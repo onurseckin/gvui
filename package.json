@@ -23,6 +23,7 @@
     "prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
   },
   "dependencies": {
+    "@base-ui-components/react": "^1.0.0-rc.0",
     "@dagrejs/dagre": "^3.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
