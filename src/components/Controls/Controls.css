@@ -12,8 +12,7 @@
 .search-header-container {
   display: flex;
   align-items: center;
-  flex: 1;
-  max-width: 380px;
+  width: 260px;
 }
 
 .search-input-wrapper {
@@ -65,21 +64,19 @@
   background-color: var(--bg-hover);
 }
 
-/* Canvas Toolbar Floating Controls */
+/* Canvas Toolbar Inline Controls */
 .canvas-toolbar {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
+  position: static;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
-  background-color: var(--bg-header, #121212);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-card, #27272a);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  z-index: 20;
+  background-color: transparent;
+  backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  z-index: auto;
 }
 
 .toolbar-group {

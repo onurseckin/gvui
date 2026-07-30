@@ -13,19 +13,6 @@
   color: var(--text-primary);
 }
 
-.sidebar-header {
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 12px;
-}
-
-.sidebar-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--text-heading);
-  letter-spacing: -0.3px;
-}
-
 .sidebar-section {
   display: flex;
   flex-direction: column;

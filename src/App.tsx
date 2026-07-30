@@ -6,10 +6,12 @@ import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
 import { useGraphStore } from "./state/useGraphStore";
 import type { GraphDataset } from "./types/graphData";
+import { Button } from "./ui";
 import "./index.css";
 
 export const App: FC = () => {
   const [currentFile, setCurrentFile] = useState<string>("ai_agent_trace.json");
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const setDataset = useGraphStore((state) => state.setDataset);
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
@@ -61,20 +63,40 @@ export const App: FC = () => {
 
   return (
     <div className="app-container">
-      <Sidebar
-        currentFile={currentFile}
-        onSelectSample={handleSelectSample}
-        onCustomUpload={handleCustomUpload}
-      />
-      <main className="app-main">
-        <header className="top-controls-bar">
-          <SearchHeader />
-        </header>
-        <div className="canvas-wrapper">
-          <GraphCanvas />
-          <CanvasToolbar />
+      <header className="top-navbar-full">
+        <div className="navbar-left">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            className="sidebar-toggle-btn"
+            title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {isSidebarOpen ? "☰" : "✕"}
+          </Button>
+          <h1 className="brand-title">GVUI</h1>
+          <span className="navbar-file-title">📄 {currentFile}</span>
         </div>
-      </main>
+        <div className="navbar-right">
+          <CanvasToolbar />
+          <SearchHeader />
+        </div>
+      </header>
+      <div className="app-body">
+        {isSidebarOpen && (
+          <Sidebar
+            currentFile={currentFile}
+            onSelectSample={handleSelectSample}
+            onCustomUpload={handleCustomUpload}
+          />
+        )}
+        <main className="app-main">
+          <div className="canvas-wrapper">
+            <GraphCanvas />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

@@ -18,10 +18,6 @@ interface SidebarProps {
 export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCustomUpload }) => {
   return (
     <aside className="sidebar-container">
-      <div className="sidebar-header">
-        <h2 className="sidebar-title">GVUI</h2>
-      </div>
-
       <div className="sidebar-section">
         <h3 className="sidebar-section-title">Sample Datasets</h3>
         <ul className="sample-list">
