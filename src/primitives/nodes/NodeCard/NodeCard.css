@@ -1,7 +1,7 @@
 .node-card {
   box-sizing: border-box;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
+  background-color: var(--bg-card, #18181b);
+  border: 1px solid var(--border-card, #27272a);
   border-radius: var(--radius-lg);
   padding: 14px;
   box-shadow: var(--shadow-card);
@@ -16,11 +16,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
+  color: #ffffff;
 }
 
 .node-card:hover {
-  background-color: var(--bg-card-hover);
-  border-color: var(--border-focus);
+  background-color: var(--bg-card-hover, #27272a);
+  border-color: var(--border-card, #27272a);
 }
 
 .node-card.selected {
@@ -40,6 +41,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  background-color: var(--bg-header, #121212);
+  margin: -14px -14px 0 -14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-card, #27272a);
 }
 
 .node-card-header-main {
@@ -245,12 +250,12 @@
 .node-card-details-content {
   margin: 0;
   padding: 8px 10px;
-  background-color: #0b1120;
-  border: 1px solid var(--border-card);
+  background-color: var(--bg-header, #121212);
+  border: 1px solid var(--border-card, #27272a);
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-family: var(--font-mono);
-  color: #f1f5f9;
+  color: #ffffff;
   max-height: 140px;
   overflow-y: auto;
   white-space: pre-wrap;

@@ -54,8 +54,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
         height={height}
         rx={14}
         ry={14}
-        fill="#0f172a"
-        stroke="#1e293b"
+        fill="#18181b"
+        stroke="#27272a"
         className={`edge-badge-rect ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
       />
       <text

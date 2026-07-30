@@ -13,7 +13,7 @@
 
 .graph-edge-path {
   fill: none;
-  stroke: #475569;
+  stroke: #52525b;
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
   shape-rendering: geometricPrecision;
@@ -30,7 +30,7 @@
 .graph-edge-path.selected {
   stroke: var(--accent-color);
   stroke-width: 3px;
-  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.6));
+  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
 }
 
 .graph-edge-path.cycle {
@@ -50,8 +50,8 @@
 }
 
 .edge-badge-rect {
-  fill: #0f172a;
-  stroke: #1e293b;
+  fill: #18181b;
+  stroke: #27272a;
   stroke-width: 1px;
   transition:
     fill 0.2s ease,
@@ -59,13 +59,13 @@
 }
 
 .edge-badge-group:hover .edge-badge-rect {
-  stroke: var(--accent-color, #6366f1);
+  stroke: var(--accent-color, #818cf8);
 }
 
 .edge-badge-rect.selected,
 .edge-badge-group.selected .edge-badge-rect {
-  stroke: var(--accent-color, #6366f1);
-  fill: rgba(99, 102, 241, 0.2);
+  stroke: var(--accent-color, #818cf8);
+  fill: rgba(129, 140, 248, 0.2);
 }
 
 .edge-badge-rect.cycle,
