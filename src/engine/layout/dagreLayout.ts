@@ -11,12 +11,15 @@ import type {
  * to prevent node overlapping in graph layout rendering.
  */
 export function calculateNodeDimensions(node: GraphNodeData): { width: number; height: number } {
-  const titleWidth = node.name.length * 9 + 48;
+  const titleWidth = node.name.length * 9.5 + 64;
 
   let badgeWidth = 0;
   let badgeRows = 0;
   if (node.badges && node.badges.length > 0) {
-    const totalBadgeChars = node.badges.reduce((acc, b) => acc + (b.label?.length || 0) + 2, 0);
+    const totalBadgeChars = node.badges.reduce(
+      (acc, b) => acc + (b.label ? b.label.length : 0) + 2,
+      0,
+    );
     badgeWidth = totalBadgeChars * 8 + 32;
     badgeRows = Math.ceil(node.badges.length / 2);
   }
@@ -24,36 +27,68 @@ export function calculateNodeDimensions(node: GraphNodeData): { width: number; h
   let toolWidth = 0;
   let toolRows = 0;
   if (node.tools && node.tools.length > 0) {
-    const totalToolChars = node.tools.reduce((acc, t) => acc + (t.name?.length || 0) + 2, 0);
+    const totalToolChars = node.tools.reduce((acc, t) => acc + (t.name ? t.name.length : 0) + 2, 0);
     toolWidth = totalToolChars * 8 + 32;
     toolRows = Math.ceil(node.tools.length / 2);
   }
 
-  const modelLength = (node.model?.length || 0) + (node.harnessModel?.length || 0);
+  const modelLength =
+    (node.model ? node.model.length : 0) + (node.harnessModel ? node.harnessModel.length : 0);
   const modelWidth = modelLength > 0 ? modelLength * 8 + 40 : 0;
 
-  const calculatedWidth = Math.max(240, titleWidth, badgeWidth, toolWidth, modelWidth);
-  const width = Math.min(380, calculatedWidth);
+  let contextLength = 0;
+  if (node.context) {
+    if (node.context.repoPath) {
+      contextLength += node.context.repoPath.length;
+    }
+    if (node.context.previousOutputs && Array.isArray(node.context.previousOutputs)) {
+      contextLength += node.context.previousOutputs.reduce(
+        (acc, p) => acc + (p.fromNode ? p.fromNode.length : 0) + (p.summary ? p.summary.length : 0),
+        0,
+      );
+    }
+  }
+  const contextWidth = contextLength > 0 ? contextLength * 8 + 32 : node.context ? 120 : 0;
 
-  let height = 80;
+  let metadataWidth = 0;
+  if (node.metadata && Object.keys(node.metadata).length > 0) {
+    const metadataStr = JSON.stringify(node.metadata);
+    metadataWidth = metadataStr.length * 7 + 32;
+  }
+
+  const width = Math.ceil(
+    Math.max(titleWidth, badgeWidth, toolWidth, modelWidth, contextWidth, metadataWidth),
+  );
+
+  let height = 44;
+
   if (node.description) {
-    const descLines = Math.ceil(node.description.length / 35);
-    height += descLines * 18 + 10;
+    const approxCharsPerLine = Math.max(20, Math.floor((width - 32) / 8));
+    const descLines = Math.ceil(node.description.length / approxCharsPerLine);
+    height += descLines * 18 + 8;
   }
+
   if (badgeRows > 0) {
-    height += badgeRows * 26 + 8;
+    height += badgeRows * 26 + 6;
   }
+
   if (toolRows > 0) {
-    height += toolRows * 26 + 8;
+    height += toolRows * 26 + 6;
   }
+
   if (node.model || node.harnessModel) {
     height += 24;
   }
+
   if (node.context) {
     height += 28;
   }
 
-  height = Math.max(120, Math.ceil(height));
+  if (node.metadata && Object.keys(node.metadata).length > 0) {
+    height += 24;
+  }
+
+  height = Math.ceil(height);
 
   return { width, height };
 }
@@ -105,7 +140,7 @@ export function computeDagreLayout(
 
   const positionedNodes: PositionedNode[] = dataset.nodes.map((node) => {
     const dagreNode = g.node(node.id);
-    const dims = dimensionsMap.get(node.id) ?? { width: 240, height: 120 };
+    const dims = dimensionsMap.get(node.id) ?? calculateNodeDimensions(node);
 
     const centerX = dagreNode?.x ?? dims.width / 2;
     const centerY = dagreNode?.y ?? dims.height / 2;
