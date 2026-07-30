@@ -1,0 +1,62 @@
+.graph-canvas-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  overflow: hidden;
+  background-color: var(--bg-canvas, #090d16);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  user-select: none;
+  cursor: grab;
+}
+
+.graph-canvas-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.graph-transform-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.graph-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.graph-svg-layer g {
+  pointer-events: auto;
+}
+
+.graph-html-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.graph-node-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  transition: opacity 0.2s ease;
+}
+
+.graph-node-wrapper.is-dimmed {
+  opacity: 0.35;
+}
