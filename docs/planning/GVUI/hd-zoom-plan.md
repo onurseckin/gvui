@@ -15,6 +15,7 @@
 ### Task 1: SVG Native ViewBox Vector Scaling & non-scaling-stroke
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/index.tsx`
 - Modify: `src/engine/GraphCanvas/GraphCanvas.css`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`
@@ -29,6 +30,7 @@
 ### Task 2: Native Text Vector Scaling for HTML Node Cards
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/index.tsx`
 - Modify: `src/engine/GraphCanvas/GraphCanvas.css`
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`

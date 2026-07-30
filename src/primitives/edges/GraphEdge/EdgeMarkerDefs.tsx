@@ -17,8 +17,16 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
         markerWidth="6"
         markerHeight="6"
         orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       >
-        <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--border, #9ca3af)" />
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="var(--border, #9ca3af)"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
       </marker>
 
       <marker
@@ -29,8 +37,16 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
         markerWidth="7"
         markerHeight="7"
         orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       >
-        <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent, #aa3bff)" />
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="var(--accent, #aa3bff)"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
       </marker>
 
       <marker
@@ -41,8 +57,16 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
         markerWidth="7"
         markerHeight="7"
         orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       >
-        <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#f59e0b"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
       </marker>
 
       <marker
@@ -53,6 +77,8 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
         markerWidth="6"
         markerHeight="6"
         orient="auto"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       >
         <circle
           cx="5"
@@ -61,6 +87,8 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
           fill="var(--bg, #ffffff)"
           stroke="var(--border, #9ca3af)"
           strokeWidth="1.5"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
         />
       </marker>
 
@@ -72,8 +100,17 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
         markerWidth="6"
         markerHeight="6"
         orient="auto"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       >
-        <circle cx="5" cy="5" r="3.5" fill="var(--accent, #aa3bff)" />
+        <circle
+          cx="5"
+          cy="5"
+          r="3.5"
+          fill="var(--accent, #aa3bff)"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
       </marker>
 
       <linearGradient id={getMarkerId("edge-flow-gradient")} x1="0%" y1="0%" x2="100%" y2="0%">

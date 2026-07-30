@@ -40,6 +40,15 @@
   pointer-events: none;
   shape-rendering: geometricPrecision;
   text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.graph-svg-layer path,
+.graph-svg-layer marker {
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
 }
 
 .graph-svg-layer g {

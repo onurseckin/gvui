@@ -64,12 +64,26 @@ export const GraphEdge: FC<GraphEdgeProps> = ({
       : "url(#edge-arrowhead)";
 
   return (
-    <g className="graph-edge-group" onClick={handleEdgeClick}>
-      <path d={dPath} className="edge-backdrop" />
+    <g
+      className="graph-edge-group"
+      onClick={handleEdgeClick}
+      shapeRendering="geometricPrecision"
+      textRendering="geometricPrecision"
+    >
+      <path
+        d={dPath}
+        className="edge-backdrop"
+        vectorEffect="non-scaling-stroke"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      />
       <path
         d={dPath}
         className={`graph-edge-path ${isSelected ? "selected" : ""} ${edge.isCycle ? "cycle" : ""} ${isAnimated ? "animated" : ""}`}
         markerEnd={edge.directed !== false ? markerId : undefined}
+        vectorEffect="non-scaling-stroke"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
       />
       <EdgeBadgeOverlay
         x={badgeX}
