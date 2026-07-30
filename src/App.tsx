@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
 import { SearchHeader } from "./components/Controls/SearchHeader";
+import { DeveloperSettings } from "./components/DeveloperSettings";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
 import { useGraphStore } from "./state/useGraphStore";
@@ -18,6 +19,7 @@ export const App: FC = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isDeveloperSettingsOpen, setIsDeveloperSettingsOpen] = useState<boolean>(false);
 
   const loadGraphFile = useCallback(async (fileId: string, initialNodeId?: string | null) => {
     try {
@@ -50,6 +52,13 @@ export const App: FC = () => {
       console.error("Failed to load graph file:", err);
     }
   }, []);
+
+  const handleClearStorage = useCallback(() => {
+    useGraphStore.setState({ shouldAutoFit: true });
+    if (currentFile) {
+      void loadGraphFile(currentFile);
+    }
+  }, [currentFile, loadGraphFile]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -155,6 +164,7 @@ export const App: FC = () => {
             currentFile={currentFile}
             onSelectSample={handleSelectSample}
             onCustomUpload={handleCustomUpload}
+            onOpenDeveloperSettings={() => setIsDeveloperSettingsOpen(true)}
           />
         )}
         <main className="app-main">
@@ -168,6 +178,11 @@ export const App: FC = () => {
         onClose={() => setIsCommandPaletteOpen(false)}
         currentFile={currentFile}
         onNavigateNode={handleNavigateNode}
+      />
+      <DeveloperSettings
+        isOpen={isDeveloperSettingsOpen}
+        onClose={() => setIsDeveloperSettingsOpen(false)}
+        onClearStorage={handleClearStorage}
       />
     </div>
   );

@@ -11,6 +11,7 @@
 ### Task 1: Create `DeveloperSettings` Modal Component
 
 **Files:**
+
 - Create: `src/components/DeveloperSettings/DeveloperSettings.types.ts`
 - Create: `src/components/DeveloperSettings/DeveloperSettings.css`
 - Create: `src/components/DeveloperSettings/index.tsx`
@@ -27,6 +28,7 @@
 ### Task 2: Integrate Developer Settings Gear Button in Sidebar & App
 
 **Files:**
+
 - Modify: `src/components/Sidebar/index.tsx`
 - Modify: `src/components/Sidebar/Sidebar.css`
 - Modify: `src/App.tsx`
