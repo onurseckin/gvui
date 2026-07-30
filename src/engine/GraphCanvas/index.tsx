@@ -95,11 +95,9 @@ export const GraphCanvas: FC = () => {
     return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
   };
 
-  const roundedX = Math.round(panOffset.x);
-  const roundedY = Math.round(panOffset.y);
   const transformStyle: CSSProperties = {
-    transform: `translate(${roundedX}px, ${roundedY}px)`,
-    zoom: zoomLevel,
+    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+    transformOrigin: "0 0",
   };
 
   return (

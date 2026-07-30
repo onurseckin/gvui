@@ -42,8 +42,10 @@ export function usePanZoom(): UsePanZoomReturn {
 
       if (newZoom === currentZoom) return;
 
-      const newPanX = mouseX - (mouseX - currentPan.x) * (newZoom / currentZoom);
-      const newPanY = mouseY - (mouseY - currentPan.y) * (newZoom / currentZoom);
+      const pointInGraphX = (mouseX - currentPan.x) / currentZoom;
+      const pointInGraphY = (mouseY - currentPan.y) / currentZoom;
+      const newPanX = mouseX - pointInGraphX * newZoom;
+      const newPanY = mouseY - pointInGraphY * newZoom;
 
       setZoomLevel(newZoom);
       setPanOffset({ x: newPanX, y: newPanY });

@@ -5,6 +5,7 @@
 **Goal:** Fix all zoom focal point, edge label desync, and text blurriness bugs so that zooming zeroes in precisely on mouse cursor position, edge labels remain 100% locked to edge paths, and typography renders at 100% crisp HD resolution.
 
 **Architecture:**
+
 1. **Mouse Focal Zoom Math**: Precise graph-space coordinate conversion `(mouseX - panX) / zoom` so zooming scales centered relative to the mouse cursor position.
 2. **Edge Label Sync Architecture**: Move edge badge overlays out of SVG `<foreignObject>` (which causes WebKit double-zoom bugs) and render them directly as native HTML badges or native SVG `<rect>`+`<text>` elements perfectly locked to `(labelX, labelY)`.
 3. **Pure HD Vector & Text Rendering**: Standard 2D CSS transform matrix `translate(x, y) scale(zoom)` with `transform-origin: 0 0` without texture-flattening 3D properties or CSS `zoom` bugs.
@@ -18,16 +19,19 @@
 ### Task 1: Mouse Cursor Focal Point Zoom Math & Unified Transform Matrix
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/usePanZoom.ts`
 - Modify: `src/engine/GraphCanvas/index.tsx`
 
 - [ ] **Step 1: Implement graph-space mouse coordinate translation in `usePanZoom.ts`**
+
 ```typescript
 const pointInGraphX = (mouseX - currentPan.x) / currentZoom;
 const pointInGraphY = (mouseY - currentPan.y) / currentZoom;
 const newPanX = mouseX - pointInGraphX * newZoom;
 const newPanY = mouseY - pointInGraphY * newZoom;
 ```
+
 - [ ] **Step 2: Apply unified `transform: translate(${panX}px, ${panY}px) scale(${zoomLevel})` with `transform-origin: 0 0` on `.graph-transform-stage`**
 - [ ] **Step 3: Run `bun run typecheck && bun run lint && bun run format`**
 - [ ] **Step 4: Commit:** `fix: implement precise mouse focal point zoom math`
@@ -37,6 +41,7 @@ const newPanY = mouseY - pointInGraphY * newZoom;
 ### Task 2: Refactor Edge Labels to Prevent WebKit ForeignObject Desync
 
 **Files:**
+
 - Modify: `src/primitives/edges/GraphEdge/EdgeBadgeOverlay.tsx`
 - Modify: `src/primitives/edges/GraphEdge/index.tsx`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`
@@ -51,6 +56,7 @@ const newPanY = mouseY - pointInGraphY * newZoom;
 ### Task 3: 100% Native Crisp Typography & Full Codebase Quality Verification
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/GraphCanvas.css`
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 
