@@ -38,8 +38,10 @@ export const CanvasToolbar: FC = () => {
     const padding = 60;
     const graphWidth = maxX - minX + padding * 2;
     const graphHeight = maxY - minY + padding * 2;
-    const viewWidth = window.innerWidth * 0.7;
-    const viewHeight = window.innerHeight * 0.7;
+
+    const wrapper = document.querySelector(".canvas-wrapper");
+    const viewWidth = wrapper?.clientWidth || window.innerWidth * 0.7;
+    const viewHeight = wrapper?.clientHeight || window.innerHeight * 0.7;
 
     const scaleX = viewWidth / graphWidth;
     const scaleY = viewHeight / graphHeight;
