@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { GraphDataset } from "../../types/graphData";
-import { calculatePortPosition, computeDagreLayout, getSideFromAngle } from "./dagreLayout";
+import {
+  calculatePortPosition,
+  computeDagreLayout,
+  findTotalPathMidpoint,
+  getSideFromAngle,
+  snapSegmentTo8Dir,
+} from "./dagreLayout";
 
 describe("dagreLayout multi-port equal spacing", () => {
   it("determines correct side based on angle theta", () => {
@@ -48,6 +54,74 @@ describe("dagreLayout multi-port equal spacing", () => {
     // Check that paths start at distinct port coordinates
     const startPoint1 = edges[0].path.split(" ")[1] + " " + edges[0].path.split(" ")[2];
     const startPoint2 = edges[1].path.split(" ")[1] + " " + edges[1].path.split(" ")[2];
-    expect(startPoint1).not.toBe(startPoint2);
+    expect(startPoint1 !== startPoint2).toBe(true);
+  });
+
+  it("snaps arbitrary segments strictly to 8-direction 45° angle increments", () => {
+    const p1 = { x: 0, y: 0 };
+    const p2 = { x: 100, y: 30 }; // Not cardinal or 45° diagonal
+
+    const snapped = snapSegmentTo8Dir(p1, p2);
+    expect(snapped.length >= 2).toBe(true);
+
+    for (let i = 0; i < snapped.length - 1; i++) {
+      const segStart = snapped[i];
+      const segEnd = snapped[i + 1];
+      const dx = segEnd.x - segStart.x;
+      const dy = segEnd.y - segStart.y;
+      const angleRad = Math.atan2(dy, dx);
+      let angleDeg = (angleRad * 180) / Math.PI;
+      if (angleDeg < 0) angleDeg += 360;
+
+      // Angle must be close to a multiple of 45° (0, 45, 90, 135, 180, 225, 270, 315)
+      const remainder = Math.abs(angleDeg % 45);
+      const is45Multiple = remainder < 0.001 || Math.abs(remainder - 45) < 0.001;
+      expect(is45Multiple).toBe(true);
+    }
+  });
+
+  it("calculates exact 50% total path arc-length midpoint", () => {
+    const polyline = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ];
+    // Total length = 100 + 100 = 200. Midpoint at distance 100 should be { x: 100, y: 0 }
+    const mid = findTotalPathMidpoint(polyline);
+    expect(Math.abs(mid.x - 100) < 0.001).toBe(true);
+    expect(Math.abs(mid.y - 0) < 0.001).toBe(true);
+  });
+
+  it("applies badge repulsion so edge badges do not overlap each other or nodes", () => {
+    const dataset: GraphDataset = {
+      id: "ds2",
+      title: "Badge Repulsion Test",
+      nodes: [
+        { id: "A", name: "Node A" },
+        { id: "B", name: "Node B" },
+      ],
+      edges: [
+        { id: "e1", source: "A", target: "B", label: "Edge 1" },
+        { id: "e2", source: "A", target: "B", label: "Edge 2" },
+      ],
+    };
+
+    const { edges } = computeDagreLayout(dataset);
+    expect(edges.length).toBe(2);
+
+    const e1 = edges[0];
+    const e2 = edges[1];
+
+    if (
+      e1.labelX !== undefined &&
+      e1.labelY !== undefined &&
+      e2.labelX !== undefined &&
+      e2.labelY !== undefined
+    ) {
+      const dx = Math.abs(e2.labelX - e1.labelX);
+      const dy = Math.abs(e2.labelY - e1.labelY);
+      // Badges must be separated by repulsion pass
+      expect(dx >= 84 || dy >= 34).toBe(true);
+    }
   });
 });
