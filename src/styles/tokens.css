@@ -3,29 +3,29 @@
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 
-  /* Surfaces & Backgrounds (Deep Dark Mode Palette - Low Brightness Surfaces) */
-  --bg-app: #06090e;
-  --bg-sidebar: #090d16;
-  --bg-header: #0d1322;
-  --bg-canvas: #06090e;
-  --bg-card: #0f172a;
-  --bg-card-hover: #141f36;
-  --bg-input: #151d30;
-  --bg-hover: #1e293b;
-  --bg-glass: rgba(13, 19, 34, 0.85);
+  /* Surfaces & Backgrounds (Carbon Gray & Deep OLED Black Palette) */
+  --bg-app: #0a0a0a;
+  --bg-sidebar: #121212;
+  --bg-header: #121212;
+  --bg-canvas: #050505;
+  --bg-card: #18181b;
+  --bg-card-hover: #27272a;
+  --bg-input: #18181b;
+  --bg-hover: #27272a;
+  --bg-glass: rgba(18, 18, 18, 0.85);
 
   /* Borders & Dividers */
-  --border-card: #1e293b;
-  --border-subtle: #162032;
-  --border-focus: #6366f1;
+  --border-card: #27272a;
+  --border-subtle: #18181b;
+  --border-focus: #818cf8;
 
-  /* High-Contrast Typography (Pure White & Vibrant Bright Text) */
+  /* High-Contrast Typography (Pure White & Carbon Muted Text) */
   --text-primary: #ffffff;
   --text-heading: #ffffff;
-  --text-muted: #e2e8f0;
-  --text-dimmed: #cbd5e1;
+  --text-muted: #a1a1aa;
+  --text-dimmed: #71717a;
 
-  /* High-Contrast Bright Text on Dark Muted Background Badges */
+  /* High-Contrast Badges & Status Tokens */
   /* Success - Deep Emerald Surface + Bright Pure Green Text */
   --status-success-bg: rgba(6, 78, 59, 0.4);
   --status-success-border: #059669;
@@ -43,24 +43,24 @@
   --status-warning-border: #d97706;
   --status-warning-text: #fde68a;
 
-  /* Info / Tokens - Deep Slate Blue Surface + Bright Pure Sky Text */
-  --status-info-bg: rgba(30, 58, 138, 0.4);
-  --status-info-border: #0284c7;
+  /* Info / Tokens - Deep Carbon Slate Surface + Bright Sky Text */
+  --status-info-bg: rgba(39, 39, 42, 0.6);
+  --status-info-border: #38bdf8;
   --status-info-text: #bae6fd;
 
-  /* Tool / Script - Deep Plum Purple Surface + Bright Pure Purple Text */
+  /* Tool / Script - Deep Plum Purple Surface + Bright Purple Text */
   --status-tool-bg: rgba(88, 28, 135, 0.4);
   --status-tool-border: #9333ea;
   --status-tool-text: #e9d5ff;
 
-  /* Neutral / Gray Badge - Dark Surface + Bright Off-White Text */
-  --status-gray-bg: rgba(30, 41, 59, 0.6);
-  --status-gray-border: #475569;
-  --status-gray-text: #ffffff;
+  /* Neutral / Gray Badge - Dark Carbon Surface + Muted Text */
+  --status-gray-bg: rgba(39, 39, 42, 0.6);
+  --status-gray-border: #3f3f46;
+  --status-gray-text: #a1a1aa;
 
   /* Accent & Selection Ring */
-  --accent-color: #6366f1;
-  --accent-glow: 0 0 0 2px #6366f1, 0 0 15px rgba(99, 102, 241, 0.4);
+  --accent-color: #818cf8;
+  --accent-glow: 0 0 0 2px #818cf8, 0 0 15px rgba(129, 140, 248, 0.4);
 
   /* Radii & Shadows */
   --radius-sm: 4px;
@@ -68,5 +68,5 @@
   --radius-lg: 12px;
   --radius-pill: 9999px;
 
-  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
 }
