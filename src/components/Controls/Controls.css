@@ -85,7 +85,6 @@
   gap: 6px;
 }
 
-.toolbar-group button,
 .toolbar-btn {
   height: 36px;
   padding: 0 12px;
@@ -93,20 +92,59 @@
   border: 1px solid #27272a;
   border-radius: var(--radius-sm);
   color: #ffffff;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.toolbar-group button:hover,
 .toolbar-btn:hover {
   background-color: var(--bg-hover, #27272a);
   border-color: var(--accent-color, #818cf8);
   color: #ffffff;
+}
+
+.toolbar-icon-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.toolbar-icon-btn:hover {
+  background-color: var(--bg-hover, #27272a);
+  border-color: var(--accent-color, #818cf8);
+  color: #ffffff;
+}
+
+.toolbar-kbd {
+  background-color: #27272a;
+  border: 1px solid #3f3f46;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .zoom-indicator {
@@ -132,7 +170,7 @@
 }
 
 .layout-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -143,7 +181,7 @@
   border: 1px solid var(--border-card, #27272a);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
   cursor: pointer;
 }

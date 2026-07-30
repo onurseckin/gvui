@@ -96,29 +96,37 @@
 
 .gvui-button--icon {
   background-color: transparent;
-  color: var(--text-muted);
+  color: #ffffff;
   border-color: transparent;
   aspect-ratio: 1 / 1;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 .gvui-button--icon.gvui-button--sm {
-  width: 28px;
+  width: 36px;
+  height: 36px;
   padding: 0;
+  font-size: 20px;
 }
 
 .gvui-button--icon.gvui-button--md {
   width: 36px;
+  height: 36px;
   padding: 0;
+  font-size: 20px;
 }
 
 .gvui-button--icon.gvui-button--lg {
   width: 44px;
+  height: 44px;
   padding: 0;
+  font-size: 20px;
 }
 
 .gvui-button--icon:hover:not(:disabled) {
   background-color: var(--bg-hover);
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .gvui-button--icon:active:not(:disabled) {
@@ -127,11 +135,13 @@
 
 /* Top navbar button overrides */
 .top-navbar-full .gvui-button--outline,
-.top-navbar-full .gvui-button--ghost {
+.top-navbar-full .gvui-button--ghost,
+.top-navbar-full .gvui-button--icon {
   color: #ffffff;
 }
 
 .top-navbar-full .gvui-button--outline:hover:not(:disabled),
-.top-navbar-full .gvui-button--ghost:hover:not(:disabled) {
+.top-navbar-full .gvui-button--ghost:hover:not(:disabled),
+.top-navbar-full .gvui-button--icon:hover:not(:disabled) {
   color: #ffffff;
 }

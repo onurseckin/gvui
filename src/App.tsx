@@ -101,14 +101,14 @@ export const App: FC = () => {
       <header className="top-navbar-full">
         <div className="navbar-left">
           <Button
-            variant="ghost"
+            variant="icon"
             size="sm"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             className="sidebar-toggle-btn"
             title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {isSidebarOpen ? "☰" : "✕"}
+            ☰
           </Button>
           <span className="navbar-file-title">📄 {currentFile}</span>
         </div>

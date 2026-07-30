@@ -88,11 +88,23 @@ export const CanvasToolbar: FC = () => {
   return (
     <div className="canvas-toolbar">
       <div className="toolbar-group">
-        <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
+        <Button
+          variant="icon"
+          size="sm"
+          onClick={handleZoomIn}
+          title="Zoom In"
+          className="toolbar-icon-btn"
+        >
           +
         </Button>
         <span className="zoom-indicator">{Math.round(zoomLevel * 100)}%</span>
-        <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
+        <Button
+          variant="icon"
+          size="sm"
+          onClick={handleZoomOut}
+          title="Zoom Out"
+          className="toolbar-icon-btn"
+        >
           -
         </Button>
       </div>
@@ -106,7 +118,7 @@ export const CanvasToolbar: FC = () => {
         title="Fit View (F)"
         className="toolbar-btn"
       >
-        🎯 Fit
+        Fit <kbd className="toolbar-kbd">F</kbd>
       </Button>
 
       <Button
@@ -116,7 +128,7 @@ export const CanvasToolbar: FC = () => {
         title="Reset View (R)"
         className="toolbar-btn"
       >
-        ↺ Reset
+        Reset <kbd className="toolbar-kbd">R</kbd>
       </Button>
 
       <div className="toolbar-divider" />
@@ -142,7 +154,7 @@ export const CanvasToolbar: FC = () => {
         title="Export HTML"
         className="toolbar-btn"
       >
-        📥 Export HTML
+        Export HTML
       </Button>
     </div>
   );
