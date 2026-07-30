@@ -86,6 +86,7 @@ export const useGraphStore = create<GraphStore>()((set) => ({
     set({
       zoomLevel: 1,
       panOffset: { x: 0, y: 0 },
+      collapsedNodeIds: new Set<string>(),
     }),
   centerNodeOnCanvas: (nodeId, viewportWidth, viewportHeight) =>
     set((state) => {

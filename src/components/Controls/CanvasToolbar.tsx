@@ -27,6 +27,7 @@ export const CanvasToolbar: FC = () => {
     const fitResult = calculateFitView(positionedNodes);
     setZoomLevel(fitResult.zoomLevel);
     setPanOffset(fitResult.panOffset);
+    useGraphStore.setState({ collapsedNodeIds: new Set<string>() });
   }, [positionedNodes, resetViewport, setPanOffset, setZoomLevel]);
 
   useEffect(() => {

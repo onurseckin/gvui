@@ -84,7 +84,7 @@ export const GraphCanvas: FC = () => {
       const queue = [...(childMap.get(collapsedId) || [])];
       while (queue.length > 0) {
         const nextId = queue.shift();
-        if (nextId && !hidden.has(nextId)) {
+        if (nextId && nextId !== collapsedId && !hidden.has(nextId)) {
           hidden.add(nextId);
           const children = childMap.get(nextId) || [];
           queue.push(...children);
