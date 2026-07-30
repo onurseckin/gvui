@@ -92,7 +92,10 @@
   font-size: 14px;
   font-weight: 600;
   color: #ffffff;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  flex-shrink: 0;
 }
 
 .node-card-type-tag {
