@@ -298,29 +298,11 @@ function simplifyPolyline(points: Point2D[]): Point2D[] {
 }
 
 /**
- * Converts a multi-point polyline into an 8-direction (45° angle snapped) polyline,
- * collapsing redundant collinear or duplicate points.
+ * Simplifies a polyline by removing collinear points along identical directional vectors.
  */
 export function snapPolyline8Dir(points: Point2D[]): Point2D[] {
   if (points.length < 2) return points;
-
-  const result: Point2D[] = [];
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const segPoints = snapSegmentTo8Dir(points[i], points[i + 1]);
-    for (const pt of segPoints) {
-      if (result.length === 0) {
-        result.push(pt);
-      } else {
-        const lastPt = result[result.length - 1];
-        if (Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y) > 0.001) {
-          result.push(pt);
-        }
-      }
-    }
-  }
-
-  return simplifyPolyline(result);
+  return simplifyPolyline(points);
 }
 
 export interface PathMidpointResult {

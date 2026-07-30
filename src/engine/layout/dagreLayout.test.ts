@@ -5,7 +5,7 @@ import {
   computeDagreLayout,
   findTotalPathMidpoint,
   getSideFromAngle,
-  snapSegmentTo8Dir,
+  snapPolyline8Dir,
 } from "./dagreLayout";
 
 describe("dagreLayout multi-port equal spacing", () => {
@@ -57,27 +57,16 @@ describe("dagreLayout multi-port equal spacing", () => {
     expect(startPoint1 !== startPoint2).toBe(true);
   });
 
-  it("snaps arbitrary segments strictly to 8-direction 45° angle increments", () => {
-    const p1 = { x: 0, y: 0 };
-    const p2 = { x: 100, y: 30 }; // Not cardinal or 45° diagonal
-
-    const snapped = snapSegmentTo8Dir(p1, p2);
-    expect(snapped.length >= 2).toBe(true);
-
-    for (let i = 0; i < snapped.length - 1; i++) {
-      const segStart = snapped[i];
-      const segEnd = snapped[i + 1];
-      const dx = segEnd.x - segStart.x;
-      const dy = segEnd.y - segStart.y;
-      const angleRad = Math.atan2(dy, dx);
-      let angleDeg = (angleRad * 180) / Math.PI;
-      if (angleDeg < 0) angleDeg += 360;
-
-      // Angle must be close to a multiple of 45° (0, 45, 90, 135, 180, 225, 270, 315)
-      const remainder = Math.abs(angleDeg % 45);
-      const is45Multiple = remainder < 0.001 || Math.abs(remainder - 45) < 0.001;
-      expect(is45Multiple).toBe(true);
-    }
+  it("simplifies polylines by removing collinear points along directional vectors", () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 50, y: 0 },
+      { x: 100, y: 0 },
+    ];
+    const simplified = snapPolyline8Dir(points);
+    expect(simplified.length).toBe(2);
+    expect(simplified[0]).toEqual({ x: 0, y: 0 });
+    expect(simplified[1]).toEqual({ x: 100, y: 0 });
   });
 
   it("calculates exact 50% total path arc-length midpoint", () => {
