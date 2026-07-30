@@ -59,7 +59,7 @@
   font-size: 0.6875rem;
   line-height: 1;
   color: var(--text-dimmed);
-  background-color: var(--bg-hover);
+  background-color: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 2px 5px;

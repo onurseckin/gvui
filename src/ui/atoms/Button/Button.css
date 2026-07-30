@@ -49,13 +49,14 @@
 
 .gvui-button--primary {
   background-color: var(--accent-color);
-  color: var(--text-primary);
+  color: #09090b;
+  font-weight: 600;
   border-color: var(--accent-color);
 }
 
 .gvui-button--primary:hover:not(:disabled) {
-  filter: brightness(1.15);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
+  filter: brightness(1.1);
+  box-shadow: var(--accent-glow);
 }
 
 .gvui-button--primary:active:not(:disabled) {
@@ -78,7 +79,7 @@
 }
 
 .gvui-button--outline {
-  background-color: transparent;
+  background-color: var(--bg-card);
   color: var(--text-primary);
   border-color: var(--border-card);
 }
@@ -86,6 +87,7 @@
 .gvui-button--outline:hover:not(:disabled) {
   background-color: var(--bg-hover);
   border-color: var(--border-focus);
+  color: var(--text-primary);
 }
 
 .gvui-button--outline:active:not(:disabled) {

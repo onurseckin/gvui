@@ -17,7 +17,7 @@
 }
 
 .gvui-select-trigger:hover:not(:disabled) {
-  border-color: var(--border-subtle);
+  border-color: var(--border-card);
   background-color: var(--bg-card-hover);
 }
 
@@ -119,8 +119,8 @@
 }
 
 .gvui-select-item[data-selected] {
-  background-color: var(--status-info-bg);
-  color: var(--status-info-text);
+  background-color: var(--bg-card-hover);
+  color: var(--accent-color);
   font-weight: 500;
 }
 

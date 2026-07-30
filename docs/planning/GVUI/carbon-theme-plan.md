@@ -15,6 +15,7 @@
 ### Task 1: Overhaul Central CSS Design Tokens & Utility Classes
 
 **Files:**
+
 - Modify: `src/styles/tokens.css`
 - Modify: `src/styles/utilities.css`
 
@@ -37,6 +38,7 @@
 ### Task 2: Align Atomic UI Component Library to Carbon Palette
 
 **Files:**
+
 - Modify: `src/ui/atoms/Button/Button.css`
 - Modify: `src/ui/atoms/Input/Input.css`
 - Modify: `src/ui/atoms/Select/Select.css`
@@ -53,6 +55,7 @@
 ### Task 3: Align Canvas, Graph Edges, Node Cards & Sidebar to Carbon Theme
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/GraphCanvas.css`
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`

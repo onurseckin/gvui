@@ -17,7 +17,7 @@
 }
 
 .gvui-input:hover:not(:disabled):not(:focus) {
-  border-color: var(--border-subtle);
+  border-color: var(--border-card);
   background-color: var(--bg-card-hover);
 }
 
