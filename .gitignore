@@ -40,4 +40,6 @@ lerna-debug.log*
 .DS_Store
 .DS_Store?
 ehthumbs.db
-Thumbs.db
+# Brainstorming Visual Companion
+.superpowers/
+
