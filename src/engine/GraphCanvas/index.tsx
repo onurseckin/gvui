@@ -98,7 +98,7 @@ export const GraphCanvas: FC = () => {
   const roundedX = Math.round(panOffset.x);
   const roundedY = Math.round(panOffset.y);
   const transformStyle = {
-    transform: `translate3d(${roundedX}px, ${roundedY}px, 0px) scale(${zoomLevel})`,
+    transform: `translate(${roundedX}px, ${roundedY}px) scale(${zoomLevel})`,
   };
 
   return (
