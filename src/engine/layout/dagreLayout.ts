@@ -167,40 +167,74 @@ function clipPointToNodeRect(
   };
 }
 
-/**
- * Finds the midpoint of the longest straight segment between adjacent points.
- */
-function findLongestSegmentMidpoint(points: Array<{ x: number; y: number }>): {
+export interface PathMidpointResult {
   x: number;
   y: number;
-} {
-  if (points.length < 2) {
-    return points[0] ?? { x: 0, y: 0 };
+  normal: { x: number; y: number };
+}
+
+/**
+ * Calculates total arc-length L = sum(distance(P_i, P_{i+1})) along all points in the polyline path.
+ * Finds the exact point (x, y) at distance s = L / 2 along the path (50% total path length),
+ * along with the perpendicular unit normal vector to the segment containing the midpoint.
+ */
+export function findTotalPathMidpoint(points: Array<{ x: number; y: number }>): PathMidpointResult {
+  if (points.length === 0) {
+    return { x: 0, y: 0, normal: { x: 0, y: 1 } };
+  }
+  if (points.length === 1) {
+    return { x: points[0].x, y: points[0].y, normal: { x: 0, y: 1 } };
   }
 
-  let maxLenSq = -1;
-  let bestMidpoint = {
-    x: (points[0].x + points[1].x) / 2,
-    y: (points[0].y + points[1].y) / 2,
-  };
+  const segmentLengths: number[] = [];
+  let totalLength = 0;
 
   for (let i = 0; i < points.length - 1; i++) {
     const p1 = points[i];
     const p2 = points[i + 1];
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
-    const lenSq = dx * dx + dy * dy;
-
-    if (lenSq > maxLenSq) {
-      maxLenSq = lenSq;
-      bestMidpoint = {
-        x: (p1.x + p2.x) / 2,
-        y: (p1.y + p2.y) / 2,
-      };
-    }
+    const len = Math.hypot(dx, dy);
+    segmentLengths.push(len);
+    totalLength += len;
   }
 
-  return bestMidpoint;
+  if (totalLength === 0) {
+    return { x: points[0].x, y: points[0].y, normal: { x: 0, y: 1 } };
+  }
+
+  const targetDist = totalLength / 2;
+  let accumulated = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const len = segmentLengths[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    if (accumulated + len >= targetDist || i === points.length - 2) {
+      const remaining = targetDist - accumulated;
+      const t = len > 0 ? Math.max(0, Math.min(1, remaining / len)) : 0;
+
+      const x = p1.x + t * (p2.x - p1.x);
+      const y = p1.y + t * (p2.y - p1.y);
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const segLen = len > 0 ? len : Math.hypot(dx, dy);
+
+      let normal = { x: 0, y: 1 };
+      if (segLen > 0) {
+        normal = { x: -dy / segLen, y: dx / segLen };
+      }
+
+      return { x, y, normal };
+    }
+
+    accumulated += len;
+  }
+
+  const lastPt = points[points.length - 1];
+  return { x: lastPt.x, y: lastPt.y, normal: { x: 0, y: 1 } };
 }
 
 /**
@@ -213,10 +247,10 @@ export function computeDagreLayout(
   const g = new dagre.graphlib.Graph();
   g.setGraph({
     rankdir: direction,
-    nodesep: 50,
-    ranksep: 70,
-    marginx: 40,
-    marginy: 40,
+    nodesep: 80,
+    ranksep: 90,
+    marginx: 50,
+    marginy: 50,
   });
   g.setDefaultEdgeLabel(() => ({}));
 
@@ -251,6 +285,7 @@ export function computeDagreLayout(
   });
 
   const positionedNodesMap = new Map<string, PositionedNode>(positionedNodes.map((n) => [n.id, n]));
+  const edgeNormals: Array<{ x: number; y: number } | undefined> = [];
 
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
     const dagreEdge = g.edge(edge.source, edge.target) as
@@ -262,6 +297,7 @@ export function computeDagreLayout(
     let path = "";
     let labelX: number | undefined;
     let labelY: number | undefined;
+    let normal: { x: number; y: number } | undefined;
 
     const srcNode = positionedNodesMap.get(edge.source);
     const tgtNode = positionedNodesMap.get(edge.target);
@@ -312,9 +348,10 @@ export function computeDagreLayout(
       }
 
       path = buildSvgPath(points);
-      const mid = findLongestSegmentMidpoint(points);
-      labelX = mid.x;
-      labelY = mid.y;
+      const midResult = findTotalPathMidpoint(points);
+      labelX = midResult.x;
+      labelY = midResult.y;
+      normal = midResult.normal;
     } else if (srcNode && tgtNode) {
       const srcCx = srcNode.x + srcNode.width / 2;
       const srcCy = srcNode.y + srcNode.height / 2;
@@ -325,9 +362,13 @@ export function computeDagreLayout(
       const endPt = clipPointToNodeRect(tgtNode, { x: srcCx, y: srcCy });
 
       path = `M ${startPt.x} ${startPt.y} L ${endPt.x} ${endPt.y}`;
-      labelX = (startPt.x + endPt.x) / 2;
-      labelY = (startPt.y + endPt.y) / 2;
+      const midResult = findTotalPathMidpoint([startPt, endPt]);
+      labelX = midResult.x;
+      labelY = midResult.y;
+      normal = midResult.normal;
     }
+
+    edgeNormals.push(normal);
 
     return {
       ...edge,
@@ -336,6 +377,51 @@ export function computeDagreLayout(
       ...(labelY !== undefined ? { labelY } : {}),
     };
   });
+
+  // 2D edge badge collision detection and offset pass
+  const MAX_COLLISION_PASSES = 10;
+  for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
+    let hasCollision = false;
+
+    for (let i = 0; i < positionedEdges.length; i++) {
+      const e1 = positionedEdges[i];
+      for (let j = i + 1; j < positionedEdges.length; j++) {
+        const e2 = positionedEdges[j];
+
+        const lX1 = e1.labelX;
+        const lY1 = e1.labelY;
+        const lX2 = e2.labelX;
+        const lY2 = e2.labelY;
+
+        if (lX1 === undefined || lY1 === undefined || lX2 === undefined || lY2 === undefined) {
+          continue;
+        }
+
+        const dx = Math.abs(lX2 - lX1);
+        const dy = Math.abs(lY2 - lY1);
+
+        if (dx < 80 && dy < 32) {
+          hasCollision = true;
+          let norm = edgeNormals[j] ?? { x: 0, y: 1 };
+          if (norm.x === 0 && norm.y === 0) {
+            norm = { x: 0, y: 1 };
+          }
+          const relX = lX2 - lX1;
+          const relY = lY2 - lY1;
+          const dot = relX * norm.x + relY * norm.y;
+          const dir = dot >= 0 ? 1 : -1;
+          const step = 36;
+
+          e2.labelX = lX2 + dir * norm.x * step;
+          e2.labelY = lY2 + dir * norm.y * step;
+        }
+      }
+    }
+
+    if (!hasCollision) {
+      break;
+    }
+  }
 
   return { nodes: positionedNodes, edges: positionedEdges };
 }

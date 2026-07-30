@@ -11,6 +11,7 @@
 ### Task 1: Fix Dialog Blur & Dynamic 50% Viewport Sizing (`CommandPalette` & `DeveloperSettings`)
 
 **Files:**
+
 - Modify: `src/components/CommandPalette/CommandPalette.css`
 - Modify: `src/components/DeveloperSettings/DeveloperSettings.css`
 
@@ -34,11 +35,12 @@
 ### Task 2: Overhaul Edge Path Midpoints & Badge Collision Avoidance
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`
 
-- [ ] **Step 1: Compute total arc-length midpoint $s = L / 2$ along full edge polyline for 100% centered edge description badges**
-- [ ] **Step 2: Increase Dagre layout spacing (`nodesep: 80`, `ranksep: 90`) for edge breathing room**
-- [ ] **Step 3: Implement 2D edge badge collision avoidance pass to offset overlapping badges**
-- [ ] **Step 4: Run `bun run typecheck && bun run lint && bun run format:check && bun run build:local`**
-- [ ] **Step 5: Commit:** `fix: center edge badges at total path midpoint and prevent badge collision overlaps`
+- [x] **Step 1: Compute total arc-length midpoint $s = L / 2$ along full edge polyline for 100% centered edge description badges**
+- [x] **Step 2: Increase Dagre layout spacing (`nodesep: 80`, `ranksep: 90`) for edge breathing room**
+- [x] **Step 3: Implement 2D edge badge collision avoidance pass to offset overlapping badges**
+- [x] **Step 4: Run `bun run typecheck && bun run lint && bun run format:check && bun run build:local`**
+- [x] **Step 5: Commit:** `fix: center edge badges at total path midpoint and prevent badge collision overlaps`
