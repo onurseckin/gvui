@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Dialog } from "@base-ui-components/react/dialog";
+import { useGraphStore } from "../../state/useGraphStore";
 import { Button } from "../../ui/atoms/Button";
 import type { DeveloperSettingsProps, DeveloperSettingsTab } from "./DeveloperSettings.types";
 import "./DeveloperSettings.css";
@@ -109,8 +110,21 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = ({
         refreshStorageData();
       };
       window.addEventListener("storage", handleStorageChange);
+
+      // Subscribe to Zustand store changes for instant live updates in current tab
+      const unsubscribeStore = useGraphStore.subscribe(() => {
+        refreshStorageData();
+      });
+
+      // Polling interval as additional fallback
+      const intervalId = setInterval(() => {
+        refreshStorageData();
+      }, 300);
+
       return () => {
         window.removeEventListener("storage", handleStorageChange);
+        unsubscribeStore();
+        clearInterval(intervalId);
       };
     }
   }, [isOpen, refreshStorageData]);

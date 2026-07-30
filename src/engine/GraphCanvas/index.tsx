@@ -57,7 +57,7 @@ export const GraphCanvas: FC = () => {
   ]);
 
   useEffect(() => {
-    if (!dataset || !currentFile || shouldAutoFit) return;
+    if (!dataset || !currentFile) return;
 
     const signature = generateDatasetSignature(dataset);
     saveStoredViewport(currentFile, {
@@ -68,16 +68,7 @@ export const GraphCanvas: FC = () => {
       layoutMode,
       collapsedNodeIds: Array.from(collapsedNodeIds),
     });
-  }, [
-    dataset,
-    currentFile,
-    zoomLevel,
-    panOffset,
-    selectedNodeId,
-    layoutMode,
-    collapsedNodeIds,
-    shouldAutoFit,
-  ]);
+  }, [dataset, currentFile, zoomLevel, panOffset, selectedNodeId, layoutMode, collapsedNodeIds]);
 
   const hiddenNodeIds = useMemo(() => {
     if (collapsedNodeIds.size === 0) return new Set<string>();
