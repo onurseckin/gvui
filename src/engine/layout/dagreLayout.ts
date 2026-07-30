@@ -55,6 +55,22 @@ export function calculatePortPosition(
 }
 
 /**
+ * Creates a perpendicular stub coordinate extending outward from a node border side.
+ */
+export function createPortStub(port: Point2D, side: NodeSide, distance = 14): Point2D {
+  switch (side) {
+    case "Top":
+      return { x: port.x, y: port.y - distance };
+    case "Bottom":
+      return { x: port.x, y: port.y + distance };
+    case "Left":
+      return { x: port.x - distance, y: port.y };
+    case "Right":
+      return { x: port.x + distance, y: port.y };
+  }
+}
+
+/**
  * Calculates dynamic node dimensions based on node content (title, badges, tools, description)
  * to prevent node overlapping in graph layout rendering.
  */
@@ -450,6 +466,7 @@ export function computeDagreLayout(
   // Mathematical Multi-Port Equal Spacing Pass
   const sourcePorts = new Map<number, Point2D>();
   const targetPorts = new Map<number, Point2D>();
+  const edgeSideInfo = new Map<number, { srcSide: NodeSide; tgtSide: NodeSide }>();
 
   interface SideAttachment {
     edgeIndex: number;
@@ -484,6 +501,8 @@ export function computeDagreLayout(
         srcSide = getSideFromAngle(thetaSrc);
         tgtSide = getSideFromAngle(thetaTgt);
       }
+
+      edgeSideInfo.set(edgeIdx, { srcSide, tgtSide });
 
       const srcKey = `${srcNode.id}:::${srcSide}`;
       const tgtKey = `${tgtNode.id}:::${tgtSide}`;
@@ -555,13 +574,19 @@ export function computeDagreLayout(
 
     const startPort = sourcePorts.get(edgeIdx);
     const endPort = targetPorts.get(edgeIdx);
+    const sideInfo = edgeSideInfo.get(edgeIdx);
+    const srcSide = sideInfo?.srcSide ?? "Bottom";
+    const tgtSide = sideInfo?.tgtSide ?? "Top";
 
     if (startPort && endPort) {
+      const startStub = createPortStub(startPort, srcSide, 16);
+      const endStub = createPortStub(endPort, tgtSide, 16);
+
       if (points.length >= 2) {
-        points[0] = { ...startPort };
-        points[points.length - 1] = { ...endPort };
+        const innerPoints = points.slice(1, -1);
+        points = [{ ...startPort }, startStub, ...innerPoints, endStub, { ...endPort }];
       } else {
-        points = [{ ...startPort }, { ...endPort }];
+        points = [{ ...startPort }, startStub, endStub, { ...endPort }];
       }
     } else if (points.length < 2 && srcNode && tgtNode) {
       const srcCx = srcNode.x + srcNode.width / 2;
