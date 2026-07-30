@@ -1,5 +1,6 @@
 .graph-edge-group {
   cursor: pointer;
+  shape-rendering: geometricPrecision;
 }
 
 .edge-backdrop {
@@ -7,30 +8,33 @@
   stroke: transparent;
   stroke-width: 16px;
   cursor: pointer;
+  vector-effect: non-scaling-stroke;
 }
 
 .graph-edge-path {
   fill: none;
-  stroke: var(--border, #9ca3af);
+  stroke: #475569;
   stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
   transition:
     stroke 0.2s ease,
     stroke-width 0.2s ease;
 }
 
 .graph-edge-group:hover .graph-edge-path {
-  stroke: var(--accent, #aa3bff);
+  stroke: var(--accent-color);
   stroke-width: 3px;
 }
 
 .graph-edge-path.selected {
-  stroke: var(--accent, #aa3bff);
+  stroke: var(--accent-color);
   stroke-width: 3px;
-  filter: drop-shadow(0 0 4px var(--accent-bg, rgba(170, 59, 255, 0.4)));
+  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.6));
 }
 
 .graph-edge-path.cycle {
-  stroke: #f59e0b;
+  stroke: #fbbf24;
   stroke-dasharray: 6 4;
 }
 
@@ -50,37 +54,40 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  background-color: var(--bg, #ffffff);
-  border: 1px solid var(--border, #e5e4e7);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
   font-size: 11px;
-  font-weight: 500;
-  color: var(--text, #6b6375);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-heading);
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
   width: max-content;
-  max-width: 120px;
+  max-width: 140px;
   margin: 0 auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .edge-badge-overlay:hover {
-  border-color: var(--accent-border, rgba(170, 59, 255, 0.5));
-  color: var(--text-h, #08060d);
+  border-color: var(--accent-color);
+  color: #ffffff;
 }
 
 .edge-badge-overlay.selected {
-  border-color: var(--accent, #aa3bff);
-  background-color: var(--accent-bg, rgba(170, 59, 255, 0.1));
-  color: var(--accent, #aa3bff);
+  border-color: var(--accent-color);
+  background-color: rgba(99, 102, 241, 0.2);
+  color: #ffffff;
 }
 
 .edge-badge-overlay.cycle {
-  border-color: rgba(245, 158, 11, 0.4);
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #d97706;
+  border-color: #d97706;
+  background-color: rgba(120, 53, 15, 0.4);
+  color: #fde68a;
 }
 
 .edge-badge-cycle-icon {
