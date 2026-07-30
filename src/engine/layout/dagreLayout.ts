@@ -244,7 +244,7 @@ export function computeDagreLayout(
   dataset: GraphDataset,
   direction: "TB" | "LR" = "TB",
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
-  const g = new dagre.graphlib.Graph();
+  const g = new dagre.graphlib.Graph({ multigraph: true });
   g.setGraph({
     rankdir: direction,
     nodesep: 80,
@@ -263,7 +263,7 @@ export function computeDagreLayout(
   });
 
   dataset.edges.forEach((edge) => {
-    g.setEdge(edge.source, edge.target);
+    g.setEdge(edge.source, edge.target, {}, edge.id);
   });
 
   dagre.layout(g);
@@ -285,14 +285,34 @@ export function computeDagreLayout(
   });
 
   const positionedNodesMap = new Map<string, PositionedNode>(positionedNodes.map((n) => [n.id, n]));
+
+  // Group edges by undirected node pair key (source/target pair) for multi-edge parallel offsetting
+  const edgePairGroups = new Map<string, number[]>();
+  dataset.edges.forEach((edge, index) => {
+    const pairKey =
+      edge.source < edge.target
+        ? `${edge.source}---${edge.target}`
+        : `${edge.target}---${edge.source}`;
+    const group = edgePairGroups.get(pairKey) ?? [];
+    group.push(index);
+    edgePairGroups.set(pairKey, group);
+  });
+
+  const edgePairInfo = new Map<number, { groupIndex: number; groupTotal: number }>();
+  edgePairGroups.forEach((indices) => {
+    indices.forEach((edgeIdx, groupIndex) => {
+      edgePairInfo.set(edgeIdx, { groupIndex, groupTotal: indices.length });
+    });
+  });
+
   const edgeNormals: Array<{ x: number; y: number } | undefined> = [];
 
-  const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
-    const dagreEdge = g.edge(edge.source, edge.target) as
+  const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, edgeIdx) => {
+    const dagreEdge = g.edge(edge.source, edge.target, edge.id) as
       | { points?: Array<{ x: number; y: number }> }
       | undefined;
     const rawPoints = dagreEdge?.points ?? [];
-    const points: Array<{ x: number; y: number }> = rawPoints.map((p) => ({ x: p.x, y: p.y }));
+    let points: Array<{ x: number; y: number }> = rawPoints.map((p) => ({ x: p.x, y: p.y }));
 
     let path = "";
     let labelX: number | undefined;
@@ -301,6 +321,47 @@ export function computeDagreLayout(
 
     const srcNode = positionedNodesMap.get(edge.source);
     const tgtNode = positionedNodesMap.get(edge.target);
+
+    // If points from dagre are empty or insufficient, construct direct segment between centers
+    if (points.length < 2 && srcNode && tgtNode) {
+      const srcCx = srcNode.x + srcNode.width / 2;
+      const srcCy = srcNode.y + srcNode.height / 2;
+      const tgtCx = tgtNode.x + tgtNode.width / 2;
+      const tgtCy = tgtNode.y + tgtNode.height / 2;
+      points = [
+        { x: srcCx, y: srcCy },
+        { x: tgtCx, y: tgtCy },
+      ];
+    }
+
+    // Offset path control points / bend coordinates for parallel multi-edges perpendicular to direction vector by ±35px
+    const pairInfo = edgePairInfo.get(edgeIdx);
+    const groupTotal = pairInfo?.groupTotal ?? 1;
+    const groupIndex = pairInfo?.groupIndex ?? 0;
+    const offset = groupTotal > 1 ? (groupIndex - (groupTotal - 1) / 2) * 70 : 0;
+
+    if (offset !== 0 && points.length >= 2) {
+      const pStart = points[0];
+      const pEnd = points[points.length - 1];
+      const dx = pEnd.x - pStart.x;
+      const dy = pEnd.y - pStart.y;
+      const len = Math.hypot(dx, dy);
+      if (len > 0) {
+        const nx = -dy / len;
+        const ny = dx / len;
+
+        if (points.length === 2) {
+          const midX = (pStart.x + pEnd.x) / 2 + offset * nx;
+          const midY = (pStart.y + pEnd.y) / 2 + offset * ny;
+          points = [pStart, { x: midX, y: midY }, pEnd];
+        } else {
+          for (let k = 1; k < points.length - 1; k++) {
+            points[k].x += offset * nx;
+            points[k].y += offset * ny;
+          }
+        }
+      }
+    }
 
     if (points.length >= 2) {
       if (srcNode) {
@@ -352,20 +413,6 @@ export function computeDagreLayout(
       labelX = midResult.x;
       labelY = midResult.y;
       normal = midResult.normal;
-    } else if (srcNode && tgtNode) {
-      const srcCx = srcNode.x + srcNode.width / 2;
-      const srcCy = srcNode.y + srcNode.height / 2;
-      const tgtCx = tgtNode.x + tgtNode.width / 2;
-      const tgtCy = tgtNode.y + tgtNode.height / 2;
-
-      const startPt = clipPointToNodeRect(srcNode, { x: tgtCx, y: tgtCy });
-      const endPt = clipPointToNodeRect(tgtNode, { x: srcCx, y: srcCy });
-
-      path = `M ${startPt.x} ${startPt.y} L ${endPt.x} ${endPt.y}`;
-      const midResult = findTotalPathMidpoint([startPt, endPt]);
-      labelX = midResult.x;
-      labelY = midResult.y;
-      normal = midResult.normal;
     }
 
     edgeNormals.push(normal);
@@ -379,41 +426,43 @@ export function computeDagreLayout(
   });
 
   // 2D edge badge collision detection and offset pass
-  const MAX_COLLISION_PASSES = 10;
+  const MAX_COLLISION_PASSES = 15;
   for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
     let hasCollision = false;
 
     for (let i = 0; i < positionedEdges.length; i++) {
       const e1 = positionedEdges[i];
+      if (e1.labelX === undefined || e1.labelY === undefined) continue;
+
       for (let j = i + 1; j < positionedEdges.length; j++) {
         const e2 = positionedEdges[j];
+        if (e2.labelX === undefined || e2.labelY === undefined) continue;
 
-        const lX1 = e1.labelX;
-        const lY1 = e1.labelY;
-        const lX2 = e2.labelX;
-        const lY2 = e2.labelY;
+        let dx = Math.abs(e2.labelX - e1.labelX);
+        let dy = Math.abs(e2.labelY - e1.labelY);
 
-        if (lX1 === undefined || lY1 === undefined || lX2 === undefined || lY2 === undefined) {
-          continue;
-        }
-
-        const dx = Math.abs(lX2 - lX1);
-        const dy = Math.abs(lY2 - lY1);
-
-        if (dx < 80 && dy < 32) {
+        if (dx < 84 && dy < 34) {
           hasCollision = true;
           let norm = edgeNormals[j] ?? { x: 0, y: 1 };
           if (norm.x === 0 && norm.y === 0) {
             norm = { x: 0, y: 1 };
           }
-          const relX = lX2 - lX1;
-          const relY = lY2 - lY1;
-          const dot = relX * norm.x + relY * norm.y;
-          const dir = dot >= 0 ? 1 : -1;
-          const step = 36;
 
-          e2.labelX = lX2 + dir * norm.x * step;
-          e2.labelY = lY2 + dir * norm.y * step;
+          let steps = 0;
+          while (dx < 84 && dy < 34 && steps < 10) {
+            const relX = e2.labelX - e1.labelX;
+            const relY = e2.labelY - e1.labelY;
+            const dot = relX * norm.x + relY * norm.y;
+            const dir = dot >= 0 ? 1 : -1;
+            const step = 36;
+
+            e2.labelX += dir * norm.x * step;
+            e2.labelY += dir * norm.y * step;
+
+            dx = Math.abs(e2.labelX - e1.labelX);
+            dy = Math.abs(e2.labelY - e1.labelY);
+            steps++;
+          }
         }
       }
     }
