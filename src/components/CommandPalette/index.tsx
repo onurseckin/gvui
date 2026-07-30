@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog } from "@base-ui-components/react/dialog";
+import { Button } from "../../ui/atoms/Button";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphDataset } from "../../types/graphData";
 import type {
@@ -219,8 +220,9 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               autoFocus
             />
             {searchQuery && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 className="command-palette-search-clear"
                 onClick={() => setSearchQuery("")}
                 title="Clear search"
@@ -235,29 +237,31 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
                 >
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
 
           <div className="command-palette-tabs" role="tablist">
-            <button
-              type="button"
+            <Button
+              variant={scope === "current" ? "primary" : "ghost"}
+              size="sm"
               role="tab"
               aria-selected={scope === "current"}
-              className={`command-palette-tab ${scope === "current" ? "command-palette-tab--active" : ""}`}
+              className="command-palette-tab"
               onClick={() => setScope("current")}
             >
               Current File
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant={scope === "all" ? "primary" : "ghost"}
+              size="sm"
               role="tab"
               aria-selected={scope === "all"}
-              className={`command-palette-tab ${scope === "all" ? "command-palette-tab--active" : ""}`}
+              className="command-palette-tab"
               onClick={() => setScope("all")}
             >
               All Files
-            </button>
+            </Button>
           </div>
 
           <div className="command-palette-results" role="listbox">

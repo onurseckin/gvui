@@ -71,12 +71,12 @@
 .developer-settings-title-icon {
   width: 18px;
   height: 18px;
-  color: #a1a1aa;
+  color: #ffffff;
 }
 
 .developer-settings-description {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
   margin: 0;
 }
 
@@ -90,76 +90,29 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #a1a1aa;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.developer-settings-refresh-btn:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .developer-settings-close-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.developer-settings-close-btn:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Tab Navigation Bar */
 .developer-settings-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 20px 0 20px;
+  gap: 8px;
+  padding: 12px 20px 0 20px;
   background-color: #121318;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .developer-settings-tab {
-  padding: 8px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  color: #ffffff;
 }
 
-.developer-settings-tab:hover {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.developer-settings-tab--active {
-  color: #60a5fa;
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
-}
-
-.developer-settings-content,
 .developer-settings-body {
   flex: 1;
   min-height: 0;
@@ -189,15 +142,17 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #ffffff;
+  font-weight: 500;
 }
 
 .developer-settings-count-badge {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-weight: 600;
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
 }
 

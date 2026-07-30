@@ -83,27 +83,12 @@
 }
 
 .command-palette-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  opacity: 0.7;
 }
 
 .command-palette-search-clear {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.command-palette-search-clear:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Scope Filter Tabs Bar */
@@ -113,31 +98,13 @@
   gap: 8px;
   padding: 8px 16px;
   background-color: #121318;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .command-palette-tab {
-  background: transparent;
-  border: none;
-  outline: none;
-  padding: 5px 12px;
-  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.command-palette-tab:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
-.command-palette-tab--active {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.12);
-  font-weight: 600;
 }
 
 /* Results Section */
@@ -153,12 +120,12 @@
 }
 
 .command-palette-results::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 3px;
 }
 
 .command-palette-results::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 /* Result Item */
@@ -174,7 +141,7 @@
 
 .command-palette-item:hover,
 .command-palette-item--selected {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .command-palette-item-main {
@@ -187,7 +154,7 @@
 
 .command-palette-item-name {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
@@ -196,7 +163,7 @@
 
 .command-palette-item-description {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

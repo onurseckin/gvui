@@ -1,6 +1,7 @@
-import type { FC, ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Dialog } from "@base-ui-components/react/dialog";
+import { Button } from "../../ui/atoms/Button";
 import type { DeveloperSettingsProps, DeveloperSettingsTab } from "./DeveloperSettings.types";
 import "./DeveloperSettings.css";
 
@@ -85,7 +86,7 @@ const renderColorizedJson = (jsonStr: string): ReactNode[] => {
   return elements;
 };
 
-export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
+export const DeveloperSettings: React.FC<DeveloperSettingsProps> = ({
   isOpen,
   onClose,
   onClearStorage,
@@ -156,8 +157,9 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
               </Dialog.Description>
             </div>
             <div className="developer-settings-header-actions">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 className="developer-settings-refresh-btn"
                 onClick={refreshStorageData}
                 title="Refresh Local Storage"
@@ -176,8 +178,8 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
                   <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1.2 1.2a10 10 0 0 0 18.8-4.2" />
                 </svg>
                 <span>Refresh</span>
-              </button>
-              <Dialog.Close className="developer-settings-close-btn" aria-label="Close">
+              </Button>
+              <Dialog.Close render={<Button variant="ghost" size="sm" aria-label="Close" />}>
                 <svg
                   viewBox="0 0 24 24"
                   width="16"
@@ -196,17 +198,16 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
           </div>
 
           <div className="developer-settings-tabs" role="tablist">
-            <button
-              type="button"
+            <Button
+              variant={activeTab === "local-storage" ? "primary" : "ghost"}
+              size="sm"
               role="tab"
               aria-selected={activeTab === "local-storage"}
-              className={`developer-settings-tab ${
-                activeTab === "local-storage" ? "developer-settings-tab--active" : ""
-              }`}
+              className="developer-settings-tab"
               onClick={() => setActiveTab("local-storage")}
             >
               Local Storage
-            </button>
+            </Button>
           </div>
 
           <div className="developer-settings-body">
@@ -236,8 +237,9 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
                       </span>
                     )}
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="developer-settings-clear-btn"
                     onClick={handleClearLocalStorage}
                     disabled={keyCount === 0}
@@ -258,7 +260,7 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
                       <line x1="14" y1="11" x2="14" y2="17" />
                     </svg>
                     Clear Local Storage
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="developer-settings-json-container">
