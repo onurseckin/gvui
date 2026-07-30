@@ -11,6 +11,7 @@
 ### Task 1: Node Collapse State LocalStorage Persistence
 
 **Files:**
+
 - Modify: `src/utils/fileStorage.ts`
 - Modify: `src/App.tsx`
 - Modify: `src/engine/GraphCanvas/index.tsx`
@@ -26,6 +27,7 @@
 ### Task 2: 100% Dead-Centered Modal Dialog Positioning (`CommandPalette` & `DeveloperSettings`)
 
 **Files:**
+
 - Modify: `src/components/CommandPalette/CommandPalette.css`
 - Modify: `src/components/DeveloperSettings/DeveloperSettings.css`
 
@@ -39,6 +41,7 @@
 ### Task 3: 8-Direction (45° Angle Snap) Edge Routing & Precise Border Touching
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 - Modify: `src/primitives/edges/GraphEdge/computeEdgePath.ts`
 

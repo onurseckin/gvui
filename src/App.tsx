@@ -31,6 +31,7 @@ export const App: FC = () => {
       const stored = loadStoredViewport(fileId, signature);
 
       if (stored) {
+        const collapsedSet = new Set(stored.collapsedNodeIds ?? []);
         useGraphStore.setState({
           dataset: data,
           currentFile: fileId,
@@ -38,6 +39,7 @@ export const App: FC = () => {
           panOffset: stored.panOffset,
           selectedNodeId: initialNodeId ?? stored.selectedNodeId,
           layoutMode: stored.layoutMode,
+          collapsedNodeIds: collapsedSet,
           shouldAutoFit: false,
         });
       } else {
@@ -45,6 +47,7 @@ export const App: FC = () => {
           dataset: data,
           currentFile: fileId,
           selectedNodeId: initialNodeId ?? null,
+          collapsedNodeIds: new Set<string>(),
           shouldAutoFit: true,
         });
       }
@@ -118,6 +121,7 @@ export const App: FC = () => {
     const stored = loadStoredViewport(fileId, signature);
 
     if (stored) {
+      const collapsedSet = new Set(stored.collapsedNodeIds ?? []);
       useGraphStore.setState({
         dataset,
         currentFile: fileId,
@@ -125,6 +129,7 @@ export const App: FC = () => {
         panOffset: stored.panOffset,
         selectedNodeId: stored.selectedNodeId,
         layoutMode: stored.layoutMode,
+        collapsedNodeIds: collapsedSet,
         shouldAutoFit: false,
       });
     } else {
@@ -132,6 +137,7 @@ export const App: FC = () => {
         dataset,
         currentFile: fileId,
         selectedNodeId: null,
+        collapsedNodeIds: new Set<string>(),
         shouldAutoFit: true,
       });
     }

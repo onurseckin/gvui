@@ -66,8 +66,18 @@ export const GraphCanvas: FC = () => {
       panOffset,
       selectedNodeId,
       layoutMode,
+      collapsedNodeIds: Array.from(collapsedNodeIds),
     });
-  }, [dataset, currentFile, zoomLevel, panOffset, selectedNodeId, layoutMode, shouldAutoFit]);
+  }, [
+    dataset,
+    currentFile,
+    zoomLevel,
+    panOffset,
+    selectedNodeId,
+    layoutMode,
+    collapsedNodeIds,
+    shouldAutoFit,
+  ]);
 
   const hiddenNodeIds = useMemo(() => {
     if (collapsedNodeIds.size === 0) return new Set<string>();

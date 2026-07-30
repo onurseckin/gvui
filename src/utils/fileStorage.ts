@@ -7,6 +7,7 @@ export interface SavedFileViewport {
   panOffset: { x: number; y: number };
   selectedNodeId: string | null;
   layoutMode: LayoutMode;
+  collapsedNodeIds?: string[];
 }
 
 const STORAGE_PREFIX = "gvui_viewport_";
@@ -54,6 +55,13 @@ function isSavedFileViewport(obj: unknown): obj is SavedFileViewport {
   if (
     typeof candidate.layoutMode !== "string" ||
     !["top-down", "left-right", "force", "radial"].includes(candidate.layoutMode)
+  ) {
+    return false;
+  }
+  if (
+    candidate.collapsedNodeIds !== undefined &&
+    (!Array.isArray(candidate.collapsedNodeIds) ||
+      !candidate.collapsedNodeIds.every((id) => typeof id === "string"))
   ) {
     return false;
   }
