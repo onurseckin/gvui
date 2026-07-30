@@ -11,6 +11,7 @@
 ### Task 1: Refactor `SearchHeader.tsx` Click Handler & Event Bubbling Prevention
 
 **Files:**
+
 - Modify: `src/components/Controls/SearchHeader.tsx`
 - Modify: `src/ui/molecules/SearchInput/index.tsx`
 
