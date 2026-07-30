@@ -11,6 +11,49 @@ export interface Point2D {
   y: number;
 }
 
+export type NodeSide = "Top" | "Right" | "Bottom" | "Left";
+
+/**
+ * Determines departure or arrival side of node (Top, Right, Bottom, Left)
+ * based on center-to-center angle theta = atan2(dy, dx) in radians.
+ * Angle ranges in radians:
+ * - Right:  [-pi/4, pi/4)
+ * - Bottom: [pi/4, 3*pi/4)
+ * - Left:   [3*pi/4, pi] or [-pi, -3*pi/4)
+ * - Top:    [-3*pi/4, -pi/4)
+ */
+export function getSideFromAngle(theta: number): NodeSide {
+  if (theta >= -Math.PI / 4 && theta < Math.PI / 4) {
+    return "Right";
+  } else if (theta >= Math.PI / 4 && theta < (3 * Math.PI) / 4) {
+    return "Bottom";
+  } else if (theta >= (-3 * Math.PI) / 4 && theta < -Math.PI / 4) {
+    return "Top";
+  } else {
+    return "Left";
+  }
+}
+
+/**
+ * Calculates exact port coordinate on node boundary given fractional offset alpha = i / (m + 1).
+ */
+export function calculatePortPosition(
+  node: { x: number; y: number; width: number; height: number },
+  side: NodeSide,
+  alpha: number,
+): Point2D {
+  switch (side) {
+    case "Top":
+      return { x: node.x + alpha * node.width, y: node.y };
+    case "Bottom":
+      return { x: node.x + alpha * node.width, y: node.y + node.height };
+    case "Left":
+      return { x: node.x, y: node.y + alpha * node.height };
+    case "Right":
+      return { x: node.x + node.width, y: node.y + alpha * node.height };
+  }
+}
+
 /**
  * Calculates dynamic node dimensions based on node content (title, badges, tools, description)
  * to prevent node overlapping in graph layout rendering.
@@ -404,6 +447,97 @@ export function computeDagreLayout(
 
   const edgeNormals: Array<Point2D | undefined> = [];
 
+  // Mathematical Multi-Port Equal Spacing Pass
+  const sourcePorts = new Map<number, Point2D>();
+  const targetPorts = new Map<number, Point2D>();
+
+  interface SideAttachment {
+    edgeIndex: number;
+    isSource: boolean;
+    otherNodeCenter: Point2D;
+  }
+
+  const nodeSideAttachments = new Map<string, SideAttachment[]>();
+
+  dataset.edges.forEach((edge, edgeIdx) => {
+    const srcNode = positionedNodesMap.get(edge.source);
+    const tgtNode = positionedNodesMap.get(edge.target);
+
+    if (srcNode && tgtNode) {
+      const srcCx = srcNode.x + srcNode.width / 2;
+      const srcCy = srcNode.y + srcNode.height / 2;
+      const tgtCx = tgtNode.x + tgtNode.width / 2;
+      const tgtCy = tgtNode.y + tgtNode.height / 2;
+
+      let srcSide: NodeSide;
+      let tgtSide: NodeSide;
+
+      if (edge.source === edge.target) {
+        srcSide = "Right";
+        tgtSide = "Top";
+      } else {
+        const dx = tgtCx - srcCx;
+        const dy = tgtCy - srcCy;
+        const thetaSrc = Math.atan2(dy, dx);
+        const thetaTgt = Math.atan2(-dy, -dx);
+
+        srcSide = getSideFromAngle(thetaSrc);
+        tgtSide = getSideFromAngle(thetaTgt);
+      }
+
+      const srcKey = `${srcNode.id}:::${srcSide}`;
+      const tgtKey = `${tgtNode.id}:::${tgtSide}`;
+
+      const srcGroup = nodeSideAttachments.get(srcKey) ?? [];
+      srcGroup.push({
+        edgeIndex: edgeIdx,
+        isSource: true,
+        otherNodeCenter: { x: tgtCx, y: tgtCy },
+      });
+      nodeSideAttachments.set(srcKey, srcGroup);
+
+      const tgtGroup = nodeSideAttachments.get(tgtKey) ?? [];
+      tgtGroup.push({
+        edgeIndex: edgeIdx,
+        isSource: false,
+        otherNodeCenter: { x: srcCx, y: srcCy },
+      });
+      nodeSideAttachments.set(tgtKey, tgtGroup);
+    }
+  });
+
+  nodeSideAttachments.forEach((attachments, key) => {
+    const [nodeId, sideStr] = key.split(":::");
+    const side = sideStr as NodeSide;
+    const node = positionedNodesMap.get(nodeId);
+    if (!node) return;
+
+    attachments.sort((a, b) => {
+      if (side === "Top" || side === "Bottom") {
+        const diffX = a.otherNodeCenter.x - b.otherNodeCenter.x;
+        if (Math.abs(diffX) > 0.001) return diffX;
+        return a.edgeIndex - b.edgeIndex;
+      } else {
+        const diffY = a.otherNodeCenter.y - b.otherNodeCenter.y;
+        if (Math.abs(diffY) > 0.001) return diffY;
+        return a.edgeIndex - b.edgeIndex;
+      }
+    });
+
+    const m = attachments.length;
+    attachments.forEach((att, k) => {
+      const i = k + 1;
+      const alpha = i / (m + 1);
+      const portPos = calculatePortPosition(node, side, alpha);
+
+      if (att.isSource) {
+        sourcePorts.set(att.edgeIndex, portPos);
+      } else {
+        targetPorts.set(att.edgeIndex, portPos);
+      }
+    });
+  });
+
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, edgeIdx) => {
     const dagreEdge = g.edge(edge.source, edge.target, edge.id) as
       | { points?: Array<{ x: number; y: number }> }
@@ -419,8 +553,17 @@ export function computeDagreLayout(
     const srcNode = positionedNodesMap.get(edge.source);
     const tgtNode = positionedNodesMap.get(edge.target);
 
-    // If points from dagre are empty or insufficient, construct direct segment between centers
-    if (points.length < 2 && srcNode && tgtNode) {
+    const startPort = sourcePorts.get(edgeIdx);
+    const endPort = targetPorts.get(edgeIdx);
+
+    if (startPort && endPort) {
+      if (points.length >= 2) {
+        points[0] = { ...startPort };
+        points[points.length - 1] = { ...endPort };
+      } else {
+        points = [{ ...startPort }, { ...endPort }];
+      }
+    } else if (points.length < 2 && srcNode && tgtNode) {
       const srcCx = srcNode.x + srcNode.width / 2;
       const srcCy = srcNode.y + srcNode.height / 2;
       const tgtCx = tgtNode.x + tgtNode.width / 2;
@@ -464,7 +607,7 @@ export function computeDagreLayout(
     points = snapPolyline8Dir(points);
 
     if (points.length >= 2) {
-      if (srcNode) {
+      if (!startPort && srcNode) {
         let targetForSrc: Point2D | undefined;
         for (let i = 1; i < points.length; i++) {
           const p = points[i];
@@ -486,7 +629,7 @@ export function computeDagreLayout(
         }
       }
 
-      if (tgtNode) {
+      if (!endPort && tgtNode) {
         let sourceForTgt: Point2D | undefined;
         for (let i = points.length - 2; i >= 0; i--) {
           const p = points[i];
