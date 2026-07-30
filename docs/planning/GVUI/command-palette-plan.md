@@ -11,6 +11,7 @@
 ### Task 1: Store & Centering Navigation Helpers (`centerNodeInCanvas`)
 
 **Files:**
+
 - Modify: `src/state/useGraphStore.ts`
 - Modify: `src/engine/GraphCanvas/usePanZoom.ts` or helper
 
@@ -25,6 +26,7 @@
 ### Task 2: Command Palette Modal Component (`src/components/CommandPalette/`)
 
 **Files:**
+
 - Create: `src/components/CommandPalette/CommandPalette.types.ts`
 - Create: `src/components/CommandPalette/CommandPalette.css`
 - Create: `src/components/CommandPalette/index.tsx`
@@ -44,6 +46,7 @@
 ### Task 3: Integrate Command Palette Modal & Global Hotkey in App Header
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/Controls/SearchHeader.tsx`
 - Modify: `src/ui/molecules/SearchInput/index.tsx`

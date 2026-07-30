@@ -3,9 +3,17 @@ import { useGraphStore } from "../../state/useGraphStore";
 import { SearchInput } from "../../ui";
 import "./Controls.css";
 
-export const SearchHeader: FC = () => {
+export interface SearchHeaderProps {
+  onOpenCommandPalette?: () => void;
+}
+
+export const SearchHeader: FC<SearchHeaderProps> = ({ onOpenCommandPalette }) => {
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const setSearchQuery = useGraphStore((state) => state.setSearchQuery);
+
+  const handleClickOrFocus = () => {
+    onOpenCommandPalette?.();
+  };
 
   return (
     <div className="search-header-container">
@@ -13,6 +21,8 @@ export const SearchHeader: FC = () => {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onClear={() => setSearchQuery("")}
+        onClick={handleClickOrFocus}
+        onFocus={handleClickOrFocus}
         placeholder="Search nodes..."
         fullWidth
       />

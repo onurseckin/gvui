@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { CommandPalette } from "./components/CommandPalette";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
 import { SearchHeader } from "./components/Controls/SearchHeader";
 import { Sidebar } from "./components/Sidebar";
@@ -12,9 +13,11 @@ import "./index.css";
 export const App: FC = () => {
   const [currentFile, setCurrentFile] = useState<string>("ai_agent_trace.json");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const setDataset = useGraphStore((state) => state.setDataset);
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
+  const centerNodeOnCanvas = useGraphStore((state) => state.centerNodeOnCanvas);
 
   const loadGraphFile = useCallback(
     async (fileId: string, initialNodeId?: string | null) => {
@@ -32,6 +35,38 @@ export const App: FC = () => {
       }
     },
     [setDataset, setSelectedNodeId],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const handleNavigateNode = useCallback(
+    async (fileId: string, nodeId: string) => {
+      if (fileId !== currentFile) {
+        await loadGraphFile(fileId, nodeId);
+      }
+      centerNodeOnCanvas(nodeId);
+
+      const params = new URLSearchParams(window.location.search);
+      params.set("graph", fileId);
+      params.set("node", nodeId);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, "", newUrl);
+
+      setIsCommandPaletteOpen(false);
+    },
+    [currentFile, loadGraphFile, centerNodeOnCanvas],
   );
 
   useEffect(() => {
@@ -80,7 +115,7 @@ export const App: FC = () => {
         </div>
         <div className="navbar-right">
           <CanvasToolbar />
-          <SearchHeader />
+          <SearchHeader onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
         </div>
       </header>
       <div className="app-body">
@@ -97,6 +132,12 @@ export const App: FC = () => {
           </div>
         </main>
       </div>
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        currentFile={currentFile}
+        onNavigateNode={handleNavigateNode}
+      />
     </div>
   );
 };

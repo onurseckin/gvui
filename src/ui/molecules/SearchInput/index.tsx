@@ -17,6 +17,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       hotkeyText = "⌘ + K",
       className = "",
       disabled = false,
+      onClick,
+      onFocus,
       ...props
     },
     ref,
@@ -107,6 +109,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           value={value}
           defaultValue={defaultValue}
           onChange={handleChange}
+          onClick={onClick}
+          onFocus={onFocus}
           placeholder={placeholder}
           size={size}
           fullWidth={fullWidth}
