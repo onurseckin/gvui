@@ -1,0 +1,63 @@
+{
+  "id": "cyclic-mesh-01",
+  "title": "Microservices Cyclic Dependency Mesh",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "mesh-gw",
+      "name": "API Gateway",
+      "type": "gateway",
+      "description": "Ingress proxy & authentication router",
+      "badges": [
+        { "label": "Status: Healthy", "variant": "success" },
+        { "label": "RPS: 12.4k", "variant": "info" }
+      ]
+    },
+    {
+      "id": "mesh-auth",
+      "name": "Auth Service",
+      "type": "service",
+      "description": "JWT validation & user sessions",
+      "badges": [
+        { "label": "Status: Healthy", "variant": "success" },
+        { "label": "Latency: 12ms", "variant": "info" }
+      ]
+    },
+    {
+      "id": "mesh-user",
+      "name": "User Service",
+      "type": "service",
+      "description": "User profile management",
+      "badges": [
+        { "label": "Status: Degrading", "variant": "amber" },
+        { "label": "Latency: 145ms", "variant": "amber" }
+      ]
+    },
+    {
+      "id": "mesh-payment",
+      "name": "Payment Gateway",
+      "type": "service",
+      "description": "Stripe & PayPal transactions",
+      "badges": [
+        { "label": "Status: Healthy", "variant": "success" }
+      ]
+    },
+    {
+      "id": "mesh-cache",
+      "name": "Redis Cluster",
+      "type": "datastore",
+      "description": "Distributed cache layer",
+      "badges": [
+        { "label": "Hit Ratio: 94%", "variant": "success" }
+      ]
+    }
+  ],
+  "edges": [
+    { "id": "me1", "source": "mesh-gw", "target": "mesh-auth", "label": "validates token" },
+    { "id": "me2", "source": "mesh-gw", "target": "mesh-user", "label": "routes request" },
+    { "id": "me3", "source": "mesh-user", "target": "mesh-auth", "label": "verifies permissions", "isCycle": true },
+    { "id": "me4", "source": "mesh-user", "target": "mesh-cache", "label": "cache lookup" },
+    { "id": "me5", "source": "mesh-user", "target": "mesh-payment", "label": "triggers checkout" },
+    { "id": "me6", "source": "mesh-payment", "target": "mesh-user", "label": "updates order status", "isCycle": true }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "id": "decision-tree-01",
+  "title": "Customer Risk Classification Decision Tree",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "dt-root",
+      "name": "1. Activity Check",
+      "type": "decision",
+      "description": "Evaluate user activity over the past 30 days",
+      "badges": [
+        { "label": "Feature: active_days_30d", "variant": "info" },
+        { "label": "Threshold: > 30 days", "variant": "gray" }
+      ],
+      "tools": [
+        { "name": "user_activity_query", "type": "generic" }
+      ]
+    },
+    {
+      "id": "dt-left1",
+      "name": "2. Revenue Check",
+      "type": "decision",
+      "description": "Evaluate annual recurring revenue (ARR)",
+      "badges": [
+        { "label": "Feature: arr_usd", "variant": "info" },
+        { "label": "Threshold: > $50,000", "variant": "amber" }
+      ],
+      "tools": [
+        { "name": "stripe_billing_fetch", "type": "custom" }
+      ]
+    },
+    {
+      "id": "dt-right1",
+      "name": "3. Support Ticket Audit",
+      "type": "decision",
+      "description": "Evaluate open critical support tickets",
+      "badges": [
+        { "label": "Feature: open_tickets", "variant": "info" },
+        { "label": "Threshold: > 5 tickets", "variant": "error" }
+      ],
+      "tools": [
+        { "name": "zendesk_api", "type": "generic" }
+      ]
+    },
+    {
+      "id": "dt-leaf1",
+      "name": "4. Enterprise Tier",
+      "type": "leaf",
+      "description": "Assign high-value enterprise status with dedicated support",
+      "badges": [
+        { "label": "Segment: Enterprise", "variant": "success" },
+        { "label": "Risk: Low", "variant": "success" }
+      ]
+    },
+    {
+      "id": "dt-leaf2",
+      "name": "5. Standard Tier",
+      "type": "leaf",
+      "description": "Assign standard tier account status",
+      "badges": [
+        { "label": "Segment: Standard", "variant": "info" },
+        { "label": "Risk: Low", "variant": "success" }
+      ]
+    },
+    {
+      "id": "dt-leaf3",
+      "name": "6. At-Risk Warning",
+      "type": "leaf",
+      "description": "Flag account for immediate customer success intervention",
+      "badges": [
+        { "label": "Segment: At-Risk", "variant": "error" },
+        { "label": "Action: Escalated", "variant": "amber" }
+      ]
+    },
+    {
+      "id": "dt-leaf4",
+      "name": "7. Dormant Account",
+      "type": "leaf",
+      "description": "Flag account as dormant for re-engagement campaign",
+      "badges": [
+        { "label": "Segment: Dormant", "variant": "gray" },
+        { "label": "Risk: Medium", "variant": "amber" }
+      ]
+    }
+  ],
+  "edges": [
+    { "id": "e-root-left", "source": "dt-root", "target": "dt-left1", "label": "Active (Yes)" },
+    { "id": "e-root-right", "source": "dt-root", "target": "dt-right1", "label": "Inactive (No)" },
+    { "id": "e-left-leaf1", "source": "dt-left1", "target": "dt-leaf1", "label": "ARR > $50k" },
+    { "id": "e-left-leaf2", "source": "dt-left1", "target": "dt-leaf2", "label": "ARR <= $50k" },
+    { "id": "e-right-leaf3", "source": "dt-right1", "target": "dt-leaf3", "label": "Tickets > 5" },
+    { "id": "e-right-leaf4", "source": "dt-right1", "target": "dt-leaf4", "label": "Tickets <= 5" }
+  ]
+}
