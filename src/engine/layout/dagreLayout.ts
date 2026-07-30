@@ -6,6 +6,11 @@ import type {
   PositionedNode,
 } from "../../types/graphData";
 
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
 /**
  * Calculates dynamic node dimensions based on node content (title, badges, tools, description)
  * to prevent node overlapping in graph layout rendering.
@@ -111,7 +116,7 @@ export function calculateNodeDimensions(node: GraphNodeData): { width: number; h
 /**
  * Builds an SVG path string from an array of 2D points.
  */
-function buildSvgPath(points: Array<{ x: number; y: number }>): string {
+export function buildSvgPath(points: Point2D[]): string {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
@@ -125,10 +130,7 @@ function buildSvgPath(points: Array<{ x: number; y: number }>): string {
 /**
  * Clips a ray from the center of a node rectangle towards a target point to the node's boundary rectangle.
  */
-function clipPointToNodeRect(
-  node: PositionedNode,
-  targetPoint: { x: number; y: number },
-): { x: number; y: number } {
+export function clipPointToNodeRect(node: PositionedNode, targetPoint: Point2D): Point2D {
   const cx = node.x + node.width / 2;
   const cy = node.y + node.height / 2;
 
@@ -167,10 +169,105 @@ function clipPointToNodeRect(
   };
 }
 
+/**
+ * Converts a single 2D vector segment (p1 -> p2) into 1 or 2 sub-segments aligned strictly
+ * to the nearest 45° angle (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°).
+ */
+export function snapSegmentTo8Dir(p1: Point2D, p2: Point2D): Point2D[] {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  if (Math.hypot(dx, dy) < 0.001) {
+    return [{ ...p1 }];
+  }
+
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx < 0.001 || absDy < 0.001 || Math.abs(absDx - absDy) < 0.001) {
+    return [{ ...p1 }, { ...p2 }];
+  }
+
+  const signX = Math.sign(dx);
+  const signY = Math.sign(dy);
+
+  if (absDx > absDy) {
+    const midPoint: Point2D = {
+      x: p1.x + signX * absDy,
+      y: p2.y,
+    };
+    return [{ ...p1 }, midPoint, { ...p2 }];
+  } else {
+    const midPoint: Point2D = {
+      x: p2.x,
+      y: p1.y + signY * absDx,
+    };
+    return [{ ...p1 }, midPoint, { ...p2 }];
+  }
+}
+
+/**
+ * Simplifies a polyline by removing collinear points along identical directional vectors.
+ */
+function simplifyPolyline(points: Point2D[]): Point2D[] {
+  if (points.length <= 2) return points;
+
+  const simplified: Point2D[] = [points[0]];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = simplified[simplified.length - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    const dx1 = curr.x - prev.x;
+    const dy1 = curr.y - prev.y;
+    const dx2 = next.x - curr.x;
+    const dy2 = next.y - curr.y;
+
+    const crossProduct = dx1 * dy2 - dy1 * dx2;
+    const dotProduct = dx1 * dx2 + dy1 * dy2;
+
+    if (Math.abs(crossProduct) < 0.001 && dotProduct > 0) {
+      continue;
+    }
+
+    simplified.push(curr);
+  }
+
+  simplified.push(points[points.length - 1]);
+  return simplified;
+}
+
+/**
+ * Converts a multi-point polyline into an 8-direction (45° angle snapped) polyline,
+ * collapsing redundant collinear or duplicate points.
+ */
+export function snapPolyline8Dir(points: Point2D[]): Point2D[] {
+  if (points.length < 2) return points;
+
+  const result: Point2D[] = [];
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const segPoints = snapSegmentTo8Dir(points[i], points[i + 1]);
+    for (const pt of segPoints) {
+      if (result.length === 0) {
+        result.push(pt);
+      } else {
+        const lastPt = result[result.length - 1];
+        if (Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y) > 0.001) {
+          result.push(pt);
+        }
+      }
+    }
+  }
+
+  return simplifyPolyline(result);
+}
+
 export interface PathMidpointResult {
   x: number;
   y: number;
-  normal: { x: number; y: number };
+  normal: Point2D;
 }
 
 /**
@@ -178,7 +275,7 @@ export interface PathMidpointResult {
  * Finds the exact point (x, y) at distance s = L / 2 along the path (50% total path length),
  * along with the perpendicular unit normal vector to the segment containing the midpoint.
  */
-export function findTotalPathMidpoint(points: Array<{ x: number; y: number }>): PathMidpointResult {
+export function findTotalPathMidpoint(points: Point2D[]): PathMidpointResult {
   if (points.length === 0) {
     return { x: 0, y: 0, normal: { x: 0, y: 1 } };
   }
@@ -222,7 +319,7 @@ export function findTotalPathMidpoint(points: Array<{ x: number; y: number }>): 
       const dy = p2.y - p1.y;
       const segLen = len > 0 ? len : Math.hypot(dx, dy);
 
-      let normal = { x: 0, y: 1 };
+      let normal: Point2D = { x: 0, y: 1 };
       if (segLen > 0) {
         normal = { x: -dy / segLen, y: dx / segLen };
       }
@@ -305,19 +402,19 @@ export function computeDagreLayout(
     });
   });
 
-  const edgeNormals: Array<{ x: number; y: number } | undefined> = [];
+  const edgeNormals: Array<Point2D | undefined> = [];
 
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, edgeIdx) => {
     const dagreEdge = g.edge(edge.source, edge.target, edge.id) as
       | { points?: Array<{ x: number; y: number }> }
       | undefined;
     const rawPoints = dagreEdge?.points ?? [];
-    let points: Array<{ x: number; y: number }> = rawPoints.map((p) => ({ x: p.x, y: p.y }));
+    let points: Point2D[] = rawPoints.map((p) => ({ x: p.x, y: p.y }));
 
     let path = "";
     let labelX: number | undefined;
     let labelY: number | undefined;
-    let normal: { x: number; y: number } | undefined;
+    let normal: Point2D | undefined;
 
     const srcNode = positionedNodesMap.get(edge.source);
     const tgtNode = positionedNodesMap.get(edge.target);
@@ -363,9 +460,12 @@ export function computeDagreLayout(
       }
     }
 
+    // Snap vector segments to 8 cardinal/intercardinal 45° angles
+    points = snapPolyline8Dir(points);
+
     if (points.length >= 2) {
       if (srcNode) {
-        let targetForSrc: { x: number; y: number } | undefined;
+        let targetForSrc: Point2D | undefined;
         for (let i = 1; i < points.length; i++) {
           const p = points[i];
           const isInsideSrc =
@@ -387,7 +487,7 @@ export function computeDagreLayout(
       }
 
       if (tgtNode) {
-        let sourceForTgt: { x: number; y: number } | undefined;
+        let sourceForTgt: Point2D | undefined;
         for (let i = points.length - 2; i >= 0; i--) {
           const p = points[i];
           const isInsideTgt =
@@ -408,6 +508,9 @@ export function computeDagreLayout(
         }
       }
 
+      // Re-snap polyline so start/end segments connected to clipped border points maintain 8-direction routing
+      points = snapPolyline8Dir(points);
+
       path = buildSvgPath(points);
       const midResult = findTotalPathMidpoint(points);
       labelX = midResult.x;
@@ -425,7 +528,7 @@ export function computeDagreLayout(
     };
   });
 
-  // 2D edge badge collision detection and offset pass
+  // 2D edge badge & path midpoint repulsion and collision avoidance pass
   const MAX_COLLISION_PASSES = 15;
   for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
     let hasCollision = false;
@@ -463,6 +566,38 @@ export function computeDagreLayout(
             dy = Math.abs(e2.labelY - e1.labelY);
             steps++;
           }
+        }
+      }
+
+      // Repel edge badge from node bounding boxes if overlapping
+      for (const node of positionedNodes) {
+        const badgeLeft = e1.labelX - 42;
+        const badgeRight = e1.labelX + 42;
+        const badgeTop = e1.labelY - 17;
+        const badgeBottom = e1.labelY + 17;
+
+        const nodeLeft = node.x - 8;
+        const nodeRight = node.x + node.width + 8;
+        const nodeTop = node.y - 8;
+        const nodeBottom = node.y + node.height + 8;
+
+        if (
+          badgeRight > nodeLeft &&
+          badgeLeft < nodeRight &&
+          badgeBottom > nodeTop &&
+          badgeTop < nodeBottom
+        ) {
+          hasCollision = true;
+          const nodeCx = node.x + node.width / 2;
+          const nodeCy = node.y + node.height / 2;
+
+          let rdx = e1.labelX - nodeCx;
+          let rdy = e1.labelY - nodeCy;
+          if (rdx === 0 && rdy === 0) rdx = 1;
+          const rlen = Math.hypot(rdx, rdy);
+
+          e1.labelX += (rdx / rlen) * 24;
+          e1.labelY += (rdy / rlen) * 24;
         }
       }
     }

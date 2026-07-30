@@ -1,3 +1,10 @@
+import {
+  buildSvgPath,
+  findTotalPathMidpoint,
+  snapPolyline8Dir,
+  type Point2D,
+} from "../../../engine/layout/dagreLayout";
+
 export type EdgePathType = "straight" | "smoothstep" | "bezier";
 
 export interface ComputeEdgePathOptions {
@@ -20,6 +27,11 @@ export function computeEdgePath({
   let midX = (sourceX + targetX) / 2;
   let midY = (sourceY + targetY) / 2;
 
+  let points: Point2D[] = [
+    { x: sourceX, y: sourceY },
+    { x: targetX, y: targetY },
+  ];
+
   if (offset !== 0) {
     const dx = targetX - sourceX;
     const dy = targetY - sourceY;
@@ -29,21 +41,22 @@ export function computeEdgePath({
       const ny = dx / len;
       midX += offset * nx;
       midY += offset * ny;
+      points = [
+        { x: sourceX, y: sourceY },
+        { x: midX, y: midY },
+        { x: targetX, y: targetY },
+      ];
     }
   }
 
-  if (pathType === "straight") {
-    if (offset !== 0) {
-      return {
-        path: `M ${sourceX} ${sourceY} Q ${midX} ${midY} ${targetX} ${targetY}`,
-        labelX: midX,
-        labelY: midY,
-      };
-    }
+  if (pathType === "straight" || pathType === "smoothstep") {
+    const snappedPoints = snapPolyline8Dir(points);
+    const path = buildSvgPath(snappedPoints);
+    const midResult = findTotalPathMidpoint(snappedPoints);
     return {
-      path: `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`,
-      labelX: midX,
-      labelY: midY,
+      path,
+      labelX: midResult.x,
+      labelY: midResult.y,
     };
   }
 
@@ -58,24 +71,8 @@ export function computeEdgePath({
     return { path, labelX: midX, labelY: midY };
   }
 
-  const borderRadius = 8;
-  const dirY = targetY > sourceY ? 1 : -1;
-  const dirX = targetX > sourceX ? 1 : -1;
-  const r = Math.min(
-    borderRadius,
-    Math.abs(targetX - sourceX) / 2,
-    Math.abs(targetY - sourceY) / 2,
-  );
-
-  if (Math.abs(sourceX - targetX) < 1) {
-    return {
-      path: `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`,
-      labelX: midX,
-      labelY: midY,
-    };
-  }
-
-  const path = `M ${sourceX} ${sourceY} L ${sourceX} ${midY - dirY * r} Q ${sourceX} ${midY} ${sourceX + dirX * r} ${midY} L ${targetX - dirX * r} ${midY} Q ${targetX} ${midY} ${targetX} ${midY + dirY * r} L ${targetX} ${targetY}`;
-
-  return { path, labelX: midX, labelY: midY };
+  const snappedPoints = snapPolyline8Dir(points);
+  const path = buildSvgPath(snappedPoints);
+  const midResult = findTotalPathMidpoint(snappedPoints);
+  return { path, labelX: midResult.x, labelY: midResult.y };
 }
