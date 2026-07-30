@@ -1,7 +1,6 @@
 import type { FC } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
-import { FilterChips } from "./components/Controls/FilterChips";
 import { SearchHeader } from "./components/Controls/SearchHeader";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
@@ -70,7 +69,6 @@ export const App: FC = () => {
       <main className="app-main">
         <header className="top-controls-bar">
           <SearchHeader />
-          <FilterChips />
         </header>
         <div className="canvas-wrapper">
           <GraphCanvas />

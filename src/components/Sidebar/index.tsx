@@ -1,5 +1,4 @@
 import type { ChangeEvent, FC } from "react";
-import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphDataset } from "../../types/graphData";
 import "./Sidebar.css";
 
@@ -16,8 +15,6 @@ interface SidebarProps {
 }
 
 export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCustomUpload }) => {
-  const dataset = useGraphStore((state) => state.dataset);
-
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -42,7 +39,7 @@ export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCusto
   return (
     <aside className="sidebar-container">
       <div className="sidebar-header">
-        <h2 className="sidebar-title">GVUI Graph Studio</h2>
+        <h2 className="sidebar-title">GVUI</h2>
       </div>
 
       <div className="sidebar-section">
@@ -69,29 +66,6 @@ export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCusto
           📁 Upload JSON File
           <input type="file" accept=".json" onChange={handleFileUpload} className="upload-input" />
         </label>
-      </div>
-
-      <div className="sidebar-section metadata-section">
-        <h3 className="sidebar-section-title">Graph Summary</h3>
-        {dataset ? (
-          <div className="metadata-card">
-            <div className="metadata-title">{dataset.title || dataset.id}</div>
-            <div className="metadata-stat">
-              <span>Nodes:</span>
-              <strong>{dataset.nodes.length}</strong>
-            </div>
-            <div className="metadata-stat">
-              <span>Edges:</span>
-              <strong>{dataset.edges.length}</strong>
-            </div>
-            <div className="metadata-stat">
-              <span>Directed:</span>
-              <strong>{dataset.directed ? "Yes" : "No"}</strong>
-            </div>
-          </div>
-        ) : (
-          <div className="metadata-empty">No dataset loaded</div>
-        )}
       </div>
     </aside>
   );
