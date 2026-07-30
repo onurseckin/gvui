@@ -11,6 +11,7 @@
 ### Task 1: Dataset Signature & LocalStorage Persistence Utility (`src/utils/fileStorage.ts`)
 
 **Files:**
+
 - Create: `src/utils/fileStorage.ts`
 
 - [ ] **Step 1: Implement deterministic dataset content hashing `generateDatasetSignature(dataset: GraphDataset): string`**
@@ -25,6 +26,7 @@
 ### Task 2: Integrate Viewport Persistence & Auto-Fit Default in App & Store
 
 **Files:**
+
 - Modify: `src/state/useGraphStore.ts`
 - Modify: `src/App.tsx`
 - Modify: `src/engine/GraphCanvas/index.tsx`
