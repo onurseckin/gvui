@@ -11,6 +11,7 @@
 ### Task 1: Remove Inline `minHeight` & Set `height: auto` in NodeCard
 
 **Files:**
+
 - Modify: `src/primitives/nodes/NodeCard/index.tsx`
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 
@@ -28,6 +29,7 @@
 ### Task 2: Align Dagre Layout Bounding Box Math with Compact Rendered Height
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 
 - [ ] **Step 1: Recalculate Dagre node height to match true compact DOM rendered height**
