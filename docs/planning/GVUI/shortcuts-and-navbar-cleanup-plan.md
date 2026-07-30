@@ -11,6 +11,7 @@
 ### Task 1: Register Keyboard Shortcuts (`F` for Fit View, `R` for Reset View)
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/Controls/CanvasToolbar.tsx`
 
@@ -27,6 +28,7 @@
 ### Task 2: Top Navbar Icon Styling & Remove GVUI Title/Divider
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/index.css`
 - Modify: `src/components/Controls/Controls.css`

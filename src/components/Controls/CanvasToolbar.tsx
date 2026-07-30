@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { useCallback, useEffect, type FC } from "react";
 import { useGraphStore } from "../../state/useGraphStore";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import { Button, LayoutSelectDropdown } from "../../ui";
@@ -18,7 +18,7 @@ export const CanvasToolbar: FC = () => {
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.2, 3.0));
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.2, 0.25));
 
-  const handleFitView = () => {
+  const handleFitView = useCallback(() => {
     if (positionedNodes.length === 0) {
       resetViewport();
       return;
@@ -53,7 +53,31 @@ export const CanvasToolbar: FC = () => {
 
     setZoomLevel(fitScale);
     setPanOffset({ x: panX, y: panY });
-  };
+  }, [positionedNodes, resetViewport, setPanOffset, setZoomLevel]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      const isModalOpen = Boolean(document.querySelector('[role="dialog"]'));
+
+      if (isInput || isModalOpen || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        handleFitView();
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        resetViewport();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleFitView, resetViewport]);
 
   const handleExportHtml = () => {
     if (dataset) {
@@ -79,7 +103,7 @@ export const CanvasToolbar: FC = () => {
         variant="outline"
         size="sm"
         onClick={handleFitView}
-        title="Fit View"
+        title="Fit View (F)"
         className="toolbar-btn"
       >
         🎯 Fit
@@ -89,7 +113,7 @@ export const CanvasToolbar: FC = () => {
         variant="outline"
         size="sm"
         onClick={resetViewport}
-        title="Reset View"
+        title="Reset View (R)"
         className="toolbar-btn"
       >
         ↺ Reset
