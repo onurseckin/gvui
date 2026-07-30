@@ -545,6 +545,14 @@ export function computeDagreLayout(
       if (edge.source === edge.target) {
         srcSide = "Right";
         tgtSide = "Top";
+      } else if (edge.isCycle) {
+        if (tgtCx <= srcCx) {
+          srcSide = "Left";
+          tgtSide = "Left";
+        } else {
+          srcSide = "Right";
+          tgtSide = "Right";
+        }
       } else if (layoutMode === "top-down") {
         const dy = tgtCy - srcCy;
         const dx = tgtCx - srcCx;
@@ -661,11 +669,21 @@ export function computeDagreLayout(
       const startStub = createPortStub(startPort, srcSide, 16);
       const endStub = createPortStub(endPort, tgtSide, 16);
 
-      // If loopback/cycle edge, sweep outward to prevent routing through node bodies
+      // If loopback/cycle edge, sweep cleanly around the outer left or right flank
       if (edge.isCycle || edge.source === edge.target) {
-        const sweepX = Math.max(startPort.x, endPort.x) + 80;
-        const sweepStubStart: Point2D = { x: sweepX, y: startPort.y };
-        const sweepStubEnd: Point2D = { x: sweepX, y: endPort.y };
+        const isLeftFlank =
+          srcNode && tgtNode
+            ? startPort.x <= srcNode.x + srcNode.width / 2
+            : startPort.x <= endPort.x;
+        const sweepX = isLeftFlank
+          ? Math.min(srcNode?.x ?? startPort.x, tgtNode?.x ?? endPort.x) - 60
+          : Math.max(
+              (srcNode?.x ?? startPort.x) + (srcNode?.width ?? 0),
+              (tgtNode?.x ?? endPort.x) + (tgtNode?.width ?? 0),
+            ) + 60;
+
+        const sweepStubStart: Point2D = { x: sweepX, y: startStub.y };
+        const sweepStubEnd: Point2D = { x: sweepX, y: endStub.y };
         points = [
           { ...startPort },
           startStub,
