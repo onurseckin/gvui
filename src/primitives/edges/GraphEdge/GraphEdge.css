@@ -65,13 +65,14 @@
 .edge-badge-rect.selected,
 .edge-badge-group.selected .edge-badge-rect {
   stroke: var(--accent-color, #818cf8);
-  fill: rgba(129, 140, 248, 0.2);
+  fill: #18181b;
 }
 
 .edge-badge-rect.cycle,
 .edge-badge-group.cycle .edge-badge-rect {
   stroke: #d97706;
-  fill: rgba(120, 53, 15, 0.4);
+  stroke-width: 1.5px;
+  fill: #18181b;
 }
 
 .edge-badge-text {
@@ -86,7 +87,8 @@
 
 .edge-badge-group.cycle .edge-badge-text,
 .edge-badge-rect.cycle + .edge-badge-text {
-  fill: #fde68a;
+  fill: #fbbf24;
+  font-weight: 600;
 }
 
 @keyframes edge-flow {
