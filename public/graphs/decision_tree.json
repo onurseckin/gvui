@@ -1,88 +1,55 @@
 {
   "id": "decision-tree-01",
-  "title": "Customer Risk Classification Decision Tree",
+  "title": "AI Model Routing & Tool Selection Tree",
   "directed": true,
   "nodes": [
     {
-      "id": "dt-root",
-      "name": "1. Activity Check",
-      "type": "decision",
-      "description": "Evaluate user activity over the past 30 days",
+      "id": "node-1",
+      "name": "1. Task Request Classifier",
+      "type": "start",
+      "description": "Evaluates prompt complexity and selects execution model tier",
       "badges": [
-        { "label": "Feature: active_days_30d", "variant": "info" },
-        { "label": "Threshold: > 30 days", "variant": "gray" }
-      ],
-      "tools": [{ "name": "user_activity_query", "type": "generic" }]
-    },
-    {
-      "id": "dt-left1",
-      "name": "2. Revenue Check",
-      "type": "decision",
-      "description": "Evaluate annual recurring revenue (ARR)",
-      "badges": [
-        { "label": "Feature: arr_usd", "variant": "info" },
-        { "label": "Threshold: > $50,000", "variant": "amber" }
-      ],
-      "tools": [{ "name": "stripe_billing_fetch", "type": "custom" }]
-    },
-    {
-      "id": "dt-right1",
-      "name": "3. Support Ticket Audit",
-      "type": "decision",
-      "description": "Evaluate open critical support tickets",
-      "badges": [
-        { "label": "Feature: open_tickets", "variant": "info" },
-        { "label": "Threshold: > 5 tickets", "variant": "error" }
-      ],
-      "tools": [{ "name": "zendesk_api", "type": "generic" }]
-    },
-    {
-      "id": "dt-leaf1",
-      "name": "4. Enterprise Tier",
-      "type": "leaf",
-      "description": "Assign high-value enterprise status with dedicated support",
-      "badges": [
-        { "label": "Segment: Enterprise", "variant": "success" },
-        { "label": "Risk: Low", "variant": "success" }
+        { "label": "Status: Evaluated", "variant": "info" },
+        { "label": "Latency: 45ms", "variant": "gray" }
       ]
     },
     {
-      "id": "dt-leaf2",
-      "name": "5. Standard Tier",
-      "type": "leaf",
-      "description": "Assign standard tier account status",
-      "badges": [
-        { "label": "Segment: Standard", "variant": "info" },
-        { "label": "Risk: Low", "variant": "success" }
-      ]
+      "id": "node-2",
+      "name": "2. Simple Query Router",
+      "type": "branch",
+      "description": "Routes low-complexity research lookups to Flash tier",
+      "badges": [{ "label": "Selected Tier: Flash", "variant": "success" }]
     },
     {
-      "id": "dt-leaf3",
-      "name": "6. At-Risk Warning",
-      "type": "leaf",
-      "description": "Flag account for immediate customer success intervention",
-      "badges": [
-        { "label": "Segment: At-Risk", "variant": "error" },
-        { "label": "Action: Escalated", "variant": "amber" }
-      ]
+      "id": "node-3",
+      "name": "3. Complex Reasoning Router",
+      "type": "branch",
+      "description": "Routes multi-file refactoring and architecture to Pro tier",
+      "badges": [{ "label": "Selected Tier: Pro", "variant": "amber" }]
     },
     {
-      "id": "dt-leaf4",
-      "name": "7. Dormant Account",
-      "type": "leaf",
-      "description": "Flag account as dormant for re-engagement campaign",
-      "badges": [
-        { "label": "Segment: Dormant", "variant": "gray" },
-        { "label": "Risk: Medium", "variant": "amber" }
-      ]
+      "id": "node-4",
+      "name": "4. Fast Research Worker",
+      "type": "agent",
+      "model": "gemini-3.6-flash",
+      "description": "Executes rapid grep search and file viewing tasks",
+      "badges": [{ "label": "Tokens: 1,200", "variant": "info" }],
+      "tools": [{ "name": "grep_search", "type": "generic" }]
+    },
+    {
+      "id": "node-5",
+      "name": "5. Deep Architecture Agent",
+      "type": "agent",
+      "model": "gemini-3.6-pro",
+      "description": "Performs deep structural refactoring and design plan analysis",
+      "badges": [{ "label": "Tokens: 8,400", "variant": "amber" }],
+      "tools": [{ "name": "writing-plans", "type": "custom" }]
     }
   ],
   "edges": [
-    { "id": "e-root-left", "source": "dt-root", "target": "dt-left1", "label": "Active (Yes)" },
-    { "id": "e-root-right", "source": "dt-root", "target": "dt-right1", "label": "Inactive (No)" },
-    { "id": "e-left-leaf1", "source": "dt-left1", "target": "dt-leaf1", "label": "ARR > $50k" },
-    { "id": "e-left-leaf2", "source": "dt-left1", "target": "dt-leaf2", "label": "ARR <= $50k" },
-    { "id": "e-right-leaf3", "source": "dt-right1", "target": "dt-leaf3", "label": "Tickets > 5" },
-    { "id": "e-right-leaf4", "source": "dt-right1", "target": "dt-leaf4", "label": "Tickets <= 5" }
+    { "id": "e1-2", "source": "node-1", "target": "node-2", "label": "simple query" },
+    { "id": "e1-3", "source": "node-1", "target": "node-3", "label": "complex reasoning" },
+    { "id": "e2-4", "source": "node-2", "target": "node-4" },
+    { "id": "e3-5", "source": "node-3", "target": "node-5" }
   ]
 }

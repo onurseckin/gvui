@@ -17,7 +17,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
   isSelected = false,
   onClick,
 }) => {
-  if (!label && !isCycle) {
+  const hasLabel = Boolean(label && label.trim().length > 0);
+  if (!hasLabel && !isCycle) {
     return null;
   }
 
