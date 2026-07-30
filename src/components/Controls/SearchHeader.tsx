@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { FC, MouseEvent } from "react";
 import { useGraphStore } from "../../state/useGraphStore";
 import { SearchInput } from "../../ui";
 import "./Controls.css";
@@ -11,7 +11,9 @@ export const SearchHeader: FC<SearchHeaderProps> = ({ onOpenCommandPalette }) =>
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const setSearchQuery = useGraphStore((state) => state.setSearchQuery);
 
-  const handleClickOrFocus = () => {
+  const handleClick = (e: MouseEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     onOpenCommandPalette?.();
   };
 
@@ -21,8 +23,8 @@ export const SearchHeader: FC<SearchHeaderProps> = ({ onOpenCommandPalette }) =>
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onClear={() => setSearchQuery("")}
-        onClick={handleClickOrFocus}
-        onFocus={handleClickOrFocus}
+        onClick={handleClick}
+        readOnly
         placeholder="Search nodes..."
         fullWidth
       />
