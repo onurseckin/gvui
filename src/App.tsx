@@ -8,34 +8,48 @@ import { GraphCanvas } from "./engine/GraphCanvas";
 import { useGraphStore } from "./state/useGraphStore";
 import type { GraphDataset } from "./types/graphData";
 import { Button } from "./ui";
+import { generateDatasetSignature, loadStoredViewport } from "./utils/fileStorage";
 import "./index.css";
 
 export const App: FC = () => {
-  const [currentFile, setCurrentFile] = useState<string>("ai_agent_trace.json");
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
-  const setDataset = useGraphStore((state) => state.setDataset);
+  const currentFile = useGraphStore((state) => state.currentFile);
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
-  const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
   const centerNodeOnCanvas = useGraphStore((state) => state.centerNodeOnCanvas);
 
-  const loadGraphFile = useCallback(
-    async (fileId: string, initialNodeId?: string | null) => {
-      try {
-        const res = await fetch(`/graphs/${fileId}`);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = (await res.json()) as GraphDataset;
-        setDataset(data);
-        setCurrentFile(fileId);
-        if (initialNodeId) {
-          setSelectedNodeId(initialNodeId);
-        }
-      } catch (err) {
-        console.error("Failed to load graph file:", err);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+
+  const loadGraphFile = useCallback(async (fileId: string, initialNodeId?: string | null) => {
+    try {
+      const res = await fetch(`/graphs/${fileId}`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = (await res.json()) as GraphDataset;
+
+      const signature = generateDatasetSignature(data);
+      const stored = loadStoredViewport(fileId, signature);
+
+      if (stored) {
+        useGraphStore.setState({
+          dataset: data,
+          currentFile: fileId,
+          zoomLevel: stored.zoomLevel,
+          panOffset: stored.panOffset,
+          selectedNodeId: initialNodeId ?? stored.selectedNodeId,
+          layoutMode: stored.layoutMode,
+          shouldAutoFit: false,
+        });
+      } else {
+        useGraphStore.setState({
+          dataset: data,
+          currentFile: fileId,
+          selectedNodeId: initialNodeId ?? null,
+          shouldAutoFit: true,
+        });
       }
-    },
-    [setDataset, setSelectedNodeId],
-  );
+    } catch (err) {
+      console.error("Failed to load graph file:", err);
+    }
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,14 +100,32 @@ export const App: FC = () => {
   }, [currentFile, selectedNodeId]);
 
   const handleSelectSample = (fileId: string) => {
-    setSelectedNodeId(null);
     void loadGraphFile(fileId);
   };
 
   const handleCustomUpload = (dataset: GraphDataset) => {
-    setSelectedNodeId(null);
-    setCurrentFile(dataset.id ? `${dataset.id}.json` : "custom.json");
-    setDataset(dataset);
+    const fileId = dataset.id ? `${dataset.id}.json` : "custom.json";
+    const signature = generateDatasetSignature(dataset);
+    const stored = loadStoredViewport(fileId, signature);
+
+    if (stored) {
+      useGraphStore.setState({
+        dataset,
+        currentFile: fileId,
+        zoomLevel: stored.zoomLevel,
+        panOffset: stored.panOffset,
+        selectedNodeId: stored.selectedNodeId,
+        layoutMode: stored.layoutMode,
+        shouldAutoFit: false,
+      });
+    } else {
+      useGraphStore.setState({
+        dataset,
+        currentFile: fileId,
+        selectedNodeId: null,
+        shouldAutoFit: true,
+      });
+    }
   };
 
   return (

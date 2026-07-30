@@ -6,6 +6,7 @@ export type FilterCategory = "all" | "success" | "error" | "tools";
 
 export interface GraphState {
   dataset: GraphDataset | null;
+  currentFile: string;
   positionedNodes: PositionedNode[];
   positionedEdges: PositionedEdge[];
   selectedNodeId: string | null;
@@ -15,10 +16,12 @@ export interface GraphState {
   zoomLevel: number;
   panOffset: { x: number; y: number };
   collapsedNodeIds: Set<string>;
+  shouldAutoFit: boolean;
 }
 
 export interface GraphActions {
   setDataset: (dataset: GraphDataset | null) => void;
+  setCurrentFile: (fileId: string) => void;
   setPositionedGraph: (nodes: PositionedNode[], edges: PositionedEdge[]) => void;
   setSelectedNodeId: (nodeId: string | null) => void;
   setSearchQuery: (query: string) => void;
@@ -33,6 +36,7 @@ export interface GraphActions {
   toggleNodeCollapse: (nodeId: string) => void;
   resetViewport: () => void;
   centerNodeOnCanvas: (nodeId: string, viewportWidth?: number, viewportHeight?: number) => void;
+  setShouldAutoFit: (shouldFit: boolean) => void;
 }
 
 export type GraphStore = GraphState & GraphActions;
@@ -41,6 +45,7 @@ const initialPanOffset: { x: number; y: number } = { x: 0, y: 0 };
 
 export const useGraphStore = create<GraphStore>()((set) => ({
   dataset: null,
+  currentFile: "ai_agent_trace.json",
   positionedNodes: [],
   positionedEdges: [],
   selectedNodeId: null,
@@ -50,8 +55,10 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   zoomLevel: 1,
   panOffset: initialPanOffset,
   collapsedNodeIds: new Set<string>(),
+  shouldAutoFit: false,
 
   setDataset: (dataset) => set({ dataset }),
+  setCurrentFile: (currentFile) => set({ currentFile }),
   setPositionedGraph: (nodes, edges) => set({ positionedNodes: nodes, positionedEdges: edges }),
   setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -102,4 +109,5 @@ export const useGraphStore = create<GraphStore>()((set) => ({
         panOffset: { x: panX, y: panY },
       };
     }),
+  setShouldAutoFit: (shouldAutoFit) => set({ shouldAutoFit }),
 }));

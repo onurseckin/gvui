@@ -4,12 +4,15 @@ import { EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { PositionedNode } from "../../types/graphData";
+import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
+import { calculateFitView } from "../../utils/fitView";
 import { computeGraphLayout } from "../layout/layoutDispatcher";
 import "./GraphCanvas.css";
 import { usePanZoom } from "./usePanZoom";
 
 export const GraphCanvas: FC = () => {
   const dataset = useGraphStore((state) => state.dataset);
+  const currentFile = useGraphStore((state) => state.currentFile);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const positionedNodes = useGraphStore((state) => state.positionedNodes);
   const positionedEdges = useGraphStore((state) => state.positionedEdges);
@@ -17,9 +20,13 @@ export const GraphCanvas: FC = () => {
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const activeFilter = useGraphStore((state) => state.activeFilter);
   const collapsedNodeIds = useGraphStore((state) => state.collapsedNodeIds);
+  const shouldAutoFit = useGraphStore((state) => state.shouldAutoFit);
 
   const setPositionedGraph = useGraphStore((state) => state.setPositionedGraph);
   const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
+  const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
+  const setPanOffset = useGraphStore((state) => state.setPanOffset);
+  const setShouldAutoFit = useGraphStore((state) => state.setShouldAutoFit);
   const toggleNodeCollapse = useGraphStore((state) => state.toggleNodeCollapse);
 
   const { containerRef, zoomLevel, panOffset, isDragging, handleMouseDown } = usePanZoom();
@@ -31,7 +38,36 @@ export const GraphCanvas: FC = () => {
     }
     const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
     setPositionedGraph(nodes, edges);
-  }, [dataset, layoutMode, setPositionedGraph]);
+
+    if (shouldAutoFit) {
+      const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+      setZoomLevel(fitResult.zoomLevel);
+      setPanOffset(fitResult.panOffset);
+      setShouldAutoFit(false);
+    }
+  }, [
+    dataset,
+    layoutMode,
+    shouldAutoFit,
+    containerRef,
+    setPositionedGraph,
+    setZoomLevel,
+    setPanOffset,
+    setShouldAutoFit,
+  ]);
+
+  useEffect(() => {
+    if (!dataset || !currentFile || shouldAutoFit) return;
+
+    const signature = generateDatasetSignature(dataset);
+    saveStoredViewport(currentFile, {
+      signature,
+      zoomLevel,
+      panOffset,
+      selectedNodeId,
+      layoutMode,
+    });
+  }, [dataset, currentFile, zoomLevel, panOffset, selectedNodeId, layoutMode, shouldAutoFit]);
 
   const hiddenNodeIds = useMemo(() => {
     if (collapsedNodeIds.size === 0) return new Set<string>();
