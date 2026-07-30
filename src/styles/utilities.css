@@ -1,0 +1,73 @@
+/* Reusable Badge Pill Variants */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-pill-success {
+  background-color: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.badge-pill-error {
+  background-color: var(--status-error-bg);
+  border-color: var(--status-error-border);
+  color: var(--status-error-text);
+}
+
+.badge-pill-warning {
+  background-color: var(--status-warning-bg);
+  border-color: var(--status-warning-border);
+  color: var(--status-warning-text);
+}
+
+.badge-pill-info {
+  background-color: var(--status-info-bg);
+  border-color: var(--status-info-border);
+  color: var(--status-info-text);
+}
+
+.badge-pill-gray {
+  background-color: var(--status-gray-bg);
+  border-color: var(--status-gray-border);
+  color: var(--status-gray-text);
+}
+
+/* Tool & Script Chips */
+.chip-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background-color: var(--status-tool-bg);
+  border: 1px solid var(--status-tool-border);
+  color: var(--status-tool-text);
+}
+
+/* Glassmorphism Surface Panel */
+.glass-panel {
+  background-color: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Text Truncation */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,10 +1,10 @@
 .node-card {
   box-sizing: border-box;
-  background-color: var(--bg, #ffffff);
-  border: 1px solid var(--border, #e5e4e7);
-  border-radius: 10px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
   padding: 12px;
-  box-shadow: var(--shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -16,39 +16,40 @@
 }
 
 .node-card:hover {
-  border-color: var(--accent-border, rgba(170, 59, 255, 0.5));
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-focus);
 }
 
 .node-card.selected {
-  outline: 2px solid var(--accent, #aa3bff);
+  outline: 2px solid var(--accent-color);
   outline-offset: 2px;
-  border-color: var(--accent, #aa3bff);
-  box-shadow: 0 0 12px var(--accent-bg, rgba(170, 59, 255, 0.25));
+  border-color: var(--accent-color);
+  box-shadow: var(--accent-glow);
 }
 
 .node-card.filtered {
-  opacity: 0.45;
-  filter: grayscale(0.2);
+  opacity: 0.35;
+  filter: grayscale(0.4);
 }
 
 .node-card.status-success {
-  border-left: 4px solid #22c55e;
+  border-left: 4px solid var(--status-success-border);
 }
 
 .node-card.status-error {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--status-error-border);
 }
 
 .node-card.status-amber {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--status-warning-border);
 }
 
 .node-card.status-info {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--status-info-border);
 }
 
 .node-card.status-gray {
-  border-left: 4px solid #9ca3af;
+  border-left: 4px solid var(--status-gray-border);
 }
 
 .node-card-header {
@@ -73,34 +74,32 @@
 }
 
 .node-card-status-dot.status-success {
-  background-color: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  background-color: var(--status-success-text);
+  box-shadow: var(--status-success-glow);
 }
 
 .node-card-status-dot.status-error {
-  background-color: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  background-color: var(--status-error-text);
+  box-shadow: var(--status-error-glow);
 }
 
 .node-card-status-dot.status-amber {
-  background-color: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  background-color: var(--status-warning-text);
 }
 
 .node-card-status-dot.status-info {
-  background-color: #3b82f6;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+  background-color: var(--status-info-text);
 }
 
 .node-card-status-dot.status-gray {
-  background-color: #9ca3af;
+  background-color: var(--status-gray-text);
 }
 
 .node-card-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-h, #08060d);
+  color: var(--text-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -108,30 +107,32 @@
 
 .node-card-type-tag {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   padding: 2px 6px;
-  border-radius: 4px;
-  background-color: var(--code-bg, #f4f3ec);
-  color: var(--text, #6b6375);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-hover);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .node-card-toggle-btn {
   background: none;
   border: none;
-  color: var(--text, #6b6375);
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s ease;
 }
 
 .node-card-toggle-btn:hover {
-  background-color: var(--code-bg, #f4f3ec);
-  color: var(--text-h, #08060d);
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .node-card-badges {
@@ -143,33 +144,39 @@
 .node-card-badge-pill {
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   font-weight: 500;
+  font-family: var(--font-mono);
 }
 
 .node-card-badge-pill.badge-success {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  background-color: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success-text);
 }
 
 .node-card-badge-pill.badge-error {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
+  background-color: var(--status-error-bg);
+  border: 1px solid var(--status-error-border);
+  color: var(--status-error-text);
 }
 
 .node-card-badge-pill.badge-amber {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #d97706;
+  background-color: var(--status-warning-bg);
+  border: 1px solid var(--status-warning-border);
+  color: var(--status-warning-text);
 }
 
 .node-card-badge-pill.badge-info {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #2563eb;
+  background-color: var(--status-info-bg);
+  border: 1px solid var(--status-info-border);
+  color: var(--status-info-text);
 }
 
 .node-card-badge-pill.badge-gray {
-  background-color: var(--code-bg, #f4f3ec);
-  color: var(--text, #6b6375);
+  background-color: var(--status-gray-bg);
+  border: 1px solid var(--status-gray-border);
+  color: var(--status-gray-text);
 }
 
 .node-card-tools {
@@ -184,19 +191,11 @@
   gap: 4px;
   font-size: 11px;
   padding: 2px 6px;
-  border-radius: 6px;
-  background-color: var(--social-bg, rgba(244, 243, 236, 0.5));
-  border: 1px solid var(--border, #e5e4e7);
-}
-
-.node-card-tool-chip .tool-icon {
-  font-size: 11px;
-}
-
-.node-card-tool-chip .tool-name {
-  font-size: 11px;
-  padding: 0;
-  background: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--status-tool-bg);
+  border: 1px solid var(--status-tool-border);
+  color: var(--status-tool-text);
+  font-family: var(--font-mono);
 }
 
 .node-card-context {
@@ -204,7 +203,7 @@
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  color: var(--text, #6b6375);
+  color: var(--text-muted);
 }
 
 .node-card-context-row {
@@ -217,13 +216,15 @@
 .node-card-context-row .context-key {
   font-weight: 500;
   flex-shrink: 0;
+  color: var(--text-dimmed);
 }
 
 .node-card-context-row .context-value {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--mono);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
 }
 
 .node-card-details {
@@ -242,21 +243,24 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--text, #6b6375);
+  color: var(--text-muted);
   cursor: pointer;
   text-align: left;
 }
 
 .node-card-details-toggle:hover {
-  color: var(--text-h, #08060d);
+  color: var(--text-heading);
 }
 
 .node-card-details-content {
   margin: 0;
   padding: 8px;
-  background-color: var(--code-bg, #f4f3ec);
-  border-radius: 6px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
   max-height: 140px;
   overflow-y: auto;
   white-space: pre-wrap;
