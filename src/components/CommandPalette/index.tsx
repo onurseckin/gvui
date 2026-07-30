@@ -243,7 +243,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
 
           <div className="command-palette-tabs" role="tablist">
             <Button
-              variant={scope === "current" ? "primary" : "ghost"}
+              variant={scope === "current" ? "outline" : "ghost"}
               size="sm"
               role="tab"
               aria-selected={scope === "current"}
@@ -253,7 +253,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               Current File
             </Button>
             <Button
-              variant={scope === "all" ? "primary" : "ghost"}
+              variant={scope === "all" ? "outline" : "ghost"}
               size="sm"
               role="tab"
               aria-selected={scope === "all"}

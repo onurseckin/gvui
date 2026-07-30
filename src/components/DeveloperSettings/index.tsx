@@ -199,7 +199,7 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = ({
 
           <div className="developer-settings-tabs" role="tablist">
             <Button
-              variant={activeTab === "local-storage" ? "primary" : "ghost"}
+              variant={activeTab === "local-storage" ? "outline" : "ghost"}
               size="sm"
               role="tab"
               aria-selected={activeTab === "local-storage"}
