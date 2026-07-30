@@ -1,4 +1,6 @@
 .node-card {
+  width: 100%;
+  height: 100%;
   box-sizing: border-box;
   background-color: var(--bg-card, #18181b);
   border: 1px solid var(--border-card, #27272a);
@@ -90,9 +92,7 @@
   font-size: 14px;
   font-weight: 600;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .node-card-type-tag {
@@ -203,9 +203,8 @@
 
 .node-card-context-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  overflow: hidden;
 }
 
 .node-card-context-row .context-key {
@@ -215,11 +214,9 @@
 }
 
 .node-card-context-row .context-value {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-family: var(--font-mono);
   color: #ffffff;
+  word-break: break-word;
 }
 
 .node-card-details {

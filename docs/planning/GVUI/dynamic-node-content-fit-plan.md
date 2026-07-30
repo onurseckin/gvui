@@ -11,6 +11,7 @@
 ### Task 1: Update Dagre Layout Bounding Box Calculation Engine
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 
 - [ ] **Step 1: Compute dynamic node width based on title string length, description length, badges, and metadata**
@@ -29,6 +30,7 @@
 ### Task 2: Update NodeCard CSS to Remove Truncation & Enable Natural Auto-Expansion
 
 **Files:**
+
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 - Modify: `src/primitives/nodes/NodeCard/NodeCardHeader.tsx`
 
