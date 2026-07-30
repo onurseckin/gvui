@@ -71,35 +71,39 @@ export function calculateNodeDimensions(node: GraphNodeData): { width: number; h
     ),
   );
 
-  let height = 44;
+  const baseHeader = 36;
+  let bodySectionsHeight = 0;
 
   if (node.description) {
     const approxCharsPerLine = Math.max(20, Math.floor((width - 32) / 8));
     const descLines = Math.ceil(node.description.length / approxCharsPerLine);
-    height += descLines * 18 + 8;
+    bodySectionsHeight += descLines * 16 + 4;
   }
 
   if (badgeRows > 0) {
-    height += badgeRows * 26 + 6;
+    bodySectionsHeight += badgeRows * 22 + 4;
   }
 
   if (toolRows > 0) {
-    height += toolRows * 26 + 6;
+    bodySectionsHeight += toolRows * 22 + 4;
   }
 
   if (node.model || node.harnessModel) {
-    height += 24;
+    bodySectionsHeight += 18;
   }
 
   if (node.context) {
-    height += 28;
+    const contextKeys = Object.keys(node.context);
+    if (contextKeys.length > 0) {
+      bodySectionsHeight += contextKeys.length * 18 + 4;
+    }
   }
 
   if (node.metadata && Object.keys(node.metadata).length > 0) {
-    height += 24;
+    bodySectionsHeight += 18;
   }
 
-  height = Math.ceil(height);
+  const height = Math.ceil(baseHeader + bodySectionsHeight + 16);
 
   return { width, height };
 }
