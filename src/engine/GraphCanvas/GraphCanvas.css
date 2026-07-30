@@ -12,7 +12,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
-  font-smooth: always;
 }
 
 .graph-canvas-viewport.is-dragging {
@@ -31,7 +30,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
-  font-smooth: always;
 }
 
 /* SVG Vector Crispness Layer */
@@ -47,7 +45,6 @@
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-smooth: always;
 }
 
 .graph-svg-layer path,
@@ -75,6 +72,7 @@
   position: absolute;
   top: 0;
   left: 0;
+  transform-origin: 0 0;
   pointer-events: auto;
   transition: opacity 0.2s ease;
 }

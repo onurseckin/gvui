@@ -135,7 +135,7 @@ function generateNodeHtml(node: GraphNodeData, x: number, y: number, width: numb
     <div
       class="node-card status-${statusVariant}"
       data-node-id="${escapeHtml(node.id)}"
-      style="position: absolute; transform: translate3d(${x}px, ${y}px, 0); width: ${width}px;"
+      style="position: absolute; transform: translate(${x}px, ${y}px); width: ${width}px;"
     >
       <header class="node-card-header">
         <div class="node-card-header-main">

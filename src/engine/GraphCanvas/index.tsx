@@ -133,7 +133,7 @@ export const GraphCanvas: FC = () => {
                 key={node.id}
                 className={`graph-node-wrapper ${isFiltered ? "is-dimmed" : ""}`}
                 style={{
-                  transform: `translate3d(${node.x}px, ${node.y}px, 0)`,
+                  transform: `translate(${node.x}px, ${node.y}px)`,
                 }}
               >
                 <NodeCard
