@@ -149,6 +149,16 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey && (e.key.toLowerCase() === "c" || e.code === "KeyC")) {
+      e.preventDefault();
+      setScope("current");
+      return;
+    }
+    if (e.altKey && (e.key.toLowerCase() === "a" || e.code === "KeyA")) {
+      e.preventDefault();
+      setScope("all");
+      return;
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -250,7 +260,8 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               className="command-palette-tab"
               onClick={() => setScope("current")}
             >
-              Current File
+              <span>Current File</span>
+              <kbd className="command-palette-key">⌥C</kbd>
             </Button>
             <Button
               variant={scope === "all" ? "outline" : "ghost"}
@@ -260,7 +271,8 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               className="command-palette-tab"
               onClick={() => setScope("all")}
             >
-              All Files
+              <span>All Files</span>
+              <kbd className="command-palette-key">⌥A</kbd>
             </Button>
           </div>
 
