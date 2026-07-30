@@ -89,11 +89,11 @@ export const CanvasToolbar: FC = () => {
     <div className="canvas-toolbar">
       <div className="toolbar-group">
         <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
-          ➕
+          +
         </Button>
         <span className="zoom-indicator">{Math.round(zoomLevel * 100)}%</span>
         <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
-          ➖
+          -
         </Button>
       </div>
 

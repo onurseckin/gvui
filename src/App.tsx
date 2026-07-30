@@ -110,7 +110,6 @@ export const App: FC = () => {
           >
             {isSidebarOpen ? "☰" : "✕"}
           </Button>
-          <h1 className="brand-title">GVUI</h1>
           <span className="navbar-file-title">📄 {currentFile}</span>
         </div>
         <div className="navbar-right">

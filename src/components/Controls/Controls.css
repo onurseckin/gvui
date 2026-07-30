@@ -87,24 +87,26 @@
 
 .toolbar-group button,
 .toolbar-btn {
-  padding: 6px 10px;
-  background-color: var(--bg-card, #18181b);
-  border: 1px solid var(--border-card, #27272a);
+  height: 36px;
+  padding: 0 12px;
+  background-color: #18181b;
+  border: 1px solid #27272a;
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .toolbar-group button:hover,
 .toolbar-btn:hover {
   background-color: var(--bg-hover, #27272a);
   border-color: var(--accent-color, #818cf8);
-  color: var(--text-heading);
+  color: #ffffff;
 }
 
 .zoom-indicator {

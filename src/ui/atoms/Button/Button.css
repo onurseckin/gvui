@@ -124,3 +124,14 @@
 .gvui-button--icon:active:not(:disabled) {
   background-color: var(--bg-card-hover);
 }
+
+/* Top navbar button overrides */
+.top-navbar-full .gvui-button--outline,
+.top-navbar-full .gvui-button--ghost {
+  color: #ffffff;
+}
+
+.top-navbar-full .gvui-button--outline:hover:not(:disabled),
+.top-navbar-full .gvui-button--ghost:hover:not(:disabled) {
+  color: #ffffff;
+}

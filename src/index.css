@@ -58,22 +58,18 @@ body,
 }
 
 .sidebar-toggle-btn {
-  font-size: 16px;
-  line-height: 1;
-  padding: 6px 8px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
-}
-
-.brand-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-heading, #f4f4f5);
-  letter-spacing: -0.3px;
-  margin: 0;
+  border-radius: var(--radius-sm);
 }
 
 .navbar-file-title {
@@ -82,8 +78,6 @@ body,
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-left: 8px;
-  border-left: 1px solid var(--border-card, #27272a);
 }
 
 .navbar-right {
