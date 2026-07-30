@@ -1,0 +1,97 @@
+.port-socket {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--bg, #ffffff);
+  border: 2px solid var(--border, #e5e4e7);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.port-socket.pos-top {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.port-socket.pos-right {
+  top: 50%;
+  right: -6px;
+  transform: translateY(-50%);
+}
+
+.port-socket.pos-bottom {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.port-socket.pos-left {
+  top: 50%;
+  left: -6px;
+  transform: translateY(-50%);
+}
+
+.port-socket-inner {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--text, #6b6375);
+  transition: all 0.2s ease;
+}
+
+.port-socket.state-connected {
+  border-color: var(--accent, #aa3bff);
+  background-color: var(--accent-bg, rgba(170, 59, 255, 0.15));
+}
+
+.port-socket.state-connected .port-socket-inner {
+  background-color: var(--accent, #aa3bff);
+  box-shadow: 0 0 6px var(--accent, #aa3bff);
+}
+
+.port-socket.state-connecting {
+  border-color: #f59e0b;
+  animation: pulse-ring 1.2s infinite;
+}
+
+.port-socket.state-connecting .port-socket-inner {
+  background-color: #f59e0b;
+}
+
+.port-socket.state-hovered,
+.port-socket:hover {
+  border-color: var(--accent, #aa3bff);
+  transform: scale(1.25);
+}
+
+.port-socket.state-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.port-socket.type-input {
+  border-style: solid;
+}
+
+.port-socket.type-output {
+  border-style: double;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}

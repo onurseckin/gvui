@@ -1,0 +1,104 @@
+.graph-edge-group {
+  cursor: pointer;
+}
+
+.edge-backdrop {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16px;
+  cursor: pointer;
+}
+
+.graph-edge-path {
+  fill: none;
+  stroke: var(--border, #9ca3af);
+  stroke-width: 2px;
+  transition:
+    stroke 0.2s ease,
+    stroke-width 0.2s ease;
+}
+
+.graph-edge-group:hover .graph-edge-path {
+  stroke: var(--accent, #aa3bff);
+  stroke-width: 3px;
+}
+
+.graph-edge-path.selected {
+  stroke: var(--accent, #aa3bff);
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 4px var(--accent-bg, rgba(170, 59, 255, 0.4)));
+}
+
+.graph-edge-path.cycle {
+  stroke: #f59e0b;
+  stroke-dasharray: 6 4;
+}
+
+.graph-edge-path.animated {
+  stroke-dasharray: 8 6;
+  animation: edge-flow 1.5s linear infinite;
+}
+
+.edge-badge-foreign-object {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edge-badge-overlay {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background-color: var(--bg, #ffffff);
+  border: 1px solid var(--border, #e5e4e7);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text, #6b6375);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  width: max-content;
+  max-width: 120px;
+  margin: 0 auto;
+}
+
+.edge-badge-overlay:hover {
+  border-color: var(--accent-border, rgba(170, 59, 255, 0.5));
+  color: var(--text-h, #08060d);
+}
+
+.edge-badge-overlay.selected {
+  border-color: var(--accent, #aa3bff);
+  background-color: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  color: var(--accent, #aa3bff);
+}
+
+.edge-badge-overlay.cycle {
+  border-color: rgba(245, 158, 11, 0.4);
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.edge-badge-cycle-icon {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.edge-badge-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes edge-flow {
+  from {
+    stroke-dashoffset: 28;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
