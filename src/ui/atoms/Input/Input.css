@@ -1,0 +1,58 @@
+.gvui-input {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.gvui-input::placeholder {
+  color: var(--text-dimmed);
+  opacity: 0.7;
+}
+
+.gvui-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-subtle);
+  background-color: var(--bg-card-hover);
+}
+
+.gvui-input:focus,
+.gvui-input:focus-visible {
+  border-color: var(--border-focus);
+  box-shadow: var(--accent-glow);
+}
+
+.gvui-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gvui-input--full-width {
+  width: 100%;
+}
+
+.gvui-input--sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.gvui-input--md {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.gvui-input--lg {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 1rem;
+  border-radius: var(--radius-lg);
+}
