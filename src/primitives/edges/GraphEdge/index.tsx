@@ -22,6 +22,7 @@ export interface GraphEdgeProps {
   isSelected?: boolean;
   isHovered?: boolean;
   isAnimated?: boolean;
+  renderBadge?: boolean;
   onClick?: (edgeId: string) => void;
 }
 
@@ -34,6 +35,7 @@ export const GraphEdge: FC<GraphEdgeProps> = ({
   pathType = "bezier",
   isSelected = false,
   isAnimated = false,
+  renderBadge = true,
   onClick,
 }) => {
   let dPath = edge.path;
@@ -87,13 +89,15 @@ export const GraphEdge: FC<GraphEdgeProps> = ({
         shapeRendering="geometricPrecision"
         textRendering="geometricPrecision"
       />
-      <EdgeBadgeOverlay
-        x={badgeX}
-        y={badgeY}
-        label={edge.label}
-        isCycle={edge.isCycle}
-        isSelected={isSelected}
-      />
+      {renderBadge && (
+        <EdgeBadgeOverlay
+          x={badgeX}
+          y={badgeY}
+          label={edge.label}
+          isCycle={edge.isCycle}
+          isSelected={isSelected}
+        />
+      )}
     </g>
   );
 };

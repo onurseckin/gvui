@@ -400,13 +400,14 @@ export function computeDagreLayout(
   dataset: GraphDataset,
   direction: "TB" | "LR" = "TB",
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
+  const layoutMode = direction === "TB" ? "top-down" : "left-right";
   const g = new dagre.graphlib.Graph({ multigraph: true });
   g.setGraph({
     rankdir: direction,
-    nodesep: 80,
-    ranksep: 90,
-    marginx: 50,
-    marginy: 50,
+    nodesep: 150,
+    ranksep: 120,
+    marginx: 80,
+    marginy: 80,
   });
   g.setDefaultEdgeLabel(() => ({}));
 
@@ -492,14 +493,40 @@ export function computeDagreLayout(
       if (edge.source === edge.target) {
         srcSide = "Right";
         tgtSide = "Top";
+      } else if (layoutMode === "top-down") {
+        const dy = tgtCy - srcCy;
+        const dx = tgtCx - srcCx;
+
+        if (dy > 30) {
+          srcSide = "Bottom";
+          tgtSide = "Top";
+        } else if (dy < -30) {
+          srcSide = "Top";
+          tgtSide = "Bottom";
+        } else if (dx >= 0) {
+          srcSide = "Right";
+          tgtSide = "Left";
+        } else {
+          srcSide = "Left";
+          tgtSide = "Right";
+        }
       } else {
         const dx = tgtCx - srcCx;
         const dy = tgtCy - srcCy;
-        const thetaSrc = Math.atan2(dy, dx);
-        const thetaTgt = Math.atan2(-dy, -dx);
 
-        srcSide = getSideFromAngle(thetaSrc);
-        tgtSide = getSideFromAngle(thetaTgt);
+        if (dx > 30) {
+          srcSide = "Right";
+          tgtSide = "Left";
+        } else if (dx < -30) {
+          srcSide = "Left";
+          tgtSide = "Right";
+        } else if (dy >= 0) {
+          srcSide = "Bottom";
+          tgtSide = "Top";
+        } else {
+          srcSide = "Top";
+          tgtSide = "Bottom";
+        }
       }
 
       edgeSideInfo.set(edgeIdx, { srcSide, tgtSide });
@@ -739,15 +766,15 @@ export function computeDagreLayout(
 
       // Repel edge badge from node bounding boxes if overlapping
       for (const node of positionedNodes) {
-        const badgeLeft = e1.labelX - 42;
-        const badgeRight = e1.labelX + 42;
-        const badgeTop = e1.labelY - 17;
-        const badgeBottom = e1.labelY + 17;
+        const badgeLeft = e1.labelX - 50;
+        const badgeRight = e1.labelX + 50;
+        const badgeTop = e1.labelY - 20;
+        const badgeBottom = e1.labelY + 20;
 
-        const nodeLeft = node.x - 8;
-        const nodeRight = node.x + node.width + 8;
-        const nodeTop = node.y - 8;
-        const nodeBottom = node.y + node.height + 8;
+        const nodeLeft = node.x - 12;
+        const nodeRight = node.x + node.width + 12;
+        const nodeTop = node.y - 12;
+        const nodeBottom = node.y + node.height + 12;
 
         if (
           badgeRight > nodeLeft &&
@@ -756,16 +783,13 @@ export function computeDagreLayout(
           badgeTop < nodeBottom
         ) {
           hasCollision = true;
-          const nodeCx = node.x + node.width / 2;
           const nodeCy = node.y + node.height / 2;
 
-          let rdx = e1.labelX - nodeCx;
-          let rdy = e1.labelY - nodeCy;
-          if (rdx === 0 && rdy === 0) rdx = 1;
-          const rlen = Math.hypot(rdx, rdy);
-
-          e1.labelX += (rdx / rlen) * 24;
-          e1.labelY += (rdy / rlen) * 24;
+          if (e1.labelY <= nodeCy) {
+            e1.labelY = node.y - 24;
+          } else {
+            e1.labelY = node.y + node.height + 24;
+          }
         }
       }
     }

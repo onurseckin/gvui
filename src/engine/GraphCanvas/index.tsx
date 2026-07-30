@@ -1,6 +1,6 @@
 import type { CSSProperties, FC } from "react";
 import { useEffect, useMemo } from "react";
-import { EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
+import { EdgeBadgeOverlay, EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { PositionedNode } from "../../types/graphData";
@@ -158,7 +158,14 @@ export const GraphCanvas: FC = () => {
               return null;
             }
             const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
-            return <GraphEdge key={edge.id} edge={edge} isSelected={isEdgeSelected} />;
+            return (
+              <GraphEdge
+                key={edge.id}
+                edge={edge}
+                isSelected={isEdgeSelected}
+                renderBadge={false}
+              />
+            );
           })}
         </svg>
 
@@ -191,6 +198,38 @@ export const GraphCanvas: FC = () => {
             );
           })}
         </div>
+
+        <svg
+          className="graph-svg-badge-layer"
+          style={{
+            position: "absolute",
+            inset: 0,
+            overflow: "visible",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          {positionedEdges.map((edge) => {
+            if (hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target)) {
+              return null;
+            }
+            const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
+            const badgeX = edge.labelX ?? 0;
+            const badgeY = edge.labelY ?? 0;
+
+            return (
+              <g key={`badge-${edge.id}`} style={{ pointerEvents: "auto" }}>
+                <EdgeBadgeOverlay
+                  x={badgeX}
+                  y={badgeY}
+                  label={edge.label}
+                  isCycle={edge.isCycle}
+                  isSelected={isEdgeSelected}
+                />
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </div>
   );
