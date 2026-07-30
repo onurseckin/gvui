@@ -189,15 +189,23 @@ export function exportGraphAsHTML(dataset: GraphDataset): void {
 
       let badgeOverlayHtml = "";
       if (edge.label || edge.isCycle) {
-        const width = 120;
+        const displayText = edge.isCycle
+          ? edge.label
+            ? `↺ ${escapeHtml(edge.label)}`
+            : "↺"
+          : escapeHtml(edge.label ?? "");
+        const labelLen = edge.isCycle
+          ? edge.label
+            ? edge.label.length + 2
+            : 1
+          : (edge.label ?? "").length;
+        const width = Math.max(60, labelLen * 7 + 24);
         const height = 28;
         badgeOverlayHtml = `
-          <foreignObject x="${labelX - width / 2}" y="${labelY - height / 2}" width="${width}" height="${height}" class="edge-badge-foreign-object">
-            <div class="edge-badge-overlay ${edge.isCycle ? "cycle" : ""}">
-              ${edge.isCycle ? '<span class="edge-badge-cycle-icon">↺</span>' : ""}
-              ${edge.label ? `<span class="edge-badge-label">${escapeHtml(edge.label)}</span>` : ""}
-            </div>
-          </foreignObject>
+          <g transform="translate(${labelX}, ${labelY})" class="edge-badge-group ${edge.isCycle ? "cycle" : ""}">
+            <rect x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" rx="14" ry="14" fill="#0f172a" stroke="#1e293b" class="edge-badge-rect ${edge.isCycle ? "cycle" : ""}" />
+            <text x="0" y="0" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="11" font-family="var(--font-mono)" font-weight="600" class="edge-badge-text">${displayText}</text>
+          </g>
         `;
       }
 

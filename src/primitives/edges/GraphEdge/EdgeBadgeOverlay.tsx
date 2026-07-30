@@ -6,7 +6,7 @@ export interface EdgeBadgeOverlayProps {
   label?: string;
   isCycle?: boolean;
   isSelected?: boolean;
-  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
+  onClick?: (e: MouseEvent<SVGGElement>) => void;
 }
 
 export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
@@ -22,39 +22,55 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
     return null;
   }
 
-  const width = 120;
+  const displayText = isCycle ? (label ? `↺ ${label}` : "↺") : (label ?? "");
+  const width = Math.max(60, displayText.length * 7 + 24);
   const height = 28;
 
-  const handleClick = (e: MouseEvent<HTMLDivElement>): void => {
+  const handleClick = (e: MouseEvent<SVGGElement>): void => {
     e.stopPropagation();
     onClick?.(e);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+  const handleKeyDown = (e: KeyboardEvent<SVGGElement>): void => {
     if ((e.key === "Enter" || e.key === " ") && onClick) {
       e.preventDefault();
-      onClick(e as unknown as MouseEvent<HTMLDivElement>);
+      onClick(e as unknown as MouseEvent<SVGGElement>);
     }
   };
 
   return (
-    <foreignObject
-      x={x - width / 2}
-      y={y - height / 2}
-      width={width}
-      height={height}
-      className="edge-badge-foreign-object"
+    <g
+      transform={`translate(${x}, ${y})`}
+      className={`edge-badge-group ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
     >
-      <div
-        className={`edge-badge-overlay ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`}
-        onClick={handleClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
+      <rect
+        x={-width / 2}
+        y={-height / 2}
+        width={width}
+        height={height}
+        rx={14}
+        ry={14}
+        fill="#0f172a"
+        stroke="#1e293b"
+        className={`edge-badge-rect ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
+      />
+      <text
+        x={0}
+        y={0}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="#ffffff"
+        fontSize="11"
+        fontFamily="var(--font-mono)"
+        fontWeight="600"
+        className="edge-badge-text"
       >
-        {isCycle ? <span className="edge-badge-cycle-icon">↺</span> : null}
-        {label ? <span className="edge-badge-label">{label}</span> : null}
-      </div>
-    </foreignObject>
+        {displayText}
+      </text>
+    </g>
   );
 };
