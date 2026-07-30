@@ -1,0 +1,100 @@
+import type { ChangeEvent, FC } from "react";
+import { useGraphStore } from "../../state/useGraphStore";
+import type { GraphDataset } from "../../types/graphData";
+import "./Sidebar.css";
+
+const SAMPLE_GRAPHS = [
+  { id: "ai_agent_trace.json", name: "AI Agent Trace", icon: "🤖" },
+  { id: "decision_tree.json", name: "Decision Tree", icon: "🌲" },
+  { id: "cyclic_mesh.json", name: "Cyclic Mesh", icon: "🔄" },
+];
+
+interface SidebarProps {
+  currentFile: string;
+  onSelectSample: (fileId: string) => void;
+  onCustomUpload: (dataset: GraphDataset) => void;
+}
+
+export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCustomUpload }) => {
+  const dataset = useGraphStore((state) => state.dataset);
+
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text) as GraphDataset;
+        if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+          onCustomUpload(parsed);
+        } else {
+          alert("Invalid Graph JSON format: must contain nodes and edges arrays.");
+        }
+      } catch {
+        alert("Failed to parse JSON file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <aside className="sidebar-container">
+      <div className="sidebar-header">
+        <h2 className="sidebar-title">GVUI Graph Studio</h2>
+      </div>
+
+      <div className="sidebar-section">
+        <h3 className="sidebar-section-title">Sample Datasets</h3>
+        <ul className="sample-list">
+          {SAMPLE_GRAPHS.map((sample) => (
+            <li key={sample.id}>
+              <button
+                type="button"
+                className={`sample-btn ${currentFile === sample.id ? "active" : ""}`}
+                onClick={() => onSelectSample(sample.id)}
+              >
+                <span className="sample-icon">{sample.icon}</span>
+                <span className="sample-label">{sample.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="sidebar-section">
+        <h3 className="sidebar-section-title">Custom Graph</h3>
+        <label className="upload-label">
+          📁 Upload JSON File
+          <input type="file" accept=".json" onChange={handleFileUpload} className="upload-input" />
+        </label>
+      </div>
+
+      <div className="sidebar-section metadata-section">
+        <h3 className="sidebar-section-title">Graph Summary</h3>
+        {dataset ? (
+          <div className="metadata-card">
+            <div className="metadata-title">{dataset.title || dataset.id}</div>
+            <div className="metadata-stat">
+              <span>Nodes:</span>
+              <strong>{dataset.nodes.length}</strong>
+            </div>
+            <div className="metadata-stat">
+              <span>Edges:</span>
+              <strong>{dataset.edges.length}</strong>
+            </div>
+            <div className="metadata-stat">
+              <span>Directed:</span>
+              <strong>{dataset.directed ? "Yes" : "No"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="metadata-empty">No dataset loaded</div>
+        )}
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
