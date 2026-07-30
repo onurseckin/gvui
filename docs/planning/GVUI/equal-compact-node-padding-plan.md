@@ -11,6 +11,7 @@
 ### Task 1: Tighten Dagre Layout Height Engine (`dagreLayout.ts`)
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 
 - [ ] **Step 1: Recalculate base header height to 36px and section heights with tight 6px gap spacing**
@@ -23,6 +24,7 @@
 ### Task 2: Standardize NodeCard CSS Padding & Remove Extra Bottom Margin
 
 **Files:**
+
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 
 - [ ] **Step 1: Set `.node-card` to `padding: 10px; gap: 8px;`**
