@@ -40,7 +40,9 @@ export const GraphEdge: FC<GraphEdgeProps> = ({
   let badgeX = edge.labelX ?? 0;
   let badgeY = edge.labelY ?? 0;
 
+  // Only re-compute path if edge.path is empty AND explicit source/target coordinates were passed
   if (
+    (!dPath || dPath.trim().length === 0) &&
     typeof sourceX === "number" &&
     typeof sourceY === "number" &&
     typeof targetX === "number" &&

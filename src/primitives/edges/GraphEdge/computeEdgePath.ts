@@ -21,7 +21,7 @@ export function computeEdgePath({
   sourceY,
   targetX,
   targetY,
-  pathType = "bezier",
+  pathType = "straight",
   offset = 0,
 }: ComputeEdgePathOptions): { path: string; labelX: number; labelY: number } {
   let midX = (sourceX + targetX) / 2;

@@ -11,6 +11,7 @@
 ### Task 1: Update `GraphEdge/index.tsx` and `computeEdgePath.ts`
 
 **Files:**
+
 - Modify: `src/primitives/edges/GraphEdge/index.tsx`
 - Modify: `src/primitives/edges/GraphEdge/computeEdgePath.ts`
 
