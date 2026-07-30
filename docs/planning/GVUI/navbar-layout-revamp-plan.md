@@ -11,6 +11,7 @@
 ### Task 1: SearchInput & SearchHeader Refactoring (`Cmd+K`, `#000000` bg, White Icons & Shortcut)
 
 **Files:**
+
 - Modify: `src/ui/molecules/SearchInput/SearchInput.types.ts`
 - Modify: `src/ui/molecules/SearchInput/SearchInput.css`
 - Modify: `src/ui/molecules/SearchInput/index.tsx`
@@ -27,6 +28,7 @@
 ### Task 2: Top Navbar Layout Overhaul & Sidebar Collapse Toggle
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/Sidebar/index.tsx`
 - Modify: `src/components/Sidebar/Sidebar.css`

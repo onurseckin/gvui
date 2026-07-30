@@ -14,7 +14,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       size = "md",
       fullWidth = false,
       showHotkey = true,
-      hotkeyText = "⌘F",
+      hotkeyText = "⌘ + K",
       className = "",
       disabled = false,
       ...props
@@ -64,7 +64,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 
     React.useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
           e.preventDefault();
           inputRef.current?.focus();
           inputRef.current?.select();
