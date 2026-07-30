@@ -32,6 +32,7 @@ export interface GraphActions {
   ) => void;
   toggleNodeCollapse: (nodeId: string) => void;
   resetViewport: () => void;
+  centerNodeOnCanvas: (nodeId: string, viewportWidth?: number, viewportHeight?: number) => void;
 }
 
 export type GraphStore = GraphState & GraphActions;
@@ -78,5 +79,27 @@ export const useGraphStore = create<GraphStore>()((set) => ({
     set({
       zoomLevel: 1,
       panOffset: { x: 0, y: 0 },
+    }),
+  centerNodeOnCanvas: (nodeId, viewportWidth, viewportHeight) =>
+    set((state) => {
+      const node = state.positionedNodes.find((n) => n.id === nodeId);
+      if (!node) {
+        return { selectedNodeId: nodeId };
+      }
+
+      const vw = viewportWidth ?? (typeof window !== "undefined" ? window.innerWidth : 1000);
+      const vh = viewportHeight ?? (typeof window !== "undefined" ? window.innerHeight : 800);
+
+      const nodeCenterX = node.x + node.width / 2;
+      const nodeCenterY = node.y + node.height / 2;
+
+      const panX = vw / 2 - nodeCenterX;
+      const panY = vh / 2 - nodeCenterY;
+
+      return {
+        selectedNodeId: nodeId,
+        zoomLevel: 1.0,
+        panOffset: { x: panX, y: panY },
+      };
     }),
 }));
