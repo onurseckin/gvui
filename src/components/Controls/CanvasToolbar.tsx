@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import type { LayoutMode } from "../../state/useGraphStore";
 import { useGraphStore } from "../../state/useGraphStore";
+import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import "./Controls.css";
 
 const LAYOUT_OPTIONS: { id: LayoutMode; label: string }[] = [
@@ -11,6 +12,7 @@ const LAYOUT_OPTIONS: { id: LayoutMode; label: string }[] = [
 ];
 
 export const CanvasToolbar: FC = () => {
+  const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const positionedNodes = useGraphStore((state) => state.positionedNodes);
@@ -60,6 +62,12 @@ export const CanvasToolbar: FC = () => {
     setPanOffset({ x: panX, y: panY });
   };
 
+  const handleExportHtml = () => {
+    if (dataset) {
+      exportGraphAsHTML(dataset);
+    }
+  };
+
   return (
     <div className="canvas-toolbar">
       <div className="toolbar-group">
@@ -101,6 +109,18 @@ export const CanvasToolbar: FC = () => {
           ))}
         </select>
       </div>
+
+      <div className="toolbar-divider" />
+
+      <button
+        type="button"
+        onClick={handleExportHtml}
+        disabled={!dataset}
+        title="Export HTML"
+        className="toolbar-btn"
+      >
+        📥 Export HTML
+      </button>
     </div>
   );
 };
