@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { CSSProperties, FC } from "react";
 import { useEffect, useMemo } from "react";
 import { EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
@@ -97,8 +97,9 @@ export const GraphCanvas: FC = () => {
 
   const roundedX = Math.round(panOffset.x);
   const roundedY = Math.round(panOffset.y);
-  const transformStyle = {
-    transform: `translate(${roundedX}px, ${roundedY}px) scale(${zoomLevel})`,
+  const transformStyle: CSSProperties = {
+    transform: `translate(${roundedX}px, ${roundedY}px)`,
+    zoom: zoomLevel,
   };
 
   return (
