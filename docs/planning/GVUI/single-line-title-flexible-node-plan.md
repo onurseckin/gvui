@@ -11,6 +11,7 @@
 ### Task 1: Refactor `dagreLayout.ts` Single-Line Width & Height Engine
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 
 - [ ] **Step 1: Compute single-line title width generously (`node.name.length * 11 + 90`) to guarantee single-line title width**
@@ -24,6 +25,7 @@
 ### Task 2: Update NodeCard CSS for Single-Line Titles & Flexible Auto-Fitting
 
 **Files:**
+
 - Modify: `src/primitives/nodes/NodeCard/NodeCard.css`
 
 - [ ] **Step 1: Set `.node-card-title` to `white-space: nowrap; word-break: normal; flex-shrink: 0;` to enforce single-line title**
