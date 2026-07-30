@@ -1,5 +1,6 @@
-import type { ChangeEvent, FC } from "react";
+import type { FC } from "react";
 import type { GraphDataset } from "../../types/graphData";
+import { Button, FileUploadButton } from "../../ui";
 import "./Sidebar.css";
 
 const SAMPLE_GRAPHS = [
@@ -15,27 +16,6 @@ interface SidebarProps {
 }
 
 export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCustomUpload }) => {
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = JSON.parse(text) as GraphDataset;
-        if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
-          onCustomUpload(parsed);
-        } else {
-          alert("Invalid Graph JSON format: must contain nodes and edges arrays.");
-        }
-      } catch {
-        alert("Failed to parse JSON file.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
   return (
     <aside className="sidebar-container">
       <div className="sidebar-header">
@@ -47,14 +27,14 @@ export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCusto
         <ul className="sample-list">
           {SAMPLE_GRAPHS.map((sample) => (
             <li key={sample.id}>
-              <button
-                type="button"
+              <Button
+                variant={currentFile === sample.id ? "primary" : "ghost"}
                 className={`sample-btn ${currentFile === sample.id ? "active" : ""}`}
                 onClick={() => onSelectSample(sample.id)}
               >
                 <span className="sample-icon">{sample.icon}</span>
                 <span className="sample-label">{sample.name}</span>
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -62,10 +42,7 @@ export const Sidebar: FC<SidebarProps> = ({ currentFile, onSelectSample, onCusto
 
       <div className="sidebar-section">
         <h3 className="sidebar-section-title">Custom Graph</h3>
-        <label className="upload-label">
-          📁 Upload JSON File
-          <input type="file" accept=".json" onChange={handleFileUpload} className="upload-input" />
-        </label>
+        <FileUploadButton onFileUpload={onCustomUpload} style={{ width: "100%" }} />
       </div>
     </aside>
   );

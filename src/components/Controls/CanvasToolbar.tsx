@@ -1,15 +1,8 @@
 import type { FC } from "react";
-import type { LayoutMode } from "../../state/useGraphStore";
 import { useGraphStore } from "../../state/useGraphStore";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
+import { Button, LayoutSelectDropdown } from "../../ui";
 import "./Controls.css";
-
-const LAYOUT_OPTIONS: { id: LayoutMode; label: string }[] = [
-  { id: "top-down", label: "Top-Down" },
-  { id: "left-right", label: "Left-Right" },
-  { id: "force", label: "Force" },
-  { id: "radial", label: "Radial" },
-];
 
 export const CanvasToolbar: FC = () => {
   const dataset = useGraphStore((state) => state.dataset);
@@ -71,24 +64,36 @@ export const CanvasToolbar: FC = () => {
   return (
     <div className="canvas-toolbar">
       <div className="toolbar-group">
-        <button type="button" onClick={handleZoomIn} title="Zoom In">
+        <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
           ➕
-        </button>
+        </Button>
         <span className="zoom-indicator">{Math.round(zoomLevel * 100)}%</span>
-        <button type="button" onClick={handleZoomOut} title="Zoom Out">
+        <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
           ➖
-        </button>
+        </Button>
       </div>
 
       <div className="toolbar-divider" />
 
-      <button type="button" onClick={handleFitView} title="Fit View" className="toolbar-btn">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleFitView}
+        title="Fit View"
+        className="toolbar-btn"
+      >
         🎯 Fit
-      </button>
+      </Button>
 
-      <button type="button" onClick={resetViewport} title="Reset View" className="toolbar-btn">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={resetViewport}
+        title="Reset View"
+        className="toolbar-btn"
+      >
         ↺ Reset
-      </button>
+      </Button>
 
       <div className="toolbar-divider" />
 
@@ -96,31 +101,25 @@ export const CanvasToolbar: FC = () => {
         <label htmlFor="layout-select" className="layout-label">
           Layout:
         </label>
-        <select
-          id="layout-select"
+        <LayoutSelectDropdown
           value={layoutMode}
-          onChange={(e) => setLayoutMode(e.target.value as LayoutMode)}
-          className="layout-select"
-        >
-          {LAYOUT_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          onLayoutChange={(mode) => setLayoutMode(mode)}
+          size="sm"
+        />
       </div>
 
       <div className="toolbar-divider" />
 
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={handleExportHtml}
         disabled={!dataset}
         title="Export HTML"
         className="toolbar-btn"
       >
         📥 Export HTML
-      </button>
+      </Button>
     </div>
   );
 };
