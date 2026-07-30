@@ -84,9 +84,15 @@ export const GraphCanvas: FC = () => {
 
     const childMap = new Map<string, string[]>();
     for (const edge of positionedEdges) {
-      const existing = childMap.get(edge.source) || [];
-      existing.push(edge.target);
-      childMap.set(edge.source, existing);
+      const existingSource = childMap.get(edge.source) || [];
+      existingSource.push(edge.target);
+      childMap.set(edge.source, existingSource);
+
+      if (edge.directed === false) {
+        const existingTarget = childMap.get(edge.target) || [];
+        existingTarget.push(edge.source);
+        childMap.set(edge.target, existingTarget);
+      }
     }
 
     const hidden = new Set<string>();

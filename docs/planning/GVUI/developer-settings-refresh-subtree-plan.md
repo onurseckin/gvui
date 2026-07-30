@@ -11,6 +11,7 @@
 ### Task 1: Add Header Refresh Button & Live Event Listener to `DeveloperSettings`
 
 **Files:**
+
 - Modify: `src/components/DeveloperSettings/index.tsx`
 - Modify: `src/components/DeveloperSettings/DeveloperSettings.css`
 
@@ -24,6 +25,7 @@
 ### Task 2: Ensure 100% Recursive Subtree Collapse Collection
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/index.tsx`
 
 - [ ] **Step 1: Audit BFS graph traversal in `hiddenNodeIds` to ensure all recursive downstream descendant nodes in the entire subtree are collected**

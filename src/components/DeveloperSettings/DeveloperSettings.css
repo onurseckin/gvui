@@ -80,6 +80,33 @@
   margin: 0;
 }
 
+.developer-settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.developer-settings-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a1a1aa;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.developer-settings-refresh-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .developer-settings-close-btn {
   background: transparent;
   border: none;

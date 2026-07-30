@@ -103,6 +103,14 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
       refreshStorageData();
       setClearedToast(false);
       setActiveTab("local-storage");
+
+      const handleStorageChange = () => {
+        refreshStorageData();
+      };
+      window.addEventListener("storage", handleStorageChange);
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+      };
     }
   }, [isOpen, refreshStorageData]);
 
@@ -147,21 +155,44 @@ export const DeveloperSettings: FC<DeveloperSettingsProps> = ({
                 Inspect application state and manage local storage entries
               </Dialog.Description>
             </div>
-            <Dialog.Close className="developer-settings-close-btn" aria-label="Close">
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div className="developer-settings-header-actions">
+              <button
+                type="button"
+                className="developer-settings-refresh-btn"
+                onClick={refreshStorageData}
+                title="Refresh Local Storage"
               >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </Dialog.Close>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6" />
+                  <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1.2 1.2a10 10 0 0 0 18.8-4.2" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+              <Dialog.Close className="developer-settings-close-btn" aria-label="Close">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </Dialog.Close>
+            </div>
           </div>
 
           <div className="developer-settings-tabs" role="tablist">
