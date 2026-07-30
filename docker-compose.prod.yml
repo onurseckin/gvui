@@ -1,0 +1,10 @@
+services:
+  gvui-prod:
+    container_name: gvui-prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
