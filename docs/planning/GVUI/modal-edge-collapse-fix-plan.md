@@ -11,6 +11,7 @@
 ### Task 1: CommandPalette & DeveloperSettings Flexbox Modal Layout Fix
 
 **Files:**
+
 - Modify: `src/components/CommandPalette/CommandPalette.css`
 - Modify: `src/components/CommandPalette/index.tsx`
 - Modify: `src/components/DeveloperSettings/DeveloperSettings.css`
@@ -26,6 +27,7 @@
 ### Task 2: Parallel Edge Curved Offset & 2D Badge Repulsion Math
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 - Modify: `src/primitives/edges/GraphEdge/computeEdgePath.ts`
 
@@ -40,6 +42,7 @@
 ### Task 3: Collapsed Node Header Visibility & Fit/Reset Accordion Reset
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/index.tsx`
 - Modify: `src/state/useGraphStore.ts`
 - Modify: `src/components/Controls/CanvasToolbar.tsx`
