@@ -19,11 +19,11 @@
   --border-subtle: #18181b;
   --border-focus: #818cf8;
 
-  /* High-Contrast Typography (Pure White & Carbon Muted Text) */
+  /* High-Contrast Typography (Pure White Text) */
   --text-primary: #ffffff;
   --text-heading: #ffffff;
-  --text-muted: #a1a1aa;
-  --text-dimmed: #71717a;
+  --text-muted: #ffffff;
+  --text-dimmed: #ffffff;
 
   /* High-Contrast Badges & Status Tokens */
   /* Success - Deep Emerald Surface + Bright Pure Green Text */
@@ -53,10 +53,10 @@
   --status-tool-border: #9333ea;
   --status-tool-text: #e9d5ff;
 
-  /* Neutral / Gray Badge - Dark Carbon Surface + Muted Text */
+  /* Neutral / Gray Badge - Dark Carbon Surface + Pure White Text */
   --status-gray-bg: rgba(39, 39, 42, 0.6);
   --status-gray-border: #3f3f46;
-  --status-gray-text: #a1a1aa;
+  --status-gray-text: #ffffff;
 
   /* Accent & Selection Ring */
   --accent-color: #818cf8;

@@ -11,6 +11,7 @@
 ### Task 1: Eliminate Muted Text System-Wide & Set Pure White Palette
 
 **Files:**
+
 - Modify: `src/styles/tokens.css`
 - Modify: `src/styles/utilities.css`
 - Modify: `src/index.css`
@@ -26,6 +27,7 @@
 ### Task 2: Refine Navbar Buttons, Hotkey Badges (`F`/`R`), & Large Hamburger Icon
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/Controls/CanvasToolbar.tsx`
 - Modify: `src/components/Controls/Controls.css`
