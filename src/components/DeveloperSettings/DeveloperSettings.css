@@ -1,20 +1,29 @@
 /* Developer Settings Dialog Backdrop Overlay */
 .developer-settings-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 9999;
+  margin: 0;
+  padding: 0;
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  z-index: 1000;
   animation: developerSettingsFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Centered Dialog Container */
 .developer-settings-dialog {
   position: relative;
+  margin: auto;
+  top: auto;
+  left: auto;
+  transform: none;
   width: 50vw;
   min-width: 540px;
   max-width: 880px;
