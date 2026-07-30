@@ -261,7 +261,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               onClick={() => setScope("current")}
             >
               <span>Current File</span>
-              <kbd className="command-palette-key">⌥C</kbd>
+              <kbd className="command-palette-key">⌥+C</kbd>
             </Button>
             <Button
               variant={scope === "all" ? "outline" : "ghost"}
@@ -272,7 +272,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               onClick={() => setScope("all")}
             >
               <span>All Files</span>
-              <kbd className="command-palette-key">⌥A</kbd>
+              <kbd className="command-palette-key">⌥+A</kbd>
             </Button>
           </div>
 
