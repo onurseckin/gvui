@@ -11,6 +11,7 @@
 ### Task 1: Update `CommandPalette.css` & `DeveloperSettings.css`
 
 **Files:**
+
 - Modify: `src/components/CommandPalette/CommandPalette.css`
 - Modify: `src/components/DeveloperSettings/DeveloperSettings.css`
 
