@@ -22,10 +22,13 @@
     "prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@types/dagre": "^0.7.54",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
