@@ -43,3 +43,7 @@ This document contains only finalized, locked technical decisions required for b
 - **Co-location Rule**: Component-specific types, styles, and sub-components live inside the component's dedicated directory (e.g. `src/primitives/nodes/NodeCard/NodeCard.types.ts`). Global `src/types/` is strictly for shared domain contracts (`GraphDataset`).
 - **Decomposition & Line Caps**: Hard cap on file length (~50–150 lines). Large components are decomposed into focused sub-components inside their component folder.
 - **Adaptive Architecture**: Structural blueprint provides clean category boundaries (`primitives/`, `engine/`, `state/`, `components/`, `types/`) while allowing flexible implementation adaptation.
+
+### Decision 6: State Management & Navigation Architecture
+- **State Management**: **Zustand** (`zustand`) for selective, fine-grained canvas subscriptions without unnecessary component re-renders during high-frequency panning/zooming.
+- **Dataset Navigation**: **Native URL Query Parameter Sync** (`?graph=file.json&node=id`) for shareable deep links without heavy router package dependencies. Zero-overhead integration across web app, Docker, and single-file HTML CLI exports.
