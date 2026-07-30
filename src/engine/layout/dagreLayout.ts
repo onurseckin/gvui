@@ -11,7 +11,7 @@ import type {
  * to prevent node overlapping in graph layout rendering.
  */
 export function calculateNodeDimensions(node: GraphNodeData): { width: number; height: number } {
-  const titleWidth = node.name.length * 9.5 + 64;
+  const titleWidth = node.name.length * 11 + 90;
 
   let badgeWidth = 0;
   let badgeRows = 0;
@@ -36,6 +36,8 @@ export function calculateNodeDimensions(node: GraphNodeData): { width: number; h
     (node.model ? node.model.length : 0) + (node.harnessModel ? node.harnessModel.length : 0);
   const modelWidth = modelLength > 0 ? modelLength * 8 + 40 : 0;
 
+  const descWidth = node.description ? node.description.length * 8 + 32 : 0;
+
   let contextLength = 0;
   if (node.context) {
     if (node.context.repoPath) {
@@ -57,7 +59,16 @@ export function calculateNodeDimensions(node: GraphNodeData): { width: number; h
   }
 
   const width = Math.ceil(
-    Math.max(titleWidth, badgeWidth, toolWidth, modelWidth, contextWidth, metadataWidth),
+    Math.max(
+      120,
+      titleWidth,
+      badgeWidth,
+      toolWidth,
+      modelWidth,
+      descWidth,
+      contextWidth,
+      metadataWidth,
+    ),
   );
 
   let height = 44;
