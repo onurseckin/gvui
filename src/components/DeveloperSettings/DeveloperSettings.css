@@ -2,6 +2,9 @@
 .developer-settings-backdrop {
   position: fixed;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -11,13 +14,13 @@
 
 /* Centered Dialog Container */
 .developer-settings-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 680px;
-  max-height: 85vh;
+  position: relative;
+  width: 50vw;
+  min-width: 520px;
+  max-width: 900px;
+  height: 60vh;
+  max-height: 700px;
+  box-sizing: border-box;
   background-color: #121318;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -254,10 +257,10 @@
 @keyframes developerSettingsScaleIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.96);
+    transform: scale(0.96) translateY(-8px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1) translateY(0);
   }
 }

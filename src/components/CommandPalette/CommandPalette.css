@@ -2,6 +2,9 @@
 .command-palette-backdrop {
   position: fixed;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -11,12 +14,13 @@
 
 /* Centered Dialog Container */
 .command-palette-dialog {
-  position: fixed;
-  top: 15vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 640px;
+  position: relative;
+  width: 50vw;
+  min-width: 520px;
+  max-width: 900px;
+  height: 60vh;
+  max-height: 700px;
+  box-sizing: border-box;
   background-color: #121318;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -254,10 +258,10 @@
 @keyframes commandPaletteScaleIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) scale(0.96) translateY(-8px);
+    transform: scale(0.96) translateY(-8px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) scale(1) translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
