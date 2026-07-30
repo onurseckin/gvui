@@ -591,10 +591,21 @@ export function computeDagreLayout(
       const startStub = createPortStub(startPort, srcSide, 16);
       const endStub = createPortStub(endPort, tgtSide, 16);
 
-      if (points.length >= 2) {
-        const innerPoints = points.slice(1, -1);
-        points = [{ ...startPort }, startStub, ...innerPoints, endStub, { ...endPort }];
+      // If loopback/cycle edge, sweep outward to prevent routing through node bodies
+      if (edge.isCycle || edge.source === edge.target) {
+        const sweepX = Math.max(startPort.x, endPort.x) + 80;
+        const sweepStubStart: Point2D = { x: sweepX, y: startPort.y };
+        const sweepStubEnd: Point2D = { x: sweepX, y: endPort.y };
+        points = [
+          { ...startPort },
+          startStub,
+          sweepStubStart,
+          sweepStubEnd,
+          endStub,
+          { ...endPort },
+        ];
       } else {
+        // Direct shortest-path connection between startStub and endStub
         points = [{ ...startPort }, startStub, endStub, { ...endPort }];
       }
     } else if (points.length < 2 && srcNode && tgtNode) {
