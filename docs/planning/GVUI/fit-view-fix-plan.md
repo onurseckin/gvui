@@ -11,6 +11,7 @@
 ### Task 1: Refactor `handleFitView` to Use Container-Relative Viewport Dimensions
 
 **Files:**
+
 - Modify: `src/components/Controls/CanvasToolbar.tsx`
 
 - [ ] **Step 1: In `CanvasToolbar.tsx`, query `.canvas-wrapper` element for `clientWidth` and `clientHeight`**
