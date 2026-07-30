@@ -15,6 +15,7 @@
 ### Task 1: UI Atoms (`Button`, `Input`, `Select`, `Badge`)
 
 **Files:**
+
 - Create: `src/ui/atoms/Button/Button.types.ts`
 - Create: `src/ui/atoms/Button/Button.css`
 - Create: `src/ui/atoms/Button/index.tsx`
@@ -42,6 +43,7 @@
 ### Task 2: UI Molecules (`SearchInput`, `FileUploadButton`, `LayoutSelectDropdown`)
 
 **Files:**
+
 - Create: `src/ui/molecules/SearchInput/SearchInput.types.ts`
 - Create: `src/ui/molecules/SearchInput/SearchInput.css`
 - Create: `src/ui/molecules/SearchInput/index.tsx`
@@ -60,6 +62,7 @@
 ### Task 3: Refactor Sidebar & Controls to Consume Atomic UI Components
 
 **Files:**
+
 - Modify: `src/components/Sidebar/index.tsx`
 - Modify: `src/components/Controls/SearchHeader.tsx`
 - Modify: `src/components/Controls/CanvasToolbar.tsx`

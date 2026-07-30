@@ -1,0 +1,68 @@
+.gvui-search-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+}
+
+.gvui-search-input-wrapper--full-width {
+  width: 100%;
+}
+
+.gvui-search-input-wrapper .gvui-search-input {
+  padding-left: 2.25rem;
+  padding-right: 3.25rem;
+}
+
+.gvui-search-input-icon {
+  position: absolute;
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dimmed);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.gvui-search-input-actions {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 1;
+}
+
+.gvui-search-input-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-dimmed);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.15s ease-in-out,
+    background-color 0.15s ease-in-out;
+}
+
+.gvui-search-input-clear:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.gvui-search-input-hotkey {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: var(--text-dimmed);
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  padding: 2px 5px;
+  user-select: none;
+  pointer-events: none;
+}
