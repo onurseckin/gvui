@@ -221,11 +221,81 @@ export function clipPointToNodeRect(node: PositionedNode, targetPoint: Point2D):
   }
 
   const t = Math.min(tx, ty);
-
   return {
     x: cx + t * dx,
     y: cy + t * dy,
   };
+}
+
+/**
+ * Checks if a 2D line segment (p1 -> p2) intersects a rectangular node bounding box (with margin).
+ */
+export function doesSegmentIntersectBox(
+  p1: Point2D,
+  p2: Point2D,
+  box: { x: number; y: number; width: number; height: number },
+  margin = 12,
+): boolean {
+  const minX = box.x - margin;
+  const maxX = box.x + box.width + margin;
+  const minY = box.y - margin;
+  const maxY = box.y + box.height + margin;
+
+  let u1 = 0;
+  let u2 = 1;
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  const p = [-dx, dx, -dy, dy];
+  const q = [p1.x - minX, maxX - p1.x, p1.y - minY, maxY - p1.y];
+
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return false;
+    } else {
+      const r = q[i] / p[i];
+      if (p[i] < 0) {
+        if (r > u2) return false;
+        if (r > u1) u1 = r;
+      } else {
+        if (r < u1) return false;
+        if (r < u2) u2 = r;
+      }
+    }
+  }
+  return u1 <= u2;
+}
+
+/**
+ * Inserts obstacle avoidance waypoints if direct segment (startStub -> endStub) intersects an intermediate node card.
+ */
+export function avoidNodeObstacles(
+  startStub: Point2D,
+  endStub: Point2D,
+  nodes: PositionedNode[],
+  srcId: string,
+  tgtId: string,
+): Point2D[] {
+  let waypoints: Point2D[] = [startStub, endStub];
+
+  for (const node of nodes) {
+    if (node.id === srcId || node.id === tgtId) continue;
+
+    if (doesSegmentIntersectBox(startStub, endStub, node, 16)) {
+      const srcCenter = { x: startStub.x, y: startStub.y };
+      const nodeCenter = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+
+      // Determine bypass direction
+      const bypassX = srcCenter.x >= nodeCenter.x ? node.x + node.width + 32 : node.x - 32;
+
+      const w1: Point2D = { x: bypassX, y: startStub.y };
+      const w2: Point2D = { x: bypassX, y: endStub.y };
+      waypoints = [startStub, w1, w2, endStub];
+      break;
+    }
+  }
+
+  return waypoints;
 }
 
 /**
@@ -605,8 +675,15 @@ export function computeDagreLayout(
           { ...endPort },
         ];
       } else {
-        // Direct shortest-path connection between startStub and endStub
-        points = [{ ...startPort }, startStub, endStub, { ...endPort }];
+        // Direct connection with intermediate node obstacle avoidance
+        const middleWaypoints = avoidNodeObstacles(
+          startStub,
+          endStub,
+          positionedNodes,
+          edge.source,
+          edge.target,
+        );
+        points = [{ ...startPort }, ...middleWaypoints, { ...endPort }];
       }
     } else if (points.length < 2 && srcNode && tgtNode) {
       const srcCx = srcNode.x + srcNode.width / 2;

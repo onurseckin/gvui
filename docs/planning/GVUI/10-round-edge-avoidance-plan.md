@@ -9,15 +9,19 @@
 ## 📐 Mathematical Formulation
 
 ### 1. Line Segment vs Node Rectangle Obstacle Intersection
+
 For a segment $S = [P_A, P_B]$ and node bounding box $N = (x - \text{margin}, y - \text{margin}, w + 2\text{margin}, h + 2\text{margin})$ (with margin = 16px):
 If $S$ intersects box $N$, compute clean obstacle avoidance waypoints:
+
 - Route around the nearest corner of $N$ (e.g. $[P_A, (P_{A,x}, \text{Corner}_y), (\text{Corner}_x, \text{Corner}_y), P_B]$).
 
 ### 2. Pure Straight Line for Unobstructed Paths
+
 If $S = [\text{startPort}, \text{startStub}, \text{endStub}, \text{endPort}]$ does NOT intersect any node box in the graph:
 Draw pure straight segment $\text{startStub} \rightarrow \text{endStub}$ with zero artificial bends!
 
 ### 3. Badge Midpoint Placement & Independent Repulsion
+
 Badges sit at exact 50% arc-length midpoint $s = L / 2$ of the path polyline.
 Edge badges NEVER mutate or distort edge line geometry; badge-node repulsion only moves the badge overlay $(x_{\text{badge}}, y_{\text{badge}})$.
 
