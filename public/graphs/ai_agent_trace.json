@@ -68,9 +68,7 @@
         { "label": "Tokens: 3,890", "variant": "amber" },
         { "label": "Latency: 850ms", "variant": "info" }
       ],
-      "tools": [
-        { "name": "write_to_file", "type": "generic" }
-      ]
+      "tools": [{ "name": "write_to_file", "type": "generic" }]
     },
     {
       "id": "node-5",
@@ -82,9 +80,7 @@
         { "label": "Status: Failed", "variant": "error" },
         { "label": "Latency: 320ms", "variant": "gray" }
       ],
-      "tools": [
-        { "name": "typecheck.sh", "type": "custom" }
-      ]
+      "tools": [{ "name": "typecheck.sh", "type": "custom" }]
     },
     {
       "id": "node-6",
@@ -98,9 +94,7 @@
         { "label": "Tokens: 980", "variant": "amber" },
         { "label": "Latency: 190ms", "variant": "info" }
       ],
-      "tools": [
-        { "name": "replace_file_content", "type": "generic" }
-      ]
+      "tools": [{ "name": "replace_file_content", "type": "generic" }]
     }
   ],
   "edges": [
@@ -109,7 +103,13 @@
     { "id": "e3-4", "source": "node-3", "target": "node-4", "label": "provides context" },
     { "id": "e4-5", "source": "node-4", "target": "node-5", "label": "submits code" },
     { "id": "e5-6", "source": "node-5", "target": "node-6", "label": "reports error" },
-    { "id": "e6-4", "source": "node-6", "target": "node-4", "label": "retry patch", "isCycle": true },
+    {
+      "id": "e6-4",
+      "source": "node-6",
+      "target": "node-4",
+      "label": "retry patch",
+      "isCycle": true
+    },
     { "id": "e6-5", "source": "node-6", "target": "node-5", "label": "re-validate" }
   ]
 }

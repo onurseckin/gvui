@@ -1,6 +1,7 @@
 # Decision 5: Co-located Component Architecture & Directory Structure
 
 ## Status
+
 - **State**: Locked & Finalized
 - **Date**: 2026-07-30
 - **Choice**: Co-located Subfolder Architecture (Strict Co-location, Line Length Caps, Adaptive Component Scoping)

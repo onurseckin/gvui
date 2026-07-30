@@ -1,6 +1,7 @@
 # Decision 4: Interactive Canvas Features & Controls
 
 ## Status
+
 - **State**: Locked & Finalized
 - **Date**: 2026-07-30
 - **Choice**: Option B (Essential Navigation + Node Search/Auto-Focus, Status Filtering & Sub-tree Collapsing)
@@ -8,9 +9,11 @@
 ---
 
 ## Explanation & Context
+
 As graphs grow large (>100+ nodes, multi-step AI thinking harnesses), users need powerful viewport navigation tools to inspect nodes cleanly without getting lost or overwhelmed.
 
 We evaluated three feature set levels:
+
 1. **Option A: Essential Navigation (Pan, Zoom, Fit View, Lock Canvas)**
 2. **Option B: Navigation + Search, Status Filtering & Sub-tree Collapsing (Selected)**
 3. **Option C: Option B + Time-Travel Step Replay Scrubber**
@@ -34,6 +37,7 @@ We evaluated three feature set levels:
 ---
 
 ## Technical Specifications
+
 - **Zoom Range**: `10%` (`0.1`) to `500%` (`5.0`).
 - **Pan Bounds**: Elastic canvas padding allowing full pan anywhere on the screen.
 - **Fit View Algorithm**: Calculates Axis-Aligned Bounding Box (AABB) of all visible nodes + 50px padding and computes exact CSS matrix scale & translate offsets.

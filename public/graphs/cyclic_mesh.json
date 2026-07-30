@@ -38,26 +38,34 @@
       "name": "Payment Gateway",
       "type": "service",
       "description": "Stripe & PayPal transactions",
-      "badges": [
-        { "label": "Status: Healthy", "variant": "success" }
-      ]
+      "badges": [{ "label": "Status: Healthy", "variant": "success" }]
     },
     {
       "id": "mesh-cache",
       "name": "Redis Cluster",
       "type": "datastore",
       "description": "Distributed cache layer",
-      "badges": [
-        { "label": "Hit Ratio: 94%", "variant": "success" }
-      ]
+      "badges": [{ "label": "Hit Ratio: 94%", "variant": "success" }]
     }
   ],
   "edges": [
     { "id": "me1", "source": "mesh-gw", "target": "mesh-auth", "label": "validates token" },
     { "id": "me2", "source": "mesh-gw", "target": "mesh-user", "label": "routes request" },
-    { "id": "me3", "source": "mesh-user", "target": "mesh-auth", "label": "verifies permissions", "isCycle": true },
+    {
+      "id": "me3",
+      "source": "mesh-user",
+      "target": "mesh-auth",
+      "label": "verifies permissions",
+      "isCycle": true
+    },
     { "id": "me4", "source": "mesh-user", "target": "mesh-cache", "label": "cache lookup" },
     { "id": "me5", "source": "mesh-user", "target": "mesh-payment", "label": "triggers checkout" },
-    { "id": "me6", "source": "mesh-payment", "target": "mesh-user", "label": "updates order status", "isCycle": true }
+    {
+      "id": "me6",
+      "source": "mesh-payment",
+      "target": "mesh-user",
+      "label": "updates order status",
+      "isCycle": true
+    }
   ]
 }

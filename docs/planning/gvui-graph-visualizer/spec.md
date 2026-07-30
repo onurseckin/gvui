@@ -1,6 +1,7 @@
 # GVUI (Graph Visualizer UI) — Planning & Design Spec
 
 ## Overview
+
 **GVUI** is a flexible, highly performant React-based UI tool designed to visualize graph structures—specifically AI thinking harnesses, decision traces, agent step graphs, and generic node-edge representations—loaded dynamically from JSON files.
 
 ---
@@ -16,4 +17,5 @@
 ---
 
 ## 1. Decision 1: Core Canvas Rendering Technology
-*Under discussion...*
+
+_Under discussion..._

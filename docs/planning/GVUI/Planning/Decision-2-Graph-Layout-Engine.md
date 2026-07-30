@@ -1,6 +1,7 @@
 # Decision 2: Graph Layout & Positioning Engine
 
 ## Status
+
 - **State**: Locked & Finalized
 - **Date**: 2026-07-30
 - **Choice**: Option C (Multi-Algorithm Auto-Layout Engine with Hierarchical Default + Layout Switcher)
@@ -8,9 +9,11 @@
 ---
 
 ## Explanation & Context
-GVUI is designed to visualize graph datasets provided as raw JSON files. The JSON files do NOT contain `x, y` coordinates, visual positioning data, or canvas metadata. 
+
+GVUI is designed to visualize graph datasets provided as raw JSON files. The JSON files do NOT contain `x, y` coordinates, visual positioning data, or canvas metadata.
 
 The JSON schema specifies only:
+
 - Node list & Node identifiers
 - Edges & edge direction (directed / undirected)
 - Cyclic feedback connections
@@ -19,6 +22,7 @@ The JSON schema specifies only:
 GVUI is 100% responsible for calculating all spatial coordinates, node spacing, alignment, and collision-free bounds.
 
 We evaluated three positioning approaches:
+
 1. **Option A: Pure Hierarchical Auto-Layout (Dagre)**
 2. **Option B: Force-Directed Physics Layout (D3-Force)**
 3. **Option C: Multi-Algorithm Auto-Layout Engine (Selected)**
@@ -43,6 +47,7 @@ We evaluated three positioning approaches:
 ---
 
 ## Technical Specifications
+
 - **Primary Layout Algorithm**: Dagre (Hierarchical DAG engine)
 - **Secondary Layout Algorithms**: D3-Force / Custom Radial positioning engine
 - **Collision Avoidance**: Automatic bounding box calculation based on node title & badge dimensions.

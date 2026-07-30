@@ -1,11 +1,11 @@
 export interface NodeBadge {
   label: string;
-  variant?: 'success' | 'info' | 'amber' | 'error' | 'gray';
+  variant?: "success" | "info" | "amber" | "error" | "gray";
 }
 
 export interface NodeTool {
   name: string;
-  type?: 'generic' | 'custom';
+  type?: "generic" | "custom";
 }
 
 export interface NodeContext {

@@ -15,6 +15,7 @@
 ### Task 1: Core Type Definitions & Sample Datasets
 
 **Files:**
+
 - Create: `src/types/graphData.ts`
 - Create: `public/graphs/ai_agent_trace.json`
 - Create: `public/graphs/decision_tree.json`
@@ -25,12 +26,12 @@
 ```typescript
 export interface NodeBadge {
   label: string;
-  variant?: 'success' | 'info' | 'amber' | 'error' | 'gray';
+  variant?: "success" | "info" | "amber" | "error" | "gray";
 }
 
 export interface NodeTool {
   name: string;
-  type?: 'generic' | 'custom';
+  type?: "generic" | "custom";
 }
 
 export interface NodeContext {
@@ -135,16 +136,23 @@ export interface PositionedEdge extends GraphEdgeData {
   "edges": [
     { "id": "e1-2", "source": "node-1", "target": "node-2", "label": "dispatches" },
     { "id": "e2-3", "source": "node-2", "target": "node-3", "label": "generates" },
-    { "id": "e3-2", "source": "node-3", "target": "node-2", "label": "retry feedback", "isCycle": true }
+    {
+      "id": "e3-2",
+      "source": "node-3",
+      "target": "node-2",
+      "label": "retry feedback",
+      "isCycle": true
+    }
   ]
 }
 ```
 
 - [ ] **Step 3: Run typecheck**
-Run: `bun run typecheck`
-Expected: PASS
+      Run: `bun run typecheck`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/types/graphData.ts public/graphs/
 git commit -m "feat: add graph data interfaces and sample datasets"
@@ -155,6 +163,7 @@ git commit -m "feat: add graph data interfaces and sample datasets"
 ### Task 2: Install State Libraries & Zustand Store
 
 **Files:**
+
 - Modify: `package.json`
 - Create: `src/state/useGraphStore.ts`
 
@@ -165,11 +174,11 @@ Run: `bun add zustand @dagrejs/dagre && bun add -D @types/dagre`
 - [ ] **Step 2: Create Zustand store `src/state/useGraphStore.ts`**
 
 ```typescript
-import { create } from 'zustand';
-import { GraphDataset, PositionedNode, PositionedEdge } from '../types/graphData';
+import { create } from "zustand";
+import { GraphDataset, PositionedNode, PositionedEdge } from "../types/graphData";
 
-export type LayoutMode = 'top-down' | 'left-right' | 'force' | 'radial';
-export type FilterCategory = 'all' | 'success' | 'error' | 'tools';
+export type LayoutMode = "top-down" | "left-right" | "force" | "radial";
+export type FilterCategory = "all" | "success" | "error" | "tools";
 
 interface GraphState {
   dataset: GraphDataset | null;
@@ -200,15 +209,16 @@ export const useGraphStore = create<GraphState>((set) => ({
   positionedNodes: [],
   positionedEdges: [],
   selectedNodeId: null,
-  searchQuery: '',
-  activeFilter: 'all',
-  layoutMode: 'top-down',
+  searchQuery: "",
+  activeFilter: "all",
+  layoutMode: "top-down",
   zoomLevel: 1,
   panOffset: { x: 0, y: 0 },
   collapsedNodeIds: new Set(),
 
   setDataset: (dataset) => set({ dataset, selectedNodeId: null }),
-  setPositionedGraph: (positionedNodes, positionedEdges) => set({ positionedNodes, positionedEdges }),
+  setPositionedGraph: (positionedNodes, positionedEdges) =>
+    set({ positionedNodes, positionedEdges }),
   setSelectedNodeId: (selectedNodeId) => set({ selectedNodeId }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setActiveFilter: (activeFilter) => set({ activeFilter }),
@@ -230,10 +240,11 @@ export const useGraphStore = create<GraphState>((set) => ({
 ```
 
 - [ ] **Step 3: Run typecheck**
-Run: `bun run typecheck`
-Expected: PASS
+      Run: `bun run typecheck`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add package.json bun.lock src/state/useGraphStore.ts
 git commit -m "feat: install zustand and create graph state store"
@@ -244,6 +255,7 @@ git commit -m "feat: install zustand and create graph state store"
 ### Task 3: Co-located Visual Node Primitives (`NodeCard` Folder)
 
 **Files:**
+
 - Create: `src/primitives/nodes/NodeCard/NodeCard.types.ts`
 - Create: `src/primitives/nodes/NodeCard/NodeCardHeader.tsx`
 - Create: `src/primitives/nodes/NodeCard/NodeCardBadges.tsx`
@@ -255,7 +267,7 @@ git commit -m "feat: install zustand and create graph state store"
 - [ ] **Step 1: Create `src/primitives/nodes/NodeCard/NodeCard.types.ts`**
 
 ```typescript
-import { PositionedNode } from '../../../types/graphData';
+import { PositionedNode } from "../../../types/graphData";
 
 export interface NodeCardProps {
   node: PositionedNode;
@@ -270,10 +282,11 @@ export interface NodeCardProps {
 - [ ] **Step 2: Create sub-components (`NodeCardHeader.tsx`, `NodeCardBadges.tsx`, etc.) and export orchestrator in `index.tsx`**
 
 - [ ] **Step 3: Run typecheck & oxlint**
-Run: `bun run typecheck && bun run lint`
-Expected: PASS with 0 errors
+      Run: `bun run typecheck && bun run lint`
+      Expected: PASS with 0 errors
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/primitives/nodes/NodeCard/
 git commit -m "feat: add NodeCard primitive component and sub-parts"
@@ -284,6 +297,7 @@ git commit -m "feat: add NodeCard primitive component and sub-parts"
 ### Task 4: Visual Edge & Handle Primitives
 
 **Files:**
+
 - Create: `src/primitives/handles/PortSocket/index.tsx`
 - Create: `src/primitives/edges/GraphEdge/index.tsx`
 - Create: `src/primitives/edges/GraphEdge/EdgeMarkerDefs.tsx`
@@ -292,10 +306,11 @@ git commit -m "feat: add NodeCard primitive component and sub-parts"
 - [ ] **Step 1: Create handle socket primitive `PortSocket/index.tsx`**
 - [ ] **Step 2: Create SVG edge path generators and SVG marker definitions**
 - [ ] **Step 3: Run typecheck & oxlint**
-Run: `bun run typecheck && bun run lint`
-Expected: PASS
+      Run: `bun run typecheck && bun run lint`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/primitives/handles/ src/primitives/edges/
 git commit -m "feat: add edge paths, markers, and port socket primitives"
@@ -306,18 +321,19 @@ git commit -m "feat: add edge paths, markers, and port socket primitives"
 ### Task 5: Dagre & Layout Engine Dispatcher
 
 **Files:**
+
 - Create: `src/engine/layout/dagreLayout.ts`
 - Create: `src/engine/layout/layoutDispatcher.ts`
 
 - [ ] **Step 1: Write Dagre hierarchical auto-layout positioning algorithm `dagreLayout.ts`**
 
 ```typescript
-import dagre from '@dagrejs/dagre';
-import { GraphDataset, PositionedNode, PositionedEdge } from '../../types/graphData';
+import dagre from "@dagrejs/dagre";
+import { GraphDataset, PositionedNode, PositionedEdge } from "../../types/graphData";
 
 export function computeDagreLayout(
   dataset: GraphDataset,
-  direction: 'TB' | 'LR' = 'TB'
+  direction: "TB" | "LR" = "TB",
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: direction, nodesep: 40, ranksep: 60 });
@@ -350,9 +366,10 @@ export function computeDagreLayout(
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
     const srcNode = positionedNodes.find((n) => n.id === edge.source);
     const tgtNode = positionedNodes.find((n) => n.id === edge.target);
-    const path = srcNode && tgtNode
-      ? `M ${srcNode.x + NODE_WIDTH / 2} ${srcNode.y + NODE_HEIGHT} L ${tgtNode.x + NODE_WIDTH / 2} ${tgtNode.y}`
-      : '';
+    const path =
+      srcNode && tgtNode
+        ? `M ${srcNode.x + NODE_WIDTH / 2} ${srcNode.y + NODE_HEIGHT} L ${tgtNode.x + NODE_WIDTH / 2} ${tgtNode.y}`
+        : "";
     return { ...edge, path };
   });
 
@@ -362,10 +379,11 @@ export function computeDagreLayout(
 
 - [ ] **Step 2: Create layout dispatcher `layoutDispatcher.ts`**
 - [ ] **Step 3: Run typecheck**
-Run: `bun run typecheck`
-Expected: PASS
+      Run: `bun run typecheck`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/engine/layout/
 git commit -m "feat: add Dagre layout calculation engine"
@@ -376,16 +394,18 @@ git commit -m "feat: add Dagre layout calculation engine"
 ### Task 6: SVG + HTML Graph Canvas & Viewport
 
 **Files:**
+
 - Create: `src/engine/GraphCanvas/usePanZoom.ts`
 - Create: `src/engine/GraphCanvas/index.tsx`
 
 - [ ] **Step 1: Write `usePanZoom` hook handling wheel zoom & drag panning**
 - [ ] **Step 2: Create `GraphCanvas/index.tsx` rendering SVG edge layer + HTML DOM node cards**
 - [ ] **Step 3: Run typecheck & oxlint**
-Run: `bun run typecheck && bun run lint`
-Expected: PASS
+      Run: `bun run typecheck && bun run lint`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/engine/GraphCanvas/
 git commit -m "feat: add SVG and HTML hybrid canvas viewport with pan zoom"
@@ -396,6 +416,7 @@ git commit -m "feat: add SVG and HTML hybrid canvas viewport with pan zoom"
 ### Task 7: App Sidebar, Search Header & Controls Toolbar
 
 **Files:**
+
 - Create: `src/components/Sidebar/index.tsx`
 - Create: `src/components/Controls/CanvasToolbar.tsx`
 - Create: `src/components/Controls/SearchHeader.tsx`
@@ -406,10 +427,11 @@ git commit -m "feat: add SVG and HTML hybrid canvas viewport with pan zoom"
 - [ ] **Step 2: Build SearchHeader and FilterChips connected to Zustand store**
 - [ ] **Step 3: Assemble App.tsx combining Sidebar + GraphCanvas + Controls**
 - [ ] **Step 4: Run typecheck, oxlint, oxfmt**
-Run: `bun run typecheck && bun run lint && bun run format:check`
-Expected: PASS with 0 warnings / 0 errors
+      Run: `bun run typecheck && bun run lint && bun run format:check`
+      Expected: PASS with 0 warnings / 0 errors
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add src/components/ src/App.tsx
 git commit -m "feat: assemble complete GVUI visualizer application"
@@ -420,15 +442,17 @@ git commit -m "feat: assemble complete GVUI visualizer application"
 ### Task 8: Single-File Standalone HTML Exporter Utility
 
 **Files:**
+
 - Create: `src/utils/htmlExporter.ts`
 
 - [ ] **Step 1: Write `htmlExporter.ts` utility serializing active dataset into self-contained HTML**
 - [ ] **Step 2: Add "Export HTML" button to CanvasToolbar**
 - [ ] **Step 3: Run typecheck & oxlint**
-Run: `bun run typecheck && bun run lint`
-Expected: PASS
+      Run: `bun run typecheck && bun run lint`
+      Expected: PASS
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add src/utils/htmlExporter.ts src/components/Controls/CanvasToolbar.tsx
 git commit -m "feat: add standalone single-file HTML exporter utility"

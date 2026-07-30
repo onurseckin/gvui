@@ -12,9 +12,7 @@
         { "label": "Feature: active_days_30d", "variant": "info" },
         { "label": "Threshold: > 30 days", "variant": "gray" }
       ],
-      "tools": [
-        { "name": "user_activity_query", "type": "generic" }
-      ]
+      "tools": [{ "name": "user_activity_query", "type": "generic" }]
     },
     {
       "id": "dt-left1",
@@ -25,9 +23,7 @@
         { "label": "Feature: arr_usd", "variant": "info" },
         { "label": "Threshold: > $50,000", "variant": "amber" }
       ],
-      "tools": [
-        { "name": "stripe_billing_fetch", "type": "custom" }
-      ]
+      "tools": [{ "name": "stripe_billing_fetch", "type": "custom" }]
     },
     {
       "id": "dt-right1",
@@ -38,9 +34,7 @@
         { "label": "Feature: open_tickets", "variant": "info" },
         { "label": "Threshold: > 5 tickets", "variant": "error" }
       ],
-      "tools": [
-        { "name": "zendesk_api", "type": "generic" }
-      ]
+      "tools": [{ "name": "zendesk_api", "type": "generic" }]
     },
     {
       "id": "dt-leaf1",

@@ -1,6 +1,7 @@
 # Decision 1: Core Rendering Technology (SVG + HTML Hybrid)
 
 ## Status
+
 - **State**: Locked & Finalized
 - **Date**: 2026-07-30
 - **Choice**: Option A (SVG + HTML React DOM Hybrid)
@@ -8,9 +9,11 @@
 ---
 
 ## Explanation & Context
+
 GVUI requires rendering graphs representing AI thinking harnesses, decision trees, and trace flows. These graphs consist of nodes with titles, status badges (`[Status: Executed]`, `[Tokens: 340]`), collapsible trace logs, and directed/undirected/cyclic edges.
 
 We evaluated three primary rendering engines:
+
 1. **Option A: SVG + HTML React DOM (Selected)**
 2. **Option B: Pure HTML5 2D Canvas**
 3. **Option C: WebGL GPU Acceleration**
@@ -34,4 +37,5 @@ We evaluated three primary rendering engines:
 ---
 
 ## Trade-Offs & Performance Boundaries
+
 - **Node Scale Target**: Optimized for graphs up to 500–1,000 active nodes on screen, which fully covers AI thinking harness traces and decision graphs.
