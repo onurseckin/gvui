@@ -11,6 +11,7 @@
 ### Task 1: Edge Path Connection Precision & Segment Midpoint Label Placement
 
 **Files:**
+
 - Modify: `src/engine/layout/dagreLayout.ts`
 
 - [ ] **Step 1: In `dagreLayout.ts`, compute exact node boundary clip points for edge start/end points to eliminate gaps**
@@ -23,6 +24,7 @@
 ### Task 2: Solid Opaque Cutout Badges & Clean Cycle Edge Styling
 
 **Files:**
+
 - Modify: `src/primitives/edges/GraphEdge/EdgeBadgeOverlay.tsx`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`
 

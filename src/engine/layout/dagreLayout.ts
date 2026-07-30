@@ -123,6 +123,87 @@ function buildSvgPath(points: Array<{ x: number; y: number }>): string {
 }
 
 /**
+ * Clips a ray from the center of a node rectangle towards a target point to the node's boundary rectangle.
+ */
+function clipPointToNodeRect(
+  node: PositionedNode,
+  targetPoint: { x: number; y: number },
+): { x: number; y: number } {
+  const cx = node.x + node.width / 2;
+  const cy = node.y + node.height / 2;
+
+  const dx = targetPoint.x - cx;
+  const dy = targetPoint.y - cy;
+
+  if (dx === 0 && dy === 0) {
+    return { x: cx, y: cy };
+  }
+
+  const xMin = node.x;
+  const xMax = node.x + node.width;
+  const yMin = node.y;
+  const yMax = node.y + node.height;
+
+  let tx = Infinity;
+  let ty = Infinity;
+
+  if (dx > 0) {
+    tx = (xMax - cx) / dx;
+  } else if (dx < 0) {
+    tx = (xMin - cx) / dx;
+  }
+
+  if (dy > 0) {
+    ty = (yMax - cy) / dy;
+  } else if (dy < 0) {
+    ty = (yMin - cy) / dy;
+  }
+
+  const t = Math.min(tx, ty);
+
+  return {
+    x: cx + t * dx,
+    y: cy + t * dy,
+  };
+}
+
+/**
+ * Finds the midpoint of the longest straight segment between adjacent points.
+ */
+function findLongestSegmentMidpoint(points: Array<{ x: number; y: number }>): {
+  x: number;
+  y: number;
+} {
+  if (points.length < 2) {
+    return points[0] ?? { x: 0, y: 0 };
+  }
+
+  let maxLenSq = -1;
+  let bestMidpoint = {
+    x: (points[0].x + points[1].x) / 2,
+    y: (points[0].y + points[1].y) / 2,
+  };
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const lenSq = dx * dx + dy * dy;
+
+    if (lenSq > maxLenSq) {
+      maxLenSq = lenSq;
+      bestMidpoint = {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2,
+      };
+    }
+  }
+
+  return bestMidpoint;
+}
+
+/**
  * Computes node coordinates and edge paths using the Dagre hierarchical positioning algorithm.
  */
 export function computeDagreLayout(
@@ -172,32 +253,80 @@ export function computeDagreLayout(
   const positionedNodesMap = new Map<string, PositionedNode>(positionedNodes.map((n) => [n.id, n]));
 
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
-    const dagreEdge = g.edge(edge.source, edge.target);
-    const points = dagreEdge?.points ?? [];
+    const dagreEdge = g.edge(edge.source, edge.target) as
+      | { points?: Array<{ x: number; y: number }> }
+      | undefined;
+    const rawPoints = dagreEdge?.points ?? [];
+    const points: Array<{ x: number; y: number }> = rawPoints.map((p) => ({ x: p.x, y: p.y }));
 
     let path = "";
     let labelX: number | undefined;
     let labelY: number | undefined;
 
+    const srcNode = positionedNodesMap.get(edge.source);
+    const tgtNode = positionedNodesMap.get(edge.target);
+
     if (points.length >= 2) {
-      path = buildSvgPath(points);
-      const midIndex = Math.floor(points.length / 2);
-      labelX = dagreEdge?.x ?? points[midIndex].x;
-      labelY = dagreEdge?.y ?? points[midIndex].y;
-    } else {
-      const srcNode = positionedNodesMap.get(edge.source);
-      const tgtNode = positionedNodesMap.get(edge.target);
-
-      if (srcNode && tgtNode) {
-        const srcCx = srcNode.x + srcNode.width / 2;
-        const srcCy = srcNode.y + srcNode.height / 2;
-        const tgtCx = tgtNode.x + tgtNode.width / 2;
-        const tgtCy = tgtNode.y + tgtNode.height / 2;
-
-        path = `M ${srcCx} ${srcCy} L ${tgtCx} ${tgtCy}`;
-        labelX = (srcCx + tgtCx) / 2;
-        labelY = (srcCy + tgtCy) / 2;
+      if (srcNode) {
+        let targetForSrc: { x: number; y: number } | undefined;
+        for (let i = 1; i < points.length; i++) {
+          const p = points[i];
+          const isInsideSrc =
+            p.x >= srcNode.x &&
+            p.x <= srcNode.x + srcNode.width &&
+            p.y >= srcNode.y &&
+            p.y <= srcNode.y + srcNode.height;
+          if (!isInsideSrc) {
+            targetForSrc = p;
+            break;
+          }
+        }
+        if (!targetForSrc && points.length > 1) {
+          targetForSrc = points[1];
+        }
+        if (targetForSrc) {
+          points[0] = clipPointToNodeRect(srcNode, targetForSrc);
+        }
       }
+
+      if (tgtNode) {
+        let sourceForTgt: { x: number; y: number } | undefined;
+        for (let i = points.length - 2; i >= 0; i--) {
+          const p = points[i];
+          const isInsideTgt =
+            p.x >= tgtNode.x &&
+            p.x <= tgtNode.x + tgtNode.width &&
+            p.y >= tgtNode.y &&
+            p.y <= tgtNode.y + tgtNode.height;
+          if (!isInsideTgt) {
+            sourceForTgt = p;
+            break;
+          }
+        }
+        if (!sourceForTgt && points.length > 1) {
+          sourceForTgt = points[points.length - 2];
+        }
+        if (sourceForTgt) {
+          points[points.length - 1] = clipPointToNodeRect(tgtNode, sourceForTgt);
+        }
+      }
+
+      path = buildSvgPath(points);
+      const mid = findLongestSegmentMidpoint(points);
+      labelX = mid.x;
+      labelY = mid.y;
+    } else if (srcNode && tgtNode) {
+      const srcCx = srcNode.x + srcNode.width / 2;
+      const srcCy = srcNode.y + srcNode.height / 2;
+      const tgtCx = tgtNode.x + tgtNode.width / 2;
+      const tgtCy = tgtNode.y + tgtNode.height / 2;
+
+      const startPt = clipPointToNodeRect(srcNode, { x: tgtCx, y: tgtCy });
+      const endPt = clipPointToNodeRect(tgtNode, { x: srcCx, y: srcCy });
+
+      path = `M ${startPt.x} ${startPt.y} L ${endPt.x} ${endPt.y}`;
+      labelX = (startPt.x + endPt.x) / 2;
+      labelY = (startPt.y + endPt.y) / 2;
     }
 
     return {
