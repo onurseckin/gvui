@@ -63,6 +63,26 @@ function compareEdgeMetas(a: EdgeSortMeta, b: EdgeSortMeta, epsilon: number): nu
   return a.edge.id.localeCompare(b.edge.id);
 }
 
+export function generatePermutations<T>(items: T[], maxPermutations = 32): T[][] {
+  const results: T[][] = [];
+
+  function permute(arr: T[], memo: T[] = []) {
+    if (results.length >= maxPermutations) return;
+    if (arr.length === 0) {
+      results.push(memo);
+      return;
+    }
+    for (let i = 0; i < arr.length; i++) {
+      const curr = arr.slice();
+      const next = curr.splice(i, 1);
+      permute(curr, memo.concat(next));
+    }
+  }
+
+  permute(items);
+  return results;
+}
+
 export function routeAllEdges(
   nodeLayout: NodeLayoutResult,
   config: CustomLayoutConfig,
@@ -358,7 +378,7 @@ export function routeAllEdges(
     }
 
     let noImprovementCount = 0;
-    const maxPasses = Math.min(2, config.maxRipUpPasses);
+    const maxPasses = config.maxRipUpPasses;
 
     for (let pass = 0; pass < maxPasses; pass++) {
       const stateSig = getRoutesSignature();
@@ -401,52 +421,135 @@ export function routeAllEdges(
       }
       seenConflictSignatures.add(conflictSig);
 
-      // Release conflict set routes
-      for (const eId of conflictSet) {
-        ledger.release(eId);
-        routesMap.delete(eId);
-      }
+      const conflictEdgeList = nonSelfEdges.filter((e) => conflictSet.has(e.id));
 
-      // Sort conflict set edges by hardest-first
-      const edgesToReroute = nonSelfEdges
-        .filter((e) => conflictSet.has(e.id))
-        .sort((a, b) => {
-          const metaA = edgeMetaMap.get(a.id);
-          const metaB = edgeMetaMap.get(b.id);
-          if (metaA && metaB) {
-            return compareEdgeMetas(metaA, metaB, config.epsilon);
+      if (
+        conflictEdgeList.length > 1 &&
+        conflictEdgeList.length <= config.maxConflictPermutationSize
+      ) {
+        // Conflict-directed permutation search over small conflict component
+        const perms = generatePermutations(conflictEdgeList, config.maxConflictPermutations);
+        let bestPermRoutes: Map<string, RoutedPath> | null = null;
+        let bestPermValidation: ExtendedLayoutValidationResult | null = null;
+        let bestPermLedgerOcc: OccupancyRecord[] | null = null;
+
+        for (const perm of perms) {
+          // Clone ledger & routes for trial permutation
+          const trialLedger = new RouteOccupancyLedger({ epsilon: config.epsilon });
+          const trialRoutesMap = new Map(routesMap);
+
+          for (const eId of conflictSet) {
+            trialRoutesMap.delete(eId);
           }
-          return a.id.localeCompare(b.id);
-        });
 
-      unroutedEdges.clear();
+          // Re-commit non-conflict routes into trial ledger
+          for (const [eId, r] of trialRoutesMap.entries()) {
+            const ports = portDistributionResult.portsByEdge.get(eId);
+            trialLedger.commitRoute(eId, r.points, ports?.sourcePort, ports?.targetPort);
+          }
 
-      for (const edge of edgesToReroute) {
-        const ports = portDistributionResult.portsByEdge.get(edge.id);
-        if (!ports) continue;
+          for (const edge of perm) {
+            const ports = portDistributionResult.portsByEdge.get(edge.id);
+            if (!ports) continue;
+            const meta = edgeMetaMap.get(edge.id);
+            const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
 
-        const meta = edgeMetaMap.get(edge.id);
-        const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
+            const route = searchOrthogonalRoute(
+              edge.id,
+              ports.sourcePort,
+              ports.targetPort,
+              grid,
+              trialLedger.toOccupancyRecords(),
+              config,
+              { role: isFeedback ? "feedback" : undefined },
+            );
 
-        const route = searchOrthogonalRoute(
-          edge.id,
-          ports.sourcePort,
-          ports.targetPort,
-          grid,
-          ledger.toOccupancyRecords(),
-          config,
-          { role: isFeedback ? "feedback" : undefined },
-        );
+            if (route) {
+              trialRoutesMap.set(edge.id, route);
+              trialLedger.commitRoute(edge.id, route.points, ports.sourcePort, ports.targetPort);
+            }
+          }
 
-        if (route) {
-          routesMap.set(edge.id, route);
-          ledger.commitRoute(edge.id, route.points, ports.sourcePort, ports.targetPort);
-        } else {
-          unroutedEdges.add(edge.id);
+          const trialVal = validateCustomLayout(
+            {
+              nodes: allNodesList,
+              edges: Array.from(trialRoutesMap.values()),
+              badges: [],
+              classifiedEdges,
+            },
+            config,
+          );
+
+          if (!bestPermValidation || compareLayoutScores(trialVal, bestPermValidation) < 0) {
+            bestPermValidation = trialVal;
+            bestPermRoutes = trialRoutesMap;
+            bestPermLedgerOcc = trialLedger.toOccupancyRecords();
+          }
+
+          if (trialVal.isValid && trialVal.crossings.length === 0) {
+            break; // Stop perm search early if clean zero crossings achieved
+          }
         }
+
+        if (bestPermRoutes && bestPermValidation && bestPermLedgerOcc) {
+          routesMap.clear();
+          for (const [k, v] of bestPermRoutes.entries()) {
+            routesMap.set(k, v);
+          }
+          ledger.release(Array.from(conflictSet).join(","));
+          for (const [eId, r] of routesMap.entries()) {
+            const ports = portDistributionResult.portsByEdge.get(eId);
+            ledger.commitRoute(eId, r.points, ports?.sourcePort, ports?.targetPort);
+          }
+          currValidation = bestPermValidation;
+        }
+      } else {
+        // Fallback: standard greedy rip-up by hardest-first metadata order
+        for (const eId of conflictSet) {
+          ledger.release(eId);
+          routesMap.delete(eId);
+        }
+
+        const edgesToReroute = nonSelfEdges
+          .filter((e) => conflictSet.has(e.id))
+          .sort((a, b) => {
+            const metaA = edgeMetaMap.get(a.id);
+            const metaB = edgeMetaMap.get(b.id);
+            if (metaA && metaB) {
+              return compareEdgeMetas(metaA, metaB, config.epsilon);
+            }
+            return a.id.localeCompare(b.id);
+          });
+
+        unroutedEdges.clear();
+
+        for (const edge of edgesToReroute) {
+          const ports = portDistributionResult.portsByEdge.get(edge.id);
+          if (!ports) continue;
+
+          const meta = edgeMetaMap.get(edge.id);
+          const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
+
+          const route = searchOrthogonalRoute(
+            edge.id,
+            ports.sourcePort,
+            ports.targetPort,
+            grid,
+            ledger.toOccupancyRecords(),
+            config,
+            { role: isFeedback ? "feedback" : undefined },
+          );
+
+          if (route) {
+            routesMap.set(edge.id, route);
+            ledger.commitRoute(edge.id, route.points, ports.sourcePort, ports.targetPort);
+          } else {
+            unroutedEdges.add(edge.id);
+          }
+        }
+        currValidation = evaluateCurrentValidation();
       }
 
-      currValidation = evaluateCurrentValidation();
       const scoreDiff = compareLayoutScores(currValidation, variantBestValidation);
 
       if (scoreDiff < 0) {
@@ -471,9 +574,10 @@ export function routeAllEdges(
     if (
       globalBestValidation.isValid &&
       globalBestValidation.metrics.edgeNodePenetrations === 0 &&
-      globalBestValidation.metrics.sharedEdgeSegmentLength === 0
+      globalBestValidation.metrics.sharedEdgeSegmentLength === 0 &&
+      globalBestValidation.metrics.crossingCount === 0
     ) {
-      break; // Valid layout with zero hard errors achieved, stop running order variants early!
+      break; // Valid layout with zero hard errors and zero crossings achieved
     }
   }
 

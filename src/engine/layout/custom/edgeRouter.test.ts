@@ -1,12 +1,21 @@
 import { describe, expect, it } from "bun:test";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 import { resolveCustomLayoutConfig } from "./config";
-import { routeAllEdges } from "./edgeRouter";
+import { generatePermutations, routeAllEdges } from "./edgeRouter";
 import { validateCustomLayout } from "./layoutValidator";
 import { computeNodeLayout } from "./nodeLayout";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("edgeRouter", () => {
+  it("generates permutations deterministically up to limit", () => {
+    const items = ["e1", "e2", "e3"];
+    const perms = generatePermutations(items, 10);
+    expect(perms.length).toBe(6);
+    expect(perms[0]).toEqual(["e1", "e2", "e3"]);
+
+    const permsCapped = generatePermutations(items, 4);
+    expect(permsCapped.length).toBe(4);
+  });
   it("routes all edges with distinct non-overlapping collinear segments", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 120, height: 50 },
