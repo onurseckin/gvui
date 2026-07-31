@@ -64,7 +64,7 @@ Recorded from baseline execution:
 - [x] **Task 2: Add Shared Search Contracts and Deterministic Budgets** (`C1-contracts`)
 - [x] **Task 3: Make Route Search Fast Before Expanding Search Breadth** (`R1-routing-kernel`)
 - [ ] **Task 4: Add Conflict-Directed Rerouting** (`R1-routing-kernel`)
-- [ ] **Task 5: Add Explicit Attachment Ordering and Side Search** (`P1-port-state`)
+- [x] **Task 5: Add Explicit Attachment Ordering and Side Search** (`P1-port-state`)
 - [ ] **Task 6: Implement Dynamic Label-Lane Demands** (`B1-label-lanes`)
 - [ ] **Task 7: Add Searchable Local Layer Order and Coordinate Shifts** (`L1-layer-state`)
 - [ ] **Task 8: Build canonical LayoutSearchState and Objective Evaluator** (`G1-global-search`)
