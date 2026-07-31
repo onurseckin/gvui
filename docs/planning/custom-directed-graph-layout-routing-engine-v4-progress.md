@@ -67,7 +67,7 @@ Recorded from baseline execution:
 - [x] **Task 5: Add Explicit Attachment Ordering and Side Search** (`P1-port-state`)
 - [x] **Task 6: Implement Dynamic Label-Lane Demands** (`B1-label-lanes`)
 - [x] **Task 7: Add Searchable Local Layer Order and Coordinate Shifts** (`L1-layer-state`)
-- [ ] **Task 8: Build canonical LayoutSearchState and Objective Evaluator** (`G1-global-search`)
+- [x] **Task 8: Build canonical LayoutSearchState and Objective Evaluator** (`G1-global-search`)
 - [ ] **Task 9: Implement Best-First Search and Neighborhood Moves** (`G1-global-search`)
 - [ ] **Task 10: Wire Dynamic Spacing Demands and Search Optimizations** (`G1-global-search`)
 - [ ] **Task 11A: Cooperative Abort and Best-Result Recovery** (`G1-global-search`)
