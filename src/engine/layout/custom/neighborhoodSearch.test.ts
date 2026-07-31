@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { resolveCustomLayoutConfig } from "./config";
 import { generateNeighborhoodStates } from "./neighborhoodSearch";
-import { createInitialSearchState } from "./searchState";
+import { generatePortCandidates } from "./portCandidates";
+import { computeStateHash, createInitialSearchState } from "./searchState";
 import { evaluateSearchState } from "./stateEvaluator";
 import type { NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
 
@@ -42,6 +43,10 @@ function assignmentSignature(states: ReturnType<typeof createInitialSearchState>
       .map(([edgeId, assignment]) => `${edgeId}:${assignment.srcSide}/${assignment.tgtSide}`)
       .join("|"),
   );
+}
+
+function stateSignatures(states: ReturnType<typeof createInitialSearchState>[]): string[] {
+  return states.map(computeStateHash);
 }
 
 function changedEndpointCount(
@@ -120,12 +125,145 @@ describe("neighborhoodSearch", () => {
     expect(repairAB).toBeDefined();
     expect(repairCD).toBeDefined();
     expect(batch).toBeDefined();
-    const assignmentA = repairAB?.sideAssignments.get("a");
-    expect(assignmentA).toBeDefined();
-    expect(repairAB?.sideAssignments.get("b")).toEqual({
-      srcSide: assignmentA?.tgtSide,
-      tgtSide: assignmentA?.srcSide,
-    });
+    expect(repairAB?.sideAssignments.get("a")).toBeDefined();
+    expect(repairAB?.sideAssignments.get("b")).toBeDefined();
+  });
+
+  it("rejects an invalid mirrored partner and uses a candidate valid for that partner", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 12 });
+    const primary = {
+      id: "primary",
+      source: "PS",
+      target: "PT",
+      role: "forward" as const,
+      reversed: false,
+    };
+    const partner = {
+      id: "partner",
+      source: "QS",
+      target: "QT",
+      role: "forward" as const,
+      reversed: false,
+    };
+    const nodes = [
+      { id: "PS", width: 80, height: 40, x: 20, y: 20 },
+      { id: "PT", width: 80, height: 40, x: 20, y: 220 },
+      { id: "QS", width: 80, height: 40, x: 320, y: 20 },
+      { id: "QT", width: 80, height: 40, x: 320, y: 220 },
+      { id: "BLOCK", width: 18, height: 36, x: 295, y: 22 },
+    ];
+    const evalResult = {
+      nodes,
+      routes: [
+        makeRoute(primary.id, primary.source, primary.target),
+        makeRoute(partner.id, partner.source, partner.target),
+      ],
+      classifiedEdges: [primary, partner],
+      validation: {
+        crossings: [{ edgeIdA: primary.id, edgeIdB: partner.id, point: { x: 200, y: 150 } }],
+        diagnostics: [{ ids: [primary.id] }],
+      },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const repair = generateNeighborhoodStates(state, evalResult, config).find(
+      (neighbor) =>
+        neighbor.sideAssignments.has(primary.id) && neighbor.sideAssignments.has(partner.id),
+    );
+    const primaryAssignment = repair?.sideAssignments.get(primary.id);
+    const partnerAssignment = repair?.sideAssignments.get(partner.id);
+    expect(primaryAssignment).toBeDefined();
+    expect(partnerAssignment).toBeDefined();
+
+    const blindMirror = {
+      srcSide: primaryAssignment!.tgtSide,
+      tgtSide: primaryAssignment!.srcSide,
+    };
+    const positions = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+    const partnerCandidates = generatePortCandidates(
+      partner,
+      nodes.find((node) => node.id === partner.source)!,
+      nodes.find((node) => node.id === partner.target)!,
+      partner.role,
+      positions,
+      config,
+      nodes,
+    ).map((candidate) => `${candidate.srcSide}/${candidate.tgtSide}`);
+
+    expect(partnerCandidates.includes(`${blindMirror.srcSide}/${blindMirror.tgtSide}`)).toBe(false);
+    expect(
+      partnerCandidates.includes(`${partnerAssignment!.srcSide}/${partnerAssignment!.tgtSide}`),
+    ).toBe(true);
+  });
+
+  it("retains both ordinary-primary moves and an ordinary partner move beside feedback repair", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 16 });
+    const evalResult = {
+      routes: [
+        makeRoute("ordinary-primary", "S0", "T0"),
+        makeRoute("ordinary-partner", "S1", "T1"),
+        makeRoute("feedback", "S2", "T2", "left", "left"),
+        makeRoute("feedback-partner", "S3", "T3"),
+      ],
+      classifiedEdges: [
+        {
+          id: "ordinary-primary",
+          source: "S0",
+          target: "T0",
+          role: "forward",
+          reversed: false,
+        },
+        {
+          id: "ordinary-partner",
+          source: "S1",
+          target: "T1",
+          role: "forward",
+          reversed: false,
+        },
+        { id: "feedback", source: "S2", target: "T2", role: "feedback", reversed: true },
+        {
+          id: "feedback-partner",
+          source: "S3",
+          target: "T3",
+          role: "forward",
+          reversed: false,
+        },
+      ],
+      validation: {
+        crossings: [
+          {
+            edgeIdA: "ordinary-primary",
+            edgeIdB: "ordinary-partner",
+            point: { x: 100, y: 100 },
+          },
+          {
+            edgeIdA: "feedback",
+            edgeIdB: "feedback-partner",
+            point: { x: 200, y: 100 },
+          },
+        ],
+        diagnostics: [{ ids: ["ordinary-primary"] }],
+      },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const neighbors = generateNeighborhoodStates(state, evalResult, config);
+    const ordinaryPrimaryMoves = neighbors.filter(
+      (neighbor) =>
+        neighbor.sideAssignments.size === 1 && neighbor.sideAssignments.has("ordinary-primary"),
+    );
+
+    expect(ordinaryPrimaryMoves).toHaveLength(2);
+    expect(
+      neighbors.some(
+        (neighbor) =>
+          neighbor.sideAssignments.size === 1 && neighbor.sideAssignments.has("feedback-partner"),
+      ),
+    ).toBe(true);
   });
 
   it("uses deterministic valid one-endpoint crossing candidates and leaves a feedback partner untouched", () => {
@@ -226,7 +364,7 @@ describe("neighborhoodSearch", () => {
 
   it("keeps a clean feedback move within a strict capped, state-fair neighborhood", () => {
     const state = createInitialSearchState();
-    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 4 });
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 5 });
     const evalResult = {
       routes: [
         makeRoute("a", "S0", "T0"),
@@ -250,6 +388,107 @@ describe("neighborhoodSearch", () => {
 
     expect(neighbors.length).toBeLessThanOrEqual(config.maxNeighborsPerState);
     expect(neighbors.some((neighbor) => neighbor.sideAssignments.has("feedback"))).toBe(true);
+  });
+
+  it("reserves capped slots for coordinated, feedback, port-order, and layer-order moves", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 5 });
+    const componentEdges = Array.from({ length: 10 }, (_, index) => ({
+      id: `edge-${index.toString().padStart(2, "0")}`,
+      source: `S${index}`,
+      target: `T${index}`,
+      role: "forward" as const,
+      reversed: false,
+    }));
+    const feedback = {
+      id: "feedback",
+      source: "FS",
+      target: "FT",
+      role: "feedback" as const,
+      reversed: true,
+    };
+    const routes = [
+      ...componentEdges.map((edge) => makeRoute(edge.id, edge.source, edge.target)),
+      makeRoute(feedback.id, feedback.source, feedback.target, "left", "left"),
+    ];
+    routes[0].sourcePort.nodeId = "SHARED";
+    routes[1].sourcePort.nodeId = "SHARED";
+    const evalResult = {
+      routes,
+      classifiedEdges: [...componentEdges, feedback],
+      validation: {
+        crossings: Array.from({ length: 5 }, (_, index) => ({
+          edgeIdA: componentEdges[index * 2].id,
+          edgeIdB: componentEdges[index * 2 + 1].id,
+          point: { x: 100 + index * 10, y: 100 },
+        })),
+        diagnostics: [{ ids: [componentEdges[0].id] }],
+      },
+      nodeLayout: { orderedLayers: [[{ id: "L0" }, { id: "L1" }]] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const firstLevel = generateNeighborhoodStates(state, evalResult, config);
+    const firstComponent = firstLevel.find((neighbor) => neighbor.sideAssignments.size === 2);
+    expect(firstComponent).toBeDefined();
+    const secondLevel = generateNeighborhoodStates(firstComponent!, evalResult, config);
+
+    expect(firstLevel).toHaveLength(5);
+    expect(firstLevel.some((neighbor) => neighbor.sideAssignments.size >= 2)).toBe(true);
+    expect(firstLevel.some((neighbor) => neighbor.sideAssignments.has(feedback.id))).toBe(true);
+    expect(firstLevel.some((neighbor) => Object.keys(neighbor.portOrders).length > 0)).toBe(true);
+    expect(firstLevel.some((neighbor) => neighbor.layerOrders.size > 0)).toBe(true);
+    expect(
+      secondLevel.some(
+        (neighbor) =>
+          neighbor.sideAssignments.has("edge-02") && neighbor.sideAssignments.has("edge-03"),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps capped port and layer candidates deterministic when routes are reversed", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 5 });
+    const routes = [
+      makeRoute("a", "SHARED", "T0"),
+      makeRoute("b", "SHARED", "T1"),
+      makeRoute("c", "S2", "T2"),
+      makeRoute("d", "S3", "T3"),
+      makeRoute("feedback", "S4", "T4", "left", "left"),
+    ];
+    const classifiedEdges = [
+      { id: "a", source: "SHARED", target: "T0", role: "forward" as const, reversed: false },
+      { id: "b", source: "SHARED", target: "T1", role: "forward" as const, reversed: false },
+      { id: "c", source: "S2", target: "T2", role: "forward" as const, reversed: false },
+      { id: "d", source: "S3", target: "T3", role: "forward" as const, reversed: false },
+      { id: "feedback", source: "S4", target: "T4", role: "feedback" as const, reversed: true },
+    ];
+    const evaluation = {
+      routes,
+      classifiedEdges,
+      validation: {
+        crossings: [
+          { edgeIdA: "a", edgeIdB: "b", point: { x: 100, y: 100 } },
+          { edgeIdA: "c", edgeIdB: "d", point: { x: 200, y: 100 } },
+        ],
+        diagnostics: [{ ids: ["a"] }],
+      },
+      nodeLayout: { orderedLayers: [[{ id: "L0" }, { id: "L1" }, { id: "L2" }]] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+    const reversed = {
+      ...evaluation,
+      routes: [...routes].reverse(),
+      classifiedEdges: [...classifiedEdges].reverse(),
+      validation: {
+        ...evaluation.validation,
+        crossings: [...evaluation.validation.crossings!].reverse(),
+      },
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    expect(stateSignatures(generateNeighborhoodStates(state, evaluation, config))).toEqual(
+      stateSignatures(generateNeighborhoodStates(state, reversed, config)),
+    );
   });
 
   it("generates outer feedback alternatives from classified metadata, not edge-id text", () => {
@@ -660,7 +899,7 @@ describe("neighborhoodSearch", () => {
   it("canonicalizes stale port orders before preserving them in side-move neighbors", () => {
     const state = createInitialSearchState();
     state.portOrders["A:bottom"] = ["removed:src", "e1:src"];
-    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 4 });
     const makeRoute = (edgeId: string, targetNodeId: string, sourceX: number) =>
       ({
         edgeId,
@@ -694,7 +933,9 @@ describe("neighborhoodSearch", () => {
       exactDemands: [],
     } as unknown as ReturnType<typeof evaluateSearchState>;
 
-    const sideMoveNeighbors = generateNeighborhoodStates(state, evalResult, config);
+    const sideMoveNeighbors = generateNeighborhoodStates(state, evalResult, config).filter(
+      (neighbor) => neighbor.sideAssignments.has("e2"),
+    );
 
     expect(sideMoveNeighbors).toHaveLength(2);
     for (const neighbor of sideMoveNeighbors) {
