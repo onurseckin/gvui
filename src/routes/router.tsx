@@ -16,13 +16,21 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/graphs/$fileId", params: { fileId: "ai_agent_trace.json" } });
+    throw redirect({ to: "/graphs/$fileId", params: { fileId: "ai_agent_trace" } });
   },
 });
 
 const graphRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/graphs/$fileId",
+  beforeLoad: ({ params }) => {
+    if (params.fileId.endsWith(".json")) {
+      throw redirect({
+        to: "/graphs/$fileId",
+        params: { fileId: params.fileId.replace(/\.json$/, "") },
+      });
+    }
+  },
   component: AppContent,
 });
 

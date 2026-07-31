@@ -13,11 +13,11 @@ import type {
 import "./CommandPalette.css";
 
 const PRESET_FILES = [
-  "ai_agent_trace.json",
-  "decision_tree.json",
-  "cyclic_mesh.json",
-  "distributed_saga_workflow.json",
-  "kubernetes_cluster_topology.json",
+  "ai_agent_trace",
+  "decision_tree",
+  "cyclic_mesh",
+  "distributed_saga_workflow",
+  "kubernetes_cluster_topology",
 ];
 
 export const CommandPalette: FC<CommandPaletteProps> = ({
@@ -40,15 +40,15 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
     let isMounted = true;
     const fetchPresetDatasets = async () => {
       const cache = new Map<string, GraphDataset>();
-      for (const fileId of PRESET_FILES) {
+      for (const slug of PRESET_FILES) {
         try {
-          const res = await fetch(`/graphs/${fileId}`);
+          const res = await fetch(`/data/graphs/${slug}.json`);
           if (res.ok) {
             const data = (await res.json()) as GraphDataset;
-            cache.set(fileId, data);
+            cache.set(slug, data);
           }
         } catch (err) {
-          console.error(`Failed to prefetch dataset ${fileId}:`, err);
+          console.error(`Failed to prefetch dataset ${slug}:`, err);
         }
       }
       if (isMounted) {
@@ -78,50 +78,55 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   const allAvailableNodes = useMemo<SearchResultNode[]>(() => {
     const nodes: SearchResultNode[] = [];
     const processedFiles = new Set<string>();
+    const cleanCurrentFile = currentFile.replace(/\.json$/, "");
 
     if (scope === "current") {
       let currentNodes = activeDataset?.nodes ?? [];
-      const isCurrentPreset = PRESET_FILES.includes(currentFile);
+      const isCurrentPreset = PRESET_FILES.includes(cleanCurrentFile);
       if (
         isCurrentPreset &&
-        datasetCache.has(currentFile) &&
+        datasetCache.has(cleanCurrentFile) &&
         (!activeDataset ||
-          (activeDataset.id !== currentFile && `${activeDataset.id}.json` !== currentFile))
+          (activeDataset.id !== cleanCurrentFile &&
+            activeDataset.id !== currentFile &&
+            `${activeDataset.id}.json` !== currentFile))
       ) {
-        currentNodes = datasetCache.get(currentFile)?.nodes ?? [];
+        currentNodes = datasetCache.get(cleanCurrentFile)?.nodes ?? [];
       }
       for (const n of currentNodes) {
         nodes.push({
           ...n,
-          fileId: currentFile,
-          sourceFileName: currentFile,
+          fileId: cleanCurrentFile,
+          sourceFileName: cleanCurrentFile,
         });
       }
     } else {
       // "All Files" scope
-      for (const fileId of PRESET_FILES) {
-        let fileNodes = datasetCache.get(fileId)?.nodes ?? [];
+      for (const slug of PRESET_FILES) {
+        let fileNodes = datasetCache.get(slug)?.nodes ?? [];
         if (
           activeDataset &&
-          (activeDataset.id === fileId || `${activeDataset.id}.json` === fileId)
+          (activeDataset.id === slug ||
+            activeDataset.id === `${slug}.json` ||
+            cleanCurrentFile === slug)
         ) {
           fileNodes = activeDataset.nodes;
         }
-        processedFiles.add(fileId);
+        processedFiles.add(slug);
         for (const n of fileNodes) {
           nodes.push({
             ...n,
-            fileId,
-            sourceFileName: fileId,
+            fileId: slug,
+            sourceFileName: slug,
           });
         }
       }
-      if (activeDataset && !processedFiles.has(currentFile)) {
+      if (activeDataset && !processedFiles.has(cleanCurrentFile)) {
         for (const n of activeDataset.nodes) {
           nodes.push({
             ...n,
-            fileId: currentFile,
-            sourceFileName: currentFile,
+            fileId: cleanCurrentFile,
+            sourceFileName: cleanCurrentFile,
           });
         }
       }

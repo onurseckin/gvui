@@ -15,7 +15,7 @@ import "./index.css";
 
 export const AppContent: FC = () => {
   const params = useParams({ strict: false }) as { fileId?: string };
-  const fileIdFromRoute = params.fileId || "ai_agent_trace.json";
+  const fileIdFromRoute = params.fileId || "ai_agent_trace";
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as { node?: string };
   const initialNodeId = searchParams.node ?? null;
@@ -29,7 +29,8 @@ export const AppContent: FC = () => {
 
   const loadGraphFile = useCallback(async (fileId: string, nodeId?: string | null) => {
     try {
-      const res = await fetch(`/graphs/${fileId}`);
+      const filename = fileId.endsWith(".json") ? fileId : `${fileId}.json`;
+      const res = await fetch(`/data/graphs/${filename}`);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = (await res.json()) as GraphDataset;
 
@@ -118,7 +119,7 @@ export const AppContent: FC = () => {
   };
 
   const handleCustomUpload = (dataset: GraphDataset) => {
-    const fileId = dataset.id ? `${dataset.id}.json` : "custom.json";
+    const fileId = dataset.id ? dataset.id.replace(/\.json$/, "") : "custom";
     const signature = generateDatasetSignature(dataset);
     const stored = loadStoredViewport(fileId, signature);
 

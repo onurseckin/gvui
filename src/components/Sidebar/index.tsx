@@ -5,11 +5,11 @@ import { Button, FileUploadButton } from "../../ui";
 import "./Sidebar.css";
 
 const SAMPLE_GRAPHS = [
-  { id: "ai_agent_trace.json", name: "AI Agent Trace", icon: "🤖" },
-  { id: "decision_tree.json", name: "Decision Tree", icon: "🌲" },
-  { id: "cyclic_mesh.json", name: "Cyclic Mesh", icon: "🔄" },
-  { id: "distributed_saga_workflow.json", name: "Saga Workflow", icon: "⚡" },
-  { id: "kubernetes_cluster_topology.json", name: "K8s Topology", icon: "☸️" },
+  { id: "ai_agent_trace", name: "AI Agent Trace", icon: "🤖" },
+  { id: "decision_tree", name: "Decision Tree", icon: "🌲" },
+  { id: "cyclic_mesh", name: "Cyclic Mesh", icon: "🔄" },
+  { id: "distributed_saga_workflow", name: "Saga Workflow", icon: "⚡" },
+  { id: "kubernetes_cluster_topology", name: "K8s Topology", icon: "☸️" },
 ];
 
 interface SidebarProps {
@@ -48,18 +48,22 @@ export const Sidebar: FC<SidebarProps> = ({
         <div className="sidebar-section">
           <h3 className="sidebar-section-title">Sample Datasets</h3>
           <ul className="sample-list">
-            {SAMPLE_GRAPHS.map((sample) => (
-              <li key={sample.id}>
-                <Button
-                  variant={currentFile === sample.id ? "primary" : "ghost"}
-                  className={`sample-btn ${currentFile === sample.id ? "active" : ""}`}
-                  onClick={() => handleSelectSample(sample.id)}
-                >
-                  <span className="sample-icon">{sample.icon}</span>
-                  <span className="sample-label">{sample.name}</span>
-                </Button>
-              </li>
-            ))}
+            {SAMPLE_GRAPHS.map((sample) => {
+              const isActive =
+                currentFile === sample.id || currentFile.replace(/\.json$/, "") === sample.id;
+              return (
+                <li key={sample.id}>
+                  <Button
+                    variant={isActive ? "primary" : "ghost"}
+                    className={`sample-btn ${isActive ? "active" : ""}`}
+                    onClick={() => handleSelectSample(sample.id)}
+                  >
+                    <span className="sample-icon">{sample.icon}</span>
+                    <span className="sample-label">{sample.name}</span>
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { deriveSearchStateBudgets } from "./layoutOptimizerState";
-import k8sData from "../../../../public/graphs/kubernetes_cluster_topology.json";
+import k8sData from "../../../../public/data/graphs/kubernetes_cluster_topology.json";
 
 describe("layoutOptimizerState performance budget derivation", () => {
   it("bounds maxLayoutStates to <= 15 for dense graphs with >= 10 nodes", () => {
