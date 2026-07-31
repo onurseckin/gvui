@@ -440,7 +440,7 @@ describe("customLayoutWorkerClient", () => {
     expect(result).toBe(expectedResult);
   });
 
-  it("streams 20+ granular micro-stage progress events during layout optimization", async () => {
+  it("streams real solver pass progress events during layout optimization", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
@@ -465,13 +465,10 @@ describe("customLayoutWorkerClient", () => {
       { environment: { isBrowser: false, runtime: null } },
     );
 
-    expect(progressEvents.length).toBeGreaterThanOrEqual(20);
-    expect(progressEvents.length).toBe(32);
-    expect(progressEvents[0].stageIndex).toBe(1);
-    expect(progressEvents[0].stageText).toBe("Step 1/32");
-    expect(progressEvents[31].stageIndex).toBe(32);
-    expect(progressEvents[31].percent).toBe(100);
-    expect(progressEvents.some((p) => p.detail.includes("A* pathfinder"))).toBe(true);
+    expect(progressEvents.length).toBeGreaterThanOrEqual(3);
+    expect(progressEvents[0].detail).toContain("Pre-search topology normalization");
+    expect(progressEvents.some((p) => p.stageText.startsWith("Pass"))).toBe(true);
+    expect(progressEvents[progressEvents.length - 1].detail).toContain("Post-search geometry finalization");
   });
 });
 

@@ -5,6 +5,7 @@ import {
   isPrimaryCleanEvaluation,
   runBoundedAestheticSearch,
 } from "./boundedAestheticSearch";
+import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
 import { compareLayoutScores } from "./layoutValidator";
 import {
   generateAestheticTrialStates,
@@ -31,6 +32,7 @@ export interface SearchOptions {
   initialState?: LayoutSearchState;
   signal?: AbortSignal;
   deadlineMs?: number;
+  onProgress?: (progress: LayoutProgressInfo) => void;
 }
 
 export interface SearchStateBudgets {
@@ -91,12 +93,12 @@ export function deriveSearchStateBudgets(
   };
 }
 
-export function searchBestLayoutState(
+export async function searchBestLayoutState(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   config: CustomLayoutConfig,
   options?: SearchOptions | LayoutSearchState,
-): OptimizationResult {
+): Promise<OptimizationResult> {
   const startTime = Date.now();
   const searchOpts: SearchOptions =
     options && "sideAssignments" in options
@@ -112,7 +114,27 @@ export function searchBestLayoutState(
     maxAStarStatesPerRoute: budgets.maxAStarStatesPerRoute,
     maxConflictPermutations: budgets.maxConflictPermutations,
   };
+
+  const maxStates = budgets.maxLayoutStates;
+  const maxFrontier = config.maxFrontierSize;
+
+  const notifyProgress = async (evaluated: number, passDescription: string) => {
+    if (searchOpts.onProgress) {
+      const percent = Math.round((evaluated / maxStates) * 100);
+      searchOpts.onProgress({
+        stageIndex: evaluated,
+        totalStages: maxStates,
+        percent,
+        stageText: `Pass ${evaluated}/${maxStates}`,
+        detail: `Evaluating pass ${evaluated}/${maxStates}: ${passDescription}`,
+      });
+    }
+    await new Promise((r) => setTimeout(r, 40));
+  };
+
+  let evaluatedStates = 1;
   const startState = searchOpts.initialState ?? createInitialSearchState();
+  await notifyProgress(evaluatedStates, "initial layout layering and topological placement");
   const startEval = evaluateSearchState(nodes, edges, startState, searchConfig);
 
   let bestState = startState;
@@ -130,11 +152,7 @@ export function searchBestLayoutState(
   visitedHashes.add(startHash);
   startState.visitedSignatures.add(startHash);
 
-  let evaluatedStates = 1;
   let stopReason: SearchStopReason = "frontier-exhausted";
-
-  const maxStates = budgets.maxLayoutStates;
-  const maxFrontier = config.maxFrontierSize;
 
   while (frontier.length > 0) {
     if (signal?.aborted) {
@@ -164,6 +182,8 @@ export function searchBestLayoutState(
         remainingGlobalStates <= budgets.maxAestheticEvaluations
           ? "layout-state-budget"
           : "aesthetic-state-budget";
+
+      let localAestheticEvaluations = 0;
       const aestheticResult = runBoundedAestheticSearch({
         bestState,
         bestEvaluation: bestEval,
@@ -171,7 +191,21 @@ export function searchBestLayoutState(
         budgetStopReason,
         visitedHashes,
         dependencies: {
-          evaluateState: (candidate) => evaluateSearchState(nodes, edges, candidate, searchConfig),
+          evaluateState: (candidate) => {
+            localAestheticEvaluations++;
+            const currentPass = evaluatedStates + localAestheticEvaluations;
+            if (searchOpts.onProgress) {
+              const percent = Math.round((currentPass / maxStates) * 100);
+              searchOpts.onProgress({
+                stageIndex: currentPass,
+                totalStages: maxStates,
+                percent,
+                stageText: `Pass ${currentPass}/${maxStates}`,
+                detail: `Evaluating pass ${currentPass}/${maxStates}: bounded aesthetic optimization pass`,
+              });
+            }
+            return evaluateSearchState(nodes, edges, candidate, searchConfig);
+          },
           generateTrialStates: (candidate, evaluation) =>
             generateAestheticTrialStates(candidate, evaluation, searchConfig),
           generateCompletionStates: (candidate, evaluation) =>
@@ -231,8 +265,13 @@ export function searchBestLayoutState(
       visitedHashes.add(hash);
       nextState.visitedSignatures.add(hash);
 
-      const nextEval = evaluateSearchState(nodes, edges, nextState, searchConfig);
       evaluatedStates++;
+      const passDesc =
+        nextState.sideAssignments.size > 0
+          ? "A* orthogonal corridor route repair candidate"
+          : "neighborhood topology candidate";
+      await notifyProgress(evaluatedStates, passDesc);
+      const nextEval = evaluateSearchState(nodes, edges, nextState, searchConfig);
 
       if (compareLayoutScores(nextEval.validation, bestEval.validation) < 0) {
         bestState = nextState;
@@ -276,3 +315,4 @@ export function searchBestLayoutState(
     stats,
   };
 }
+
