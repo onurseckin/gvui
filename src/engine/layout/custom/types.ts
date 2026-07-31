@@ -198,12 +198,16 @@ export type RouteOrderStrategy =
   | "crossings_first";
 
 export interface LayoutSearchState {
-  orderedLayerIds: string[][];
-  spacing: CanonicalSpacingOverrides;
-  graphPadding: number;
-  portSides: Record<string, PortSideAssignment>;
+  sideAssignments: Map<string, PortSideAssignment>;
   portOrders: Record<string, string[]>;
-  routeOrderStrategy: RouteOrderStrategy;
+  exactDemands: ExactSpacingDemand[];
+  layerOrders: Map<number, string[]>;
+  layerShifts: Map<string, number>;
+  visitedSignatures: Set<string>;
+  orderedLayerIds?: string[][];
+  spacing?: CanonicalSpacingOverrides;
+  graphPadding?: number;
+  routeOrderStrategy?: RouteOrderStrategy;
 }
 
 export interface ExactSpacingDemand {

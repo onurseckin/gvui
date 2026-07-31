@@ -600,7 +600,7 @@ export function validateCustomLayout(
   };
 }
 
-function validationResultToScore(res: LayoutValidationResult): LayoutScore {
+export function validationResultToScore(res: LayoutValidationResult): LayoutScore {
   const hardErrorCount = res.diagnostics.filter((d) => d.severity === "error").length;
   return {
     hardErrorCount: res.isValid ? hardErrorCount : Math.max(1, hardErrorCount),
