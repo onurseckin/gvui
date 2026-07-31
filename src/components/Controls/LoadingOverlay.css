@@ -58,6 +58,44 @@
   transition: width 0.2s ease-out;
 }
 
+.loading-stepper-container {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  justify-content: space-between;
+}
+
+.loading-step-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #8b949e;
+  transition: all 0.2s ease-in-out;
+}
+
+.loading-step-chip.is-done {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: rgba(63, 185, 80, 0.4);
+  color: #3fb950;
+}
+
+.loading-step-chip.is-active {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: #58a6ff;
+  color: #58a6ff;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+}
+
+.step-icon {
+  font-weight: 700;
+  font-size: 10px;
+}
+
 .loading-overlay-detail {
   font-size: 13px;
   color: #8b949e;

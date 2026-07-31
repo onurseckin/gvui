@@ -9,6 +9,14 @@ export interface LoadingOverlayProps {
   edgeCount?: number;
 }
 
+const STAGES = [
+  { id: 1, label: "Topology", range: [0, 20] },
+  { id: 2, label: "Ranking", range: [20, 40] },
+  { id: 3, label: "A* Routing", range: [40, 70] },
+  { id: 4, label: "Crossings", range: [70, 90] },
+  { id: 5, label: "Render", range: [90, 100] },
+];
+
 export const LoadingOverlay: FC<LoadingOverlayProps> = ({
   percent,
   stageText,
@@ -23,7 +31,7 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
       <div className="loading-overlay-card">
         <div className="loading-overlay-header">
           <span className="loading-overlay-title">{stageText}</span>
-          <span className="loading-overlay-percent">{`${safePercent}%`}</span>
+          <span className="loading-overlay-percent">{Math.round(safePercent)}%</span>
         </div>
 
         <div className="loading-progress-track">
@@ -33,13 +41,31 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
           />
         </div>
 
+        <div className="loading-stepper-container">
+          {STAGES.map((s) => {
+            const isDone = safePercent >= s.range[1];
+            const isActive = safePercent >= s.range[0] && safePercent < s.range[1];
+
+            let badgeClass = "loading-step-chip";
+            if (isDone) badgeClass += " is-done";
+            else if (isActive) badgeClass += " is-active";
+
+            return (
+              <div key={s.id} className={badgeClass}>
+                {isDone ? <span className="step-icon">✓</span> : <span className="step-icon">{s.id}</span>}
+                <span className="step-label">{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="loading-overlay-detail">{detail}</div>
 
         {(nodeCount !== undefined || edgeCount !== undefined) && (
           <div className="loading-overlay-meta">
-            {nodeCount !== undefined && <span>{`${nodeCount} Nodes`}</span>}
+            {nodeCount !== undefined && <span>{nodeCount} Nodes</span>}
             {nodeCount !== undefined && edgeCount !== undefined && <span>•</span>}
-            {edgeCount !== undefined && <span>{`${edgeCount} Edges`}</span>}
+            {edgeCount !== undefined && <span>{edgeCount} Edges</span>}
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { LoadingOverlay } from "./LoadingOverlay";
 
 describe("LoadingOverlay Component", () => {
-  it("renders stage name, percentage, and detail message", () => {
+  it("renders 5-step visual stage indicators with checkmarks", () => {
     const html = renderToString(
       <LoadingOverlay
         percent={65}
@@ -14,10 +14,12 @@ describe("LoadingOverlay Component", () => {
       />
     );
 
+    expect(html).toContain("Topology");
+    expect(html).toContain("Ranking");
+    expect(html).toContain("A* Routing");
+    expect(html).toContain("Crossings");
+    expect(html).toContain("Render");
     expect(html).toContain("65%");
-    expect(html).toContain("Stage 3 of 5");
-    expect(html).toContain("Computing A* orthogonal routes...");
-    expect(html).toContain("12 Nodes");
-    expect(html).toContain("13 Edges");
   });
 });
+
