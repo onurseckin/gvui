@@ -7,6 +7,7 @@ export interface RoutingGrid {
   edges: GridEdge[];
   adj: Map<string, { targetId: string; edge: GridEdge }[]>;
   obstacles: Rect[];
+  nodeObstacles: { nodeId: string; rect: Rect }[];
 }
 
 export function vertexKey(p: Point): string {
@@ -20,7 +21,11 @@ export function buildRoutingGrid(
   config: CustomLayoutConfig,
   laneRings = 2
 ): RoutingGrid {
-  const obstacles = nodes.map((n) => expandRect({ x: n.x, y: n.y, width: n.width, height: n.height }, config.obstacleClearance));
+  const nodeObstacles = nodes.map((n) => ({
+    nodeId: n.id,
+    rect: expandRect({ x: n.x, y: n.y, width: n.width, height: n.height }, config.obstacleClearance),
+  }));
+  const obstacles = nodeObstacles.map((no) => no.rect);
 
   const xSet = new Set<number>();
   const ySet = new Set<number>();
@@ -67,22 +72,38 @@ export function buildRoutingGrid(
   const yCoords = Array.from(ySet).sort((a, b) => a - b);
 
   const vertices = new Map<string, Point>();
-  const portStubPoints = new Set<string>();
+  const portStubNodeMap = new Map<string, Set<string>>();
+
   for (const p of ports) {
-    portStubPoints.add(vertexKey(p.point));
-    portStubPoints.add(vertexKey(p.stub));
+    const ptKey = vertexKey(p.point);
+    const stKey = vertexKey(p.stub);
+
+    if (!portStubNodeMap.has(ptKey)) portStubNodeMap.set(ptKey, new Set());
+    if (!portStubNodeMap.has(stKey)) portStubNodeMap.set(stKey, new Set());
+
+    portStubNodeMap.get(ptKey)!.add(p.nodeId);
+    portStubNodeMap.get(stKey)!.add(p.nodeId);
   }
 
   // 4. Filter vertices not inside obstacle interiors
+  // Stop exempting a port or stub that lies inside an unrelated obstacle
   for (const x of xCoords) {
     for (const y of yCoords) {
       const pt = { x, y };
       const key = vertexKey(pt);
+      const associatedNodeIds = portStubNodeMap.get(key);
 
-      const isPortOrStub = portStubPoints.has(key);
-      const isInsideObstacle = obstacles.some((obs) => pointInRectInterior(pt, obs, config.epsilon));
+      let isBlocked = false;
+      for (const no of nodeObstacles) {
+        if (pointInRectInterior(pt, no.rect, config.epsilon)) {
+          if (!associatedNodeIds || !associatedNodeIds.has(no.nodeId)) {
+            isBlocked = true;
+            break;
+          }
+        }
+      }
 
-      if (!isInsideObstacle || isPortOrStub) {
+      if (!isBlocked) {
         vertices.set(key, pt);
       }
     }
@@ -105,6 +126,22 @@ export function buildRoutingGrid(
     adj.get(vId)?.push({ targetId: uId, edge: gridEdge });
   }
 
+  function segmentIntersectsUnrelatedObstacle(p1: Point, p2: Point, segment: Segment): boolean {
+    const p1NodeIds = portStubNodeMap.get(vertexKey(p1));
+    const p2NodeIds = portStubNodeMap.get(vertexKey(p2));
+
+    for (const no of nodeObstacles) {
+      if (segmentIntersectsRectInterior(segment, no.rect, config.epsilon)) {
+        const p1Belongs = p1NodeIds?.has(no.nodeId);
+        const p2Belongs = p2NodeIds?.has(no.nodeId);
+        if (!p1Belongs && !p2Belongs) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // 5. Connect horizontal neighbors
   for (const y of yCoords) {
     const rowVertices = xCoords
@@ -116,9 +153,7 @@ export function buildRoutingGrid(
       const p2 = rowVertices[i + 1];
       const segment: Segment = { a: p1, b: p2 };
 
-      const intersectsObstacle = obstacles.some((obs) => segmentIntersectsRectInterior(segment, obs, config.epsilon));
-
-      if (!intersectsObstacle) {
+      if (!segmentIntersectsUnrelatedObstacle(p1, p2, segment)) {
         addGridEdge(vertexKey(p1), vertexKey(p2), segment);
       }
     }
@@ -135,9 +170,7 @@ export function buildRoutingGrid(
       const p2 = colVertices[i + 1];
       const segment: Segment = { a: p1, b: p2 };
 
-      const intersectsObstacle = obstacles.some((obs) => segmentIntersectsRectInterior(segment, obs, config.epsilon));
-
-      if (!intersectsObstacle) {
+      if (!segmentIntersectsUnrelatedObstacle(p1, p2, segment)) {
         addGridEdge(vertexKey(p1), vertexKey(p2), segment);
       }
     }
@@ -148,5 +181,6 @@ export function buildRoutingGrid(
     edges,
     adj,
     obstacles,
+    nodeObstacles,
   };
 }
