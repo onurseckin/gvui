@@ -1,5 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
-import type { BadgeSpacingRequest, NormalizedEdge, NormalizedNode } from "./types";
+import type { BadgeSpacingRequest, ExactSpacingDemand, NormalizedEdge, NormalizedNode } from "./types";
 
 export interface MeasuredBadge {
   width: number;
@@ -148,3 +148,38 @@ export function resolveEffectiveSpacingOverrides(
     nodeGapAfterNodeId,
   };
 }
+
+export function resolveExactSpacingDemands(
+  demands: ExactSpacingDemand[],
+  defaultNodeGap: number,
+  defaultRankGap: number,
+): SpacingOverrides {
+  const nodeGapByRank = new Map<number, number>();
+  const rankGapAfterRank = new Map<number, number>();
+  const nodeGapAfterNodeId = new Map<string, number>();
+
+  for (const d of demands) {
+    if (d.kind === "node-gap") {
+      if (d.rank !== undefined) {
+        const current = nodeGapByRank.get(d.rank) ?? defaultNodeGap;
+        nodeGapByRank.set(d.rank, Math.max(current, d.minimum));
+      }
+      if (d.afterNodeId !== undefined) {
+        const current = nodeGapAfterNodeId.get(d.afterNodeId) ?? defaultNodeGap;
+        nodeGapAfterNodeId.set(d.afterNodeId, Math.max(current, d.minimum));
+      }
+    } else if (d.kind === "rank-gap") {
+      if (d.rank !== undefined) {
+        const current = rankGapAfterRank.get(d.rank) ?? defaultRankGap;
+        rankGapAfterRank.set(d.rank, Math.max(current, d.minimum));
+      }
+    }
+  }
+
+  return {
+    nodeGapByRank,
+    rankGapAfterRank,
+    nodeGapAfterNodeId,
+  };
+}
+
