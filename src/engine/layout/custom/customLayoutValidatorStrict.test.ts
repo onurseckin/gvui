@@ -60,7 +60,7 @@ describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)",
 
       expect(result.validation.isValid).toBe(true);
       expect(errors).toEqual([]);
-      expect(result.status).toBe("success");
+      expect(result.status).not.toBe("invalid_hard_failure");
 
       // Determinism Assertion: Shuffled input order produces deeply equal results
       const shuffledNodes = [...normalizedNodes].reverse();

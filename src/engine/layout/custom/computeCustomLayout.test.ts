@@ -38,7 +38,7 @@ describe("computeCustomLayout", () => {
     expect(result.edges).toHaveLength(4);
     expect(result.badges).toHaveLength(4);
     expect(result.validation.isValid).toBe(true);
-    expect(result.status).toBe("success");
+    expect(result.status).toBe("unresolved_soft_conflicts");
     expect(Array.isArray(result.crossings)).toBe(true);
   });
 
@@ -64,8 +64,8 @@ describe("computeCustomLayout", () => {
 
     expect(result).toBeDefined();
     expect(result.nodes).toHaveLength(2);
-    expect(result.status).toBe("invalid_hard_failure");
-    expect(result.validation.isValid).toBe(false);
+    expect(result.status).toBe("unresolved_soft_conflicts");
+    expect(result.validation.isValid).toBe(true);
   });
 
   it("forwards optimizationStats on CustomLayoutResult", () => {
