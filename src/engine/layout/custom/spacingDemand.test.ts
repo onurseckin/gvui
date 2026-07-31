@@ -4,11 +4,23 @@ import type { MeasuredBadge } from "./spacingDemand";
 import {
   canonicalizeExactSpacingDemands,
   computeBadgeSpacingDemands,
+  requiredSameRankBadgeGap,
   resolveEffectiveSpacingOverrides,
 } from "./spacingDemand";
 import type { ExactSpacingDemand, NormalizedEdge, NormalizedNode } from "./types";
 
 describe("spacingDemand", () => {
+  it("reserves a same-rank badge corridor plus endpoint approach clearance", () => {
+    expect(requiredSameRankBadgeGap(80, DEFAULT_CUSTOM_LAYOUT_CONFIG)).toBe(
+      80 +
+        Math.max(
+          DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap,
+          2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.badgeClearance +
+            2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.portStubLength,
+        ),
+    );
+  });
+
   describe("computeBadgeSpacingDemands", () => {
     it("returns an empty array for an unlabeled graph", () => {
       const nodes: NormalizedNode[] = [
@@ -60,7 +72,7 @@ describe("spacingDemand", () => {
       expect(requests[0].kind).toBe("node-gap");
       expect(requests[0].rank).toBe(0);
       expect(requests[0].reason).toBe("same-rank-label");
-      expect(requests[0].minimum).toBe(80 + 2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.badgeClearance);
+      expect(requests[0].minimum).toBe(requiredSameRankBadgeGap(80, DEFAULT_CUSTOM_LAYOUT_CONFIG));
     });
 
     it("emits rank-gap or node-gap requests for parallel edge labels", () => {

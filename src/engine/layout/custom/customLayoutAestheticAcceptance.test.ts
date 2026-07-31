@@ -4,6 +4,7 @@ import { computeCustomLayout } from "./computeCustomLayout";
 import { DEFAULT_CUSTOM_LAYOUT_CONFIG, type CustomLayoutConfig } from "./config";
 import { expandRect, segmentIntersectsRectInterior, simplifyOrthogonalPath } from "./geometry";
 import { buildLayoutScore, compareLayoutScore, countPathHairpins } from "./layoutObjective";
+import { requiredSameRankBadgeGap } from "./spacingDemand";
 import type { BadgePlacement, NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
 
 function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig>) {
@@ -225,18 +226,33 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       assertUniquePortsPerNode(result.edges);
 
       const syncBadge = result.badges.find((b) => b.label === "horizontal sync");
+      const syncRoute = result.edges.find(
+        (edge) => edge.sourcePort.nodeId === "MID1" && edge.targetPort.nodeId === "MID2",
+      );
       expect(syncBadge).toBeDefined();
-      if (syncBadge) {
-        expect(syncBadge.leaderPoints?.length ?? 0).toBeLessThanOrEqual(2);
-      }
+      expect(syncRoute).toBeDefined();
+      expect(syncRoute?.sourcePort.side).toBe("right");
+      expect(syncRoute?.targetPort.side).toBe("left");
+      expect(countPathHairpins(syncRoute?.points ?? [])).toBe(0);
+      expect(
+        Math.max(0, simplifyOrthogonalPath(syncRoute?.points ?? []).length - 2),
+      ).toBeLessThanOrEqual(2);
+      expect(syncBadge?.leaderPoints).toBe(undefined);
+      expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
+      expect(result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(2);
+      expect(result.optimizationStats?.stopReason).toBe("objective-target");
 
-      const nodeA = result.nodes.find((n) => n.id === "A");
-      const nodeB = result.nodes.find((n) => n.id === "B");
-      if (nodeA && nodeB && syncBadge) {
-        const peerGap = Math.abs(nodeB.x - (nodeA.x + nodeA.width));
-        const minRequiredGap =
-          syncBadge.rect.width + 2 * (DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap / 2);
-        expect(peerGap).toBeGreaterThanOrEqual(minRequiredGap);
+      const mid1 = result.nodes.find((node) => node.id === "MID1");
+      const mid2 = result.nodes.find((node) => node.id === "MID2");
+      expect(mid1).toBeDefined();
+      expect(mid2).toBeDefined();
+      if (mid1 && mid2 && syncBadge) {
+        const leftPeer = mid1.x <= mid2.x ? mid1 : mid2;
+        const rightPeer = mid1.x <= mid2.x ? mid2 : mid1;
+        const peerGap = rightPeer.x - (leftPeer.x + leftPeer.width);
+        expect(peerGap).toBeGreaterThanOrEqual(
+          requiredSameRankBadgeGap(syncBadge.rect.width, DEFAULT_CUSTOM_LAYOUT_CONFIG),
+        );
       }
     });
   });

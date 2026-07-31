@@ -17,6 +17,11 @@ export interface SpacingOverrides {
   nodeGapAfterNodeId?: Map<string, number>;
 }
 
+export function requiredSameRankBadgeGap(badgeWidth: number, config: CustomLayoutConfig): number {
+  const endpointApproachClearance = 2 * config.badgeClearance + 2 * config.portStubLength;
+  return badgeWidth + Math.max(config.nodeGap, endpointApproachClearance);
+}
+
 function spacingAxis(kind: ExactSpacingDemand["kind"]): "x" | "y" | "padding" {
   if (kind === "node-gap" || kind === "lane-x") return "x";
   if (kind === "rank-gap" || kind === "lane-y") return "y";
@@ -115,7 +120,7 @@ export function computeBadgeSpacingDemands(
           kind: "node-gap",
           rank: rU,
           afterNodeId: edge.source,
-          minimum: badge.width + 2 * config.badgeClearance,
+          minimum: requiredSameRankBadgeGap(badge.width, config),
           reason: "same-rank-label",
         });
       } else {

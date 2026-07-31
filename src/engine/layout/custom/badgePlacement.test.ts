@@ -6,6 +6,8 @@ import { routeAllEdges } from "./edgeRouter";
 import { validateCustomLayout } from "./layoutValidator";
 import type { NormalizedEdge, NormalizedNode, Point, Rect, RoutedPath } from "./types";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
+import { measureBadgeRect } from "./badgeMeasurement";
+import { requiredSameRankBadgeGap } from "./spacingDemand";
 
 describe("badgePlacement", () => {
   it("rejects a badge candidate that intersects a non-owner route segment", () => {
@@ -137,6 +139,78 @@ describe("badgePlacement", () => {
     expect(result.placements).toEqual([]);
     expect(result.spacingRequests).toHaveLength(1);
     expect(result.spacingRequests?.[0]?.edgeId).toBe("e1");
+  });
+
+  it("requests enough same-rank space for the badge and endpoint approaches", () => {
+    const config = resolveCustomLayoutConfig();
+    const label = "horizontal sync";
+    const route: RoutedPath = {
+      edgeId: "e-sync",
+      points: [
+        { x: 0, y: 100 },
+        { x: 10, y: 100 },
+      ],
+      sourcePort: {
+        nodeId: "MID1",
+        side: "right",
+        index: 0,
+        point: { x: 0, y: 100 },
+        stub: { x: 1, y: 100 },
+      },
+      targetPort: {
+        nodeId: "MID2",
+        side: "left",
+        index: 0,
+        point: { x: 10, y: 100 },
+        stub: { x: 9, y: 100 },
+      },
+    };
+    const edge: NormalizedEdge = {
+      id: route.edgeId,
+      source: "MID1",
+      target: "MID2",
+      label,
+      layoutRole: "cross",
+    };
+    const nodeLayout = {
+      normalizedGraph: {
+        nodes: [
+          { id: "MID1", width: 20, height: 20 },
+          { id: "MID2", width: 20, height: 20 },
+        ],
+        edges: [edge],
+        nodeMap: new Map(),
+        edgeMap: new Map([[edge.id, edge]]),
+        outgoingMap: new Map(),
+        incomingMap: new Map(),
+      },
+      nodePositions: new Map<string, Point>([
+        ["MID1", { x: -20, y: 90 }],
+        ["MID2", { x: 10, y: 90 }],
+      ]),
+      rankAssignment: {
+        nodeRankMap: new Map<string, number>([
+          ["MID1", 1],
+          ["MID2", 1],
+        ]),
+      },
+      classifiedEdges: [{ ...edge, role: "cross", reversed: false }],
+    } as unknown as NodeLayoutResult;
+
+    const result = placeEdgeBadges([route], nodeLayout, config);
+    const badgeWidth = measureBadgeRect(label, config, false).width;
+
+    expect(result.placements).toEqual([]);
+    expect(result.spacingRequests).toEqual([
+      {
+        edgeId: edge.id,
+        kind: "node-gap",
+        rank: 1,
+        afterNodeId: "MID1",
+        minimum: requiredSameRankBadgeGap(badgeWidth, config),
+        reason: "same-rank-label",
+      },
+    ]);
   });
 
   it("never forces a conflicting candidate after component backtracking fails", () => {

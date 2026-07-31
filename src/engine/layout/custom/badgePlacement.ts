@@ -11,6 +11,7 @@ import {
   simplifyOrthogonalPath,
 } from "./geometry";
 import type { NodeLayoutResult } from "./nodeLayout";
+import { requiredSameRankBadgeGap } from "./spacingDemand";
 import type {
   BadgeCandidate,
   BadgePlacement,
@@ -358,7 +359,7 @@ function createBadgeSpacingRequest(
       kind: "node-gap",
       rank: srcRank,
       afterNodeId: edge.source,
-      minimum: badgeDim.width + 2 * config.badgeClearance,
+      minimum: requiredSameRankBadgeGap(badgeDim.width, config),
       reason: "same-rank-label",
     };
   }

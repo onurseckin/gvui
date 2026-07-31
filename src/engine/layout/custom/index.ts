@@ -20,7 +20,11 @@ export * from "./badgeMeasurement";
 export * from "./badgePlacement";
 export * from "./layoutValidator";
 export * from "./layoutObjective";
-export { computeBadgeSpacingDemands, resolveEffectiveSpacingOverrides } from "./spacingDemand";
+export {
+  computeBadgeSpacingDemands,
+  requiredSameRankBadgeGap,
+  resolveEffectiveSpacingOverrides,
+} from "./spacingDemand";
 export * from "./svgPath";
 export * from "./crossingDetection";
 export * from "./routeOccupancy";
