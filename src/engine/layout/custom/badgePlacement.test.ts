@@ -544,8 +544,7 @@ describe("badgePlacement", () => {
         source: "B",
         target: "A",
         label: "feedback label",
-        layoutRole: "feedback",
-        isCycle: true,
+        layoutRole: "auto",
       },
     ];
 
@@ -589,6 +588,7 @@ describe("badgePlacement", () => {
         ["B", { x: 200, y: 400 }],
         ["obs", { x: obstacleNode.x, y: obstacleNode.y }],
       ]),
+      classifiedEdges: [{ ...edges[0], role: "feedback" as const, reversed: true }],
     } as unknown as NodeLayoutResult;
 
     const badgeResult = placeBadges([route], mockNodeLayout, config);

@@ -45,6 +45,37 @@ export function generateNeighborhoodStates(
   const crossings = evalResult.validation.crossings ?? [];
   const classifiedById = new Map(evalResult.classifiedEdges.map((edge) => [edge.id, edge]));
   const routesByEdgeId = new Map(evalResult.routes.map((route) => [route.edgeId, route]));
+  const nodeSideMap = new Map<string, string[]>();
+  for (const route of evalResult.routes) {
+    const srcKey = `${route.sourcePort.nodeId}:${route.sourcePort.side}`;
+    const tgtKey = `${route.targetPort.nodeId}:${route.targetPort.side}`;
+    nodeSideMap.set(srcKey, [...(nodeSideMap.get(srcKey) ?? []), `${route.edgeId}:src`]);
+    nodeSideMap.set(tgtKey, [...(nodeSideMap.get(tgtKey) ?? []), `${route.edgeId}:tgt`]);
+  }
+
+  const canonicalPortOrders: Record<string, string[]> = {};
+  for (const [sideKey, endpoints] of nodeSideMap) {
+    const liveEndpoints = [...new Set(endpoints)].sort();
+    const liveSet = new Set(liveEndpoints);
+    const seen = new Set<string>();
+    const retained = (state.portOrders[sideKey] ?? []).filter((endpoint) => {
+      if (!liveSet.has(endpoint) || seen.has(endpoint)) return false;
+      seen.add(endpoint);
+      return true;
+    });
+    canonicalPortOrders[sideKey] = [
+      ...retained,
+      ...liveEndpoints.filter((endpoint) => !seen.has(endpoint)),
+    ];
+  }
+
+  const cloneCanonicalState = (): LayoutSearchState => {
+    const nextState = cloneSearchState(state);
+    nextState.portOrders = Object.fromEntries(
+      Object.entries(canonicalPortOrders).map(([key, order]) => [key, [...order]]),
+    );
+    return nextState;
+  };
   for (const cross of crossings) {
     problemEdgeIds.add(cross.edgeIdA);
     problemEdgeIds.add(cross.edgeIdB);
@@ -92,7 +123,7 @@ export function generateNeighborhoodStates(
       const alternative = queue.alternatives[alternativeIndex];
       if (!alternative) continue;
 
-      const nextState = cloneSearchState(state);
+      const nextState = cloneCanonicalState();
       nextState.sideAssignments.set(queue.edgeId, alternative);
       neighbors.push(nextState);
       addedInRound = true;
@@ -101,28 +132,14 @@ export function generateNeighborhoodStates(
   }
 
   // 2. Generate Port Order Moves for node sides with 2+ attachments
-  const nodeSideMap = new Map<string, string[]>();
-  for (const r of evalResult.routes) {
-    const srcKey = `${r.sourcePort.nodeId}:${r.sourcePort.side}`;
-    const tgtKey = `${r.targetPort.nodeId}:${r.targetPort.side}`;
-
-    const srcList = nodeSideMap.get(srcKey) ?? [];
-    srcList.push(`${r.edgeId}:src`);
-    nodeSideMap.set(srcKey, srcList);
-
-    const tgtList = nodeSideMap.get(tgtKey) ?? [];
-    tgtList.push(`${r.edgeId}:tgt`);
-    nodeSideMap.set(tgtKey, tgtList);
-  }
-
   for (const [sKey, endpoints] of nodeSideMap.entries()) {
     if (neighbors.length >= maxNeighbors) break;
     if (endpoints.length >= 2) {
-      const currentOrder = state.portOrders[sKey] ?? [...endpoints].sort();
+      const currentOrder = canonicalPortOrders[sKey] ?? [...endpoints].sort();
       const swapped = [...currentOrder];
       // Swap adjacent elements
       for (let i = 0; i < swapped.length - 1; i++) {
-        const nextState = cloneSearchState(state);
+        const nextState = cloneCanonicalState();
         const orderCopy = [...swapped];
         const tmp = orderCopy[i];
         orderCopy[i] = orderCopy[i + 1];
@@ -140,7 +157,7 @@ export function generateNeighborhoodStates(
       const layer = evalResult.nodeLayout.orderedLayers[r];
       if (layer.length >= 2) {
         for (let i = 0; i < layer.length - 1; i++) {
-          const nextState = cloneSearchState(state);
+          const nextState = cloneCanonicalState();
           const currentRankOrder = nextState.layerOrders.get(r) ?? layer.map((n) => n.id);
           const orderCopy = [...currentRankOrder];
           const tmp = orderCopy[i];
@@ -156,7 +173,7 @@ export function generateNeighborhoodStates(
 
   // 4. Generate Spacing Demand Expansion Moves when unresolved badges or label overlaps exist
   if (evalResult.exactDemands.length > state.exactDemands.length) {
-    const nextState = cloneSearchState(state);
+    const nextState = cloneCanonicalState();
     nextState.exactDemands = [...evalResult.exactDemands];
     neighbors.unshift(nextState);
   }

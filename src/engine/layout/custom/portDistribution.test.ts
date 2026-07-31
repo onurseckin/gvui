@@ -66,10 +66,7 @@ describe("portDistribution", () => {
       { id: "B4", width: 100, height: 60, x: 300, y: 200 },
     ];
     const sideAssignments = new Map<string, { srcSide: Side; tgtSide: Side }>(
-      remoteNodes.map((_node, index) => [
-        `e${index + 1}`,
-        { srcSide: "bottom", tgtSide: "top" },
-      ]),
+      remoteNodes.map((_node, index) => [`e${index + 1}`, { srcSide: "bottom", tgtSide: "top" }]),
     );
     const nodeMap = new Map<string, NormalizedNode & Point>([
       ["A", nodeA],
@@ -184,5 +181,44 @@ describe("portDistribution", () => {
     expect(portE4?.index).toBe(1);
     expect(portE1?.index).toBe(2);
     expect(portE2?.index).toBe(3);
+  });
+
+  it("filters stale explicit-order entries and appends newly attached endpoints", () => {
+    const nodeA: NormalizedNode & Point = { id: "A", width: 300, height: 60, x: 0, y: 0 };
+    const targets: (NormalizedNode & Point)[] = [
+      { id: "B1", width: 100, height: 60, x: 0, y: 200 },
+      { id: "B2", width: 100, height: 60, x: 100, y: 200 },
+      { id: "B3", width: 100, height: 60, x: 200, y: 200 },
+    ];
+    const edges = targets.map((target, index) => ({
+      id: `e${index + 1}`,
+      source: "A",
+      target: target.id,
+    }));
+    const assignments = new Map(
+      edges.map((edge) => [edge.id, { srcSide: "bottom" as const, tgtSide: "top" as const }]),
+    );
+    const nodeMap = new Map<string, NormalizedNode & Point>([
+      ["A", nodeA],
+      ...targets.map((target) => [target.id, target] as const),
+    ]);
+
+    const result = distributePorts(
+      edges,
+      assignments,
+      nodeMap,
+      resolveCustomLayoutConfig({ portEndpointPadding: 0 }),
+      { "A:bottom": ["removed:src", "e2:src"] },
+    );
+
+    expect(
+      edges
+        .map((edge) => result.portsByEdge.get(edge.id)!.sourcePort)
+        .sort((a, b) => a.index - b.index)
+        .map((port) => port.point.x),
+    ).toEqual([50, 150, 250]);
+    expect(result.portsByEdge.get("e2")!.sourcePort.index).toBe(0);
+    expect(result.portsByEdge.get("e1")!.sourcePort.index).toBe(1);
+    expect(result.portsByEdge.get("e3")!.sourcePort.index).toBe(2);
   });
 });

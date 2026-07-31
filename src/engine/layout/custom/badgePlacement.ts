@@ -320,6 +320,17 @@ interface BadgeItem {
   area: number;
 }
 
+function resolveBadgeEdgeRole(
+  edge: NormalizedEdge,
+  nodeLayout: NodeLayoutResult,
+): NormalizedEdge["layoutRole"] | "self" | undefined {
+  const classifiedRole = nodeLayout.classifiedEdges?.find(
+    (candidate) => candidate.id === edge.id,
+  )?.role;
+  if (classifiedRole) return classifiedRole;
+  return edge.layoutRole === "auto" ? undefined : edge.layoutRole;
+}
+
 function sortBadgeItems(items: BadgeItem[]): BadgeItem[] {
   return [...items].sort((a, b) => {
     if (a.candidates.length !== b.candidates.length) {
@@ -444,8 +455,7 @@ export function placeEdgeBadges(
 
     if (!hasBadge(label, isCycle)) continue;
 
-    const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
-    const role = edge.layoutRole ?? classifiedRole;
+    const role = resolveBadgeEdgeRole(edge, nodeLayout);
     const isFeedbackOrSelf = role === "feedback" || role === "self" || isCycle;
     const allowLeaders = isFeedbackOrSelf;
 
@@ -633,10 +643,7 @@ export function placeEdgeBadges(
           unresolvedEdgeIds.push(bItem.edgeId);
           const edge = edgeMap.get(bItem.edgeId);
           if (edge) {
-            const classifiedRole = nodeLayout.classifiedEdges?.find(
-              (ce) => ce.id === edge.id,
-            )?.role;
-            const role = edge.layoutRole ?? classifiedRole;
+            const role = resolveBadgeEdgeRole(edge, nodeLayout);
             const isFeedbackOrSelf =
               role === "feedback" || role === "self" || Boolean(edge.isCycle);
             if (!isFeedbackOrSelf) {

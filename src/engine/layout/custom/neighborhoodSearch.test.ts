@@ -138,4 +138,49 @@ describe("neighborhoodSearch", () => {
     expect(alternatives[0].get(route.edgeId)).toEqual({ srcSide: "right", tgtSide: "right" });
     expect(alternatives.every((assignments) => !assignments.has("C"))).toBe(true);
   });
+
+  it("canonicalizes stale port orders before preserving them in side-move neighbors", () => {
+    const state = createInitialSearchState();
+    state.portOrders["A:bottom"] = ["removed:src", "e1:src"];
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const makeRoute = (edgeId: string, targetNodeId: string, sourceX: number) =>
+      ({
+        edgeId,
+        points: [
+          { x: sourceX, y: 50 },
+          { x: sourceX, y: 200 },
+        ],
+        sourcePort: {
+          nodeId: "A",
+          side: "bottom",
+          index: 0,
+          point: { x: sourceX, y: 50 },
+          stub: { x: sourceX, y: 70 },
+        },
+        targetPort: {
+          nodeId: targetNodeId,
+          side: "top",
+          index: 0,
+          point: { x: sourceX, y: 200 },
+          stub: { x: sourceX, y: 180 },
+        },
+      }) satisfies RoutedPath;
+    const evalResult = {
+      routes: [makeRoute("e1", "B", 25), makeRoute("e2", "C", 75)],
+      classifiedEdges: [
+        { id: "e1", source: "A", target: "B", role: "forward", reversed: false },
+        { id: "e2", source: "A", target: "C", role: "forward", reversed: false },
+      ],
+      validation: { crossings: [], diagnostics: [{ ids: ["e2"] }] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const sideMoveNeighbors = generateNeighborhoodStates(state, evalResult, config);
+
+    expect(sideMoveNeighbors).toHaveLength(2);
+    for (const neighbor of sideMoveNeighbors) {
+      expect(neighbor.portOrders["A:bottom"]).toEqual(["e1:src", "e2:src"]);
+    }
+  });
 });
