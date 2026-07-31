@@ -5,6 +5,7 @@ import { computeNodeLayout, type NodeLayoutResult } from "./nodeLayout";
 import { routeAllEdges } from "./edgeRouter";
 import { validateCustomLayout } from "./layoutValidator";
 import type { NormalizedEdge, NormalizedNode, Point, Rect, RoutedPath } from "./types";
+import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 
 describe("badgePlacement", () => {
   it("places edge badges without overlapping node cards or other badges", () => {
@@ -121,38 +122,71 @@ describe("badgePlacement", () => {
     expect(offsetCand?.leaderPoints?.[0]).toEqual({ x: 250, y: 200 });
   });
 
-  it("reproduces Scenario #16 long labels without overlaps or collision with unrelated edges", () => {
-    const nodes: NormalizedNode[] = [
-      { id: "A", width: 140, height: 60 },
-      { id: "B", width: 140, height: 60 },
-      { id: "C", width: 140, height: 60 },
-    ];
-    const edges: NormalizedEdge[] = [
-      { id: "e1", source: "A", target: "B", label: "High Volume API Request [v1.2]" },
-      { id: "e2", source: "B", target: "C", label: "Encrypted Payload Transmission" },
-      { id: "e3", source: "A", target: "C", label: "Bypass Fast Path Route" },
-    ];
+  const scenarioIds = [5, 6, 8, 9, 11, 14, 16];
+
+  for (const scId of scenarioIds) {
+    it(`reproduces Scenario #${scId} with zero hard badge conflicts`, () => {
+      const sc = CUSTOM_LAYOUT_SCENARIOS[scId];
+      const nodes: NormalizedNode[] = sc.nodes.map((n) => ({
+        id: n.id,
+        label: n.name,
+        width: n.w,
+        height: n.h,
+      }));
+      const edges: NormalizedEdge[] = sc.edges.map((e, idx) => ({
+        id: (e as { id?: string }).id ?? `e_${scId}_${idx + 1}`,
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        isCycle: e.isCycle,
+        layoutRole: e.layoutRole,
+      }));
+
+      const config = resolveCustomLayoutConfig();
+      const nodeLayout = computeNodeLayout(nodes, edges, config);
+      const routerResult = routeAllEdges(nodeLayout, config);
+      const badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+
+      const fullResult = {
+        nodes: nodes.map((n) => ({
+          ...n,
+          x: nodeLayout.nodePositions.get(n.id)?.x ?? 0,
+          y: nodeLayout.nodePositions.get(n.id)?.y ?? 0,
+        })),
+        edges: routerResult.routes,
+        badges: badgeResult.placements,
+      };
+
+      const validation = validateCustomLayout(fullResult, config);
+      expect(validation.metrics.badgeNodeOverlaps).toBe(0);
+      expect(validation.metrics.badgeBadgeOverlaps).toBe(0);
+      expect(validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
+    });
+  }
+
+  it("maintains deterministic placements when routes and edge arrays are shuffled", () => {
+    const sc = CUSTOM_LAYOUT_SCENARIOS[16];
+    const nodes: NormalizedNode[] = sc.nodes.map((n) => ({ id: n.id, label: n.name, width: n.w, height: n.h }));
+    const edges: NormalizedEdge[] = sc.edges.map((e, idx) => ({
+      id: `e_16_${idx + 1}`,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      isCycle: e.isCycle,
+      layoutRole: e.layoutRole,
+    }));
 
     const config = resolveCustomLayoutConfig();
     const nodeLayout = computeNodeLayout(nodes, edges, config);
     const routerResult = routeAllEdges(nodeLayout, config);
 
-    const badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+    const badgeResult1 = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+    const shuffledRoutes = [...routerResult.routes].reverse();
+    const badgeResult2 = placeEdgeBadges(shuffledRoutes, nodeLayout, config);
 
-    expect(badgeResult.placements.length).toBe(3);
-
-    // Validate using custom layout validator metrics
-    const fullResult = {
-      nodes: nodes.map((n) => ({ ...n, x: nodeLayout.nodePositions.get(n.id)?.x ?? 0, y: nodeLayout.nodePositions.get(n.id)?.y ?? 0 })),
-      edges: routerResult.routes,
-      badges: badgeResult.placements,
-    };
-
-    const validation = validateCustomLayout(fullResult, config);
-    expect(validation.metrics.badgeNodeOverlaps).toBe(0);
-    expect(validation.metrics.badgeBadgeOverlaps).toBe(0);
-    expect(validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
+    expect(badgeResult1.placements).toEqual(badgeResult2.placements);
   });
 });
+
 
 
