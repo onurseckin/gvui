@@ -1,23 +1,23 @@
-# 04. Codebase Reference Map for Dagre Engines
+# 04. Codebase Reference Map for Top-Down Dagre Engine
 
 [← Back to Master Index](../README.md)
 
-This document maps the **Top-Down Dagre Engine** theoretical algorithms directly to implementation files, exported functions, and exact line anchors in GVUI.
+This document maps the theoretical algorithms of the **Top-Down Dagre Engine** directly to implementation files, exported functions, exact line anchors, complexity bounds, and verification commands in GVUI.
 
 ---
 
-## 🗺️ Codebase Directory & Symbol Matrix
+## 1. 🗺️ Codebase Directory & Symbol Matrix
 
-| File Path | Core Functionality | Primary Exported Symbols | Verified Line Anchors |
+| File Path | Core Subsystem / Functionality | Primary Exported Symbols | Verified Line Anchors |
 | :--- | :--- | :--- | :--- |
-| [`nodeDimensions.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) | Dagre graph construction, layout execution, coordinate conversion & label repulsion pass | `computeDagreLayout`, `calculateNodeDimensions` | [`L451-L604`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) |
-| [`layoutDispatcher.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L134-L152) | Layout mode dispatcher routing `"top-down-dagre"` and `"left-right"` engine execution | `computeGraphLayout` | [`L134-L152`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L134-L152) |
+| [`nodeDimensions.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) | Dagre graph construction, layout execution, coordinate conversion, path clipping, and badge repulsion pass | `computeDagreLayout`, `calculateNodeDimensions` | [`L451-L604`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) |
+| [`layoutDispatcher.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L138-L152) | Layout mode dispatcher routing `"top-down-dagre"` and `"left-right"` engine execution | `computeGraphLayout` | [`L138-L152`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L138-L152) |
 
 ---
 
-## 🔍 Verified Source Code Snippets
+## 2. 🔍 Verified Source Code Snippets
 
-### 1. `computeDagreLayout` in [`nodeDimensions.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604)
+### 2.1 `computeDagreLayout` in [`nodeDimensions.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604)
 
 ```typescript
 /**
@@ -49,6 +49,7 @@ export function computeDagreLayout(
     g.setEdge(edge.source, edge.target, {}, edge.id);
   });
 
+  // Executes Network Simplex, Barycentric Ordering, and Brandes-Köpf Placement
   dagre.layout(g);
 
   const positionedNodes: PositionedNode[] = dataset.nodes.map((node) => {
@@ -67,13 +68,13 @@ export function computeDagreLayout(
     };
   });
 
-  // ... (Edge path routing, node rectangle clipping, and badge repulsion pass)
+  // ... (Edge path routing, boundary rectangle clipping, and badge repulsion pass)
 
   return { nodes: positionedNodes, edges: positionedEdges };
 }
 ```
 
-### 2. `computeGraphLayout` Dispatcher in [`layoutDispatcher.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L134-L152)
+### 2.2 `computeGraphLayout` Dispatcher in [`layoutDispatcher.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L138-L152)
 
 ```typescript
 /**
@@ -102,10 +103,71 @@ export async function computeGraphLayout(
 
 ---
 
-## 🎯 Implementation Subsystem Breakdown
+## 3. 🎯 Theoretical Algorithm to Code Execution Mapping
 
-1. **Graph Configuration & Sizing**: [nodeDimensions.ts:L455-L463](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L455-L463) initializes Graphlib graph parameters (`nodesep: 150`, `ranksep: 120`, `marginx: 80`, `marginy: 80`).
-2. **Dagre Execution**: [nodeDimensions.ts:L477](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L477) executes `dagre.layout(g)` performing Network Simplex Layering, Barycentric Crossing Reduction, and Brandes-Köpf Coordinate Assignment.
-3. **Coordinate Normalization**: [nodeDimensions.ts:L479-L493](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L479-L493) converts center-origin `(dagreNode.x, dagreNode.y)` coordinates into top-left bounding box coordinates `(x, y)`.
-4. **Boundary Clipping**: [nodeDimensions.ts:L518-L562](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L518-L562) clips edge endpoint paths to node boundary rectangles via `clipPointToNodeRect`.
-5. **Label Badge Repulsion**: [nodeDimensions.ts:L575-L601](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L575-L601) shifts overlapping edge label badges along $X$ or $Y$ axes.
+```
+  Theoretical Phase                   Graphlib / Dagre Execution              GVUI Integration Source
+ ┌──────────────────┐               ┌───────────────────────────┐           ┌────────────────────────────┐
+ │ Network Simplex  │──────────────►│ Phase 1: Rank Assignment  │──────────►│ nodeDimensions.ts#L477     │
+ │ Layering         │               │ (min edge length ILP)     │           │ dagre.layout(g)            │
+ └──────────────────┘               └───────────────────────────┘           └────────────────────────────┘
+          │                                       │                                       │
+          ▼                                       ▼                                       ▼
+ ┌──────────────────┐               ┌───────────────────────────┐           ┌────────────────────────────┐
+ │ Barycentric      │──────────────►│ Phase 2: Crossing         │──────────►│ nodeDimensions.ts#L477     │
+ │ Order Sweeps     │               │ Minimization (24 passes)  │           │ dagre.layout(g)            │
+ └──────────────────┘               └───────────────────────────┘           └────────────────────────────┘
+          │                                       │                                       │
+          ▼                                       ▼                                       ▼
+ ┌──────────────────┐               ┌───────────────────────────┐           ┌────────────────────────────┐
+ │ Brandes-Köpf     │──────────────►│ Phase 3: Coordinate       │──────────►│ nodeDimensions.ts#L477     │
+ │ Alignment        │               │ Assignment (4 passes)     │           │ dagre.layout(g)            │
+ └──────────────────┘               └───────────────────────────┘           └────────────────────────────┘
+                                                  │                                       │
+                                                  ▼                                       ▼
+                                    ┌───────────────────────────┐           ┌────────────────────────────┐
+                                    │ Center-to-Top-Left        │──────────►│ nodeDimensions.ts#L479-493 │
+                                    │ Coordinate Shift          │           │ x = cx - w/2; y = cy - h/2 │
+                                    └───────────────────────────┘           └────────────────────────────┘
+                                                  │                                       │
+                                                  ▼                                       ▼
+                                    ┌───────────────────────────┐           ┌────────────────────────────┐
+                                    │ Boundary Clipping &       │──────────►│ nodeDimensions.ts#L518-601 │
+                                    │ Badge Repulsion           │           │ clipPointToNodeRect        │
+                                    └───────────────────────────┘           └────────────────────────────┘
+```
+
+1. **Graph Initialization & Parameters**: [`nodeDimensions.ts:L455-L463`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L455-L463) sets `rankdir: "TB"`, `nodesep: 150`, `ranksep: 120`, `marginx: 80`, `marginy: 80`.
+2. **Dagre Pipeline Execution**: [`nodeDimensions.ts:L477`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L477) executes `dagre.layout(g)`.
+3. **Center-to-Top-Left Conversion**: [`nodeDimensions.ts:L479-L493`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L479-L493) converts center origin $(c_x, c_y)$ to canvas top-left position $(x, y) = (c_x - w/2, c_y - h/2)$.
+4. **Node Rect Path Clipping**: [`nodeDimensions.ts:L518-L562`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L518-L562) clips edge polyline endpoints at node border perimeters via `clipPointToNodeRect`.
+5. **Label Badge Repulsion Pass**: [`nodeDimensions.ts:L575-L601`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L575-L601) shifts overlapping edge label badges along $X$ or $Y$ axes.
+
+---
+
+## 4. 📊 Asymptotic Complexity Bounds
+
+| Phase / Algorithm | Time Complexity (Average) | Time Complexity (Worst-Case) | Space Complexity | Theoretical Driver |
+| :--- | :--- | :--- | :--- | :--- |
+| **Network Simplex Layering** | $O(V \cdot E)$ | $O(V^2 \cdot E)$ | $O(V + E)$ | Spanning tree cut pivoting until $\text{cutval}(e) \ge 0$. |
+| **Barycentric Order Sweeps** | $O(K \cdot (V + E \log E))$ | $O(K \cdot V \cdot E)$ | $O(V + E)$ | $K = 24$ sweeps sorting neighbor positions per layer. |
+| **Brandes-Köpf Alignment** | $O(V + E)$ | $O(V + E)$ | $O(V + E)$ | 4 linear sweeps + block graph compaction + median calculation. |
+| **Edge Clipping & Badge Repulsion** | $O(E)$ | $O(E^2)$ | $O(E)$ | Pairwise badge overlap check on edge midpoints. |
+| **Total Engine Execution** | **$O(V \cdot E + K \cdot E \log E)$** | **$O(V^2 \cdot E)$** | **$O(V + E)$** | **Guaranteed polynomial execution time.** |
+
+---
+
+## 5. 🧪 Executable Verification Commands
+
+To verify and test the Top-Down Dagre Engine layout implementation and line anchors, run the following commands in the workspace root:
+
+```bash
+# 1. Typecheck TypeScript interfaces and layout signatures
+bun run typecheck
+
+# 2. Run ESLint code quality checks across engine files
+bun run lint
+
+# 3. Execute unit test suite for layout engine
+bun test src/engine/layout/
+```
