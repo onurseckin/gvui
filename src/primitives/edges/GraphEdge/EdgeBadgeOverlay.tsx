@@ -1,6 +1,6 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 
-import { getBadgeDisplayText, hasBadge, measureBadgeRect } from "../../engine/layout/custom/badgeMeasurement";
+import { getBadgeDisplayText, hasBadge, measureBadgeRect } from "../../../engine/layout/custom/badgeMeasurement";
 
 export interface EdgeBadgeOverlayProps {
   x: number;
