@@ -1,5 +1,6 @@
 import type { CustomLayoutConfig } from "./config";
-import type { EdgeRole, NormalizedEdge, NormalizedNode, Point, Side } from "./types";
+import { segmentIntersectsRectInterior } from "./geometry";
+import type { EdgeRole, NormalizedEdge, NormalizedNode, Point, Rect, Segment, Side } from "./types";
 
 export interface PortCandidate {
   edgeId: string;
@@ -52,10 +53,12 @@ export function generatePortCandidates(
   tgtNode: NormalizedNode & Point,
   role: EdgeRole,
   _nodePositions: Map<string, Point>,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  allNodes?: (NormalizedNode & Point)[]
 ): PortCandidate[] {
   const sides: Side[] = ["top", "right", "bottom", "left"];
-  const candidates: PortCandidate[] = [];
+  const allCandidates: PortCandidate[] = [];
+  const validCandidates: PortCandidate[] = [];
 
   for (const srcSide of sides) {
     const srcInfo = getSideCenterAndStub(srcNode, srcNode.width, srcNode.height, srcSide, config.portStubLength);
@@ -84,13 +87,17 @@ export function generatePortCandidates(
         if (tgtSide === "bottom") directionPen += config.directionPenalty;
         if (srcSide === "bottom" && tgtSide === "top") directionPen = 0;
       } else if (role === "feedback") {
-        if ((srcSide === "left" && tgtSide === "left") || (srcSide === "right" && tgtSide === "right")) {
+        const srcIsLR = srcSide === "left" || srcSide === "right";
+        const tgtIsLR = tgtSide === "left" || tgtSide === "right";
+        if (srcIsLR && tgtIsLR) {
           directionPen = 0;
         } else {
           directionPen += config.directionPenalty;
         }
       } else if (role === "cross") {
-        if ((srcSide === "right" && tgtSide === "left") || (srcSide === "left" && tgtSide === "right")) {
+        const srcIsLR = srcSide === "left" || srcSide === "right";
+        const tgtIsLR = tgtSide === "left" || tgtSide === "right";
+        if (srcIsLR && tgtIsLR) {
           directionPen = 0;
         } else {
           directionPen += config.directionPenalty * 0.5;
@@ -99,7 +106,7 @@ export function generatePortCandidates(
 
       const baseCost = estimatedLength + bendEstimate * config.bendPenalty + directionPen;
 
-      candidates.push({
+      const candidate: PortCandidate = {
         edgeId: edge.id,
         srcSide,
         tgtSide,
@@ -110,9 +117,34 @@ export function generatePortCandidates(
         estimatedLength,
         bendEstimate,
         baseCost,
-      });
+      };
+
+      allCandidates.push(candidate);
+
+      const srcLeg: Segment = { a: srcInfo.point, b: srcInfo.stub };
+      const tgtLeg: Segment = { a: tgtInfo.point, b: tgtInfo.stub };
+
+      let hasLegConflict = false;
+      if (allNodes) {
+        for (const n of allNodes) {
+          const rect: Rect = { x: n.x, y: n.y, width: n.width, height: n.height };
+          if (n.id !== srcNode.id && segmentIntersectsRectInterior(srcLeg, rect, config.epsilon)) {
+            hasLegConflict = true;
+            break;
+          }
+          if (n.id !== tgtNode.id && segmentIntersectsRectInterior(tgtLeg, rect, config.epsilon)) {
+            hasLegConflict = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasLegConflict) {
+        validCandidates.push(candidate);
+      }
     }
   }
 
-  return candidates;
+  return validCandidates.length > 0 ? validCandidates : allCandidates;
 }
+

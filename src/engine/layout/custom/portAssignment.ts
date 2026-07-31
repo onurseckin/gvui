@@ -14,7 +14,8 @@ function sideKey(nodeId: string, side: Side): string {
 export function assignPortSidesGlobally(
   edges: NormalizedEdge[],
   candidatesMap: Map<string, PortCandidate[]>,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  edgeMetaMap?: Map<string, { isFeedback?: boolean; rankSpan?: number; badgeArea?: number }>
 ): PortSideAssignmentResult {
   const sideUseMap = new Map<string, number>();
 
@@ -40,8 +41,15 @@ export function assignPortSidesGlobally(
     return cand.baseCost + reuseCost;
   }
 
-  // Calculate regret per edge
-  const edgeRegretList: { edge: NormalizedEdge; regret: number; sortedCands: PortCandidate[] }[] = [];
+  // Calculate regret and metadata per edge
+  const edgeRegretList: {
+    edge: NormalizedEdge;
+    regret: number;
+    sortedCands: PortCandidate[];
+    isFeedback: boolean;
+    rankSpan: number;
+    badgeArea: number;
+  }[] = [];
 
   for (const edge of edges) {
     const cands = candidatesMap.get(edge.id) ?? [];
@@ -50,12 +58,28 @@ export function assignPortSidesGlobally(
     const secondCost = sorted[1]?.baseCost ?? bestCost;
     const regret = secondCost - bestCost;
 
-    edgeRegretList.push({ edge, regret, sortedCands: sorted });
+    const meta = edgeMetaMap?.get(edge.id);
+    const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle || edge.layoutRole === "feedback");
+    const rankSpan = meta?.rankSpan ?? 0;
+    const badgeArea = meta?.badgeArea ?? 0;
+
+    edgeRegretList.push({ edge, regret, sortedCands: sorted, isFeedback, rankSpan, badgeArea });
   }
 
-  // Sort edges by descending regret, tiebreak by edge ID
+  // Sort edges by: feedback constraint, rank span, candidate regret, badge area, then edge ID
   edgeRegretList.sort((a, b) => {
-    if (Math.abs(b.regret - a.regret) > config.epsilon) return b.regret - a.regret;
+    if (a.isFeedback !== b.isFeedback) {
+      return a.isFeedback ? -1 : 1;
+    }
+    if (Math.abs(b.rankSpan - a.rankSpan) > config.epsilon) {
+      return b.rankSpan - a.rankSpan;
+    }
+    if (Math.abs(b.regret - a.regret) > config.epsilon) {
+      return b.regret - a.regret;
+    }
+    if (Math.abs(b.badgeArea - a.badgeArea) > config.epsilon) {
+      return b.badgeArea - a.badgeArea;
+    }
     return a.edge.id.localeCompare(b.edge.id);
   });
 
