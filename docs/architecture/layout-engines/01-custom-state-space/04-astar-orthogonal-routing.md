@@ -58,30 +58,24 @@ When two orthogonal edge paths intersect perpendicularly in 2D space:
 
 The engine renders an SVG arc bridge to visually distinguish non-connecting crossings:
 
-$$\text{BridgePath}(p_{\text{cross}}) = M \ (x-6, y) \ A \ 6 \ 6 \ 0 \ 0 \ 1 \ (x+6, y)$$
+$$\text{BridgePath}(p_{\text{cross}}) = M \ (x-6, y) \ A \ 6 \ 6 \ 0 \ 0 \ 0 \ (x+6, y)$$
 
 ---
 
 ## 4. Codebase Reference Map
 
 - [edgeRouter.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/edgeRouter.ts#L1-L120) — `routeAllEdges`
-- [astarPathfinder.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/astarPathfinder.ts#L1-L150) — `findOrthogonalPathAStar`
-- [svgPath.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/svgPath.ts#L1-L40) — `pointsToSvgPath`, bridge arc generation
+- [routeSearch.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/routeSearch.ts#L1-L150) — `searchOrthogonalRoute`, `compareRouteCost`
+- [svgPath.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/svgPath.ts#L1-L180) — `pointsToSvgPath`, bridge arc generation
 
 ```typescript
-// Code Snippet from astarPathfinder.ts
-export function calculateAStarStepCost(
-  currentDir: Point,
-  nextDir: Point,
-  isObstacle: boolean,
-): number {
-  let cost = 8; // Step distance
-  if (currentDir.x !== nextDir.x || currentDir.y !== nextDir.y) {
-    cost += 40; // Turn penalty
-  }
-  if (isObstacle) {
-    cost += 500; // Obstacle penalty
-  }
-  return cost;
+// Code Snippet from routeSearch.ts
+export function searchOrthogonalRoute(
+  startPort: PortRef,
+  endPort: PortRef,
+  grid: RoutingGrid,
+  config: CustomLayoutConfig,
+): RouteSearchResult | null {
+  // A* grid search algorithm with RouteCost lexicographical priority...
 }
 ```
