@@ -7,7 +7,7 @@ import type { LayoutSelectDropdownProps } from "./LayoutSelectDropdown.types";
 const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   {
     value: "top-down",
-    label: "Top-Down",
+    label: "Top-Down (State-Space Engine)",
     icon: (
       <svg
         width="14"
@@ -27,7 +27,7 @@ const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   },
   {
     value: "top-down-dagre",
-    label: "Top-Down (Dagre)",
+    label: "Top-Down (Dagre Ranked Engine)",
     icon: (
       <svg
         width="14"
@@ -47,7 +47,7 @@ const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   },
   {
     value: "left-right",
-    label: "Left-to-Right",
+    label: "Left-to-Right (Dagre Rank-Based Engine)",
     icon: (
       <svg
         width="14"
@@ -67,7 +67,7 @@ const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   },
   {
     value: "force",
-    label: "Organic Force",
+    label: "Organic Force (Physics Force-Directed)",
     icon: (
       <svg
         width="14"
@@ -93,7 +93,7 @@ const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   },
   {
     value: "radial",
-    label: "Radial",
+    label: "Radial Balance (Concentric Circular)",
     icon: (
       <svg
         width="14"
