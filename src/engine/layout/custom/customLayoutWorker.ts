@@ -1,7 +1,7 @@
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
 import { optimizeLayout } from "./optimizeLayout";
-import type { NormalizedEdge, NormalizedNode } from "./types";
+import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
 export interface CustomLayoutWorkerRequest {
   id: string;
@@ -23,7 +23,7 @@ export interface CustomLayoutWorkerProgressMessage {
 export interface CustomLayoutWorkerResponse {
   id: string;
   type: "success" | "error";
-  result?: ReturnType<typeof optimizeLayout>;
+  result?: CustomLayoutResult;
   error?: string;
 }
 
@@ -32,11 +32,11 @@ export type CustomLayoutWorkerMessage =
   | CustomLayoutWorkerProgressMessage;
 
 if (typeof self !== "undefined" && typeof self.postMessage === "function") {
-  self.onmessage = (event: MessageEvent<CustomLayoutWorkerRequest>) => {
+  self.onmessage = async (event: MessageEvent<CustomLayoutWorkerRequest>) => {
     const { id, nodes, edges, configPartial } = event.data;
     try {
       const config = resolveCustomLayoutConfig(configPartial);
-      const result = optimizeLayout(nodes, edges, config, (progress) => {
+      const result = await optimizeLayout(nodes, edges, config, (progress) => {
         const progressMessage: CustomLayoutWorkerProgressMessage = {
           id,
           type: "progress",

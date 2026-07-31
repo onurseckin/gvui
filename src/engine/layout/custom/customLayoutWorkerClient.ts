@@ -52,7 +52,7 @@ export interface ComputeLayoutWorkerDependencies {
     edges: NormalizedEdge[],
     config: CustomLayoutConfig,
     onProgress?: (progress: LayoutProgressInfo) => void,
-  ) => CustomLayoutResult;
+  ) => Promise<CustomLayoutResult> | CustomLayoutResult;
 }
 
 export class LayoutTimeoutError extends Error {
@@ -123,7 +123,7 @@ export async function computeCustomLayoutAsync(
     }
 
     // A true SSR/Node environment has no interactive main thread to freeze.
-    return computeSynchronously(nodes, edges, config, options.onProgress);
+    return await computeSynchronously(nodes, edges, config, options.onProgress);
   }
 
   const reqId = `req_${++requestIdCounter}_${Date.now()}`;

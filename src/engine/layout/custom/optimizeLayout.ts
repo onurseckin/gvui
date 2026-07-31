@@ -46,11 +46,12 @@ export function hashLayoutState(
   return `N[${nodeStr}]E[${edgeStr}]B[${badgeStr}]`;
 }
 
-function emitProgress(
+async function emitProgress(
   onProgress: ((progress: LayoutProgressInfo) => void) | undefined,
   step: number,
   detail: string,
-): void {
+  delayMs: number = 35,
+): Promise<void> {
   if (!onProgress) return;
   const totalStages = 32;
   const percent = Math.round((step / totalStages) * 100);
@@ -61,32 +62,33 @@ function emitProgress(
     stageText: `Step ${step}/32`,
     detail,
   });
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
-export function optimizeLayout(
+export async function optimizeLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   configPartial?: Partial<CustomLayoutConfig>,
   onProgress?: (progress: LayoutProgressInfo) => void,
-): CustomLayoutResult {
+): Promise<CustomLayoutResult> {
   const config = resolveCustomLayoutConfig(configPartial);
 
   // Steps 1-3 (0-10%): Node dimensions calculation, edge endpoint validation, adjacency list construction
-  emitProgress(onProgress, 1, "Node dimensions calculation");
-  emitProgress(onProgress, 2, "Edge endpoint validation");
-  emitProgress(onProgress, 3, "Adjacency list construction");
+  await emitProgress(onProgress, 1, "Node dimensions calculation");
+  await emitProgress(onProgress, 2, "Edge endpoint validation");
+  await emitProgress(onProgress, 3, "Adjacency list construction");
 
   // Steps 4-8 (10-25%): 3-color DFS cycle breaking, topological layer assignment, rank distribution
-  emitProgress(onProgress, 4, "3-color DFS cycle breaking");
-  emitProgress(onProgress, 5, "3-color DFS cycle breaking - back-edge removal");
-  emitProgress(onProgress, 6, "Topological layer assignment");
-  emitProgress(onProgress, 7, "Topological layer assignment - node ranking");
-  emitProgress(onProgress, 8, "Rank distribution");
+  await emitProgress(onProgress, 4, "3-color DFS cycle breaking");
+  await emitProgress(onProgress, 5, "3-color DFS cycle breaking - back-edge removal");
+  await emitProgress(onProgress, 6, "Topological layer assignment");
+  await emitProgress(onProgress, 7, "Topological layer assignment - node ranking");
+  await emitProgress(onProgress, 8, "Rank distribution");
 
   // Steps 9-18 (25-55%): Barycentric crossing minimization sweeps (Sweep 1 through 10)
   for (let sweep = 1; sweep <= 10; sweep++) {
     const step = 8 + sweep;
-    emitProgress(onProgress, step, `Barycentric crossing minimization sweep ${sweep}`);
+    await emitProgress(onProgress, step, `Barycentric crossing minimization sweep ${sweep}`);
   }
 
   // Steps 19-27 (55-85%): A* orthogonal corridor routing per edge iteration
@@ -96,7 +98,7 @@ export function optimizeLayout(
       totalEdges === 1
         ? 1
         : Math.min(totalEdges, 1 + Math.floor(((step - 19) / 8) * (totalEdges - 1)));
-    emitProgress(
+    await emitProgress(
       onProgress,
       step,
       `Routing edge ${edgeNum} of ${totalEdges} via A* pathfinder...`,
@@ -107,11 +109,11 @@ export function optimizeLayout(
   const bestEval = optResult.bestEvaluation;
 
   // Steps 28-32 (85-100%): Crossing bridge calculation, badge placement, final geometry fit
-  emitProgress(onProgress, 28, "Crossing bridge calculation");
-  emitProgress(onProgress, 29, "Crossing bridge geometry fit");
-  emitProgress(onProgress, 30, "Badge placement");
-  emitProgress(onProgress, 31, "Final geometry fit");
-  emitProgress(onProgress, 32, "Layout optimization complete");
+  await emitProgress(onProgress, 28, "Crossing bridge calculation");
+  await emitProgress(onProgress, 29, "Crossing bridge geometry fit");
+  await emitProgress(onProgress, 30, "Badge placement");
+  await emitProgress(onProgress, 31, "Final geometry fit");
+  await emitProgress(onProgress, 32, "Layout optimization complete");
 
   return {
     nodes: bestEval.nodes,
