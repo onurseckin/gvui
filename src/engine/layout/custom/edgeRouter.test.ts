@@ -1,12 +1,36 @@
 import { describe, expect, it } from "bun:test";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 import { resolveCustomLayoutConfig } from "./config";
-import { generatePermutations, routeAllEdges } from "./edgeRouter";
+import { generatePermutations, replaceConflictReservations, routeAllEdges } from "./edgeRouter";
 import { validateCustomLayout } from "./layoutValidator";
 import { computeNodeLayout } from "./nodeLayout";
+import { RouteOccupancyLedger } from "./routeOccupancy";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("edgeRouter", () => {
+  it("replaces every conflicting reservation without retaining its prior route", () => {
+    const ledger = new RouteOccupancyLedger();
+    const oldRoutes = new Map([
+      ["e-a", { edgeId: "e-a", points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] }],
+      ["e-b", { edgeId: "e-b", points: [{ x: 0, y: 20 }, { x: 100, y: 20 }] }],
+    ]);
+    for (const route of oldRoutes.values()) {
+      ledger.commitRoute(route.edgeId, route.points);
+    }
+
+    const replacementRoutes = new Map([
+      ["e-a", { edgeId: "e-a", points: [{ x: 0, y: 10 }, { x: 100, y: 10 }] }],
+      ["e-b", { edgeId: "e-b", points: [{ x: 0, y: 30 }, { x: 100, y: 30 }] }],
+    ]);
+
+    replaceConflictReservations(ledger, ["e-a", "e-b"], replacementRoutes, new Map());
+
+    expect(ledger.getReservations().map((reservation) => reservation.segment)).toEqual([
+      { a: { x: 0, y: 10 }, b: { x: 100, y: 10 } },
+      { a: { x: 0, y: 30 }, b: { x: 100, y: 30 } },
+    ]);
+  });
+
   it("uses explicit port orders when distributing edge endpoints", () => {
     const config = resolveCustomLayoutConfig({ portEndpointPadding: 0 });
     const nodes: NormalizedNode[] = [

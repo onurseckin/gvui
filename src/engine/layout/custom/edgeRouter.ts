@@ -84,6 +84,24 @@ export function generatePermutations<T>(items: T[], maxPermutations = 32): T[][]
   return results;
 }
 
+export function replaceConflictReservations(
+  ledger: RouteOccupancyLedger,
+  conflictEdgeIds: Iterable<string>,
+  routes: ReadonlyMap<string, Pick<RoutedPath, "edgeId" | "points">>,
+  portsByEdge: ReadonlyMap<string, { sourcePort?: PortRef; targetPort?: PortRef }>,
+): void {
+  const edgeIds = Array.from(new Set(conflictEdgeIds));
+  for (const edgeId of edgeIds) {
+    ledger.release(edgeId);
+  }
+  for (const edgeId of edgeIds) {
+    const route = routes.get(edgeId);
+    if (!route) continue;
+    const ports = portsByEdge.get(edgeId);
+    ledger.commitRoute(edgeId, route.points, ports?.sourcePort, ports?.targetPort);
+  }
+}
+
 export function routeAllEdges(
   nodeLayout: NodeLayoutResult,
   config: CustomLayoutConfig,
@@ -515,11 +533,12 @@ export function routeAllEdges(
           for (const [k, v] of bestPermRoutes.entries()) {
             routesMap.set(k, v);
           }
-          ledger.release(Array.from(conflictSet).join(","));
-          for (const [eId, r] of routesMap.entries()) {
-            const ports = portDistributionResult.portsByEdge.get(eId);
-            ledger.commitRoute(eId, r.points, ports?.sourcePort, ports?.targetPort);
-          }
+          replaceConflictReservations(
+            ledger,
+            conflictSet,
+            routesMap,
+            portDistributionResult.portsByEdge,
+          );
           currValidation = bestPermValidation;
         }
       } else {
