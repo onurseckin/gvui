@@ -13,9 +13,11 @@ import type {
 
 export const ORDER: (keyof LayoutScore)[] = [
   "hardErrorCount",
+  "unresolvedRouteCount",
   "nodeNodeOverlaps",
   "edgeNodePenetrations",
   "sharedEdgeSegmentLength",
+  "unresolvedBadgeCount",
   "badgeNodeOverlaps",
   "badgeBadgeOverlaps",
   "badgeUnrelatedEdgeOverlaps",
@@ -167,7 +169,10 @@ export function calculateExcessBends(
 
 export function calculatePortSideImbalance(
   nodes: { id: string }[],
-  edges: { sourcePort?: { nodeId: string; side: Side }; targetPort?: { nodeId: string; side: Side } }[],
+  edges: {
+    sourcePort?: { nodeId: string; side: Side };
+    targetPort?: { nodeId: string; side: Side };
+  }[],
 ): number {
   const nodeSideCounts = new Map<string, Record<Side, number>>();
 
@@ -224,22 +229,27 @@ export function buildLayoutScore(
   const leaderMetrics = calculateLeaderMetrics(result.badges ?? [], roles);
   const hairpinMetrics = calculateHairpinCount(result.edges ?? [], roles);
   const hairpinCount = validation.metrics.hairpinCount ?? hairpinMetrics.totalHairpins;
-  const avoidableHairpinCount = validation.metrics.avoidableHairpinCount ?? hairpinMetrics.avoidableHairpins;
-  const excessBendCount = validation.metrics.excessBendCount ?? calculateExcessBends(result.edges ?? [], roles);
+  const avoidableHairpinCount =
+    validation.metrics.avoidableHairpinCount ?? hairpinMetrics.avoidableHairpins;
+  const excessBendCount =
+    validation.metrics.excessBendCount ?? calculateExcessBends(result.edges ?? [], roles);
   const portSideImbalance =
     validation.metrics.portSideImbalance ??
     calculatePortSideImbalance(result.nodes ?? [], result.edges ?? []);
 
   return {
     hardErrorCount,
+    unresolvedRouteCount: validation.metrics.unresolvedRouteCount,
     nodeNodeOverlaps: validation.metrics.nodeNodeOverlaps,
     edgeNodePenetrations: validation.metrics.edgeNodePenetrations,
     sharedEdgeSegmentLength: validation.metrics.sharedEdgeSegmentLength,
+    unresolvedBadgeCount: validation.metrics.unresolvedBadgeCount,
     badgeNodeOverlaps: validation.metrics.badgeNodeOverlaps,
     badgeBadgeOverlaps: validation.metrics.badgeBadgeOverlaps,
     badgeUnrelatedEdgeOverlaps: validation.metrics.badgeUnrelatedEdgeOverlaps,
     crossingCount: validation.metrics.crossingCount,
-    ordinaryLeaderCount: validation.metrics.ordinaryLeaderCount ?? leaderMetrics.ordinaryLeaderCount,
+    ordinaryLeaderCount:
+      validation.metrics.ordinaryLeaderCount ?? leaderMetrics.ordinaryLeaderCount,
     avoidableHairpinCount,
     excessBendCount,
     hairpinCount,
@@ -254,4 +264,3 @@ export function buildLayoutScore(
     stateHash,
   };
 }
-

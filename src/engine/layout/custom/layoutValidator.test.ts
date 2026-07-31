@@ -5,6 +5,7 @@ import type {
   BadgePlacement,
   CustomLayoutResult,
   EdgeRole,
+  NormalizedEdge,
   NormalizedNode,
   Point,
   RoutedPath,
@@ -20,6 +21,8 @@ function createEmptyResult(): CustomLayoutResult {
       isValid: true,
       diagnostics: [],
       metrics: {
+        unresolvedRouteCount: 0,
+        unresolvedBadgeCount: 0,
         nodeNodeOverlaps: 0,
         edgeNodePenetrations: 0,
         sharedEdgeSegmentLength: 0,
@@ -435,6 +438,94 @@ describe("layoutValidator", () => {
     const diag = val.diagnostics.find((d) => d.code === "MISSING_ROUTE");
     expect(diag).toBeDefined();
     expect(diag?.ids).toContain("e1");
+  });
+
+  test("reports each expected edge without a rendered route as a hard failure", () => {
+    const renderedEdge: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
+      points: [
+        { x: 100, y: 100 },
+        { x: 100, y: 300 },
+      ],
+    };
+    const expectedEdges: NormalizedEdge[] = [
+      { id: "e1", source: "nA", target: "nB" },
+      { id: "e2", source: "nB", target: "nC" },
+    ];
+
+    const validation = validateCustomLayout(
+      { ...createEmptyResult(), edges: [renderedEdge], expectedEdges },
+      DEFAULT_CUSTOM_LAYOUT_CONFIG,
+    );
+
+    expect(validation.isValid).toBe(false);
+    expect(validation.metrics.unresolvedRouteCount).toBe(1);
+    expect(
+      validation.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "MISSING_ROUTE" &&
+          diagnostic.ids.length === 1 &&
+          diagnostic.ids[0] === "e2",
+      ),
+    ).toBe(true);
+  });
+
+  test("reports a missing required badge as a soft diagnostic", () => {
+    const renderedEdge: RoutedPath = {
+      edgeId: "e2",
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
+      points: [
+        { x: 100, y: 100 },
+        { x: 100, y: 300 },
+      ],
+    };
+    const expectedEdges: NormalizedEdge[] = [
+      { id: "e2", source: "nA", target: "nB", label: "required" },
+    ];
+
+    const validation = validateCustomLayout(
+      { ...createEmptyResult(), edges: [renderedEdge], expectedEdges },
+      DEFAULT_CUSTOM_LAYOUT_CONFIG,
+    );
+
+    expect(validation.isValid).toBe(true);
+    expect(validation.metrics.unresolvedBadgeCount).toBe(1);
+    expect(
+      validation.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "MISSING_BADGE" &&
+          diagnostic.severity === "warning" &&
+          diagnostic.ids.length === 1 &&
+          diagnostic.ids[0] === "e2",
+      ),
+    ).toBe(true);
   });
 
   test("detects non-orthogonal internal segments and attaches segment", () => {

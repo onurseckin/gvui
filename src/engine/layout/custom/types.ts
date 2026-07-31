@@ -120,7 +120,6 @@ export interface GridEdge {
   nearObstacle?: boolean;
 }
 
-
 export interface OccupancyRecord {
   edgeId: string;
   segment: Segment;
@@ -238,6 +237,8 @@ export type SearchStopReason =
   | "hard-failure";
 
 export interface LayoutMetrics {
+  unresolvedRouteCount: number;
+  unresolvedBadgeCount: number;
   nodeNodeOverlaps: number;
   edgeNodePenetrations: number;
   sharedEdgeSegmentLength: number;
@@ -290,9 +291,11 @@ export interface RouteCost {
 
 export interface LayoutScore {
   hardErrorCount: number;
+  unresolvedRouteCount: number;
   nodeNodeOverlaps: number;
   edgeNodePenetrations: number;
   sharedEdgeSegmentLength: number;
+  unresolvedBadgeCount: number;
   badgeNodeOverlaps: number;
   badgeBadgeOverlaps: number;
   badgeUnrelatedEdgeOverlaps: number;
@@ -337,4 +340,3 @@ export interface CustomLayoutResult {
   rankBandMap?: Map<number, { topY: number; height: number; centerY: number }>;
   boundingBox?: Rect;
 }
-

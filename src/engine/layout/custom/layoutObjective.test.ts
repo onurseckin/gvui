@@ -5,9 +5,11 @@ import type { LayoutScore } from "./types";
 function score(overrides: Partial<LayoutScore> = {}): LayoutScore {
   return {
     hardErrorCount: 0,
+    unresolvedRouteCount: 0,
     nodeNodeOverlaps: 0,
     edgeNodePenetrations: 0,
     sharedEdgeSegmentLength: 0,
+    unresolvedBadgeCount: 0,
     badgeNodeOverlaps: 0,
     badgeBadgeOverlaps: 0,
     badgeUnrelatedEdgeOverlaps: 0,
@@ -29,6 +31,18 @@ function score(overrides: Partial<LayoutScore> = {}): LayoutScore {
 }
 
 describe("layoutObjective", () => {
+  test("prefers complete route sets over any aesthetic improvement", () => {
+    const complete = score({ totalLength: 100000, crossingCount: 5 });
+    const partial = score({ unresolvedRouteCount: 1, totalLength: 10, crossingCount: 0 });
+    expect(compareLayoutScore(complete, partial)).toBeLessThan(0);
+  });
+
+  test("prefers resolved badges before badge collision metrics", () => {
+    const resolved = score({ badgeUnrelatedEdgeOverlaps: 1 });
+    const missingBadge = score({ unresolvedBadgeCount: 1, badgeUnrelatedEdgeOverlaps: 0 });
+    expect(compareLayoutScore(resolved, missingBadge)).toBeLessThan(0);
+  });
+
   test("prefers zero badge/unrelated-edge overlaps over any reduction in crossings", () => {
     const noBadgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 0, crossingCount: 5 });
     const badgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 1, crossingCount: 0 });
@@ -80,4 +94,3 @@ describe("layoutObjective", () => {
     ).toBe(0);
   });
 });
-

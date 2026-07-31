@@ -82,6 +82,51 @@ describe("routeSearch", () => {
     }
   });
 
+  it("uses a bounded grid dogleg when A* reaches its state cap", () => {
+    const nodes: (NormalizedNode & Point)[] = [
+      { id: "A", width: 100, height: 50, x: 100, y: 0 },
+      { id: "OBS", width: 80, height: 50, x: 110, y: 90 },
+      { id: "B", width: 100, height: 50, x: 100, y: 200 },
+    ];
+    const sourcePort: PortRef = {
+      nodeId: "A",
+      side: "bottom",
+      index: 0,
+      point: { x: 150, y: 50 },
+      stub: { x: 150, y: 70 },
+    };
+    const targetPort: PortRef = {
+      nodeId: "B",
+      side: "top",
+      index: 0,
+      point: { x: 150, y: 200 },
+      stub: { x: 150, y: 180 },
+    };
+    const config = resolveCustomLayoutConfig();
+    const grid = buildRoutingGrid(
+      nodes,
+      [sourcePort, targetPort],
+      { x: 0, y: 0, width: 350, height: 300 },
+      config,
+    );
+
+    const route = searchOrthogonalRoute("e1", sourcePort, targetPort, grid, [], config, {
+      maxIterations: 1,
+      allowDoglegFallback: true,
+    });
+
+    expect(route).toBeDefined();
+    for (let index = 0; index < route!.points.length - 1; index++) {
+      expect(
+        segmentIntersectsRectInterior(
+          { a: route!.points[index], b: route!.points[index + 1] },
+          { x: 110, y: 90, width: 80, height: 50 },
+          config.epsilon,
+        ),
+      ).toBe(false);
+    }
+  });
+
   it("fewer bends win when lengths are equal", () => {
     const nodes: (NormalizedNode & Point)[] = [
       { id: "A", width: 100, height: 50, x: 0, y: 0 },
@@ -371,5 +416,3 @@ describe("routeSearch", () => {
     });
   });
 });
-
-

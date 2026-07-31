@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { useMemo, useState } from "react";
 import {
   computeCustomLayout,
+  type CustomLayoutResult,
   type ExtendedLayoutDiagnostic,
   type NormalizedEdge,
   type NormalizedNode,
@@ -56,7 +57,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
 
-  const layoutResult = useMemo(() => {
+  const layoutResult = useMemo<CustomLayoutResult>(() => {
     try {
       return computeCustomLayout(normalizedNodes, normalizedEdges);
     } catch (err) {
@@ -73,6 +74,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
             { code: "RENDER_ERROR", severity: "error" as const, message: String(err), ids: [] },
           ],
           metrics: {
+            unresolvedRouteCount: normalizedEdges.length,
+            unresolvedBadgeCount: normalizedEdges.filter(
+              (edge) => edge.isCycle || (edge.label?.trim().length ?? 0) > 0,
+            ).length,
             nodeNodeOverlaps: 0,
             edgeNodePenetrations: 0,
             sharedEdgeSegmentLength: 0,

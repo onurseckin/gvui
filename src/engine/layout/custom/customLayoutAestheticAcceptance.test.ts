@@ -26,7 +26,11 @@ function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig
   return { scenario, nodes, edges, result: computeCustomLayout(nodes, edges, configOverride) };
 }
 
-function findRouteByLabel(edges: NormalizedEdge[], routes: RoutedPath[], label: string): RoutedPath {
+function findRouteByLabel(
+  edges: NormalizedEdge[],
+  routes: RoutedPath[],
+  label: string,
+): RoutedPath {
   const edge = edges.find((e) => e.label?.toLowerCase() === label.toLowerCase());
   if (!edge) throw new Error(`Edge with label "${label}" not found`);
   const route = routes.find((r) => r.edgeId === edge.id);
@@ -84,6 +88,15 @@ function isDirectlyAssociatedBadge(badge: BadgePlacement, route: RoutedPath): bo
 }
 
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
+  it("returns complete routes and required badges for every testing scenario", () => {
+    for (const scenario of Object.values(CUSTOM_LAYOUT_SCENARIOS)) {
+      const { edges, result } = computeScenario(scenario.id);
+      expect(result.edges).toHaveLength(edges.length);
+      expect(result.validation.metrics.unresolvedRouteCount).toBe(0);
+      expect(result.validation.metrics.unresolvedBadgeCount).toBe(0);
+    }
+  }, 120000);
+
   describe("Scenario #5 (Fan-Out 8-Node Broadcaster)", () => {
     it("meets V3 aesthetic acceptance criteria", () => {
       const { edges, result } = computeScenario(5);
@@ -109,9 +122,7 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       assertUniquePortsPerNode(result.edges);
 
       const colTargetSides = new Set(
-        result.edges
-          .filter((e) => e.targetPort.nodeId === "COL")
-          .map((e) => e.targetPort.side),
+        result.edges.filter((e) => e.targetPort.nodeId === "COL").map((e) => e.targetPort.side),
       );
       expect(colTargetSides.size).toBeGreaterThanOrEqual(2);
 
@@ -147,7 +158,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       const nodeB = result.nodes.find((n) => n.id === "B");
       if (nodeA && nodeB && syncBadge) {
         const peerGap = Math.abs(nodeB.x - (nodeA.x + nodeA.width));
-        const minRequiredGap = syncBadge.rect.width + 2 * (DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap / 2);
+        const minRequiredGap =
+          syncBadge.rect.width + 2 * (DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap / 2);
         expect(peerGap).toBeGreaterThanOrEqual(minRequiredGap);
       }
     });
@@ -196,85 +208,67 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #20 (Full DevOps Microservice Mesh)", () => {
-    it(
-      "meets V3 aesthetic acceptance criteria",
-      () => {
-        const { edges, result } = computeScenario(20);
-        expect(result.validation.isValid).toBe(true);
-        expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
-        expect(result.validation.metrics.crossingCount).toBe(0);
-        expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBeLessThanOrEqual(2);
-        assertUniquePortsPerNode(result.edges);
+    it("meets V3 aesthetic acceptance criteria", () => {
+      const { edges, result } = computeScenario(20);
+      expect(result.validation.isValid).toBe(true);
+      expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
+      expect(result.validation.metrics.crossingCount).toBe(0);
+      expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBeLessThanOrEqual(2);
+      assertUniquePortsPerNode(result.edges);
 
-        for (const route of result.edges) {
-          const edgeDef = edges.find((e) => e.id === route.edgeId);
-          const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
-          const maxAllowedBends = isFeedback ? 4 : 3;
-          const bendCount = Math.max(0, simplifyOrthogonalPath(route.points).length - 2);
-          expect(bendCount).toBeLessThanOrEqual(maxAllowedBends);
-        }
+      for (const route of result.edges) {
+        const edgeDef = edges.find((e) => e.id === route.edgeId);
+        const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
+        const maxAllowedBends = isFeedback ? 4 : 3;
+        const bendCount = Math.max(0, simplifyOrthogonalPath(route.points).length - 2);
+        expect(bendCount).toBeLessThanOrEqual(maxAllowedBends);
+      }
 
-        const payOrderRoute = findRouteByLabel(edges, result.edges, "charge payment");
-        const payOrderLength = payOrderRoute.points.reduce((acc, pt, idx) => {
-          if (idx === 0) return 0;
-          const prev = payOrderRoute.points[idx - 1];
-          return acc + Math.hypot(pt.x - prev.x, pt.y - prev.y);
-        }, 0);
-        const maxX = Math.max(...result.nodes.map((n) => n.x + n.width));
-        const maxY = Math.max(...result.nodes.map((n) => n.y + n.height));
-        const outerBoundaryLength = 2 * (maxX + maxY);
-        expect(payOrderLength).toBeLessThan(outerBoundaryLength);
-      },
-      15000,
-    );
+      const payOrderRoute = findRouteByLabel(edges, result.edges, "charge payment");
+      const payOrderLength = payOrderRoute.points.reduce((acc, pt, idx) => {
+        if (idx === 0) return 0;
+        const prev = payOrderRoute.points[idx - 1];
+        return acc + Math.hypot(pt.x - prev.x, pt.y - prev.y);
+      }, 0);
+      const maxX = Math.max(...result.nodes.map((n) => n.x + n.width));
+      const maxY = Math.max(...result.nodes.map((n) => n.y + n.height));
+      const outerBoundaryLength = 2 * (maxX + maxY);
+      expect(payOrderLength).toBeLessThan(outerBoundaryLength);
+    }, 15000);
   });
 
   describe("All 20 CUSTOM_LAYOUT_SCENARIOS Acceptance & Non-Regression Gate", () => {
     for (let id = 1; id <= 20; id++) {
-      it(
-        `scenario #${id} satisfies V3 acceptance, zero ordinary leaders, score non-regression, and port uniqueness`,
-        () => {
-          const { nodes, edges, result } = computeScenario(id);
-          expect(result.status).not.toBe("invalid_hard_failure");
-          expect(result.validation.metrics.ordinaryLeaderCount ?? 0).toBeLessThanOrEqual(1);
-          assertUniquePortsPerNode(result.edges);
+      it(`scenario #${id} satisfies V3 acceptance, zero ordinary leaders, score non-regression, and port uniqueness`, () => {
+        const { nodes, edges, result } = computeScenario(id);
+        expect(result.status).not.toBe("invalid_hard_failure");
+        expect(result.validation.metrics.ordinaryLeaderCount ?? 0).toBeLessThanOrEqual(1);
+        assertUniquePortsPerNode(result.edges);
 
-          for (const badge of result.badges) {
-            const route = result.edges.find((e) => e.edgeId === badge.edgeId);
-            const edgeDef = edges.find((e) => e.id === badge.edgeId);
-            const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
-            if (!isFeedback && route && id !== 8) {
-              expect(isDirectlyAssociatedBadge(badge, route)).toBe(true);
-            }
+        for (const badge of result.badges) {
+          const route = result.edges.find((e) => e.edgeId === badge.edgeId);
+          const edgeDef = edges.find((e) => e.id === badge.edgeId);
+          const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
+          if (!isFeedback && route && id !== 8) {
+            expect(isDirectlyAssociatedBadge(badge, route)).toBe(true);
           }
+        }
 
-          const initialResult = computeCustomLayout(nodes, edges, { maxGlobalPasses: 1 });
-          const edgeRoles = new Map<string, "feedback" | "forward" | "self" | "cross">(
-            edges.map((e) => [
-              e.id,
-              e.layoutRole && e.layoutRole !== "auto"
-                ? e.layoutRole
-                : e.isCycle
-                  ? "feedback"
-                  : "forward",
-            ]),
-          );
-          const initialScore = buildLayoutScore(
-            initialResult,
-            initialResult.validation,
-            edgeRoles,
-          );
-          const finalScore = buildLayoutScore(
-            result,
-            result.validation,
-            edgeRoles,
-          );
-          expect(compareLayoutScore(finalScore, initialScore)).toBeLessThanOrEqual(0);
-        },
-        60000,
-      );
+        const initialResult = computeCustomLayout(nodes, edges, { maxGlobalPasses: 1 });
+        const edgeRoles = new Map<string, "feedback" | "forward" | "self" | "cross">(
+          edges.map((e) => [
+            e.id,
+            e.layoutRole && e.layoutRole !== "auto"
+              ? e.layoutRole
+              : e.isCycle
+                ? "feedback"
+                : "forward",
+          ]),
+        );
+        const initialScore = buildLayoutScore(initialResult, initialResult.validation, edgeRoles);
+        const finalScore = buildLayoutScore(result, result.validation, edgeRoles);
+        expect(compareLayoutScore(finalScore, initialScore)).toBeLessThanOrEqual(0);
+      }, 60000);
     }
   });
 });
-
-

@@ -37,11 +37,7 @@ export function evaluateSearchState(
 ): StateEvaluationResult {
   const currentDemands: ExactSpacingDemand[] = [...state.exactDemands];
 
-  let spacingOverrides = resolveExactSpacingDemands(
-    currentDemands,
-    config.nodeGap,
-    config.rankGap,
-  );
+  let spacingOverrides = resolveExactSpacingDemands(currentDemands, config.nodeGap, config.rankGap);
 
   let nodeLayout = computeNodeLayout(
     nodes,
@@ -82,11 +78,7 @@ export function evaluateSearchState(
     if (addedNew) {
       state.sideAssignments.clear();
 
-      spacingOverrides = resolveExactSpacingDemands(
-        currentDemands,
-        config.nodeGap,
-        config.rankGap,
-      );
+      spacingOverrides = resolveExactSpacingDemands(currentDemands, config.nodeGap, config.rankGap);
 
       nodeLayout = computeNodeLayout(
         nodes,
@@ -114,6 +106,7 @@ export function evaluateSearchState(
       edges: routerResult.routes,
       badges: badgeResult.placements,
       classifiedEdges: nodeLayout.classifiedEdges,
+      expectedEdges: nodeLayout.normalizedGraph.edges,
     },
     config,
   );

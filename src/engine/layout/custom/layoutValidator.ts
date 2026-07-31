@@ -25,6 +25,7 @@ import type {
   LayoutDiagnostic,
   LayoutMetrics,
   LayoutScore,
+  NormalizedEdge,
   LayoutValidationResult,
   Point,
   Rect,
@@ -70,6 +71,7 @@ export function validateCustomLayout(
   result: Pick<CustomLayoutResult, "nodes" | "edges" | "badges"> & {
     classifiedEdges?: ClassifiedEdge[];
     edgeRoles?: Map<string, EdgeRole> | Record<string, EdgeRole>;
+    expectedEdges?: NormalizedEdge[];
   },
   partialConfig: CustomLayoutConfig | Partial<CustomLayoutConfig>,
 ): ExtendedLayoutValidationResult {
@@ -79,6 +81,8 @@ export function validateCustomLayout(
   const seenDiagnosticKeys = new Set<string>();
 
   const metrics: LayoutMetrics = {
+    unresolvedRouteCount: 0,
+    unresolvedBadgeCount: 0,
     nodeNodeOverlaps: 0,
     edgeNodePenetrations: 0,
     sharedEdgeSegmentLength: 0,
@@ -101,6 +105,40 @@ export function validateCustomLayout(
   const nodes = result.nodes ?? [];
   const edges = result.edges ?? [];
   const badges = result.badges ?? [];
+
+  if (result.expectedEdges) {
+    const routesByEdgeId = new Map(edges.map((edge) => [edge.edgeId, edge]));
+    const badgesByEdgeId = new Map(badges.map((badge) => [badge.edgeId, badge]));
+
+    for (const expectedEdge of result.expectedEdges) {
+      if (!routesByEdgeId.has(expectedEdge.id)) {
+        if (
+          addDiagnostic(diagnostics, seenDiagnosticKeys, {
+            code: "MISSING_ROUTE",
+            severity: "error",
+            message: `Expected edge ${expectedEdge.id} has no rendered route`,
+            ids: [expectedEdge.id],
+          })
+        ) {
+          metrics.unresolvedRouteCount++;
+        }
+      }
+
+      const requiresBadge = expectedEdge.isCycle || (expectedEdge.label?.trim().length ?? 0) > 0;
+      if (requiresBadge && !badgesByEdgeId.has(expectedEdge.id)) {
+        if (
+          addDiagnostic(diagnostics, seenDiagnosticKeys, {
+            code: "MISSING_BADGE",
+            severity: "warning",
+            message: `Expected edge ${expectedEdge.id} has no rendered badge`,
+            ids: [expectedEdge.id],
+          })
+        ) {
+          metrics.unresolvedBadgeCount++;
+        }
+      }
+    }
+  }
 
   const nodeRectMap = new Map<string, Rect>();
 
@@ -604,9 +642,11 @@ export function validationResultToScore(res: LayoutValidationResult): LayoutScor
   const hardErrorCount = res.diagnostics.filter((d) => d.severity === "error").length;
   return {
     hardErrorCount: res.isValid ? hardErrorCount : Math.max(1, hardErrorCount),
+    unresolvedRouteCount: res.metrics.unresolvedRouteCount,
     nodeNodeOverlaps: res.metrics.nodeNodeOverlaps,
     edgeNodePenetrations: res.metrics.edgeNodePenetrations,
     sharedEdgeSegmentLength: res.metrics.sharedEdgeSegmentLength,
+    unresolvedBadgeCount: res.metrics.unresolvedBadgeCount,
     badgeNodeOverlaps: res.metrics.badgeNodeOverlaps,
     badgeBadgeOverlaps: res.metrics.badgeBadgeOverlaps,
     badgeUnrelatedEdgeOverlaps: res.metrics.badgeUnrelatedEdgeOverlaps,
@@ -624,7 +664,6 @@ export function validationResultToScore(res: LayoutValidationResult): LayoutScor
     totalArea: res.metrics.totalArea,
     stateHash: "",
   };
-
 }
 
 export function compareLayoutScores(a: LayoutValidationResult, b: LayoutValidationResult): number {

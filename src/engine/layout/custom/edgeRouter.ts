@@ -109,6 +109,12 @@ export function routeAllEdges(
   }
 
   const allNodesList = Array.from(nodeMap.values());
+  const forbiddenNodeRects = allNodesList.map((node) => ({
+    x: node.x,
+    y: node.y,
+    width: node.width,
+    height: node.height,
+  }));
 
   // Candidates and Metadata computation for non-self edges
   const candidatesMap = new Map<string, PortCandidate[]>();
@@ -194,12 +200,7 @@ export function routeAllEdges(
     }
   }
 
-  const portDistributionResult = distributePorts(
-    nonSelfEdges,
-    sideAssignmentsMap,
-    nodeMap,
-    config,
-  );
+  const portDistributionResult = distributePorts(nonSelfEdges, sideAssignmentsMap, nodeMap, config);
 
   // Collect all ports for grid construction
   const allPortRefs: PortRef[] = [];
@@ -339,7 +340,11 @@ export function routeAllEdges(
         grid,
         ledger.toOccupancyRecords(),
         config,
-        { role: isFeedback ? "feedback" : undefined },
+        {
+          role: isFeedback ? "feedback" : undefined,
+          forbiddenRects: forbiddenNodeRects,
+          allowDoglegFallback: true,
+        },
       );
 
       if (route) {
@@ -358,6 +363,7 @@ export function routeAllEdges(
           edges: Array.from(routesMap.values()),
           badges: [],
           classifiedEdges,
+          expectedEdges: normalizedGraph.edges,
         },
         config,
       );
@@ -462,7 +468,7 @@ export function routeAllEdges(
               grid,
               trialLedger.toOccupancyRecords(),
               config,
-              { role: isFeedback ? "feedback" : undefined },
+              { role: isFeedback ? "feedback" : undefined, forbiddenRects: forbiddenNodeRects },
             );
 
             if (route) {
@@ -477,6 +483,7 @@ export function routeAllEdges(
               edges: Array.from(trialRoutesMap.values()),
               badges: [],
               classifiedEdges,
+              expectedEdges: normalizedGraph.edges,
             },
             config,
           );
@@ -538,7 +545,7 @@ export function routeAllEdges(
             grid,
             ledger.toOccupancyRecords(),
             config,
-            { role: isFeedback ? "feedback" : undefined },
+            { role: isFeedback ? "feedback" : undefined, forbiddenRects: forbiddenNodeRects },
           );
 
           if (route) {
@@ -566,7 +573,10 @@ export function routeAllEdges(
       }
     }
 
-    if (!globalBestValidation || compareLayoutScores(variantBestValidation, globalBestValidation) < 0) {
+    if (
+      !globalBestValidation ||
+      compareLayoutScores(variantBestValidation, globalBestValidation) < 0
+    ) {
       globalBestValidation = variantBestValidation;
       globalBestRoutesMap = new Map(variantBestRoutesMap);
       globalBestOccupancy = variantBestOccupancy;
@@ -584,9 +594,7 @@ export function routeAllEdges(
 
   const finalRoutes = Array.from(globalBestRoutesMap.values());
   const status =
-    globalBestValidation && globalBestValidation.isValid
-      ? "success"
-      : "unresolved_soft_conflicts";
+    globalBestValidation && globalBestValidation.isValid ? "success" : "unresolved_soft_conflicts";
 
   return {
     routes: finalRoutes,

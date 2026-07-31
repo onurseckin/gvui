@@ -4,6 +4,7 @@ import {
   isOrthogonalSegment,
   segmentIntersectsRectInterior,
   segmentsCross,
+  simplifyOrthogonalPath,
 } from "./geometry";
 import { type RoutingGrid, vertexKey } from "./routingGrid";
 import type {
@@ -106,9 +107,112 @@ export interface RouteSearchOptions {
   forbiddenRects?: Rect[];
   reservations?: OccupancyRecord[];
   maxIterations?: number;
+  allowDoglegFallback?: boolean;
 }
 
-function compareNodes(a: AStarNode, b: AStarNode, epsilon: number, stateKeyFn: (n: AStarNode) => string): number {
+function findGridDoglegRoute(
+  edgeId: string,
+  sourcePort: PortRef,
+  targetPort: PortRef,
+  grid: RoutingGrid,
+  occupancy: OccupancyRecord[],
+  config: CustomLayoutConfig,
+  stats: RouteSearchStats,
+): RoutedPath | null {
+  const xCoords = Array.from(
+    new Set(Array.from(grid.vertices.values()).map((point) => point.x)),
+  ).sort((a, b) => a - b);
+  const yCoords = Array.from(
+    new Set(Array.from(grid.vertices.values()).map((point) => point.y)),
+  ).sort((a, b) => a - b);
+  const selectTracks = (
+    coordinates: number[],
+    sourceCoordinate: number,
+    targetCoordinate: number,
+  ) => {
+    const midpoint = (sourceCoordinate + targetCoordinate) / 2;
+    const nearest = [...coordinates]
+      .sort((a, b) => Math.abs(a - midpoint) - Math.abs(b - midpoint) || a - b)
+      .slice(0, 8);
+    return Array.from(
+      new Set([
+        coordinates[0],
+        coordinates[coordinates.length - 1],
+        sourceCoordinate,
+        targetCoordinate,
+        ...nearest,
+      ]),
+    );
+  };
+  const candidateXTracks = selectTracks(xCoords, sourcePort.stub.x, targetPort.stub.x);
+  const candidateYTracks = selectTracks(yCoords, sourcePort.stub.y, targetPort.stub.y);
+  const indexedOccupancy = new IndexedOccupancy(occupancy, config.epsilon);
+
+  const tryCandidate = (points: Point[]): RoutedPath | null => {
+    const simplified = simplifyOrthogonalPath(points, config.epsilon);
+    for (let index = 0; index < simplified.length - 1; index++) {
+      const segment = { a: simplified[index], b: simplified[index + 1] };
+      if (
+        !isOrthogonalSegment(segment, config.epsilon) ||
+        grid.nodeObstacles.some(
+          ({ nodeId, rect }) =>
+            segmentIntersectsRectInterior(segment, rect, config.epsilon) &&
+            !(index === 0 && nodeId === sourcePort.nodeId) &&
+            !(index === simplified.length - 2 && nodeId === targetPort.nodeId),
+        )
+      ) {
+        return null;
+      }
+      const occupancyResult = indexedOccupancy.checkSegmentConflict(segment, edgeId);
+      if (occupancyResult.isCollinearOccupied || occupancyResult.stepCrossings > 0) {
+        return null;
+      }
+    }
+
+    return {
+      edgeId,
+      points: simplified,
+      sourcePort,
+      targetPort,
+      stats,
+    };
+  };
+
+  for (const x of candidateXTracks) {
+    for (const y of candidateYTracks) {
+      const horizontalFirst = tryCandidate([
+        sourcePort.point,
+        sourcePort.stub,
+        { x, y: sourcePort.stub.y },
+        { x, y },
+        { x: targetPort.stub.x, y },
+        targetPort.stub,
+        targetPort.point,
+      ]);
+      if (horizontalFirst) return horizontalFirst;
+
+      const verticalFirst = tryCandidate([
+        sourcePort.point,
+        sourcePort.stub,
+        { x: sourcePort.stub.x, y },
+        { x, y },
+        { x, y: targetPort.stub.y },
+        targetPort.stub,
+        targetPort.point,
+      ]);
+      if (verticalFirst) return verticalFirst;
+    }
+  }
+
+  return null;
+}
+
+function compareNodes(
+  a: AStarNode,
+  b: AStarNode,
+  epsilon: number,
+  stateKeyFn: (n: AStarNode) => string,
+): number {
   const costCmp = compareRouteCost(a.fCost, b.fCost, epsilon);
   if (costCmp !== 0) return costCmp;
 
@@ -175,10 +279,16 @@ class AStarMinHeap {
       const rightIdx = leftIdx + 1;
       let smallest = idx;
 
-      if (leftIdx < length && compareNodes(this.heap[leftIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0) {
+      if (
+        leftIdx < length &&
+        compareNodes(this.heap[leftIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0
+      ) {
         smallest = leftIdx;
       }
-      if (rightIdx < length && compareNodes(this.heap[rightIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0) {
+      if (
+        rightIdx < length &&
+        compareNodes(this.heap[rightIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0
+      ) {
         smallest = rightIdx;
       }
       if (smallest !== idx) {
@@ -535,7 +645,9 @@ export function searchOrthogonalRoute(
   };
 
   if (!bestGoalNode) {
-    return null;
+    return stopReason === "max_iterations" && options?.allowDoglegFallback
+      ? findGridDoglegRoute(edgeId, sourcePort, targetPort, grid, combinedOccupancy, config, stats)
+      : null;
   }
 
   // Reconstruct path
@@ -555,7 +667,11 @@ export function searchOrthogonalRoute(
 
   for (const pt of rawPoints) {
     const last = points[points.length - 1];
-    if (!last || Math.abs(last.x - pt.x) > config.epsilon || Math.abs(last.y - pt.y) > config.epsilon) {
+    if (
+      !last ||
+      Math.abs(last.x - pt.x) > config.epsilon ||
+      Math.abs(last.y - pt.y) > config.epsilon
+    ) {
       points.push(pt);
     }
   }
@@ -591,4 +707,3 @@ export function searchOrthogonalRoute(
     stats,
   };
 }
-
