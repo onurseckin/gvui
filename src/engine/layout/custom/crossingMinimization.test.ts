@@ -47,4 +47,30 @@ describe("crossingMinimization", () => {
     const result = minimizeCrossings(layerGraph);
     expect(result.crossingCount).toBe(0);
   });
+
+  it("applies explicit layerOrders overrides", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+      { id: "X", width: 100, height: 50 },
+      { id: "Y", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "A", target: "X" },
+      { id: "e2", source: "B", target: "Y" },
+    ];
+
+    const norm = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(norm);
+    const roles = classifyEdgeRoles(norm, scc);
+    const ranks = assignRanks(norm, roles);
+    const layerGraph = buildLayerGraph(norm, roles, ranks);
+
+    const layerOrders = new Map<number, string[]>();
+    layerOrders.set(0, ["B", "A"]);
+
+    const result = minimizeCrossings(layerGraph, 24, layerOrders);
+    const rank0Ids = result.orderedLayers[0].map((n) => n.id);
+    expect(rank0Ids).toEqual(["B", "A"]);
+  });
 });

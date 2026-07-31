@@ -36,6 +36,8 @@ export function computeNodeLayout(
   inputEdges: NormalizedEdge[],
   userConfig?: Partial<CustomLayoutConfig>,
   spacingOverrides?: SpacingOverrides,
+  layerOrders?: Map<number, string[]> | Record<number, string[]>,
+  layerShifts?: Map<string, number> | Record<string, number>,
 ): NodeLayoutResult {
   const config = resolveCustomLayoutConfig(userConfig);
 
@@ -44,13 +46,14 @@ export function computeNodeLayout(
   const cycleBreaking = classifyEdgeRoles(normalizedGraph, sccResult);
   const rankAssignment = assignRanks(normalizedGraph, cycleBreaking);
   const layerGraph = buildLayerGraph(normalizedGraph, cycleBreaking, rankAssignment);
-  const minimized = minimizeCrossings(layerGraph, config.maxCrossingSweeps);
+  const minimized = minimizeCrossings(layerGraph, config.maxCrossingSweeps, layerOrders);
   const coordResult = assignCoordinates(
     normalizedGraph,
     layerGraph,
     minimized.orderedLayers,
     config,
     spacingOverrides,
+    layerShifts,
   );
 
   return {

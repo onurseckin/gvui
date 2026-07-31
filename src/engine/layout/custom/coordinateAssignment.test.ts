@@ -194,5 +194,41 @@ describe("coordinateAssignment", () => {
     const rank1Gap = Math.abs(posN4.x - posN3.x) - 100;
     expect(rank1Gap).toBeGreaterThanOrEqual(110);
   });
+
+  it("applies layerShifts overrides for rank Y and node X/Y shifts", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "N1", width: 100, height: 50 },
+      { id: "N2", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "N1", target: "N2" }];
+
+    const config = resolveCustomLayoutConfig();
+    const norm = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(norm);
+    const roles = classifyEdgeRoles(norm, scc);
+    const ranks = assignRanks(norm, roles);
+    const layerGraph = buildLayerGraph(norm, roles, ranks);
+    const minimized = minimizeCrossings(layerGraph);
+
+    const layerShifts = new Map<string, number>([
+      ["rank:1:y", 50],
+      ["node:N1:x", 30],
+    ]);
+
+    const result = assignCoordinates(
+      norm,
+      layerGraph,
+      minimized.orderedLayers,
+      config,
+      undefined,
+      layerShifts,
+    );
+
+    const posN1 = result.nodePositions.get("N1")!;
+    const posN2 = result.nodePositions.get("N2")!;
+
+    expect(posN1.x - posN2.x).toBe(30);
+    expect(posN2.y).toBe(result.rankBandMap.get(1)!.topY);
+  });
 });
 

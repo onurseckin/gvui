@@ -188,15 +188,24 @@ function projectLayerCenters(
   return result;
 }
 
+export type EffectiveLayerShifts = Map<string, number> | Record<string, number>;
+
 export function assignCoordinates(
   _graph: NormalizedGraph,
   layerGraph: ExpandedLayerGraph,
   orderedLayers: LayerNode[][],
   config: CustomLayoutConfig,
   spacingOverrides?: EffectiveSpacingOverrides,
+  layerShifts?: EffectiveLayerShifts,
 ): CoordinateAssignmentResult {
   const nodePositions = new Map<string, Point>();
   const rankBandMap = new Map<number, RankBand>();
+
+  const getShift = (key: string): number => {
+    if (!layerShifts) return 0;
+    if (layerShifts instanceof Map) return layerShifts.get(key) ?? 0;
+    return layerShifts[key] ?? 0;
+  };
 
   // 1. Calculate Y positions and rank bands
   let currentY = config.graphPadding;
@@ -208,8 +217,9 @@ export function assignCoordinates(
     const rankHeight =
       realNodesInRank.length > 0 ? Math.max(...realNodesInRank.map((n) => n.height)) : 40;
 
-    const centerY = currentY + rankHeight / 2;
-    rankBandMap.set(r, { topY: currentY, height: rankHeight, centerY });
+    const rankYShift = getShift(`rank:${r}:y`);
+    const centerY = currentY + rankHeight / 2 + rankYShift;
+    rankBandMap.set(r, { topY: currentY + rankYShift, height: rankHeight, centerY });
 
     const effectiveRankGap = getEffectiveRankGap(r, spacingOverrides, config);
     currentY += rankHeight + effectiveRankGap;
@@ -317,8 +327,10 @@ export function assignCoordinates(
 
       const x = cx - width / 2;
       const y = item.isVirtual ? band.centerY : band.topY + (band.height - height) / 2;
+      const shiftX = getShift(`node:${item.id}:x`);
+      const shiftY = getShift(`node:${item.id}:y`);
 
-      nodePositions.set(item.id, { x, y });
+      nodePositions.set(item.id, { x: x + shiftX, y: y + shiftY });
     }
   }
 

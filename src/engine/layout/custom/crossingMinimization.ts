@@ -65,18 +65,46 @@ export function countTotalGraphCrossings(
   return total;
 }
 
+export function applyLayerOrderOverrides(
+  layers: LayerNode[][],
+  layerOrders?: Map<number, string[]> | Record<number, string[]>,
+): LayerNode[][] {
+  if (!layerOrders) return layers;
+
+  const getOrder = (rank: number): string[] | undefined => {
+    if (layerOrders instanceof Map) return layerOrders.get(rank);
+    return layerOrders[rank];
+  };
+
+  return layers.map((layer, rank) => {
+    const customOrder = getOrder(rank);
+    if (!customOrder || customOrder.length === 0) return [...layer];
+
+    const orderMap = new Map<string, number>();
+    customOrder.forEach((id, idx) => orderMap.set(id, idx));
+
+    return [...layer].sort((a, b) => {
+      const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+      const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.id.localeCompare(b.id);
+    });
+  });
+}
+
 export function minimizeCrossings(
   layerGraph: ExpandedLayerGraph,
   maxSweeps = 24,
+  layerOrders?: Map<number, string[]> | Record<number, string[]>,
 ): CrossingMinimizationResult {
   // Clone layers
-  let currentLayers: LayerNode[][] = layerGraph.layers.map((layer) => [...layer]);
+  let currentLayers: LayerNode[][] = applyLayerOrderOverrides(layerGraph.layers, layerOrders).map((layer) => [...layer]);
 
   let bestLayers = currentLayers.map((l) => [...l]);
   let bestCrossings = countTotalGraphCrossings(bestLayers, layerGraph.successorsMap);
 
-  if (bestCrossings === 0) {
-    return { orderedLayers: bestLayers, crossingCount: 0 };
+  if (bestCrossings === 0 || (layerOrders && (layerOrders instanceof Map ? layerOrders.size : Object.keys(layerOrders).length) > 0)) {
+    return { orderedLayers: bestLayers, crossingCount: bestCrossings };
   }
 
   for (let sweep = 0; sweep < maxSweeps; sweep++) {
