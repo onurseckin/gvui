@@ -20,9 +20,7 @@ if (typeof window === "undefined") {
       return store.size;
     },
   };
-  (globalThis as unknown as { window: unknown }).window = {
-    localStorage: mockLocalStorage,
-  };
+  (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
 
 describe("layoutCacheStorage", () => {

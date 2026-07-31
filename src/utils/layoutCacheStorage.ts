@@ -8,13 +8,24 @@ export interface StoredLayoutPayload {
   timestamp: number;
 }
 
+function getLocalStorage(): Storage | null {
+  if (typeof window !== "undefined" && window.localStorage) {
+    return window.localStorage;
+  }
+  if (typeof globalThis !== "undefined" && (globalThis as unknown as { localStorage?: Storage }).localStorage) {
+    return (globalThis as unknown as { localStorage?: Storage }).localStorage ?? null;
+  }
+  return null;
+}
+
 export function loadStoredLayout(signature: string): { nodes: PositionedNode[]; edges: PositionedEdge[] } | null {
-  if (typeof window === "undefined" || !window.localStorage || !signature) {
+  const storage = getLocalStorage();
+  if (!storage || !signature) {
     return null;
   }
 
   try {
-    const raw = window.localStorage.getItem(`${CACHE_PREFIX}${signature}`);
+    const raw = storage.getItem(`${CACHE_PREFIX}${signature}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredLayoutPayload;
     if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) {
@@ -31,7 +42,8 @@ export function saveStoredLayout(
   signature: string,
   layout: { nodes: PositionedNode[]; edges: PositionedEdge[] },
 ): void {
-  if (typeof window === "undefined" || !window.localStorage || !signature) {
+  const storage = getLocalStorage();
+  if (!storage || !signature) {
     return;
   }
 
@@ -41,24 +53,25 @@ export function saveStoredLayout(
       edges: layout.edges,
       timestamp: Date.now(),
     };
-    window.localStorage.setItem(`${CACHE_PREFIX}${signature}`, JSON.stringify(payload));
+    storage.setItem(`${CACHE_PREFIX}${signature}`, JSON.stringify(payload));
   } catch (err) {
     console.warn("Failed to save layout to localStorage:", err);
   }
 }
 
 export function clearStoredLayoutCache(): void {
-  if (typeof window === "undefined" || !window.localStorage) return;
+  const storage = getLocalStorage();
+  if (!storage) return;
   try {
     const keysToRemove: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
       if (key && key.startsWith(CACHE_PREFIX)) {
         keysToRemove.push(key);
       }
     }
     for (const key of keysToRemove) {
-      window.localStorage.removeItem(key);
+      storage.removeItem(key);
     }
   } catch (err) {
     console.warn("Failed to clear layout cache:", err);
