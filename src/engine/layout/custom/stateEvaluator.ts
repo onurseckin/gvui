@@ -4,7 +4,7 @@ import { routeAllEdges } from "./edgeRouter";
 import { planLabelLaneDemands } from "./labelLanePlanner";
 import { validateCustomLayout, validationResultToScore } from "./layoutValidator";
 import { computeNodeLayout, type NodeLayoutResult } from "./nodeLayout";
-import { resolveExactSpacingDemands } from "./spacingDemand";
+import { canonicalizeExactSpacingDemands, resolveExactSpacingDemands } from "./spacingDemand";
 import type {
   BadgePlacement,
   ExactSpacingDemand,
@@ -29,6 +29,7 @@ export interface StateEvaluationResult {
   allPortRefs: PortRef[];
   exactDemands: ExactSpacingDemand[];
   classifiedEdges: ClassifiedEdge[];
+  resetSideAssignments: boolean;
 }
 
 export function evaluateSearchState(
@@ -37,7 +38,7 @@ export function evaluateSearchState(
   state: LayoutSearchState,
   config: CustomLayoutConfig,
 ): StateEvaluationResult {
-  const currentDemands: ExactSpacingDemand[] = [...state.exactDemands];
+  const currentDemands: ExactSpacingDemand[] = canonicalizeExactSpacingDemands(state.exactDemands);
 
   let spacingOverrides = resolveExactSpacingDemands(currentDemands, config.nodeGap, config.rankGap);
 
@@ -56,9 +57,67 @@ export function evaluateSearchState(
   });
 
   let badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+  let stateResetRequired = false;
+
+  const canMoveLayout = (demand: ExactSpacingDemand): boolean => {
+    if (demand.kind === "node-gap" || demand.kind === "lane-x") {
+      const rank =
+        demand.rank ??
+        (demand.afterNodeId
+          ? nodeLayout.rankAssignment.nodeRankMap.get(demand.afterNodeId)
+          : undefined);
+      return (
+        rank !== undefined && (nodeLayout.rankAssignment.rankNodesMap.get(rank)?.length ?? 0) >= 2
+      );
+    }
+    if (demand.kind === "rank-gap" || demand.kind === "lane-y") {
+      return (
+        demand.rank !== undefined &&
+        nodeLayout.rankAssignment.rankNodesMap.has(demand.rank) &&
+        nodeLayout.rankAssignment.rankNodesMap.has(demand.rank + 1)
+      );
+    }
+    return false;
+  };
+
+  const appendActionableDemand = (demand: ExactSpacingDemand): boolean => {
+    if (!canMoveLayout(demand)) return false;
+    const nextDemands = canonicalizeExactSpacingDemands([...currentDemands, demand]);
+    const currentOverrides = resolveExactSpacingDemands(
+      currentDemands,
+      config.nodeGap,
+      config.rankGap,
+    );
+    const nextOverrides = resolveExactSpacingDemands(nextDemands, config.nodeGap, config.rankGap);
+    const mapChanges = (
+      left: Map<number | string, number> | undefined,
+      right: Map<number | string, number> | undefined,
+      defaultValue: number,
+    ) => {
+      const keys = new Set([...(left?.keys() ?? []), ...(right?.keys() ?? [])]);
+      for (const key of keys) {
+        if ((left?.get(key) ?? defaultValue) !== (right?.get(key) ?? defaultValue)) return true;
+      }
+      return false;
+    };
+    const changesEffectiveSpacing =
+      currentOverrides.globalNodeGap !== nextOverrides.globalNodeGap ||
+      currentOverrides.globalRankGap !== nextOverrides.globalRankGap ||
+      mapChanges(currentOverrides.nodeGapByRank, nextOverrides.nodeGapByRank, config.nodeGap) ||
+      mapChanges(
+        currentOverrides.nodeGapAfterNodeId,
+        nextOverrides.nodeGapAfterNodeId,
+        config.nodeGap,
+      ) ||
+      mapChanges(currentOverrides.rankGapAfterRank, nextOverrides.rankGapAfterRank, config.rankGap);
+    if (!changesEffectiveSpacing) return false;
+    currentDemands.splice(0, currentDemands.length, ...nextDemands);
+    return true;
+  };
 
   if (badgeResult.spacingRequests && badgeResult.spacingRequests.length > 0) {
     let addedNew = false;
+    let resetSideAssignments = false;
     for (const req of badgeResult.spacingRequests) {
       const demand: ExactSpacingDemand = {
         kind: req.kind,
@@ -68,19 +127,15 @@ export function evaluateSearchState(
         minimum: req.minimum,
         reason: req.reason,
       };
-      if (
-        !currentDemands.some(
-          (d) => d.kind === demand.kind && d.minimum >= demand.minimum && d.rank === demand.rank,
-        )
-      ) {
-        currentDemands.push(demand);
-        addedNew = true;
-      }
+      const appended = appendActionableDemand(demand);
+      addedNew = addedNew || appended;
+      resetSideAssignments ||= !appended && state.sideAssignments.size > 0;
     }
 
     if (addedNew) {
-      state.sideAssignments.clear();
-
+      // Spacing changes invalidate a port-side trial, but the candidate state
+      // itself remains immutable so it can be scored and revisited faithfully.
+      const rerouteSideAssignments = new Map();
       spacingOverrides = resolveExactSpacingDemands(currentDemands, config.nodeGap, config.rankGap);
 
       nodeLayout = computeNodeLayout(
@@ -93,11 +148,18 @@ export function evaluateSearchState(
       );
 
       routerResult = routeAllEdges(nodeLayout, config, {
-        sideAssignments: state.sideAssignments,
+        sideAssignments: rerouteSideAssignments,
         portOrders: state.portOrders,
       });
 
       badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+    }
+
+    if (resetSideAssignments) {
+      // A no-op demand may still reveal that a side-assignment trial blocked
+      // label placement. Request a routing reset as its own state rather than
+      // encoding it as a fake spacing override.
+      stateResetRequired = true;
     }
   }
 
@@ -117,12 +179,17 @@ export function evaluateSearchState(
 
   const score = validationResultToScore(validation);
 
-  const labelDemands = planLabelLaneDemands(badgeResult.placements, routerResult.routes, config);
+  const labelDemands = planLabelLaneDemands(badgeResult.placements, routerResult.routes, config, {
+    rankByNodeId: nodeLayout.rankAssignment.nodeRankMap,
+    layerNodeIds: Array.from(nodeLayout.rankAssignment.rankNodesMap.entries())
+      .sort(([left], [right]) => left - right)
+      .map(([, nodeIds]) => nodeIds),
+    nodeGapByRank: spacingOverrides.nodeGapByRank,
+    rankGapAfterRank: spacingOverrides.rankGapAfterRank,
+  });
 
   for (const ld of labelDemands) {
-    if (!currentDemands.some((e) => e.reason === ld.reason && e.minimum === ld.minimum)) {
-      currentDemands.push(ld);
-    }
+    appendActionableDemand(ld);
   }
 
   const allPortRefs: PortRef[] = [];
@@ -146,5 +213,6 @@ export function evaluateSearchState(
     allPortRefs,
     exactDemands: currentDemands,
     classifiedEdges: nodeLayout.classifiedEdges,
+    resetSideAssignments: stateResetRequired,
   };
 }

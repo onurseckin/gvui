@@ -1,4 +1,5 @@
 import type { LayoutSearchState, PortSideAssignment } from "./types";
+import { exactSpacingDemandSignature } from "./spacingDemand";
 
 export function createInitialSearchState(
   sideAssignments?: Map<string, PortSideAssignment>,
@@ -62,10 +63,7 @@ export function computeStateHash(state: LayoutSearchState): string {
     .map(([k, v]) => `${k}=[${v.join(",")}]`)
     .join(";");
 
-  const demandsStr = state.exactDemands
-    .map((d) => `${d.kind}:${d.minimum}:${d.reason}`)
-    .sort()
-    .join(";");
+  const demandsStr = exactSpacingDemandSignature(state.exactDemands);
 
   const layersStr = Array.from(state.layerOrders.entries())
     .sort((a, b) => a[0] - b[0])

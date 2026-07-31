@@ -3,7 +3,13 @@ import { compareLayoutScores } from "./layoutValidator";
 import { generateNeighborhoodStates } from "./neighborhoodSearch";
 import { computeStateHash, createInitialSearchState } from "./searchState";
 import { evaluateSearchState, type StateEvaluationResult } from "./stateEvaluator";
-import type { LayoutSearchState, NormalizedEdge, NormalizedNode, OptimizationStats, SearchStopReason } from "./types";
+import type {
+  LayoutSearchState,
+  NormalizedEdge,
+  NormalizedNode,
+  OptimizationStats,
+  SearchStopReason,
+} from "./types";
 
 export interface OptimizationResult {
   bestState: LayoutSearchState;
@@ -27,7 +33,7 @@ export function searchBestLayoutState(
   const searchOpts: SearchOptions =
     options && "sideAssignments" in options
       ? { initialState: options }
-      : (options as SearchOptions) ?? {};
+      : ((options as SearchOptions) ?? {});
 
   const deadlineTime = searchOpts.deadlineMs ? startTime + searchOpts.deadlineMs : undefined;
   const signal = searchOpts.signal;
@@ -142,13 +148,13 @@ export function searchBestLayoutState(
       }
 
       if (frontier.length > maxFrontier) {
-        frontier.sort((a, b) => compareLayoutScores(a.evalResult.validation, b.evalResult.validation));
+        frontier.sort((a, b) =>
+          compareLayoutScores(a.evalResult.validation, b.evalResult.validation),
+        );
         frontier.length = maxFrontier;
       }
     }
   }
-
-  const durationMs = Date.now() - startTime;
 
   const stats: OptimizationStats = {
     globalPasses: 1,
@@ -159,7 +165,6 @@ export function searchBestLayoutState(
     totalEvaluatedStates: evaluatedStates,
     visitedStateHashes: visitedHashes.size,
     stopReason,
-    durationMs,
   };
 
   return {

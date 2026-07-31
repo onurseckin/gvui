@@ -1,5 +1,6 @@
 import type { CustomLayoutConfig } from "./config";
 import { cloneSearchState } from "./searchState";
+import { exactSpacingDemandSignature } from "./spacingDemand";
 import type { StateEvaluationResult } from "./stateEvaluator";
 import type { EdgeRole, LayoutSearchState, Side } from "./types";
 
@@ -76,6 +77,12 @@ export function generateNeighborhoodStates(
     );
     return nextState;
   };
+
+  if (evalResult.resetSideAssignments && state.sideAssignments.size > 0) {
+    const resetState = cloneCanonicalState();
+    resetState.sideAssignments.clear();
+    neighbors.push(resetState);
+  }
   for (const cross of crossings) {
     problemEdgeIds.add(cross.edgeIdA);
     problemEdgeIds.add(cross.edgeIdB);
@@ -91,9 +98,16 @@ export function generateNeighborhoodStates(
     }
   }
 
-  // Feedback is graph semantics, not a naming convention for generated IDs.
+  // Feedback is graph semantics, not a naming convention for generated IDs. A
+  // route already using a same-side outer corridor with no diagnosed defect is
+  // not an expansion target: its alternatives only repeat equivalent work.
   for (const edge of evalResult.classifiedEdges) {
-    if (edge.role === "feedback" || edge.isCycle) {
+    const routed = routesByEdgeId.get(edge.id);
+    const isOuterCorridor =
+      routed !== undefined &&
+      routed.sourcePort.side === routed.targetPort.side &&
+      (routed.sourcePort.side === "left" || routed.sourcePort.side === "right");
+    if ((edge.role === "feedback" || edge.isCycle) && !isOuterCorridor) {
       problemEdgeIds.add(edge.id);
     }
   }
@@ -172,7 +186,10 @@ export function generateNeighborhoodStates(
   }
 
   // 4. Generate Spacing Demand Expansion Moves when unresolved badges or label overlaps exist
-  if (evalResult.exactDemands.length > state.exactDemands.length) {
+  if (
+    exactSpacingDemandSignature(evalResult.exactDemands) !==
+    exactSpacingDemandSignature(state.exactDemands)
+  ) {
     const nextState = cloneCanonicalState();
     nextState.exactDemands = [...evalResult.exactDemands];
     neighbors.unshift(nextState);

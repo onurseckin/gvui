@@ -1,5 +1,10 @@
 import type { CustomLayoutConfig } from "./config";
-import type { BadgeSpacingRequest, ExactSpacingDemand, NormalizedEdge, NormalizedNode } from "./types";
+import type {
+  BadgeSpacingRequest,
+  ExactSpacingDemand,
+  NormalizedEdge,
+  NormalizedNode,
+} from "./types";
 
 export interface MeasuredBadge {
   width: number;
@@ -10,6 +15,45 @@ export interface SpacingOverrides {
   nodeGapByRank?: Map<number, number>;
   rankGapAfterRank?: Map<number, number>;
   nodeGapAfterNodeId?: Map<string, number>;
+}
+
+function spacingAxis(kind: ExactSpacingDemand["kind"]): "x" | "y" | "padding" {
+  if (kind === "node-gap" || kind === "lane-x") return "x";
+  if (kind === "rank-gap" || kind === "lane-y") return "y";
+  return "padding";
+}
+
+function spacingDemandScopeKey(demand: ExactSpacingDemand): string {
+  return `${spacingAxis(demand.kind)}:${demand.rank ?? "global"}:${demand.afterNodeId ?? ""}`;
+}
+
+export function canonicalizeExactSpacingDemands(
+  demands: ExactSpacingDemand[],
+): ExactSpacingDemand[] {
+  const byScope = new Map<string, ExactSpacingDemand>();
+
+  for (const demand of demands) {
+    const key = spacingDemandScopeKey(demand);
+    const existing = byScope.get(key);
+    const affectedEdgeIds = [
+      ...new Set([...(existing?.affectedEdgeIds ?? []), ...demand.affectedEdgeIds]),
+    ].sort();
+    if (!existing || demand.minimum > existing.minimum) {
+      byScope.set(key, { ...demand, affectedEdgeIds });
+    } else {
+      byScope.set(key, { ...existing, affectedEdgeIds });
+    }
+  }
+
+  return Array.from(byScope.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, demand]) => demand);
+}
+
+export function exactSpacingDemandSignature(demands: ExactSpacingDemand[]): string {
+  return canonicalizeExactSpacingDemands(demands)
+    .map((demand) => `${spacingDemandScopeKey(demand)}:${demand.minimum}`)
+    .join(";");
 }
 
 export function computeBadgeSpacingDemands(
@@ -65,8 +109,7 @@ export function computeBadgeSpacingDemands(
         });
       } else {
         // Cross-rank single edge
-        const requiredHeight =
-          badge.height + 2 * config.badgeClearance + 2 * config.portStubLength;
+        const requiredHeight = badge.height + 2 * config.badgeClearance + 2 * config.portStubLength;
         if (requiredHeight > config.rankGap) {
           requests.push({
             edgeId: edge.id,
@@ -199,4 +242,3 @@ export function resolveExactSpacingDemands(
     globalRankGap,
   };
 }
-

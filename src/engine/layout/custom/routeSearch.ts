@@ -54,6 +54,7 @@ interface AStarNode {
   dir: SegmentDirection;
   previousDir: SegmentDirection | null;
   visitedRequiredCorridor: boolean;
+  stateKey: string;
   gCost: RouteCost;
   hLength: number;
   fCost: RouteCost;
@@ -239,12 +240,7 @@ function findGridDoglegRoute(
   return null;
 }
 
-function compareNodes(
-  a: AStarNode,
-  b: AStarNode,
-  epsilon: number,
-  stateKeyFn: (n: AStarNode) => string,
-): number {
+function compareNodes(a: AStarNode, b: AStarNode, epsilon: number): number {
   const costCmp = compareRouteCost(a.fCost, b.fCost, epsilon);
   if (costCmp !== 0) return costCmp;
 
@@ -252,9 +248,7 @@ function compareNodes(
     return a.hLength - b.hLength;
   }
 
-  const keyA = stateKeyFn(a);
-  const keyB = stateKeyFn(b);
-  const keyCmp = keyA.localeCompare(keyB);
+  const keyCmp = a.stateKey.localeCompare(b.stateKey);
   if (keyCmp !== 0) return keyCmp;
 
   return a.vId.localeCompare(b.vId);
@@ -263,11 +257,9 @@ function compareNodes(
 class AStarMinHeap {
   private heap: AStarNode[] = [];
   private epsilon: number;
-  private stateKeyFn: (n: AStarNode) => string;
 
-  constructor(epsilon: number, stateKeyFn: (n: AStarNode) => string) {
+  constructor(epsilon: number) {
     this.epsilon = epsilon;
-    this.stateKeyFn = stateKeyFn;
   }
 
   public get size(): number {
@@ -293,7 +285,7 @@ class AStarMinHeap {
   private bubbleUp(idx: number): void {
     while (idx > 0) {
       const parentIdx = (idx - 1) >>> 1;
-      if (compareNodes(this.heap[idx], this.heap[parentIdx], this.epsilon, this.stateKeyFn) < 0) {
+      if (compareNodes(this.heap[idx], this.heap[parentIdx], this.epsilon) < 0) {
         const tmp = this.heap[idx];
         this.heap[idx] = this.heap[parentIdx];
         this.heap[parentIdx] = tmp;
@@ -313,13 +305,13 @@ class AStarMinHeap {
 
       if (
         leftIdx < length &&
-        compareNodes(this.heap[leftIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0
+        compareNodes(this.heap[leftIdx], this.heap[smallest], this.epsilon) < 0
       ) {
         smallest = leftIdx;
       }
       if (
         rightIdx < length &&
-        compareNodes(this.heap[rightIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0
+        compareNodes(this.heap[rightIdx], this.heap[smallest], this.epsilon) < 0
       ) {
         smallest = rightIdx;
       }
@@ -522,19 +514,6 @@ export function searchOrthogonalRoute(
     length: initialGCost.length + initialHLength,
   };
 
-  const startNode: AStarNode = {
-    vId: srcStubId,
-    dir: initialDir,
-    previousDir: null,
-    visitedRequiredCorridor: startVisited,
-    gCost: initialGCost,
-    hLength: initialHLength,
-    fCost: initialFCost,
-    parent: null,
-  };
-
-  const gCosts = new Map<string, RouteCost>();
-
   const stateKey = (
     vId: string,
     dir: SegmentDirection,
@@ -545,12 +524,23 @@ export function searchOrthogonalRoute(
       ? `${vId}:${dir}:${previousDir ?? "none"}:${visitedCorridor}`
       : `${vId}:${dir}:${previousDir ?? "none"}`;
 
-  const getNodeStateKey = (n: AStarNode) =>
-    stateKey(n.vId, n.dir, n.previousDir, n.visitedRequiredCorridor);
+  const startNode: AStarNode = {
+    vId: srcStubId,
+    dir: initialDir,
+    previousDir: null,
+    visitedRequiredCorridor: startVisited,
+    stateKey: stateKey(srcStubId, initialDir, null, startVisited),
+    gCost: initialGCost,
+    hLength: initialHLength,
+    fCost: initialFCost,
+    parent: null,
+  };
 
-  gCosts.set(getNodeStateKey(startNode), initialGCost);
+  const gCosts = new Map<string, RouteCost>();
 
-  const openHeap = new AStarMinHeap(config.epsilon, getNodeStateKey);
+  gCosts.set(startNode.stateKey, initialGCost);
+
+  const openHeap = new AStarMinHeap(config.epsilon);
   openHeap.push(startNode);
 
   let bestGoalNode: AStarNode | null = null;
@@ -573,8 +563,7 @@ export function searchOrthogonalRoute(
     }
 
     const current = openHeap.pop()!;
-    const currentKey = getNodeStateKey(current);
-    const bestG = gCosts.get(currentKey);
+    const bestG = gCosts.get(current.stateKey);
 
     // Skip stale queue entries
     if (bestG && compareRouteCost(current.gCost, bestG, config.epsilon) > 0) {
@@ -658,6 +647,7 @@ export function searchOrthogonalRoute(
           dir: moveDir,
           previousDir: current.dir,
           visitedRequiredCorridor: nextVisited,
+          stateKey: nextKey,
           gCost: newGCost,
           hLength: newHLength,
           fCost: newFCost,

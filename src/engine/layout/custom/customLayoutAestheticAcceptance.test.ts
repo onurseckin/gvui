@@ -107,6 +107,10 @@ function badgeOtherRouteIntersections(badges: BadgePlacement[], routes: RoutedPa
   return intersections.sort();
 }
 
+function sumExpandedStates(routes: RoutedPath[]): number {
+  return routes.reduce((total, route) => total + (route.stats?.expandedStates ?? 0), 0);
+}
+
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   it("keeps badges out of every non-owner route in collision scenarios", () => {
     for (const scenarioId of [8, 9, 12, 14, 19, 20]) {
@@ -146,6 +150,18 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
 
       expect(countPathHairpins(route.points)).toBeLessThanOrEqual(1);
     }
+  }, 60000);
+
+  it("bounds deterministic expansion work for cyclic scenarios #11 and #13", () => {
+    const scenario11 = computeScenario(11);
+    const scenario13 = computeScenario(13);
+
+    expect(scenario11.result.edges).toHaveLength(scenario11.edges.length);
+    expect(scenario13.result.edges).toHaveLength(scenario13.edges.length);
+    expect(scenario11.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(12);
+    expect(scenario13.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(8);
+    expect(sumExpandedStates(scenario11.result.edges)).toBeLessThanOrEqual(12_000);
+    expect(sumExpandedStates(scenario13.result.edges)).toBeLessThanOrEqual(10_000);
   }, 60000);
 
   it("returns complete routes and required badges for every testing scenario", () => {

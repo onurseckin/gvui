@@ -72,6 +72,62 @@ describe("neighborhoodSearch", () => {
     ]);
   });
 
+  it("does not churn alternate sides for an already outer, conflict-free feedback route", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig();
+    const edge: NormalizedEdge = { id: "e-C-A-2", source: "C", target: "A", isCycle: true };
+    const route = {
+      edgeId: edge.id,
+      points: [
+        { x: -40, y: 100 },
+        { x: -40, y: 0 },
+      ],
+      sourcePort: {
+        nodeId: "C",
+        side: "left",
+        index: 0,
+        point: { x: 0, y: 100 },
+        stub: { x: -40, y: 100 },
+      },
+      targetPort: {
+        nodeId: "A",
+        side: "left",
+        index: 0,
+        point: { x: 0, y: 0 },
+        stub: { x: -40, y: 0 },
+      },
+    } satisfies RoutedPath;
+    const evalResult = {
+      routes: [route],
+      classifiedEdges: [{ ...edge, role: "feedback", reversed: true }],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    expect(generateNeighborhoodStates(state, evalResult, config)).toEqual([]);
+  });
+
+  it("restarts routing without a no-op spacing demand when a side trial blocks badge placement", () => {
+    const state = createInitialSearchState();
+    state.sideAssignments.set("e1", { srcSide: "left", tgtSide: "left" });
+    const config = resolveCustomLayoutConfig();
+    const evalResult = {
+      routes: [],
+      classifiedEdges: [],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+      resetSideAssignments: true,
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const neighbors = generateNeighborhoodStates(state, evalResult, config);
+
+    expect(neighbors).toHaveLength(1);
+    expect(neighbors[0].sideAssignments).toEqual(new Map());
+    expect(neighbors[0].exactDemands).toEqual([]);
+  });
+
   it("gives every edge named by a diagnostic a port-side alternative", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
