@@ -3,6 +3,7 @@ import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/cus
 import { resolveCustomLayoutConfig } from "./config";
 import { computeCustomLayout } from "./computeCustomLayout";
 import { searchBestLayoutState } from "./layoutOptimizerState";
+import { generateNeighborhoodStates } from "./neighborhoodSearch";
 import { createInitialSearchState } from "./searchState";
 import { evaluateSearchState } from "./stateEvaluator";
 import type { NormalizedEdge, NormalizedNode } from "./types";
@@ -121,6 +122,43 @@ describe("layoutOptimizerState", () => {
         reason: "blocked-direct-badge",
       },
     ]);
+  });
+
+  it("emits an explicit reset when an assigned Scenario #20 route still blocks its badge", () => {
+    const scenario = CUSTOM_LAYOUT_SCENARIOS[20];
+    const nodes: NormalizedNode[] = scenario.nodes.map((node) => ({
+      id: node.id,
+      label: node.name,
+      width: node.w,
+      height: node.h,
+    }));
+    const edges: NormalizedEdge[] = scenario.edges.map((edge, index) => ({
+      id: `e-${edge.source}-${edge.target}-${index}`,
+      source: edge.source,
+      target: edge.target,
+      label: edge.label,
+      isCycle: edge.isCycle,
+      layoutRole: edge.layoutRole,
+    }));
+    const state = createInitialSearchState();
+    state.sideAssignments.set("e-ORDER-DB-8", { srcSide: "left", tgtSide: "left" });
+    const config = resolveCustomLayoutConfig();
+
+    const evaluation = evaluateSearchState(nodes, edges, state, config);
+
+    expect(
+      evaluation.validation.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "MISSING_BADGE" && diagnostic.ids.includes("e-ORDER-DB-8"),
+      ),
+    ).toBe(true);
+    expect(evaluation.resetSideAssignments).toBe(true);
+
+    const resetNeighbors = generateNeighborhoodStates(state, evaluation, config).filter(
+      (neighbor) => neighbor.sideAssignments.size === 0,
+    );
+    expect(resetNeighbors).toHaveLength(1);
+    expect(resetNeighbors[0]?.exactDemands).toEqual(evaluation.exactDemands);
   });
 
   it("merges every actionable badge-spacing request from one evaluation", () => {

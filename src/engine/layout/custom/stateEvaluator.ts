@@ -111,7 +111,6 @@ export function evaluateSearchState(
     demands: ExactSpacingDemand[],
   ): {
     effectiveSpacingChanged: boolean;
-    hasBlockedRequest: boolean;
   } => {
     const actionableDemands = demands.filter(canMoveLayout);
     const nextDemands = canonicalizeExactSpacingDemands([...currentDemands, ...actionableDemands]);
@@ -119,7 +118,6 @@ export function evaluateSearchState(
     currentDemands.splice(0, currentDemands.length, ...nextDemands);
     return {
       effectiveSpacingChanged,
-      hasBlockedRequest: actionableDemands.length !== demands.length,
     };
   };
 
@@ -134,7 +132,7 @@ export function evaluateSearchState(
         reason: req.reason,
       }),
     );
-    const { effectiveSpacingChanged, hasBlockedRequest } = mergeActionableDemands(requests);
+    const { effectiveSpacingChanged } = mergeActionableDemands(requests);
 
     if (effectiveSpacingChanged) {
       // Evaluate the candidate exactly as represented. A port-side reset, if
@@ -158,10 +156,12 @@ export function evaluateSearchState(
       badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
     }
 
-    // A blocked request can justify one explicit routing-reset neighbor. A
-    // request whose numeric spacing is already sufficient merely enriches the
-    // canonical demand metadata and does not imply a reset.
-    stateResetRequired = hasBlockedRequest && state.sideAssignments.size > 0;
+    // Inspect the final placement result (after any spacing reroute). A
+    // remaining request on an explicitly assigned route means that side trial
+    // still blocks its badge, so reset it through a distinct neighbor state.
+    stateResetRequired = Boolean(
+      badgeResult.spacingRequests?.some((request) => state.sideAssignments.has(request.edgeId)),
+    );
   }
 
   const validation = validateCustomLayout(
