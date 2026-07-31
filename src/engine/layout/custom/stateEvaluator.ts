@@ -59,6 +59,33 @@ export function evaluateSearchState(
   let badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
   let stateResetRequired = false;
 
+  const mapsDiffer = <Key>(
+    left: Map<Key, number> | undefined,
+    right: Map<Key, number> | undefined,
+    defaultValue: number,
+  ): boolean => {
+    const keys = new Set([...(left?.keys() ?? []), ...(right?.keys() ?? [])]);
+    for (const key of keys) {
+      if ((left?.get(key) ?? defaultValue) !== (right?.get(key) ?? defaultValue)) return true;
+    }
+    return false;
+  };
+
+  const hasEffectiveSpacingChange = (nextDemands: ExactSpacingDemand[]): boolean => {
+    const nextOverrides = resolveExactSpacingDemands(nextDemands, config.nodeGap, config.rankGap);
+    return (
+      spacingOverrides.globalNodeGap !== nextOverrides.globalNodeGap ||
+      spacingOverrides.globalRankGap !== nextOverrides.globalRankGap ||
+      mapsDiffer(spacingOverrides.nodeGapByRank, nextOverrides.nodeGapByRank, config.nodeGap) ||
+      mapsDiffer(
+        spacingOverrides.nodeGapAfterNodeId,
+        nextOverrides.nodeGapAfterNodeId,
+        config.nodeGap,
+      ) ||
+      mapsDiffer(spacingOverrides.rankGapAfterRank, nextOverrides.rankGapAfterRank, config.rankGap)
+    );
+  };
+
   const canMoveLayout = (demand: ExactSpacingDemand): boolean => {
     if (demand.kind === "node-gap" || demand.kind === "lane-x") {
       const rank =
@@ -80,62 +107,38 @@ export function evaluateSearchState(
     return false;
   };
 
-  const appendActionableDemand = (demand: ExactSpacingDemand): boolean => {
-    if (!canMoveLayout(demand)) return false;
-    const nextDemands = canonicalizeExactSpacingDemands([...currentDemands, demand]);
-    const currentOverrides = resolveExactSpacingDemands(
-      currentDemands,
-      config.nodeGap,
-      config.rankGap,
-    );
-    const nextOverrides = resolveExactSpacingDemands(nextDemands, config.nodeGap, config.rankGap);
-    const mapChanges = (
-      left: Map<number | string, number> | undefined,
-      right: Map<number | string, number> | undefined,
-      defaultValue: number,
-    ) => {
-      const keys = new Set([...(left?.keys() ?? []), ...(right?.keys() ?? [])]);
-      for (const key of keys) {
-        if ((left?.get(key) ?? defaultValue) !== (right?.get(key) ?? defaultValue)) return true;
-      }
-      return false;
-    };
-    const changesEffectiveSpacing =
-      currentOverrides.globalNodeGap !== nextOverrides.globalNodeGap ||
-      currentOverrides.globalRankGap !== nextOverrides.globalRankGap ||
-      mapChanges(currentOverrides.nodeGapByRank, nextOverrides.nodeGapByRank, config.nodeGap) ||
-      mapChanges(
-        currentOverrides.nodeGapAfterNodeId,
-        nextOverrides.nodeGapAfterNodeId,
-        config.nodeGap,
-      ) ||
-      mapChanges(currentOverrides.rankGapAfterRank, nextOverrides.rankGapAfterRank, config.rankGap);
-    if (!changesEffectiveSpacing) return false;
+  const mergeActionableDemands = (
+    demands: ExactSpacingDemand[],
+  ): {
+    effectiveSpacingChanged: boolean;
+    hasBlockedRequest: boolean;
+  } => {
+    const actionableDemands = demands.filter(canMoveLayout);
+    const nextDemands = canonicalizeExactSpacingDemands([...currentDemands, ...actionableDemands]);
+    const effectiveSpacingChanged = hasEffectiveSpacingChange(nextDemands);
     currentDemands.splice(0, currentDemands.length, ...nextDemands);
-    return true;
+    return {
+      effectiveSpacingChanged,
+      hasBlockedRequest: actionableDemands.length !== demands.length,
+    };
   };
 
   if (badgeResult.spacingRequests && badgeResult.spacingRequests.length > 0) {
-    let addedNew = false;
-    let resetSideAssignments = false;
-    for (const req of badgeResult.spacingRequests) {
-      const demand: ExactSpacingDemand = {
+    const requests = badgeResult.spacingRequests.map(
+      (req): ExactSpacingDemand => ({
         kind: req.kind,
         rank: req.rank,
         afterNodeId: req.afterNodeId,
         affectedEdgeIds: [req.edgeId],
         minimum: req.minimum,
         reason: req.reason,
-      };
-      const appended = appendActionableDemand(demand);
-      addedNew = addedNew || appended;
-      resetSideAssignments ||= !appended && state.sideAssignments.size > 0;
-    }
+      }),
+    );
+    const { effectiveSpacingChanged, hasBlockedRequest } = mergeActionableDemands(requests);
 
-    if (addedNew) {
-      // Spacing changes invalidate a port-side trial, but the candidate state
-      // itself remains immutable so it can be scored and revisited faithfully.
-      const rerouteSideAssignments = new Map();
+    if (effectiveSpacingChanged) {
+      // Evaluate the candidate exactly as represented. A port-side reset, if
+      // useful, is emitted later as a distinct neighbor state.
       spacingOverrides = resolveExactSpacingDemands(currentDemands, config.nodeGap, config.rankGap);
 
       nodeLayout = computeNodeLayout(
@@ -148,19 +151,17 @@ export function evaluateSearchState(
       );
 
       routerResult = routeAllEdges(nodeLayout, config, {
-        sideAssignments: rerouteSideAssignments,
+        sideAssignments: state.sideAssignments,
         portOrders: state.portOrders,
       });
 
       badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
     }
 
-    if (resetSideAssignments) {
-      // A no-op demand may still reveal that a side-assignment trial blocked
-      // label placement. Request a routing reset as its own state rather than
-      // encoding it as a fake spacing override.
-      stateResetRequired = true;
-    }
+    // A blocked request can justify one explicit routing-reset neighbor. A
+    // request whose numeric spacing is already sufficient merely enriches the
+    // canonical demand metadata and does not imply a reset.
+    stateResetRequired = hasBlockedRequest && state.sideAssignments.size > 0;
   }
 
   const validation = validateCustomLayout(
@@ -188,9 +189,7 @@ export function evaluateSearchState(
     rankGapAfterRank: spacingOverrides.rankGapAfterRank,
   });
 
-  for (const ld of labelDemands) {
-    appendActionableDemand(ld);
-  }
+  mergeActionableDemands(labelDemands);
 
   const allPortRefs: PortRef[] = [];
   for (const r of routerResult.routes) {

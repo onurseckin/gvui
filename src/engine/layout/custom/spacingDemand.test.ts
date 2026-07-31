@@ -1,8 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_CUSTOM_LAYOUT_CONFIG } from "./config";
 import type { MeasuredBadge } from "./spacingDemand";
-import { computeBadgeSpacingDemands, resolveEffectiveSpacingOverrides } from "./spacingDemand";
-import type { NormalizedEdge, NormalizedNode } from "./types";
+import {
+  canonicalizeExactSpacingDemands,
+  computeBadgeSpacingDemands,
+  resolveEffectiveSpacingOverrides,
+} from "./spacingDemand";
+import type { ExactSpacingDemand, NormalizedEdge, NormalizedNode } from "./types";
 
 describe("spacingDemand", () => {
   describe("computeBadgeSpacingDemands", () => {
@@ -34,10 +38,10 @@ describe("spacingDemand", () => {
         { id: "A", width: 100, height: 40 },
         { id: "B", width: 100, height: 40 },
       ];
-      const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B", label: "Same Rank Edge" }];
-      const badgeMeasurements = new Map<string, MeasuredBadge>([
-        ["e1", { width: 80, height: 28 }],
-      ]);
+      const edges: NormalizedEdge[] = [
+        { id: "e1", source: "A", target: "B", label: "Same Rank Edge" },
+      ];
+      const badgeMeasurements = new Map<string, MeasuredBadge>([["e1", { width: 80, height: 28 }]]);
       const ranks = new Map<string, number>([
         ["A", 0],
         ["B", 0],
@@ -131,6 +135,58 @@ describe("spacingDemand", () => {
       expect(overrides.nodeGapByRank?.get(0)).toBe(120);
       expect(overrides.nodeGapAfterNodeId?.get("A")).toBe(90);
       expect(overrides.rankGapAfterRank?.get(1)).toBe(150);
+    });
+  });
+
+  describe("canonicalizeExactSpacingDemands", () => {
+    it("retains every unresolved label edge sharing an unchanged spacing scope", () => {
+      const demands: ExactSpacingDemand[] = [
+        {
+          kind: "rank-gap",
+          rank: 0,
+          affectedEdgeIds: ["label-a"],
+          minimum: 120,
+          reason: "blocked-direct-badge",
+        },
+        {
+          kind: "rank-gap",
+          rank: 0,
+          affectedEdgeIds: ["label-b"],
+          minimum: 120,
+          reason: "blocked-direct-badge",
+        },
+      ];
+
+      expect(canonicalizeExactSpacingDemands(demands)).toEqual([
+        {
+          kind: "rank-gap",
+          rank: 0,
+          affectedEdgeIds: ["label-a", "label-b"],
+          minimum: 120,
+          reason: "blocked-direct-badge",
+        },
+      ]);
+    });
+
+    it("uses the same representative for equal minima regardless of request order", () => {
+      const rankGap: ExactSpacingDemand = {
+        kind: "rank-gap",
+        rank: 0,
+        affectedEdgeIds: ["rank-edge"],
+        minimum: 120,
+        reason: "parallel-labels",
+      };
+      const laneY: ExactSpacingDemand = {
+        kind: "lane-y",
+        rank: 0,
+        affectedEdgeIds: ["lane-edge"],
+        minimum: 120,
+        reason: "same-rank-label",
+      };
+
+      expect(canonicalizeExactSpacingDemands([rankGap, laneY])).toEqual(
+        canonicalizeExactSpacingDemands([laneY, rankGap]),
+      );
     });
   });
 });

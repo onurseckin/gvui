@@ -49,7 +49,46 @@ describe("layoutOptimizerState", () => {
     expect(state.sideAssignments.get("e1")).toEqual({ srcSide: "left", tgtSide: "left" });
   });
 
-  it("does not retain Scenario #20's badge-spacing demand below the current effective rank gap", () => {
+  it("keeps assigned port sides while applying newly discovered badge spacing", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B", label: "long label" }];
+    const state = createInitialSearchState();
+    state.sideAssignments.set("e1", { srcSide: "left", tgtSide: "left" });
+
+    const evaluation = evaluateSearchState(
+      nodes,
+      edges,
+      state,
+      resolveCustomLayoutConfig({ rankGap: 10 }),
+    );
+
+    expect(evaluation.exactDemands).toHaveLength(1);
+    expect(evaluation.routes[0]?.sourcePort.side).toBe("left");
+    expect(evaluation.routes[0]?.targetPort.side).toBe("left");
+  });
+
+  it("reproduces the selected state's geometry and validation", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B", label: "long label" }];
+    const initialState = createInitialSearchState();
+    initialState.sideAssignments.set("e1", { srcSide: "left", tgtSide: "left" });
+    const config = resolveCustomLayoutConfig({ rankGap: 10, maxLayoutStates: 5 });
+
+    const result = searchBestLayoutState(nodes, edges, config, { initialState });
+    const reproduced = evaluateSearchState(nodes, edges, result.bestState, config);
+
+    expect(reproduced.routes).toEqual(result.bestEvaluation.routes);
+    expect(reproduced.badges).toEqual(result.bestEvaluation.badges);
+    expect(reproduced.validation).toEqual(result.bestEvaluation.validation);
+  });
+
+  it("retains Scenario #20 badge-spacing metadata even when the effective rank gap is unchanged", () => {
     const scenario = CUSTOM_LAYOUT_SCENARIOS[20];
     const nodes: NormalizedNode[] = scenario.nodes.map((node) => ({
       id: node.id,
@@ -73,7 +112,15 @@ describe("layoutOptimizerState", () => {
       resolveCustomLayoutConfig(),
     );
 
-    expect(evaluation.exactDemands).toEqual([]);
+    expect(evaluation.exactDemands).toEqual([
+      {
+        kind: "rank-gap",
+        rank: 1,
+        affectedEdgeIds: ["e-AUTH-CACHE-3", "e-ORDER-DB-8", "e-USER-PAY-5"],
+        minimum: 88,
+        reason: "blocked-direct-badge",
+      },
+    ]);
   });
 
   it("merges every actionable badge-spacing request from one evaluation", () => {

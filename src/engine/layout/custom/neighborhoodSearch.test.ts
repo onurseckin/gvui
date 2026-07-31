@@ -72,7 +72,7 @@ describe("neighborhoodSearch", () => {
     ]);
   });
 
-  it("does not churn alternate sides for an already outer, conflict-free feedback route", () => {
+  it("keeps clean outer feedback routes eligible for score-improving side alternatives", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig();
     const edge: NormalizedEdge = { id: "e-C-A-2", source: "C", target: "A", isCycle: true };
@@ -105,7 +105,16 @@ describe("neighborhoodSearch", () => {
       exactDemands: [],
     } as unknown as ReturnType<typeof evaluateSearchState>;
 
-    expect(generateNeighborhoodStates(state, evalResult, config)).toEqual([]);
+    const alternatives = generateNeighborhoodStates(state, evalResult, config)
+      .map((neighbor) => neighbor.sideAssignments.get(edge.id))
+      .filter(
+        (assignment): assignment is NonNullable<typeof assignment> => assignment !== undefined,
+      );
+
+    expect(alternatives.slice(0, 2)).toEqual([
+      { srcSide: "right", tgtSide: "right" },
+      { srcSide: "left", tgtSide: "top" },
+    ]);
   });
 
   it("restarts routing without a no-op spacing demand when a side trial blocks badge placement", () => {

@@ -81,6 +81,7 @@ export function generateNeighborhoodStates(
   if (evalResult.resetSideAssignments && state.sideAssignments.size > 0) {
     const resetState = cloneCanonicalState();
     resetState.sideAssignments.clear();
+    resetState.exactDemands = [...evalResult.exactDemands];
     neighbors.push(resetState);
   }
   for (const cross of crossings) {
@@ -98,16 +99,11 @@ export function generateNeighborhoodStates(
     }
   }
 
-  // Feedback is graph semantics, not a naming convention for generated IDs. A
-  // route already using a same-side outer corridor with no diagnosed defect is
-  // not an expansion target: its alternatives only repeat equivalent work.
+  // Feedback is graph semantics, not a naming convention for generated IDs.
+  // Even a clean outer corridor can improve a later score component, so keep
+  // every feedback route eligible for its bounded side alternatives.
   for (const edge of evalResult.classifiedEdges) {
-    const routed = routesByEdgeId.get(edge.id);
-    const isOuterCorridor =
-      routed !== undefined &&
-      routed.sourcePort.side === routed.targetPort.side &&
-      (routed.sourcePort.side === "left" || routed.sourcePort.side === "right");
-    if ((edge.role === "feedback" || edge.isCycle) && !isOuterCorridor) {
+    if (edge.role === "feedback" || edge.isCycle) {
       problemEdgeIds.add(edge.id);
     }
   }

@@ -11,6 +11,16 @@ export interface LabelLanePlannerContext {
 
 type RouteAxis = "horizontal" | "vertical";
 
+interface LabelRouteMetadata {
+  placement: BadgePlacement;
+  route: RoutedPath;
+  axis: RouteAxis | null;
+  endpointRanks: number[];
+  endpointRankSet: Set<number>;
+  rankBoundaries: number[];
+  rankBoundarySet: Set<number>;
+}
+
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return Math.min(aEnd, bEnd) > Math.max(aStart, bStart);
 }
@@ -48,44 +58,24 @@ function routeAxisAtBadge(
 }
 
 function sharedMovableRank(
-  left: RoutedPath,
-  right: RoutedPath,
+  left: LabelRouteMetadata,
+  right: LabelRouteMetadata,
   context: LabelLanePlannerContext,
 ): number | undefined {
-  const leftRanks = [
-    context.rankByNodeId.get(left.sourcePort.nodeId),
-    context.rankByNodeId.get(left.targetPort.nodeId),
-  ];
-  const rightRanks = new Set([
-    context.rankByNodeId.get(right.sourcePort.nodeId),
-    context.rankByNodeId.get(right.targetPort.nodeId),
-  ]);
-
-  return leftRanks.find(
+  return left.endpointRanks.find(
     (rank): rank is number =>
-      rank !== undefined && rightRanks.has(rank) && (context.layerNodeIds[rank]?.length ?? 0) >= 2,
+      right.endpointRankSet.has(rank) && (context.layerNodeIds[rank]?.length ?? 0) >= 2,
   );
 }
 
 function sharedRankBoundary(
-  left: RoutedPath,
-  right: RoutedPath,
+  left: LabelRouteMetadata,
+  right: LabelRouteMetadata,
   context: LabelLanePlannerContext,
 ): number | undefined {
-  const boundaries = (route: RoutedPath) => {
-    const sourceRank = context.rankByNodeId.get(route.sourcePort.nodeId);
-    const targetRank = context.rankByNodeId.get(route.targetPort.nodeId);
-    if (sourceRank === undefined || targetRank === undefined || sourceRank === targetRank)
-      return [];
-    const start = Math.min(sourceRank, targetRank);
-    const end = Math.max(sourceRank, targetRank);
-    return Array.from({ length: end - start }, (_, offset) => start + offset);
-  };
-  const rightBoundaries = new Set(boundaries(right));
-
-  return boundaries(left).find(
+  return left.rankBoundaries.find(
     (rank) =>
-      rightBoundaries.has(rank) &&
+      right.rankBoundarySet.has(rank) &&
       context.layerNodeIds[rank] !== undefined &&
       context.layerNodeIds[rank + 1] !== undefined,
   );
@@ -98,26 +88,51 @@ export function planLabelLaneDemands(
   context: LabelLanePlannerContext,
 ): ExactSpacingDemand[] {
   const routesByEdgeId = new Map(routes.map((route) => [route.edgeId, route]));
+  const routeMetadata = placements.map((placement): LabelRouteMetadata | null => {
+    const route = routesByEdgeId.get(placement.edgeId);
+    if (!route) return null;
+    const sourceRank = context.rankByNodeId.get(route.sourcePort.nodeId);
+    const targetRank = context.rankByNodeId.get(route.targetPort.nodeId);
+    const endpointRanks = [sourceRank, targetRank].filter(
+      (rank): rank is number => rank !== undefined,
+    );
+    const rankBoundaries =
+      sourceRank === undefined || targetRank === undefined || sourceRank === targetRank
+        ? []
+        : Array.from(
+            { length: Math.abs(targetRank - sourceRank) },
+            (_, offset) => Math.min(sourceRank, targetRank) + offset,
+          );
+    return {
+      placement,
+      route,
+      axis: routeAxisAtBadge(route, placement, config.epsilon),
+      endpointRanks,
+      endpointRankSet: new Set(endpointRanks),
+      rankBoundaries,
+      rankBoundarySet: new Set(rankBoundaries),
+    };
+  });
   const demands: ExactSpacingDemand[] = [];
 
-  for (let i = 0; i < placements.length; i++) {
-    const left = placements[i];
-    const leftRoute = routesByEdgeId.get(left.edgeId);
-    if (!leftRoute) continue;
-    const leftAxis = routeAxisAtBadge(leftRoute, left, config.epsilon);
-    if (!leftAxis) continue;
+  for (let i = 0; i < routeMetadata.length; i++) {
+    const left = routeMetadata[i];
+    if (!left || !left.axis) continue;
 
-    for (let j = i + 1; j < placements.length; j++) {
-      const right = placements[j];
-      const rightRoute = routesByEdgeId.get(right.edgeId);
-      if (!rightRoute || !rectsOverlapStrict(left.rect, right.rect, config.epsilon)) continue;
-      const rightAxis = routeAxisAtBadge(rightRoute, right, config.epsilon);
-      if (leftAxis !== rightAxis) continue;
+    for (let j = i + 1; j < routeMetadata.length; j++) {
+      const right = routeMetadata[j];
+      if (
+        !right ||
+        left.axis !== right.axis ||
+        !rectsOverlapStrict(left.placement.rect, right.placement.rect, config.epsilon)
+      )
+        continue;
 
-      const affectedEdgeIds = [left.edgeId, right.edgeId].sort();
-      if (leftAxis === "vertical") {
-        const rank = sharedMovableRank(leftRoute, rightRoute, context);
-        const minimum = left.rect.width + right.rect.width + 2 * config.badgeClearance;
+      const affectedEdgeIds = [left.placement.edgeId, right.placement.edgeId].sort();
+      if (left.axis === "vertical") {
+        const rank = sharedMovableRank(left, right, context);
+        const minimum =
+          left.placement.rect.width + right.placement.rect.width + 2 * config.badgeClearance;
         const current = context.nodeGapByRank?.get(rank ?? -1) ?? config.nodeGap;
         if (rank !== undefined && minimum > current + config.epsilon) {
           demands.push({
@@ -129,8 +144,9 @@ export function planLabelLaneDemands(
           });
         }
       } else {
-        const rank = sharedRankBoundary(leftRoute, rightRoute, context);
-        const minimum = left.rect.height + right.rect.height + 2 * config.badgeClearance;
+        const rank = sharedRankBoundary(left, right, context);
+        const minimum =
+          left.placement.rect.height + right.placement.rect.height + 2 * config.badgeClearance;
         const current = context.rankGapAfterRank?.get(rank ?? -1) ?? config.rankGap;
         if (rank !== undefined && minimum > current + config.epsilon) {
           demands.push({

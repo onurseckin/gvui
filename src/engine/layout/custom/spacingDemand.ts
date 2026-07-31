@@ -27,6 +27,10 @@ function spacingDemandScopeKey(demand: ExactSpacingDemand): string {
   return `${spacingAxis(demand.kind)}:${demand.rank ?? "global"}:${demand.afterNodeId ?? ""}`;
 }
 
+function spacingDemandRepresentativeKey(demand: ExactSpacingDemand): string {
+  return `${demand.kind}:${demand.reason}`;
+}
+
 export function canonicalizeExactSpacingDemands(
   demands: ExactSpacingDemand[],
 ): ExactSpacingDemand[] {
@@ -38,7 +42,14 @@ export function canonicalizeExactSpacingDemands(
     const affectedEdgeIds = [
       ...new Set([...(existing?.affectedEdgeIds ?? []), ...demand.affectedEdgeIds]),
     ].sort();
-    if (!existing || demand.minimum > existing.minimum) {
+    if (
+      !existing ||
+      demand.minimum > existing.minimum ||
+      (demand.minimum === existing.minimum &&
+        spacingDemandRepresentativeKey(demand).localeCompare(
+          spacingDemandRepresentativeKey(existing),
+        ) < 0)
+    ) {
       byScope.set(key, { ...demand, affectedEdgeIds });
     } else {
       byScope.set(key, { ...existing, affectedEdgeIds });
