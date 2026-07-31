@@ -9,8 +9,8 @@ export interface CircularProgressLoaderProps {
 
 export const CircularProgressLoader: FC<CircularProgressLoaderProps> = ({
   percent,
-  size = 120,
-  strokeWidth = 8,
+  size = 72,
+  strokeWidth = 3.5,
 }) => {
   const safePercent = Math.min(100, Math.max(0, percent));
   const radius = (size - strokeWidth) / 2;
@@ -20,18 +20,12 @@ export const CircularProgressLoader: FC<CircularProgressLoaderProps> = ({
   return (
     <div className="circular-loader-wrapper" style={{ width: size, height: size }}>
       <svg className="circular-loader-svg" width={size} height={size}>
-        <defs>
-          <linearGradient id="loaderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1f6beb" />
-            <stop offset="100%" stopColor="#3fb950" />
-          </linearGradient>
-        </defs>
         <circle
           className="circular-loader-bg"
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          strokeWidth={strokeWidth}
+          strokeWidth={3}
         />
         <circle
           className="circular-loader-fg"
@@ -43,9 +37,7 @@ export const CircularProgressLoader: FC<CircularProgressLoaderProps> = ({
           strokeDashoffset={strokeDashoffset}
         />
       </svg>
-      <div className="circular-loader-center">
-        <span className="circular-loader-percent">{`${Math.round(safePercent)}%`}</span>
-      </div>
     </div>
   );
 };
+

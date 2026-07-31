@@ -11,27 +11,14 @@
 
 .circular-loader-bg {
   fill: none;
-  stroke: #21262d;
+  stroke: #222222;
 }
 
 .circular-loader-fg {
   fill: none;
-  stroke: url(#loaderGradient);
+  stroke: #ffffff;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.15s ease-out;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
 }
 
-.circular-loader-center {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.circular-loader-percent {
-  font-size: 22px;
-  font-weight: 700;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  color: #3fb950;
-}
