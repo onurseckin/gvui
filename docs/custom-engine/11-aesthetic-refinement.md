@@ -2,47 +2,52 @@
 
 # Bounded Aesthetic Search
 
-This chapter explores the final polish phase of the layout engine: Bounded Aesthetic Search. Once the layout is functionally correct, this phase makes it beautiful.
+This chapter explores the final polish phase of the layout engine: **Bounded Aesthetic Search**. The primary optimization loop guarantees a functionally correct layout, but this phase exists solely to make it *beautiful*.
 
 ## Atoms: Correct vs. Beautiful
 
-The optimization loop (discussed in Chapter 10) is heavily focused on hard constraints. It searches until it finds a layout with zero overlaps, zero penetrations, and minimized crossings. 
+The main optimization loop (discussed in Chapter 10) operates on hard constraints: zero node overlaps, zero edge penetrations, and minimized edge crossings. Once it achieves a score of 0 for these critical penalties, it considers its job done.
 
 However, a layout can have 0 crossings and 0 overlaps, yet still look terrible.
 
-**Layout A (0 Crossings, 3 Hairpins)**
+**Layout A: Functionally Correct (0 Crossings, 2 Hairpins)**
 ```text
   [Node A]
+    | (bottom port)
+    v
+   ( ) <-- (Unnecessary U-turn out of bottom port)
     |
-   (B)
-    |
-  /-+-/    <-- Unnecessary U-turn (Hairpin)
+  /-+-/    
   | |
   | \-\
-  \---(L)[Node B]
+  \---(>)[Node B] (entering left port)
 ```
 
-**Layout B (0 Crossings, 0 Hairpins)**
+**Layout B: Beautiful (0 Crossings, 0 Hairpins)**
 ```text
   [Node A]
-    |
-   (B)
-    |
-    |
-   (T)
-  [Node B]
+    | (right port)
+    +----------------\
+                     |
+                     v
+                  [Node B] (entering top port)
 ```
 
-Both layouts are functionally valid. But Layout B is dramatically cleaner. The aesthetic refinement phase exists solely to transform layouts like A into layouts like B.
+Both layouts are valid. But Layout B is dramatically cleaner. The primary search doesn't care about Layout B because Layout A already has zero overlaps and crossings. The aesthetic refinement phase exists to find Layout B.
 
 ## Molecules: Hairpins and Excess Bends
 
 What causes these ugly visual artifacts? 
 
-1. **Hairpins (U-turns)**: A hairpin occurs when an edge routes out of a node, doubles back on itself, and travels in the opposite direction. Often, the A* router is forced to create a U-turn to avoid an obstacle (like a node in the way), but simply assigning the edge to a different port side would eliminate the need entirely.
+1. **Hairpins (U-turns)**: A hairpin occurs when an edge routes out of a node, immediately doubles back on itself, and travels in the opposite direction. The A* router often creates a U-turn to avoid an obstacle, but simply assigning the edge to a different port side would eliminate the need for a U-turn entirely.
 2. **Excess Bends**: An edge that requires 4 orthogonal bends when 2 would suffice. This is frequently caused by routing order artifacts, where earlier routed edges force later edges to take convoluted paths.
 
-## Cells: The Refinement Loop
+### Why a Separate Phase?
+Why not penalize hairpins in the main search loop? Because beauty is subjective and fragile. If we heavily penalize hairpins early on, the main search might prioritize fixing a hairpin over fixing a node overlap. The engine separates concerns:
+1. **Main Search**: Solve the topology. Untangle the graph. Ensure zero overlaps.
+2. **Aesthetic Search**: Polish the routing. Reduce bends and hairpins without breaking the topology.
+
+## Cells: The Refinement Loop and Trial States
 
 To fix these issues, we run a targeted, secondary search loop. See [runBoundedAestheticSearch](../../src/engine/layout/custom/boundedAestheticSearch.ts#L77).
 
@@ -55,13 +60,43 @@ For every edge with an aesthetic defect, the engine generates very specific tria
 1. **Outward Source Moves**: Shift the source port to a side facing the exterior of the graph. This often gives the router a clean, unobstructed corridor.
 2. **Target-Toward-Source Moves**: Bring the target port closer to the source node, reducing the distance the route must travel and often stripping away bends.
 
-### Bounded Evaluation
+### Traced Example: Fixing a Hairpin
 
-Each of these trial states is evaluated through the full layout pipeline. 
-- If a trial fixes a hairpin but introduces a crossing, the engine generates **crossing repair completions** to attempt to fix the new crossing while preserving the aesthetic win.
-- If the new state results in a strictly better score (fewer hairpins, fewer bends, shorter length) without introducing overlaps or crossings, it becomes the new best layout.
+Let's trace the engine fixing an edge `E1` from `Node A` to `Node B` that currently has a hairpin.
 
-This search is tightly bounded. It has a limited evaluation budget and terminates quickly, ensuring the engine remains responsive.
+**Current State**: 
+- `E1` source port: Bottom
+- `E1` target port: Left
+- Hairpins: 1
+- Bends: 4
+
+**Step 1: Generate Trial States**
+The engine identifies `E1` as defective. It generates specific port-swap trials:
+- *Trial 1 (Outward)*: Move source port to Right.
+- *Trial 2 (Target-Toward-Source)*: Move target port to Top.
+- *Trial 3 (Combined)*: Source Right, Target Top.
+
+**Step 2: Evaluate Trials**
+The engine runs the router for each trial.
+- *Trial 1*: Reduces bends to 3, hairpins to 1.
+- *Trial 2*: Reduces bends to 3, hairpins to 1.
+- *Trial 3*: Reduces bends to 1, hairpins to 0. (This matches "Layout B" from the Atoms section).
+
+**Step 3: Verify Constraints**
+The engine checks *Trial 3*. Does it introduce new node overlaps? No. Does it introduce new crossings? No. It strictly improves the aesthetic score (bends and hairpins) without degrading the hard constraints.
+
+**Step 4: Apply**
+Trial 3 becomes the new best layout.
+
+### Bounded Evaluation and Budget Constraints
+
+Evaluating every possible port combination for every edge is too slow. The aesthetic search is strictly bounded:
+- It only targets edges that actually have defects.
+- It limits the number of generated trial states per edge.
+- It has a maximum iteration budget (e.g., 50 evaluations total).
+- It stops early if the layout reaches a "perfect" aesthetic score (0 hairpins, minimal bends).
+
+If a trial fixes a hairpin but introduces a crossing, the engine generates **crossing repair completions** to attempt to fix the new crossing while preserving the aesthetic win. If it can't fix the crossing, the trial is rejected—correctness always trumps beauty.
 
 ## Organisms: Publication-Quality Results
 

@@ -4,66 +4,106 @@
 
 ## The Problem: What is a "Good" Layout?
 
-Imagine two graph layouts. 
-- Layout A has 0 edge crossings, but edges are extremely long and bend 15 times. 
-- Layout B has 1 edge crossing, but edges are short and straight. 
+Imagine you are trying to write a computer program to decide if a graph layout looks "good." 
 
-Which is better? A single numeric score (like "Score = crossings * 10 + bends * 2") is highly unstable. If you tweak the weights, you accidentally break other layouts. Certain flaws (like nodes physically overlapping each other) are fatal errors and should NEVER be accepted, regardless of how straight the edges are.
+You might start by simply counting the number of times edges cross each other. 
+- **Layout A** has 0 crossings.
+- **Layout B** has 1 crossing. 
+So, A is better than B.
 
-## The Concept: Dictionary Ordering
+But what if Layout A achieved 0 crossings by drawing an edge that takes 15 different 90-degree turns and stretches across the entire screen? What if Layout A placed two nodes directly on top of each other?
 
-"Lexicographic" means sorting like a dictionary. When comparing "Apple" and "Axe", you look at the first letter. If it's a tie ('A' == 'A'), you look at the second letter ('p' vs 'x'). 
+To fix this, developers usually create a **weighted sum** formula:
+`Score = (overlaps * 1000) + (crossings * 100) + (bends * 10) + (length * 1)`
 
-We apply this to a **score vector** representing a layout's flaws. We prioritize fatal errors first, then structural flaws, then aesthetic preferences.
+**The Fatal Flaw of Weighted Sums:**
+If you tweak the weights to fix one badly routed graph, you accidentally break three other graphs. If a layout has 0 overlaps but 11 crossings (penalty 1100), the math might decide it's "cheaper" to just place two nodes on top of each other (penalty 1000) to save the crossings. This is unacceptable. Certain flaws (like nodes overlapping) are **fatal errors** and should never be traded for aesthetic improvements.
 
-If Layout A has `[0, 5]` (0 overlaps, 5 crossings) and Layout B has `[1, 0]` (1 overlap, 0 crossings), Layout A wins immediately. We don't even look at the crossings because Layout A won at the first (most important) dimension.
+## The Aha Moment: Dictionary Ordering
+
+"Lexicographic" simply means sorting like a dictionary. When comparing the words "Apple" and "Axe", you don't calculate a weighted sum of the letters. You look at the first letter. If it's a tie, you look at the second letter. The first letter has absolute, infinite priority over the second letter.
+
+We apply this exact concept to a **score vector** representing a layout's flaws. 
+
+If Layout A has `[0 overlaps, 5 crossings]` and Layout B has `[1 overlap, 0 crossings]`, Layout A wins immediately. We don't even look at the crossings. Layout A won at the first (most important) dimension. There is no math, no weight tuning, and no accidental trade-offs.
 
 ## The Priority Vector
 
-In our custom layout engine, a layout is evaluated against a 21-dimension vector of penalties (lower is better). See [`ORDER` in `layoutObjective.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutObjective.ts#L14-L36).
+In our custom layout engine, every proposed layout is evaluated against a 21-dimension vector of penalties (where lower is better). 
+
+You can see the exact definition in [`ORDER` in `layoutObjective.ts`](../../src/engine/layout/custom/layoutObjective.ts#L14-L36). Here is why they are ordered this way:
 
 ### 1. Hard Errors (The "Never Accept" Tier)
-1. `hardErrorCount`: Fatal routing failures.
-2. `unresolvedRouteCount`: Edges that couldn't find a path to their target.
-3. `nodeNodeOverlaps`: Nodes placed on top of each other.
-4. `edgeNodePenetrations`: Edges cutting through the middle of a node.
+These dimensions represent fundamentally broken layouts. If these are non-zero, the graph is illegible.
+- **`hardErrorCount`**: Fatal routing failures (e.g., memory limits exceeded).
+- **`unresolvedRouteCount`**: Edges that completely failed to find a path to their target.
+- **`nodeNodeOverlaps`**: Nodes placed physically on top of each other.
+- **`edgeNodePenetrations`**: Edges cutting through the middle of a node instead of routing around it.
 
 ### 2. Structural Quality (The "Legibility" Tier)
-5. `sharedEdgeSegmentLength`: Edges drawn exactly on top of each other (ambiguous paths).
-6. `unresolvedBadgeCount`: Badges that couldn't be placed.
-7. `badgeNodeOverlaps` / `badgeBadgeOverlaps` / `badgeUnrelatedEdgeOverlaps`: Badges colliding with geometry.
-10. `crossingCount`: How many times edges cross each other.
+Once we guarantee the layout isn't broken, we optimize for readability.
+- **`sharedEdgeSegmentLength`**: Edges drawn exactly on top of each other (making it impossible to tell which path goes where).
+- **`unresolvedBadgeCount`**: Edge badges that couldn't fit anywhere.
+- **`badgeNodeOverlaps`**: Badges colliding with nodes or other badges.
+- **`crossingCount`**: How many times edges cross each other. (Notice how crossings are actually dimension #10 — overlaps and penetrations are far worse!)
 
 ### 3. Aesthetic Quality (The "Polish" Tier)
-11. `ordinaryLeaderCount`: Badges needing a leader line.
-12. `avoidableHairpinCount`: Edges that U-turn unnecessarily.
-13. `excessBendCount`: Edges with too many 90-degree corners.
-14. `hairpinCount`: Total number of U-turns.
-15. `bendCount`: Total number of 90-degree bends.
-16. `directionDeviationPenalty`: Edges flowing against the intended Top-to-Bottom direction.
-17. `totalLength`: The sum of all edge pixel lengths (shorter is tighter).
-18. `portSideImbalance`: Uneven distribution of edges connecting to a node's sides.
-19. `feedbackLeaderCount`: Leader lines on feedback edges.
-20. `totalLeaderLength`: Sum length of badge leader lines.
-21. `totalArea`: Total bounding box area of the layout.
+Only when two layouts tie on all structural rules do we look at aesthetics.
+- **`avoidableHairpinCount`**: Edges that U-turn unnecessarily.
+- **`bendCount`**: Total number of 90-degree corners.
+- **`directionDeviationPenalty`**: Edges flowing against the intended Top-to-Bottom direction.
+- **`totalLength`**: The sum of all edge pixel lengths (shorter is tighter).
+- **`totalArea`**: Total bounding box area of the layout (dimension #21).
 
-## A Concrete Example
+## A Concrete Traced Example
 
-Let's evaluate two layout states during optimization. We'll simplify the vector to just 5 dimensions: `[Overlaps, Crossings, Hairpins, Bends, Length]`.
+Let's evaluate three layout states during optimization. We'll simplify the vector to just 5 dimensions: 
+`Vector = [Overlaps, Crossings, Hairpins, Bends, Length]`
 
-- **State Alpha**: `[0, 1, 0, 4, 1200]`
-- **State Beta**: `[0, 0, 2, 8, 1500]`
+Imagine our A* engine generates three possible layouts for a small 4-node graph:
 
-**Comparison:**
-- Dimension 0 (Overlaps): Tie (0 == 0). Move to next.
-- Dimension 1 (Crossings): Beta (0) beats Alpha (1). **Beta Wins.**
+**State Alpha (The Messy Default):**
+- 0 overlaps.
+- 1 crossing.
+- 0 hairpins.
+- 4 bends.
+- 1200px length.
+- **Vector**: `[0, 1, 0, 4, 1200]`
 
-Even though Beta is much uglier (it has hairpins, double the bends, and is 300px longer), it is technically a superior layout because it eliminated a crossing, which is a higher-priority structural rule.
+**State Beta (The Long Detour):**
+- 0 overlaps.
+- 0 crossings. (It routed around the crossing!)
+- 2 hairpins.
+- 8 bends.
+- 1500px length.
+- **Vector**: `[0, 0, 2, 8, 1500]`
 
-## How the Optimization Loop Uses This
+**State Gamma (The Fatal Error):**
+- 1 overlap. (Nodes pushed too close together).
+- 0 crossings.
+- 0 hairpins.
+- 2 bends.
+- 800px length.
+- **Vector**: `[1, 0, 0, 2, 800]`
 
-This scoring system drives the core of our custom layout engine. 
-1. The engine maintains a "Frontier Queue" of partial layout states.
-2. It sorts this queue using the `compareLayoutScore` function.
-3. It pops the best state off the queue, generates slight variations (neighbors) of that layout, scores them, and pushes them back into the queue.
-4. The search terminates when it finds a layout with a "perfect" score (zeros in all dimensions) or when it runs out of its computation budget, returning the best state found so far.
+### The Comparison Walkthrough
+
+**1. Alpha vs Gamma:**
+- Dimension 0 (Overlaps): Alpha has 0. Gamma has 1. 
+- **Result:** Alpha wins. Gamma is immediately discarded, even though Gamma has shorter edges and fewer bends.
+
+**2. Alpha vs Beta:**
+- Dimension 0 (Overlaps): Tie (0 == 0). Move to Dimension 1.
+- Dimension 1 (Crossings): Alpha has 1. Beta has 0.
+- **Result:** Beta wins. 
+
+Even though Beta is technically "uglier" (it has 2 hairpins, double the bends, and is 300px longer than Alpha), it is mathematically the superior layout because it eliminated a crossing, which is a higher-priority structural rule.
+
+## How the Engine Uses This
+
+This scoring system drives the core `compareLayoutScore` function in the custom layout engine. 
+
+1. The engine maintains a "Frontier Queue" of thousands of partial layout states.
+2. It sorts this queue lexicographically.
+3. It pops the absolute best state off the queue, generates slight variations (neighbors) of that layout, scores them, and pushes them back into the queue.
+4. Because the rules are strict priorities, the search naturally glides toward structurally sound layouts before it even wastes CPU cycles trying to optimize for edge lengths.
