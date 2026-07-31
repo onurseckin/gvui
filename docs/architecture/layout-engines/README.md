@@ -4,6 +4,15 @@ Welcome to the comprehensive, deeply educational developer documentation for the
 
 This documentation suite provides step-by-step mathematical derivations, ASCII infographics, system flow diagrams, performance characteristics, and direct codebase reference maps for all 5 layout algorithm paradigms implemented in GVUI.
 
+## 📖 Diátaxis Framework & Architectural Decision Records (ADRs)
+
+To maximize readability and maintenance, this documentation suite is structured according to the **Diátaxis Technical Documentation Authoring Framework** (https://diataxis.fr/) and includes formal **ADRs**:
+
+- [**Diátaxis Framework Index**](./00-diataxis-framework-index.md) — 4-quadrant index of Tutorials, How-to Guides, References, and Explanations.
+- [**ADR-001: Custom State-Space Layout Engine**](../../decisions/ADR-001-custom-state-space-layout-engine.md)
+- [**ADR-002: Grid A* Orthogonal Routing with 90° Turn Penalties**](../../decisions/ADR-002-grid-astar-orthogonal-routing.md)
+- [**ADR-003: Dynamic Node Gap Expansion for Badge Clearance**](../../decisions/ADR-003-dynamic-node-gap-expansion.md)
+
 ---
 
 ## 🗺️ Layout Engines Sitemap & Architecture Matrix
