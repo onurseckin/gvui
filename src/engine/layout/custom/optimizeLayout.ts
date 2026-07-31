@@ -1,7 +1,6 @@
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
 import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
-import { deriveProgressState } from "./customLayoutWorkerPool";
 import { searchBestLayoutState } from "./layoutOptimizerState";
 import type {
   BadgePlacement,

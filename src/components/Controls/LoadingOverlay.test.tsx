@@ -12,11 +12,11 @@ describe("LoadingOverlay Component", () => {
       />
     );
 
-    expect(html).toContain("loading-overlay-backdrop");
-    expect(html).toContain("Computing A* orthogonal routes...");
-    expect(html).not.toContain("loading-overlay-card");
-    expect(html).not.toContain("Topology");
-    expect(html).not.toContain("✓");
+    expect(html.includes("loading-overlay-backdrop")).toBe(true);
+    expect(html.includes("Computing A* orthogonal routes...")).toBe(true);
+    expect(html.includes("loading-overlay-card")).toBe(false);
+    expect(html.includes("Topology")).toBe(false);
+    expect(html.includes("✓")).toBe(false);
   });
 
   it("falls back to stageText when detail is empty", () => {
@@ -28,8 +28,8 @@ describe("LoadingOverlay Component", () => {
       />
     );
 
-    expect(html).toContain("Processing layout...");
-    expect(html).not.toContain("loading-overlay-card");
+    expect(html.includes("Processing layout...")).toBe(true);
+    expect(html.includes("loading-overlay-card")).toBe(false);
   });
 });
 
