@@ -17,27 +17,49 @@ This document maps the theoretical physical vector equations, simulated annealin
 
 ---
 
-## ⚡ Asymptotic Complexity Analysis
+## ⚡ Asymptotic Complexity Analysis & Worked Numerical Derivations
 
 For a graph $G = (V, E)$ executed over $t_{\max}$ simulated annealing iterations:
 
 ### 1. Time Complexity Breakdown
-- **Seed Grid Initialization**: $O(|V|)$ to assign initial staggered grid coordinates.
-- **Pairwise Repulsion Loop**: $O(|V|^2)$ per iteration to evaluate Coulomb repulsion for all distinct vertex pairs $(u, v)$.
-- **Connected Edge Attraction Loop**: $O(|E|)$ per iteration to calculate spring attraction along graph edges.
-- **Center Gravity & Position Update**: $O(|V|)$ per iteration to apply centripetal restoration and update node positions.
-- **SVG Edge Path Routing**: $O(|E|)$ to compute straight-line SVG paths `M srcCx srcCy L tgtCx tgtCy` and label midpoints.
 
 $$\text{Total Time Complexity} = O\left( t_{\max} \cdot (|V|^2 + |E|) \right)$$
 
-For typical parameters ($t_{\max} = 100$), the algorithm executes efficiently in under 15ms for graphs up to 200 nodes.
+#### Step-by-Step Operation Breakdown:
+1. **Seed Grid Initialization**: $O(|V|)$ to assign initial staggered grid coordinates.
+2. **Pairwise Repulsion Loop**: $\frac{|V|(|V|-1)}{2}$ operations per iteration to evaluate Coulomb repulsion for all distinct vertex pairs $(u, v)$.
+3. **Connected Edge Attraction Loop**: $|E|$ operations per iteration to calculate spring attraction along graph edges.
+4. **Center Gravity & Position Update**: $|V|$ operations per iteration to apply centripetal restoration and update node positions.
+5. **SVG Edge Path Routing**: $O(|E|)$ to compute straight-line SVG paths `M srcCx srcCy L tgtCx tgtCy` and label midpoints.
+
+#### Worked Numerical Calculation Example:
+Consider a sample graph with $|V| = 16$ nodes, $|E| = 20$ edges, executed for $t_{\max} = 100$ iterations:
+
+- **Pairwise Repulsion Evaluations**:
+  $$\text{Pairs per iteration} = \frac{16 \times 15}{2} = 120\text{ pair calculations}$$
+  $$\text{Total Repulsion Operations} = 100 \times 120 = 12\,000\text{ evaluations}$$
+
+- **Edge Attraction Evaluations**:
+  $$\text{Total Attraction Operations} = 100 \times 20 = 2\,000\text{ evaluations}$$
+
+- **Gravity & Update Operations**:
+  $$\text{Total Update Operations} = 100 \times 16 = 1\,600\text{ evaluations}$$
+
+- **Total Arithmetic Force Calculations**:
+  $$\text{Total Ops} = 12\,000 + 2\,000 + 1\,600 = 15\,600\text{ operations}$$
+
+At average modern execution speed (~1.5 billion ops/sec), $15\,600$ operations execute in under $0.05\text{ms}$.
 
 ### 2. Space Complexity Breakdown
-- **Node Position Map**: $O(|V|)$ memory storage for coordinate structures and node dimension mappings.
-- **Force Accumulation Vectors**: $O(|V|)$ auxiliary storage for net force components $(F_x, F_y)$.
-- **Positioned Edge Output**: $O(|E|)$ storage for SVG path strings and edge label center coordinates.
 
 $$\text{Total Space Complexity} = O(|V| + |E|)$$
+
+#### Worked Numerical Memory Example:
+For $|V| = 16$ and $|E| = 20$:
+- **Node Position Map**: $16 \times 48\text{ bytes} \approx 768\text{ bytes}$
+- **Force Accumulation Array**: $16 \times 16\text{ bytes} \approx 256\text{ bytes}$
+- **Positioned Edge Array**: $20 \times 128\text{ bytes} \approx 2560\text{ bytes}$
+- **Total Memory Allocation**: $\approx 3.58\text{ KB}$
 
 ---
 

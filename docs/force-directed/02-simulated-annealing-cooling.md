@@ -33,20 +33,24 @@ Originating from statistical mechanics and metallurgy, **Simulated Annealing** i
 
 ---
 
-## 2. Bottom-Up Mathematical Deconstruction
+## 2. Bottom-Up Mathematical Deconstruction & Numerical Sub-Steps
 
-### Step 1: Velocity Bounding & Position Update Formula
-At iteration $t$, after net force vector $\vec{F}_{\text{net}}(u)$ is computed for node $u$, the force magnitude is evaluated:
+---
+
+### Sub-step 2.1: Temperature-Bounded Velocity Clamping & Position Updates
+
+#### 1. Mathematical Sub-Component Formula
+At iteration $t$, after net force vector $\vec{F}_{\text{net}}(u)$ is computed for node $u$, force magnitude is evaluated:
 
 $$\|\vec{F}_{\text{net}}(u)\|_2 = \sqrt{F_{\text{net}, x}(u)^2 + F_{\text{net}, y}(u)^2}$$
 
-The displacement step size is clamped to maximum allowable distance $T(t)$ via scalar capping function $\min(\|\vec{F}_{\text{net}}(u)\|, T(t))$:
+Displacement step size is clamped to maximum allowable distance $T(t)$ via scalar capping function $\min(\|\vec{F}_{\text{net}}(u)\|_2, T(t))$:
 
 $$\vec{\Delta p}_u^{(t)} = \frac{\vec{F}_{\text{net}}(u)}{\max\left(\epsilon, \|\vec{F}_{\text{net}}(u)\|_2\right)} \cdot \min\left( \|\vec{F}_{\text{net}}(u)\|_2, T(t) \right)$$
 
 $$\vec{p}_u^{(t+1)} = \vec{p}_u^{(t)} + \vec{\Delta p}_u^{(t)}$$
 
-#### Component-wise Position Update Equations:
+Cartesian position update equations:
 
 $$x_u^{(t+1)} = x_u^{(t)} + \frac{F_{\text{net}, x}(u)}{\max\left(\epsilon, \|\vec{F}_{\text{net}}(u)\|_2\right)} \cdot \min\left( \|\vec{F}_{\text{net}}(u)\|_2, T(t) \right)$$
 
@@ -56,45 +60,182 @@ Where:
 - $T(t)$: Temperature radius at iteration $t$, setting the upper limit on pixel displacement per step.
 - $\epsilon = 10^{-4}$: Guard against division by zero when $\|\vec{F}_{\text{net}}(u)\| \to 0$.
 
+#### 2. Concrete Numerical Graph Example
+Consider Node $u$ at initial position $\vec{p}_u^{(0)} = (140.0, 230.0)\text{px}$ experiencing net force vector $\vec{F}_{\text{net}}(u) = (+538.31, +400.23)\text{px}$ from document 01.
+
+1. Net force magnitude $\|\vec{F}_{\text{net}}(u)\|_2$:
+   $$\|\vec{F}_{\text{net}}(u)\|_2 = \sqrt{538.31^2 + 400.23^2} = 670.79\text{px}$$
+
+2. Temperature cap at iteration $t=0$ ($T_0 = W/10 = 120.0\text{px}$):
+   $$\min\left( \|\vec{F}_{\text{net}}(u)\|_2, T(0) \right) = \min(670.79, 120.0) = 120.0\text{px}$$
+
+3. Unit force direction vector $\hat{F}_{\text{net}}$:
+   $$\hat{F}_{\text{net}} = \begin{pmatrix} \frac{538.31}{670.79} \\[4pt] \frac{400.23}{670.79} \end{pmatrix} = \begin{pmatrix} +0.8025 \\[4pt] +0.5967 \end{pmatrix}$$
+
+4. Clamped displacement vector $\vec{\Delta p}_u^{(0)}$:
+   $$\vec{\Delta p}_u^{(0)} = 120.0 \times \begin{pmatrix} +0.8025 \\[4pt] +0.5967 \end{pmatrix} = \begin{pmatrix} +96.30 \\[4pt] +71.60 \end{pmatrix}\text{px}$$
+
+5. Updated node position $\vec{p}_u^{(1)}$:
+   $$x_u^{(1)} = 140.0 + 96.30 = 236.30\text{px}$$
+   $$y_u^{(1)} = 230.0 + 71.60 = 301.60\text{px}$$
+   $$\vec{p}_u^{(1)} = (236.30, 301.60)\text{px}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function clampDisplacementAndUpdatePosition(
+  pos: { x: number; y: number },
+  force: { fx: number; fy: number },
+  temperature: number,
+  epsilon = 1e-4
+): { x: number; y: number; stepX: number; stepY: number; fmag: number } {
+  const fmag = Math.max(epsilon, Math.sqrt(force.fx * force.fx + force.fy * force.fy));
+  const limitedDist = Math.min(fmag, temperature);
+  const stepX = (force.fx / fmag) * limitedDist;
+  const stepY = (force.fy / fmag) * limitedDist;
+  return {
+    x: pos.x + stepX,
+    y: pos.y + stepY,
+    stepX,
+    stepY,
+    fmag,
+  };
+}
+// Example execution: pos=(140,230), force=(538.31,400.23), temp=120 => pos=(236.30, 301.60)
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                      F_net Force Vector (670.79 px)
+                        ↗ ── ── ── ── ── ── ── ── ┐
+                       ╱                          │
+        (Node u) ─────● ───────►                  │ Truncated by Thermal
+         (140, 230)    \                          │ Radius T(0) = 120.0 px
+                        \   Clamped Step          │
+                         \   (96.30, 71.60)       ▼
+                          ↘ ──────────────────────● New Pos (236.30, 301.60)
+                            Bounding Circle T(0) = 120 px
+```
+
 ---
 
-### Step 2: Cooling Schedule Formulations
-The temperature schedule defines how $T(t)$ decays over discrete simulation iterations $t = 0, 1, 2, \dots, t_{\max}$.
+### Sub-step 2.2: Exponential Simulated Annealing Decay Schedule ($T(t) = T_0 \cdot \gamma^t$)
 
-```
-   Temp T(t)
-   ▲
- T0┼───┐
-   │   │\
-   │   │ \  Exponential Decay: T(t) = T0 * gamma^t   (gamma = 0.95)
-   │   │  \
-   │   │   \
-   │   │    ───┐
-   │   │       \
-   │   │        ───┐  Linear Decay: T(t) = T0 * (1 - t / T_max)
-   │   │           \
- Tmin──┴────────────┴─────────────────────────────────────► Iteration t
-       t=0          t=25         t=50        t=75       t=100 (Max Iterations)
-```
+#### 1. Mathematical Sub-Component Formula
+The exponential temperature decay schedule (Fruchterman-Reingold standard) reduces temperature $T(t)$ across discrete simulation steps $t$:
 
-#### 1. Exponential Cooling (Fruchterman-Reingold Standard)
 $$T(t) = T_0 \cdot \gamma^t$$
 
-Where $\gamma \in [0.90, 0.98]$ is the cooling factor (typically $\gamma = 0.95$). This schedule provides rapid early movement followed by smooth, asymptotic thermal decay.
+Where:
+- $T_0$: Initial temperature (typically $W / 10$).
+- $\gamma \in [0.90, 0.98]$: Fractional cooling retention factor per step (default $\gamma = 0.95$).
 
-#### 2. Linear Cooling
-$$T(t) = T_0 \cdot \left(1 - \frac{t}{t_{\max}}\right)$$
+#### 2. Concrete Numerical Graph Example
+With initial temperature $T_0 = 120.0\text{px}$ and cooling factor $\gamma = 0.95$:
 
-Provides a constant rate of temperature reduction across fixed step count $t_{\max}$.
+- Iteration $t = 0$:
+  $$T(0) = 120.0 \times 0.95^0 = 120.00\text{px}$$
+- Iteration $t = 1$:
+  $$T(1) = 120.0 \times 0.95^1 = 114.00\text{px}$$
+- Iteration $t = 10$:
+  $$T(10) = 120.0 \times 0.95^{10} = 120.0 \times 0.59874 = 71.85\text{px}$$
+- Iteration $t = 50$:
+  $$T(50) = 120.0 \times 0.95^{50} = 120.0 \times 0.07694 = 9.23\text{px}$$
+- Iteration $t = 100$:
+  $$T(100) = 120.0 \times 0.95^{100} = 120.0 \times 0.00592 = 0.71\text{px}$$
 
-#### 3. Quadratic Cooling
-$$T(t) = T_0 \cdot \left(1 - \frac{t}{t_{\max}}\right)^2$$
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function computeExponentialTemperature(
+  T0: number,
+  gamma: number,
+  step: number
+): number {
+  return T0 * Math.pow(gamma, step);
+}
+// Example executions for T0=120, gamma=0.95:
+// step=0   => 120.00 px
+// step=1   => 114.00 px
+// step=10  => 71.85 px
+// step=50  => 9.23 px
+// step=100 => 0.71 px
+```
 
-Accelerates dampening early in the simulation, useful for extremely dense, highly connected graphs.
+#### 4. Sub-Step ASCII Infographic
+```
+   Temp T(t) [px]
+   ▲
+120┼───● t=0 (120.00 px)
+114┼───┼──● t=1 (114.00 px)
+ 71.85 ┼──┼──┼──────● t=10 (71.85 px)
+   │   │  │  │      │
+  9.23 ┼──┼──┼──────┼──────────────● t=50 (9.23 px)
+  0.71 ┼──┼──┼──────┼──────────────┼──────────────● t=100 (0.71 px)
+  0.00 ┴──┴──┴──────┴──────────────┴──────────────┴──────────────────► Iteration t
+```
 
 ---
 
-### Step 3: Termination Conditions & Hyperparameter Sensitivity
+### Sub-step 2.3: Alternative Decay Schedules & Convergence Termination Check ($T_{\min}$)
+
+#### 1. Mathematical Sub-Component Formula
+Alternative cooling decay formulations offer trade-offs between convergence speed and layout quality:
+
+1. **Linear Cooling**:
+   $$T_{\text{lin}}(t) = T_0 \cdot \left(1 - \frac{t}{t_{\max}}\right)$$
+
+2. **Quadratic Cooling**:
+   $$T_{\text{quad}}(t) = T_0 \cdot \left(1 - \frac{t}{t_{\max}}\right)^2$$
+
+Simulation termination condition:
+$$\text{Halt if } T(t) < T_{\min} \quad \text{or} \quad t \ge t_{\max}$$
+
+Where $T_{\min} = 0.01\text{px}$ is the sub-pixel motion cutoff threshold and $t_{\max} = 100$.
+
+#### 2. Concrete Numerical Graph Example
+Comparing temperature values at iteration $t = 50$ for $T_0 = 120.0\text{px}$ and $t_{\max} = 100$:
+
+- Exponential ($\gamma = 0.95$): $T_{\text{exp}}(50) = 120.0 \times 0.95^{50} = 9.23\text{px}$
+- Linear: $T_{\text{lin}}(50) = 120.0 \times (1 - 50/100) = 60.00\text{px}$
+- Quadratic: $T_{\text{quad}}(50) = 120.0 \times (1 - 50/100)^2 = 30.00\text{px}$
+
+Termination check for Exponential decay at iteration $t = 184$:
+$$T(184) = 120.0 \times 0.95^{184} \approx 0.0099\text{px}$$
+Since $T(184) = 0.0099\text{px} < T_{\min} = 0.01\text{px}$, simulation exits early at step 184 without waiting for $t_{\max}$.
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function evaluateDecayAndCheckTermination(
+  T0: number,
+  t: number,
+  maxIter: number,
+  gamma = 0.95,
+  minTemp = 0.01
+): { temp: number; shouldTerminate: boolean } {
+  const temp = T0 * Math.pow(gamma, t);
+  const shouldTerminate = temp < minTemp || t >= maxIter;
+  return { temp, shouldTerminate };
+}
+// Example execution at t=184: { temp: 0.0099, shouldTerminate: true }
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+   Comparison of Cooling Decay Profiles (T0 = 120 px, t_max = 100)
+
+   Temp [px]
+  120 ┼───●───────────────────────────────────
+      │   │ \ Linear (60.0 px at t=50)
+      │   │  \
+   60 ┼───│───┼─────●────────
+   30 ┼───│───┼──────┼─────● Quadratic (30.0 px at t=50)
+    9.23┼─│───┼──────┼─────┼──────● Exponential (9.23 px at t=50)
+ 0.01 ┼───┴───┴──────┴─────┴──────┴──────● T_min Threshold (Halt)
+      0   t=0       t=50                 t=100
+```
+
+---
+
+### Step 3: Hyperparameter Sensitivity Matrix
 
 | Parameter | Recommended Value | Physical Significance | Sensitivity Effect |
 | :--- | :--- | :--- | :--- |
@@ -128,7 +269,7 @@ Accelerates dampening early in the simulation, useful for extremely dense, highl
 ### Diagram 2: Spatial Convergence Progression Across Thermal Stages
 ```
   Iteration 0 (Hot)              Iteration 50 (Cooling)            Iteration 100 (Frozen)
-  T(0) = 120px                   T(50) = 9.2px                     T(100) = 0.007px (Halted)
+  T(0) = 120px                   T(50) = 9.23px                    T(100) = 0.71px (Frozen)
 
       (u)                          (u) ─────── (v)                    (u) ─────── (v)
      ╱   ╲                            │         │                      │         │
@@ -159,6 +300,7 @@ export interface ForceEdge {
 
 /**
  * Runs iterative Fruchterman-Reingold force-directed simulation with simulated annealing cooling.
+ * Synthesizes all vector force sub-steps and temperature clamping schedules.
  */
 export function runForceDirectedSimulation(
   nodes: ForceNode[],
@@ -170,7 +312,7 @@ export function runForceDirectedSimulation(
   const nodeCount = nodes.length;
   if (nodeCount === 0) return [];
 
-  // 1. Compute ideal equilibrium distance k
+  // 1. Compute ideal equilibrium distance k (Sub-step 2.1 in Doc 01)
   const area = canvasWidth * canvasHeight;
   const k = 0.75 * Math.sqrt(area / nodeCount);
   const k2 = k * k;
@@ -180,7 +322,7 @@ export function runForceDirectedSimulation(
   const cGravity = 0.02;
   const epsilon = 1e-4;
 
-  // Initialize temperature T0 and cooling factor gamma
+  // Initialize temperature T0 and cooling factor gamma (Sub-step 2.2)
   let temperature = canvasWidth / 10;
   const gamma = 0.95;
   const minTemperature = 0.01;
@@ -191,10 +333,9 @@ export function runForceDirectedSimulation(
 
   // 2. Iterative Physics Simulation Loop
   for (let iter = 0; iter < maxIterations && temperature > minTemperature; iter++) {
-    // Array to store accumulated net forces per node
     const forces: Point2D[] = positions.map(() => ({ x: 0, y: 0 }));
 
-    // 2a. Repulsive forces between ALL node pairs O(|V|^2)
+    // 2a. Repulsive forces between ALL node pairs O(|V|^2) (Sub-step 2.3 in Doc 01)
     for (let i = 0; i < nodeCount; i++) {
       for (let j = i + 1; j < nodeCount; j++) {
         const u = positions[i];
@@ -205,7 +346,6 @@ export function runForceDirectedSimulation(
         const distSq = Math.max(epsilon, dx * dx + dy * dy);
         const dist = Math.sqrt(distSq);
 
-        // Repulsive magnitude F_r = k^2 / dist
         const fRep = k2 / dist;
         const fx = (dx / dist) * fRep;
         const fy = (dy / dist) * fRep;
@@ -217,7 +357,7 @@ export function runForceDirectedSimulation(
       }
     }
 
-    // 2b. Attractive forces along connected edges O(|E|)
+    // 2b. Attractive forces along connected edges O(|E|) (Sub-step 2.4 in Doc 01)
     for (const edge of edges) {
       const u = posMap.get(edge.source);
       const v = posMap.get(edge.target);
@@ -230,7 +370,6 @@ export function runForceDirectedSimulation(
       const dy = u.y - v.y;
       const dist = Math.max(epsilon, Math.sqrt(dx * dx + dy * dy));
 
-      // Attractive magnitude F_a = dist^2 / k
       const fAtt = (dist * dist) / k;
       const fx = (dx / dist) * fAtt;
       const fy = (dy / dist) * fAtt;
@@ -241,11 +380,11 @@ export function runForceDirectedSimulation(
       forces[idxV].y += fy;
     }
 
-    // 2c. Center gravity & temperature-bounded position updates O(|V|)
+    // 2c. Center gravity & temperature-bounded position updates O(|V|) (Sub-steps 2.1 & 2.5)
     for (let i = 0; i < nodeCount; i++) {
       const node = positions[i];
 
-      // Add centripetal restoration force toward canvas center
+      // Add centripetal restoration force
       forces[i].x -= cGravity * (node.x - centerX);
       forces[i].y -= cGravity * (node.y - centerY);
 
@@ -257,7 +396,7 @@ export function runForceDirectedSimulation(
       node.y += (forces[i].y / forceMag) * limitedDist;
     }
 
-    // 2d. Exponential Simulated Annealing Cooling Decay
+    // 2d. Exponential Simulated Annealing Cooling Decay (Sub-step 2.2)
     temperature *= gamma;
   }
 
