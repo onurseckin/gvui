@@ -2,10 +2,15 @@ declare module "bun:test" {
   export function describe(name: string, fn: () => void): void;
   export function it(name: string, fn: () => void | Promise<void>, timeout?: number): void;
   export function test(name: string, fn: () => void | Promise<void>, timeout?: number): void;
+  export function beforeEach(fn: () => void | Promise<void>): void;
+  export function afterEach(fn: () => void | Promise<void>): void;
+  export function beforeAll(fn: () => void | Promise<void>): void;
+  export function afterAll(fn: () => void | Promise<void>): void;
   export function expect(value: unknown): {
     toBe(expected: unknown): void;
     toEqual(expected: unknown): void;
     toBeDefined(): void;
+    toBeNull(): void;
     toBeGreaterThan(expected: number): void;
     toBeGreaterThanOrEqual(expected: number): void;
     toBeLessThan(expected: number): void;
@@ -16,6 +21,7 @@ declare module "bun:test" {
     not: {
       toBe(expected: unknown): void;
       toEqual(expected: unknown): void;
+      toBeNull(): void;
     };
   };
 }
