@@ -62,7 +62,7 @@ Recorded from baseline execution:
 - [x] **Task 0: Freeze the V4 Baseline** (`O0-orchestrator`)
 - [x] **Task 1: Restore the Unweakened Acceptance Contract** (`T1-acceptance`)
 - [x] **Task 2: Add Shared Search Contracts and Deterministic Budgets** (`C1-contracts`)
-- [ ] **Task 3: Make Route Search Fast Before Expanding Search Breadth** (`R1-routing-kernel`)
+- [x] **Task 3: Make Route Search Fast Before Expanding Search Breadth** (`R1-routing-kernel`)
 - [ ] **Task 4: Add Conflict-Directed Rerouting** (`R1-routing-kernel`)
 - [ ] **Task 5: Add Explicit Attachment Ordering and Side Search** (`P1-port-state`)
 - [ ] **Task 6: Implement Dynamic Label-Lane Demands** (`B1-label-lanes`)
