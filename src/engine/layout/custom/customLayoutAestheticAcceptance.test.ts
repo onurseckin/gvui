@@ -284,6 +284,31 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #20 (Full DevOps Microservice Mesh)", () => {
+    it("reaches the bounded crossing-free repair deterministically", () => {
+      const config = { maxLayoutStates: 32, maxFrontierSize: 32 };
+      const { nodes, edges, result } = computeScenario(20, config);
+      const reversed = computeCustomLayout([...nodes].reverse(), [...edges].reverse(), config);
+      const routeSignature = (routes: RoutedPath[]) =>
+        routes
+          .map((route) => ({
+            edgeId: route.edgeId,
+            sourceSide: route.sourcePort.side,
+            targetSide: route.targetPort.side,
+            points: route.points,
+          }))
+          .sort((left, right) => left.edgeId.localeCompare(right.edgeId));
+
+      expect(result.edges).toHaveLength(12);
+      expect(result.badges).toHaveLength(12);
+      expect(result.validation.metrics.crossingCount).toBe(0);
+      expect(result.optimizationStats?.evaluatedPortStates).toBeLessThanOrEqual(32);
+      expect(reversed.edges).toHaveLength(12);
+      expect(reversed.badges).toHaveLength(12);
+      expect(reversed.validation.metrics.crossingCount).toBe(0);
+      expect(reversed.optimizationStats?.evaluatedPortStates).toBeLessThanOrEqual(32);
+      expect(routeSignature(reversed.edges)).toEqual(routeSignature(result.edges));
+    }, 45000);
+
     it("meets V3 aesthetic acceptance criteria", () => {
       const { edges, result } = computeScenario(20);
       expect(result.validation.isValid).toBe(true);

@@ -1,9 +1,10 @@
 import type { CustomLayoutConfig } from "./config";
 import { calculateExcessBends, countPathHairpins } from "./layoutObjective";
+import { generatePortCandidates, type PortCandidate } from "./portCandidates";
 import { cloneSearchState } from "./searchState";
 import { exactSpacingDemandSignature } from "./spacingDemand";
 import type { StateEvaluationResult } from "./stateEvaluator";
-import type { EdgeRole, LayoutSearchState, Side } from "./types";
+import type { ClassifiedEdge, LayoutSearchState, PortSideAssignment, Side } from "./types";
 
 const feedbackSidePairs: ReadonlyArray<{ srcSide: Side; tgtSide: Side }> = [
   { srcSide: "left", tgtSide: "left" },
@@ -12,26 +13,177 @@ const feedbackSidePairs: ReadonlyArray<{ srcSide: Side; tgtSide: Side }> = [
   { srcSide: "right", tgtSide: "top" },
 ];
 
-function sideAlternatives(
-  current: { srcSide: Side; tgtSide: Side },
-  role: EdgeRole | undefined,
-  isCycle: boolean,
-): { srcSide: Side; tgtSide: Side }[] {
-  if (role === "feedback" || isCycle) {
-    return feedbackSidePairs.filter(
-      (pair) => pair.srcSide !== current.srcSide || pair.tgtSide !== current.tgtSide,
-    );
+const sideRing: readonly Side[] = ["top", "right", "bottom", "left"];
+
+interface CrossingComponentRepair {
+  edgeIds: string[];
+  assignments: Array<[string, PortSideAssignment]>;
+}
+
+function assignmentKey(assignment: PortSideAssignment): string {
+  return `${assignment.srcSide}/${assignment.tgtSide}`;
+}
+
+function reverseAssignment(assignment: PortSideAssignment): PortSideAssignment {
+  return { srcSide: assignment.tgtSide, tgtSide: assignment.srcSide };
+}
+
+function adjacentSides(side: Side): Side[] {
+  const index = sideRing.indexOf(side);
+  return [
+    sideRing[(index + sideRing.length - 1) % sideRing.length],
+    sideRing[(index + 1) % sideRing.length],
+  ];
+}
+
+function currentAssignment(
+  state: LayoutSearchState,
+  edgeId: string,
+  routesByEdgeId: Map<string, StateEvaluationResult["routes"][number]>,
+): PortSideAssignment {
+  const routed = routesByEdgeId.get(edgeId);
+  return (
+    state.sideAssignments.get(edgeId) ??
+    (routed
+      ? { srcSide: routed.sourcePort.side, tgtSide: routed.targetPort.side }
+      : { srcSide: "bottom", tgtSide: "top" })
+  );
+}
+
+function candidateAssignments(
+  edge: ClassifiedEdge,
+  current: PortSideAssignment,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+): Array<{ assignment: PortSideAssignment; baseCost: number }> {
+  const nodes = evalResult.nodes ?? [];
+  const source = nodes.find((node) => node.id === edge.source);
+  const target = nodes.find((node) => node.id === edge.target);
+  if (!source || !target) {
+    return [
+      ...adjacentSides(current.tgtSide).map((tgtSide) => ({
+        assignment: { srcSide: current.srcSide, tgtSide },
+        baseCost: 0,
+      })),
+      ...adjacentSides(current.srcSide).map((srcSide) => ({
+        assignment: { srcSide, tgtSide: current.tgtSide },
+        baseCost: 0,
+      })),
+    ];
   }
 
-  const alternatives: { srcSide: Side; tgtSide: Side }[] = [];
-  for (const srcSide of ["top", "right", "bottom", "left"] as const) {
-    for (const tgtSide of ["top", "right", "bottom", "left"] as const) {
-      if (srcSide !== current.srcSide || tgtSide !== current.tgtSide) {
-        alternatives.push({ srcSide, tgtSide });
+  const positions = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+  const candidates = generatePortCandidates(
+    edge,
+    source,
+    target,
+    edge.role,
+    positions,
+    config,
+    nodes,
+  );
+  return candidates.map((candidate: PortCandidate) => ({
+    assignment: { srcSide: candidate.srcSide, tgtSide: candidate.tgtSide },
+    baseCost: candidate.baseCost,
+  }));
+}
+
+/**
+ * A defect unit has only two meaningful local repairs: move its target port
+ * one cardinal step, or move its source port one cardinal step. This keeps
+ * the search bounded and lets the router decide the actual corridor.
+ */
+function oneEndpointAlternatives(
+  edge: ClassifiedEdge,
+  current: PortSideAssignment,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+): PortSideAssignment[] {
+  const candidates = candidateAssignments(edge, current, evalResult, config);
+  const selectBest = (kind: "target" | "source"): PortSideAssignment | undefined =>
+    candidates
+      .filter(({ assignment }) => {
+        if (kind === "target") {
+          return (
+            assignment.srcSide === current.srcSide &&
+            adjacentSides(current.tgtSide).includes(assignment.tgtSide)
+          );
+        }
+        return (
+          assignment.tgtSide === current.tgtSide &&
+          adjacentSides(current.srcSide).includes(assignment.srcSide)
+        );
+      })
+      .sort(
+        (left, right) =>
+          left.baseCost - right.baseCost ||
+          assignmentKey(left.assignment).localeCompare(assignmentKey(right.assignment)),
+      )[0]?.assignment;
+
+  // Target moves are intentionally evaluated first. The second candidate is
+  // the best source move, not an exponentially broader pair trial.
+  return [selectBest("target"), selectBest("source")].filter(
+    (assignment): assignment is PortSideAssignment => assignment !== undefined,
+  );
+}
+
+function semanticFeedbackAlternatives(
+  current: PortSideAssignment,
+  edge: ClassifiedEdge,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+): PortSideAssignment[] {
+  const hasPositionedEndpoints = Boolean(
+    evalResult.nodes?.some((node) => node.id === edge.source) &&
+    evalResult.nodes?.some((node) => node.id === edge.target),
+  );
+  if (!hasPositionedEndpoints) {
+    return feedbackSidePairs.filter(
+      (assignment) => assignmentKey(assignment) !== assignmentKey(current),
+    );
+  }
+  const valid = new Set(
+    candidateAssignments(edge, current, evalResult, config).map(({ assignment }) =>
+      assignmentKey(assignment),
+    ),
+  );
+  return feedbackSidePairs.filter(
+    (assignment) =>
+      assignmentKey(assignment) !== assignmentKey(current) &&
+      // generatePortCandidates returns every candidate when no endpoint leg is
+      // valid, so this check remains deterministic while preferring valid legs.
+      (valid.size === 0 || valid.has(assignmentKey(assignment))),
+  );
+}
+
+function crossingComponents(
+  crossings: NonNullable<StateEvaluationResult["validation"]["crossings"]>,
+): string[][] {
+  const adjacency = new Map<string, Set<string>>();
+  for (const crossing of crossings) {
+    if (!adjacency.has(crossing.edgeIdA)) adjacency.set(crossing.edgeIdA, new Set());
+    if (!adjacency.has(crossing.edgeIdB)) adjacency.set(crossing.edgeIdB, new Set());
+    adjacency.get(crossing.edgeIdA)!.add(crossing.edgeIdB);
+    adjacency.get(crossing.edgeIdB)!.add(crossing.edgeIdA);
+  }
+
+  const components: string[][] = [];
+  const remaining = new Set(adjacency.keys());
+  while (remaining.size > 0) {
+    const first = [...remaining].sort()[0];
+    const queue = [first];
+    const component: string[] = [];
+    remaining.delete(first);
+    while (queue.length > 0) {
+      const edgeId = queue.shift()!;
+      component.push(edgeId);
+      for (const adjacent of [...(adjacency.get(edgeId) ?? [])].sort()) {
+        if (remaining.delete(adjacent)) queue.push(adjacent);
       }
     }
+    components.push(component.sort());
   }
-  return alternatives;
+  return components.sort((left, right) => left.join("\u0000").localeCompare(right.join("\u0000")));
 }
 
 export function generateNeighborhoodStates(
@@ -42,7 +194,8 @@ export function generateNeighborhoodStates(
   const neighbors: LayoutSearchState[] = [];
   const maxNeighbors = config.maxNeighborsPerState;
 
-  // 1. Generate Port Side Swap Moves for edges with crossings, hairpins, or excess bends
+  // 1. Generate bounded, defect-oriented port moves. Crossings are repaired
+  // by connected components rather than a flat Cartesian sweep of all sides.
   const priorityProblemEdgeIds = new Set<string>();
   const feedbackFillerEdgeIds = new Set<string>();
   const crossings = evalResult.validation.crossings ?? [];
@@ -58,6 +211,10 @@ export function generateNeighborhoodStates(
 
   const canonicalPortOrders: Record<string, string[]> = {};
   for (const [sideKey, endpoints] of nodeSideMap) {
+    // The router has a deterministic geometric order when this key is absent.
+    // Materializing that implicit order here turns a side-only repair into an
+    // attachment-order constraint and can block its intended reroute.
+    if (!Object.hasOwn(state.portOrders, sideKey)) continue;
     const liveEndpoints = [...new Set(endpoints)].sort();
     const liveSet = new Set(liveEndpoints);
     const seen = new Set<string>();
@@ -86,10 +243,10 @@ export function generateNeighborhoodStates(
     resetState.exactDemands = [...evalResult.exactDemands];
     neighbors.push(resetState);
   }
-  for (const cross of crossings) {
-    priorityProblemEdgeIds.add(cross.edgeIdA);
-    priorityProblemEdgeIds.add(cross.edgeIdB);
-  }
+  const crossingEdgeIds = new Set(
+    crossings.flatMap((crossing) => [crossing.edgeIdA, crossing.edgeIdB]),
+  );
+  const pressuredEdgeIds = new Set<string>();
 
   // Include every affected edge from diagnostics. A badge/edge collision names
   // both participants and either route may be the movable one.
@@ -97,6 +254,7 @@ export function generateNeighborhoodStates(
     for (const edgeId of diag.ids ?? []) {
       if (classifiedById.has(edgeId)) {
         priorityProblemEdgeIds.add(edgeId);
+        pressuredEdgeIds.add(edgeId);
       }
     }
   }
@@ -108,6 +266,7 @@ export function generateNeighborhoodStates(
     for (const edgeId of demand.affectedEdgeIds ?? []) {
       if (classifiedById.has(edgeId)) {
         priorityProblemEdgeIds.add(edgeId);
+        pressuredEdgeIds.add(edgeId);
       }
     }
   }
@@ -143,25 +302,121 @@ export function generateNeighborhoodStates(
       Number(state.sideAssignments.has(left)) - Number(state.sideAssignments.has(right));
     return assignmentOrder || left.localeCompare(right);
   };
+  const pushNeighbor = (nextState: LayoutSearchState): boolean => {
+    if (neighbors.length >= maxNeighbors) return false;
+    neighbors.push(nextState);
+    return true;
+  };
+
+  const buildCrossingRepair = (edgeIds: string[]): CrossingComponentRepair | undefined => {
+    const rankedIds = [...edgeIds].sort(compareByAssignmentThenId);
+    const feedbackEdgeId = rankedIds.find((edgeId) => {
+      const edge = classifiedById.get(edgeId);
+      return edge?.role === "feedback" || edge?.isCycle;
+    });
+    if (feedbackEdgeId) {
+      const edge = classifiedById.get(feedbackEdgeId);
+      if (!edge) return undefined;
+      const current = currentAssignment(state, feedbackEdgeId, routesByEdgeId);
+      const assignment = semanticFeedbackAlternatives(current, edge, evalResult, config)[0];
+      return assignment ? { edgeIds, assignments: [[feedbackEdgeId, assignment]] } : undefined;
+    }
+
+    const primaryEdgeId = rankedIds.find((edgeId) => pressuredEdgeIds.has(edgeId)) ?? rankedIds[0];
+    const primaryEdge = classifiedById.get(primaryEdgeId);
+    if (!primaryEdge) return undefined;
+    const primaryCurrent = currentAssignment(state, primaryEdgeId, routesByEdgeId);
+    const primaryAssignment = oneEndpointAlternatives(
+      primaryEdge,
+      primaryCurrent,
+      evalResult,
+      config,
+    )[0];
+    if (!primaryAssignment) return undefined;
+
+    // The crossing component is a graph, but this proposal touches only the
+    // first deterministic crossing pair. Wider coupled combinations are
+    // deliberately excluded: the batch below only merges disjoint repairs.
+    const partnerEdgeId = crossings
+      .filter(
+        (crossing) => crossing.edgeIdA === primaryEdgeId || crossing.edgeIdB === primaryEdgeId,
+      )
+      .map((crossing) => (crossing.edgeIdA === primaryEdgeId ? crossing.edgeIdB : crossing.edgeIdA))
+      .filter((edgeId) => edgeIds.includes(edgeId))
+      .sort(compareByAssignmentThenId)[0];
+    if (!partnerEdgeId) return undefined;
+
+    return {
+      edgeIds,
+      assignments: [
+        [primaryEdgeId, primaryAssignment],
+        [partnerEdgeId, reverseAssignment(primaryAssignment)],
+      ],
+    };
+  };
+
+  const componentRepairs = crossingComponents(crossings)
+    .sort((left, right) => {
+      const leftAssigned = left.reduce(
+        (count, edgeId) => count + Number(state.sideAssignments.has(edgeId)),
+        0,
+      );
+      const rightAssigned = right.reduce(
+        (count, edgeId) => count + Number(state.sideAssignments.has(edgeId)),
+        0,
+      );
+      return (
+        leftAssigned - rightAssigned || left.join("\u0000").localeCompare(right.join("\u0000"))
+      );
+    })
+    .map(buildCrossingRepair)
+    .filter((repair): repair is CrossingComponentRepair => repair !== undefined);
+
+  for (const repair of componentRepairs) {
+    const nextState = cloneCanonicalState();
+    for (const [edgeId, assignment] of repair.assignments) {
+      nextState.sideAssignments.set(edgeId, assignment);
+    }
+    if (!pushNeighbor(nextState)) break;
+  }
+
+  // One coordinated state is enough to test independent repairs together.
+  // Components share no crossing edge by construction, so this cannot create
+  // a Cartesian product of alternatives.
+  if (componentRepairs.length >= 2 && neighbors.length < maxNeighbors) {
+    const batch = cloneCanonicalState();
+    for (const repair of componentRepairs) {
+      for (const [edgeId, assignment] of repair.assignments) {
+        batch.sideAssignments.set(edgeId, assignment);
+      }
+    }
+    pushNeighbor(batch);
+  }
+
   const orderedProblemEdgeIds = [
     ...Array.from(priorityProblemEdgeIds).sort(compareByAssignmentThenId),
     ...Array.from(feedbackFillerEdgeIds)
       .filter((edgeId) => !priorityProblemEdgeIds.has(edgeId))
       .sort(),
   ];
-  const candidateQueues = orderedProblemEdgeIds.map((edgeId) => {
-    const routed = routesByEdgeId.get(edgeId);
-    const currentSide =
-      state.sideAssignments.get(edgeId) ??
-      (routed
-        ? { srcSide: routed.sourcePort.side, tgtSide: routed.targetPort.side }
-        : { srcSide: "bottom" as Side, tgtSide: "top" as Side });
-    const classified = classifiedById.get(edgeId);
-    return {
-      edgeId,
-      alternatives: sideAlternatives(currentSide, classified?.role, Boolean(classified?.isCycle)),
-    };
-  });
+  const candidateQueues = orderedProblemEdgeIds
+    .filter((edgeId) => !crossingEdgeIds.has(edgeId))
+    .map((edgeId) => {
+      const classified = classifiedById.get(edgeId);
+      if (!classified) return undefined;
+      const current = currentAssignment(state, edgeId, routesByEdgeId);
+      const isFeedback = classified.role === "feedback" || classified.isCycle;
+      return {
+        edgeId,
+        alternatives: isFeedback
+          ? semanticFeedbackAlternatives(current, classified, evalResult, config)
+          : oneEndpointAlternatives(classified, current, evalResult, config),
+      };
+    })
+    .filter(
+      (queue): queue is { edgeId: string; alternatives: PortSideAssignment[] } =>
+        queue !== undefined,
+    );
 
   // Round-robin candidates so every prioritized problem edge gets a
   // deterministic first opportunity before clean feedback filler and before
@@ -175,7 +430,7 @@ export function generateNeighborhoodStates(
 
       const nextState = cloneCanonicalState();
       nextState.sideAssignments.set(queue.edgeId, alternative);
-      neighbors.push(nextState);
+      pushNeighbor(nextState);
       addedInRound = true;
     }
     if (!addedInRound) break;
