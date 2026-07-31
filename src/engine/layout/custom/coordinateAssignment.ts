@@ -132,7 +132,10 @@ function projectLayerCenters(
     const next = layer[i + 1];
     const currW = curr.width;
     const nextW = next.width;
-    const gap = getEffectiveNodeGap(rank, curr, spacingOverrides, config);
+    const gap = Math.max(
+      getEffectiveNodeGap(rank, curr, spacingOverrides, config),
+      getEffectiveNodeGap(rank, next, spacingOverrides, config),
+    );
     const d = (currW + nextW) / 2 + gap;
     s[i + 1] = s[i] + d;
   }
@@ -240,7 +243,13 @@ export function assignCoordinates(
       const width = item.isVirtual ? 0 : item.width;
 
       initialCenterXMap.set(item.id, currentX + width / 2);
-      const effectiveNodeGap = getEffectiveNodeGap(r, item, spacingOverrides, config);
+      const nextItem = i < layer.length - 1 ? layer[i + 1] : undefined;
+      const effectiveNodeGap = nextItem
+        ? Math.max(
+            getEffectiveNodeGap(r, item, spacingOverrides, config),
+            getEffectiveNodeGap(r, nextItem, spacingOverrides, config),
+          )
+        : getEffectiveNodeGap(r, item, spacingOverrides, config);
       currentX += width + effectiveNodeGap;
     }
   }

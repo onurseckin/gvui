@@ -114,12 +114,21 @@ export function computeBadgeSpacingDemands(
       const { edge, badge } = group[0];
       if (rU === rV) {
         // Same-rank edge label
+        const minGap = requiredSameRankBadgeGap(badge.width, config);
         requests.push({
           edgeId: edge.id,
           kind: "node-gap",
           rank: rU,
           afterNodeId: edge.source,
-          minimum: requiredSameRankBadgeGap(badge.width, config),
+          minimum: minGap,
+          reason: "same-rank-label",
+        });
+        requests.push({
+          edgeId: edge.id,
+          kind: "node-gap",
+          rank: rU,
+          afterNodeId: edge.target,
+          minimum: minGap,
           reason: "same-rank-label",
         });
       } else {
