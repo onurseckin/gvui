@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
 import { computeCustomLayout } from "../../../engine/layout/custom";
-import { renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
+import { pointsToSvgPath, renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
 import type { NormalizedEdge, NormalizedNode } from "../../../engine/layout/custom/types";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
@@ -32,6 +32,7 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
       target: e.target,
       label: e.label,
       isCycle: e.isCycle,
+      layoutRole: e.layoutRole,
     }));
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
@@ -47,10 +48,6 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
   const originalEdgeMap = useMemo(() => {
     return new Map(normalizedEdges.map((e) => [e.id, e]));
   }, [normalizedEdges]);
-
-  const crossingPoints = useMemo(() => {
-    return layoutResult.crossings.map((c) => c.point);
-  }, [layoutResult]);
 
   if (!isOpen) return null;
 
@@ -134,9 +131,13 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                   </marker>
                 </defs>
 
+                {/* Edge Routes */}
                 {layoutResult.edges.map((routedPath) => {
                   const origEdge = originalEdgeMap.get(routedPath.edgeId);
-                  const dPath = renderPathWithCrossingBridges(routedPath.points, crossingPoints);
+                  const ownedCrossings = (layoutResult.crossings || [])
+                    .filter((c) => (c.bridgeOwnerEdgeId ?? c.edgeIdB) === routedPath.edgeId)
+                    .map((c) => c.point);
+                  const dPath = renderPathWithCrossingBridges(routedPath.points, ownedCrossings);
 
                   return (
                     <path
@@ -151,12 +152,53 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                   );
                 })}
 
+                {/* Crossings */}
+                {(layoutResult.crossings || []).map((c, i) => (
+                  <circle
+                    key={`crossing-modal-${c.edgeIdA}-${c.edgeIdB}-${i}`}
+                    cx={c.point.x}
+                    cy={c.point.y}
+                    r="5"
+                    fill="#f59e0b"
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                  />
+                ))}
+
+                {/* Badges */}
                 {layoutResult.badges.map((badge) => {
                   const badgeCenterX = badge.rect.x + badge.rect.width / 2;
                   const badgeCenterY = badge.rect.y + badge.rect.height / 2;
+                  const hasLeader =
+                    badge.anchorPoint &&
+                    Math.hypot(
+                      badge.anchorPoint.x - badgeCenterX,
+                      badge.anchorPoint.y - badgeCenterY
+                    ) > 4;
 
                   return (
                     <g key={`badge-modal-${badge.edgeId}-${badge.label}`}>
+                      {badge.leaderPoints && badge.leaderPoints.length >= 2 ? (
+                        <path
+                          d={pointsToSvgPath(badge.leaderPoints)}
+                          stroke="#38bdf8"
+                          strokeWidth="1"
+                          strokeDasharray="3,3"
+                          fill="none"
+                        />
+                      ) : (
+                        hasLeader && (
+                          <line
+                            x1={badge.anchorPoint.x}
+                            y1={badge.anchorPoint.y}
+                            x2={badgeCenterX}
+                            y2={badgeCenterY}
+                            stroke="#38bdf8"
+                            strokeWidth="1"
+                            strokeDasharray="3,3"
+                          />
+                        )
+                      )}
                       <rect
                         x={badge.rect.x}
                         y={badge.rect.y}
@@ -188,3 +230,4 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
     </div>
   );
 };
+

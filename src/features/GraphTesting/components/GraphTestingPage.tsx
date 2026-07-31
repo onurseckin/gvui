@@ -1,8 +1,7 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
-import { computeCustomLayout } from "../../../engine/layout/custom";
-import { renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
-import type { NormalizedEdge, NormalizedNode } from "../../../engine/layout/custom/types";
+import { computeCustomLayout, type ExtendedLayoutDiagnostic, type NormalizedEdge, type NormalizedNode } from "../../../engine/layout/custom";
+import { pointsToSvgPath, renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
 import { Button } from "../../../ui";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
@@ -41,6 +40,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
       target: e.target,
       label: e.label,
       isCycle: e.isCycle,
+      layoutRole: e.layoutRole,
     }));
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
@@ -86,10 +86,6 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   const originalEdgeMap = useMemo(() => {
     return new Map(normalizedEdges.map((e) => [e.id, e]));
   }, [normalizedEdges]);
-
-  const crossingPoints = useMemo(() => {
-    return (layoutResult.crossings || []).map((c) => c.point);
-  }, [layoutResult]);
 
   const renderedNodes = layoutResult.nodes || [];
   const renderedEdges = layoutResult.edges || [];
@@ -149,7 +145,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
       {/* Metrics Summary Panel */}
       <div className="graph-testing-metrics-wrapper">
-        <CustomLayoutMetrics layoutResult={layoutResult} />
+        <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />
         <CustomLayoutDebugOverlay
           layoutResult={layoutResult}
           options={debugOptions}
@@ -210,7 +206,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               {/* Edge Routes */}
               {renderedEdges.map((routedPath) => {
                 const origEdge = originalEdgeMap.get(routedPath.edgeId);
-                const dPath = renderPathWithCrossingBridges(routedPath.points || [], crossingPoints);
+                const ownedCrossings = renderedCrossings
+                  .filter((c) => (c.bridgeOwnerEdgeId ?? c.edgeIdB) === routedPath.edgeId)
+                  .map((c) => c.point);
+                const dPath = renderPathWithCrossingBridges(routedPath.points || [], ownedCrossings);
 
                 return (
                   <g key={`edge-group-${routedPath.edgeId}`}>
@@ -277,6 +276,48 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                   />
                 ))}
 
+              {/* Diagnostic Geometry Highlights */}
+              {debugOptions.showDiagnostics &&
+                (layoutResult.validation?.diagnostics as ExtendedLayoutDiagnostic[] | undefined)?.map(
+                  (diag, i) => (
+                    <g key={`diag-geom-${diag.code}-${i}`}>
+                      {diag.rect && (
+                        <rect
+                          x={diag.rect.x}
+                          y={diag.rect.y}
+                          width={diag.rect.width}
+                          height={diag.rect.height}
+                          fill="rgba(239, 68, 68, 0.15)"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                          strokeDasharray="4,4"
+                        />
+                      )}
+                      {diag.segment && (
+                        <line
+                          x1={diag.segment.a.x}
+                          y1={diag.segment.a.y}
+                          x2={diag.segment.b.x}
+                          y2={diag.segment.b.y}
+                          stroke="#ef4444"
+                          strokeWidth="3"
+                          strokeDasharray="4,2"
+                        />
+                      )}
+                      {diag.point && (
+                        <circle
+                          cx={diag.point.x}
+                          cy={diag.point.y}
+                          r="6"
+                          fill="#ef4444"
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                        />
+                      )}
+                    </g>
+                  )
+                )}
+
               {/* Badges */}
               {debugOptions.showBadges &&
                 renderedBadges.map((badge) => {
@@ -291,16 +332,26 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
                   return (
                     <g key={`badge-${badge.edgeId}-${badge.label}`}>
-                      {hasLeader && (
-                        <line
-                          x1={badge.anchorPoint.x}
-                          y1={badge.anchorPoint.y}
-                          x2={badgeCenterX}
-                          y2={badgeCenterY}
+                      {badge.leaderPoints && badge.leaderPoints.length >= 2 ? (
+                        <path
+                          d={pointsToSvgPath(badge.leaderPoints)}
                           stroke="#38bdf8"
                           strokeWidth="1"
                           strokeDasharray="3,3"
+                          fill="none"
                         />
+                      ) : (
+                        hasLeader && (
+                          <line
+                            x1={badge.anchorPoint.x}
+                            y1={badge.anchorPoint.y}
+                            x2={badgeCenterX}
+                            y2={badgeCenterY}
+                            stroke="#38bdf8"
+                            strokeWidth="1"
+                            strokeDasharray="3,3"
+                          />
+                        )
                       )}
                       <rect
                         x={badge.rect.x}
@@ -337,3 +388,4 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     </div>
   );
 };
+

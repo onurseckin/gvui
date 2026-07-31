@@ -1,11 +1,16 @@
 import type { FC } from "react";
-import type { CustomLayoutResult } from "../../../engine/layout/custom/types";
+import { hasBadge } from "../../../engine/layout/custom/badgeMeasurement";
+import type { CustomLayoutResult, NormalizedEdge } from "../../../engine/layout/custom/types";
 
 interface CustomLayoutMetricsProps {
   layoutResult: CustomLayoutResult;
+  normalizedEdges?: NormalizedEdge[];
 }
 
-export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult }) => {
+export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
+  layoutResult,
+  normalizedEdges,
+}) => {
   const validation = layoutResult?.validation || {
     isValid: false,
     diagnostics: [],
@@ -39,6 +44,26 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
   const edgeCount = (layoutResult?.edges || []).length;
   const diagnostics = validation.diagnostics || [];
 
+  const totalEdgesCount = normalizedEdges ? normalizedEdges.length : edgeCount;
+  const validRoutedEdgesCount = (layoutResult?.edges || []).filter(
+    (e) => e.points && e.points.length >= 2
+  ).length;
+  const missingRouteDiagnosticsCount = diagnostics.filter(
+    (d) => d.code === "MISSING_ROUTE"
+  ).length;
+  const unresolvedRoutes = Math.max(
+    missingRouteDiagnosticsCount,
+    totalEdgesCount - validRoutedEdgesCount
+  );
+
+  const expectedBadgesCount = normalizedEdges
+    ? normalizedEdges.filter((e) => hasBadge(e.label, e.isCycle)).length
+    : (layoutResult?.badges || []).length;
+  const unresolvedBadges = Math.max(
+    0,
+    expectedBadgesCount - (layoutResult?.badges || []).length
+  );
+
   return (
     <div className="custom-layout-metrics-panel">
       <div className="metrics-header">
@@ -64,6 +89,18 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
         <div className="metric-card">
           <span className="metric-label">Bends</span>
           <span className="metric-value">{metrics.bendCount}</span>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">Unresolved Routes</span>
+          <span className={`metric-value ${unresolvedRoutes > 0 ? "has-conflicts" : ""}`}>
+            {unresolvedRoutes}
+          </span>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">Unresolved Badges</span>
+          <span className={`metric-value ${unresolvedBadges > 0 ? "has-conflicts" : ""}`}>
+            {unresolvedBadges}
+          </span>
         </div>
         <div className="metric-card">
           <span className="metric-label">Total Edge Length</span>
@@ -97,3 +134,4 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
     </div>
   );
 };
+
