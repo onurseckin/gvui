@@ -439,5 +439,39 @@ describe("customLayoutWorkerClient", () => {
     const result = await promise;
     expect(result).toBe(expectedResult);
   });
+
+  it("streams 20+ granular micro-stage progress events during layout optimization", async () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
+    const progressEvents: Array<{
+      stageIndex: number;
+      totalStages: number;
+      percent: number;
+      stageText: string;
+      detail: string;
+    }> = [];
+
+    await computeCustomLayoutAsync(
+      {
+        nodes,
+        edges,
+        onProgress: (progress) => {
+          progressEvents.push(progress);
+        },
+      },
+      { environment: { isBrowser: false, runtime: null } },
+    );
+
+    expect(progressEvents.length).toBeGreaterThanOrEqual(20);
+    expect(progressEvents.length).toBe(32);
+    expect(progressEvents[0].stageIndex).toBe(1);
+    expect(progressEvents[0].stageText).toBe("Step 1/32");
+    expect(progressEvents[31].stageIndex).toBe(32);
+    expect(progressEvents[31].percent).toBe(100);
+    expect(progressEvents.some((p) => p.detail.includes("A* pathfinder"))).toBe(true);
+  });
 });
 

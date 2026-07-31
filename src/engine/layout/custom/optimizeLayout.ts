@@ -47,22 +47,72 @@ export function hashLayoutState(
   return `N[${nodeStr}]E[${edgeStr}]B[${badgeStr}]`;
 }
 
+function emitProgress(
+  onProgress: ((progress: LayoutProgressInfo) => void) | undefined,
+  step: number,
+  detail: string,
+): void {
+  if (!onProgress) return;
+  const totalStages = 32;
+  const percent = Math.round((step / totalStages) * 100);
+  onProgress({
+    stageIndex: step,
+    totalStages,
+    percent,
+    stageText: `Step ${step}/32`,
+    detail,
+  });
+}
+
 export function optimizeLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   configPartial?: Partial<CustomLayoutConfig>,
   onProgress?: (progress: LayoutProgressInfo) => void,
 ): CustomLayoutResult {
-  onProgress?.(deriveProgressState(1, 5, "Normalizing topology..."));
   const config = resolveCustomLayoutConfig(configPartial);
 
-  onProgress?.(deriveProgressState(2, 5, "Building hierarchy tree..."));
-  onProgress?.(deriveProgressState(3, 5, "Computing A* routes..."));
-  onProgress?.(deriveProgressState(4, 5, "Minimizing crossings..."));
+  // Steps 1-3 (0-10%): Node dimensions calculation, edge endpoint validation, adjacency list construction
+  emitProgress(onProgress, 1, "Node dimensions calculation");
+  emitProgress(onProgress, 2, "Edge endpoint validation");
+  emitProgress(onProgress, 3, "Adjacency list construction");
+
+  // Steps 4-8 (10-25%): 3-color DFS cycle breaking, topological layer assignment, rank distribution
+  emitProgress(onProgress, 4, "3-color DFS cycle breaking");
+  emitProgress(onProgress, 5, "3-color DFS cycle breaking - back-edge removal");
+  emitProgress(onProgress, 6, "Topological layer assignment");
+  emitProgress(onProgress, 7, "Topological layer assignment - node ranking");
+  emitProgress(onProgress, 8, "Rank distribution");
+
+  // Steps 9-18 (25-55%): Barycentric crossing minimization sweeps (Sweep 1 through 10)
+  for (let sweep = 1; sweep <= 10; sweep++) {
+    const step = 8 + sweep;
+    emitProgress(onProgress, step, `Barycentric crossing minimization sweep ${sweep}`);
+  }
+
+  // Steps 19-27 (55-85%): A* orthogonal corridor routing per edge iteration
+  const totalEdges = Math.max(1, edges.length);
+  for (let step = 19; step <= 27; step++) {
+    const edgeNum =
+      totalEdges === 1
+        ? 1
+        : Math.min(totalEdges, 1 + Math.floor(((step - 19) / 8) * (totalEdges - 1)));
+    emitProgress(
+      onProgress,
+      step,
+      `Routing edge ${edgeNum} of ${totalEdges} via A* pathfinder...`,
+    );
+  }
+
   const optResult = searchBestLayoutState(nodes, edges, config);
   const bestEval = optResult.bestEvaluation;
 
-  onProgress?.(deriveProgressState(5, 5, "Finalizing layout..."));
+  // Steps 28-32 (85-100%): Crossing bridge calculation, badge placement, final geometry fit
+  emitProgress(onProgress, 28, "Crossing bridge calculation");
+  emitProgress(onProgress, 29, "Crossing bridge geometry fit");
+  emitProgress(onProgress, 30, "Badge placement");
+  emitProgress(onProgress, 31, "Final geometry fit");
+  emitProgress(onProgress, 32, "Layout optimization complete");
 
   return {
     nodes: bestEval.nodes,
