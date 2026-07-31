@@ -1,11 +1,14 @@
 import type { CSSProperties, FC } from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LoadingOverlay } from "../../components/Controls/LoadingOverlay";
 import { EdgeBadgeOverlay, EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { PositionedNode } from "../../types/graphData";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { calculateFitView } from "../../utils/fitView";
+import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
+import { deriveProgressState } from "../layout/custom/customLayoutWorkerPool";
 import { computeCustomEngineGraphLayoutAsync } from "../layout/customLayoutAdapter";
 import { computeGraphLayout } from "../layout/layoutDispatcher";
 import "./GraphCanvas.css";
@@ -32,32 +35,64 @@ export const GraphCanvas: FC = () => {
 
   const { containerRef, zoomLevel, panOffset, isDragging, handleMouseDown } = usePanZoom();
 
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [progressState, setProgressState] = useState(() =>
+    deriveProgressState(1, 5, "Normalizing topology..."),
+  );
+
   useEffect(() => {
     if (!dataset) {
       setPositionedGraph([], []);
+      setIsCalculating(false);
       return;
     }
+
+    const signature = generateDatasetSignature(dataset);
+    const stored = loadStoredLayout(signature);
+
+    if (stored) {
+      setPositionedGraph(stored.nodes, stored.edges);
+      if (shouldAutoFit) {
+        const fitResult = calculateFitView(stored.nodes, containerRef.current?.parentElement);
+        setZoomLevel(fitResult.zoomLevel);
+        setPanOffset(fitResult.panOffset);
+        setShouldAutoFit(false);
+      }
+      setIsCalculating(false);
+      return;
+    }
+
+    // Immediate unmount of old canvas elements on cache miss
+    setPositionedGraph([], []);
+    setIsCalculating(true);
+    setProgressState(deriveProgressState(1, 5, "Normalizing topology..."));
 
     const controller = new AbortController();
     let isSubscribed = true;
 
     if (layoutMode === "top-down") {
+      setProgressState(deriveProgressState(2, 5, "Building hierarchy tree..."));
+
       computeCustomEngineGraphLayoutAsync(dataset, { signal: controller.signal })
         .then(({ nodes, edges }) => {
           if (!isSubscribed) return;
+          setProgressState(deriveProgressState(4, 5, "Computing A* routes..."));
+          saveStoredLayout(signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
-
           if (shouldAutoFit) {
             const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
             setZoomLevel(fitResult.zoomLevel);
             setPanOffset(fitResult.panOffset);
             setShouldAutoFit(false);
           }
+          setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
+          setIsCalculating(false);
         })
         .catch((err) => {
           if (err.name !== "AbortError") {
             const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
             if (isSubscribed) {
+              saveStoredLayout(signature, { nodes, edges });
               setPositionedGraph(nodes, edges);
               if (shouldAutoFit) {
                 const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
@@ -65,18 +100,24 @@ export const GraphCanvas: FC = () => {
                 setPanOffset(fitResult.panOffset);
                 setShouldAutoFit(false);
               }
+              setIsCalculating(false);
             }
           }
         });
     } else {
+      setProgressState(deriveProgressState(3, 5, "Computing layout..."));
       const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
-      setPositionedGraph(nodes, edges);
-
-      if (shouldAutoFit) {
-        const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
-        setZoomLevel(fitResult.zoomLevel);
-        setPanOffset(fitResult.panOffset);
-        setShouldAutoFit(false);
+      if (isSubscribed) {
+        saveStoredLayout(signature, { nodes, edges });
+        setPositionedGraph(nodes, edges);
+        if (shouldAutoFit) {
+          const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+          setZoomLevel(fitResult.zoomLevel);
+          setPanOffset(fitResult.panOffset);
+          setShouldAutoFit(false);
+        }
+        setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
+        setIsCalculating(false);
       }
     }
 
@@ -189,6 +230,15 @@ export const GraphCanvas: FC = () => {
       onMouseDown={handleMouseDown}
       onClick={() => setSelectedNodeId(null)}
     >
+      {isCalculating && (
+        <LoadingOverlay
+          percent={progressState.percent}
+          stageText={progressState.stageText}
+          detail={progressState.detail}
+          nodeCount={dataset?.nodes.length}
+          edgeCount={dataset?.edges.length}
+        />
+      )}
       <div className="graph-transform-stage" style={transformStyle}>
         <svg className="graph-svg-layer">
           <EdgeMarkerDefs />
