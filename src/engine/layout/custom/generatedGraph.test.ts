@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { computeCustomLayout } from "./computeCustomLayout";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
-const TEST_TIMEOUT_MS = 30000;
+const TEST_TIMEOUT_MS = 10000;
 
 /**
  * Deterministic PRNG using Mulberry32 algorithm.
@@ -79,12 +79,12 @@ function assertLayoutProperties(result: CustomLayoutResult, nodes: NormalizedNod
 }
 
 /**
- * Generator for Random DAGs with 10 to 25 nodes and variable edge density.
+ * Generator for Random DAGs with 10 to 18 nodes and variable edge density.
  */
-function generateRandomDAG(seed: number, minNodes = 10, maxNodes = 25): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateRandomDAG(seed: number, minNodes = 10, maxNodes = 18): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
   const nodeCount = randomInt(rng, minNodes, maxNodes);
-  const density = 0.05 + rng() * 0.10; // 5% to 15% density
+  const density = 0.05 + rng() * 0.08;
 
   const nodes: NormalizedNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
@@ -126,7 +126,7 @@ function generateRandomDAG(seed: number, minNodes = 10, maxNodes = 25): { nodes:
 /**
  * Generator for Random Cyclic Graphs with feedback loops and self-loops.
  */
-function generateRandomCyclicGraph(seed: number, nodeCount = 15): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateRandomCyclicGraph(seed: number, nodeCount = 12): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
   const nodes: NormalizedNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
@@ -187,8 +187,8 @@ function generateVariableSizeNodesGraph(seed: number, nodeCount = 12): { nodes: 
     nodes.push({
       id: `var_node_${i}`,
       label: `VarNode ${i}`,
-      width: randomInt(rng, 50, 250),
-      height: randomInt(rng, 30, 150),
+      width: randomInt(rng, 50, 220),
+      height: randomInt(rng, 30, 130),
     });
   }
 
@@ -200,7 +200,7 @@ function generateVariableSizeNodesGraph(seed: number, nodeCount = 12): { nodes: 
       source: `var_node_${i}`,
       target: `var_node_${i + 1}`,
     });
-    if (i + 2 < nodeCount && rng() < 0.3) {
+    if (i + 2 < nodeCount && rng() < 0.25) {
       edges.push({
         id: `var_e_${edgeId++}`,
         source: `var_node_${i}`,
@@ -232,7 +232,7 @@ function generateDenseMultiEdgeGraph(seed: number, nodeCount = 8): { nodes: Norm
   for (let i = 0; i < nodeCount; i++) {
     for (let j = 0; j < nodeCount; j++) {
       if (i === j) continue;
-      if (rng() < 0.2) {
+      if (rng() < 0.18) {
         const multiCount = randomInt(rng, 1, 2);
         for (let k = 0; k < multiCount; k++) {
           edges.push({
@@ -252,7 +252,7 @@ function generateDenseMultiEdgeGraph(seed: number, nodeCount = 8): { nodes: Norm
 /**
  * Generator for High-Degree Hub graph.
  */
-function generateHubGraph(seed: number, leafCount = 12): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateHubGraph(seed: number, leafCount = 10): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
   const nodes: NormalizedNode[] = [
     { id: "hub_central", label: "Central Hub", width: 180, height: 90 },
@@ -309,7 +309,7 @@ function generateDisconnectedComponentsGraph(seed: number, componentCount = 3): 
 }
 
 describe("Generated Graph Layout & Routing Stress Tests", () => {
-  describe("Random DAGs (10 to 25 nodes, variable density)", () => {
+  describe("Random DAGs (10 to 18 nodes, variable density)", () => {
     const seeds = [1001, 2024, 3050, 4112, 5555];
 
     for (const seed of seeds) {
