@@ -27,7 +27,7 @@ describe("portDistribution", () => {
     expect(portA?.stub).toEqual({ x: 150, y: 130 }); // y + stubLength 20
   });
 
-  it("distributes 2 attachments on a side at 1/3 and 2/3 fractions sorted by remote X", () => {
+  it("distributes attachments at equal-bin centers sorted by remote X", () => {
     const nodeA: NormalizedNode & Point = { id: "A", width: 300, height: 60, x: 0, y: 0 };
     const nodeB1: NormalizedNode & Point = { id: "B1", width: 100, height: 60, x: 0, y: 200 };
     const nodeB2: NormalizedNode & Point = { id: "B2", width: 100, height: 60, x: 200, y: 200 };
@@ -54,8 +54,41 @@ describe("portDistribution", () => {
     const port1 = result.portsByEdge.get("e1")?.sourcePort;
     const port2 = result.portsByEdge.get("e2")?.sourcePort;
 
-    expect(port1?.point.x).toBe(100); // 1/3 of 300
-    expect(port2?.point.x).toBe(200); // 2/3 of 300
+    expect([port1?.point.x, port2?.point.x]).toEqual([75, 225]);
+  });
+
+  it("distributes three and four attachments at equal-bin centers", () => {
+    const nodeA: NormalizedNode & Point = { id: "A", width: 300, height: 60, x: 0, y: 0 };
+    const remoteNodes: (NormalizedNode & Point)[] = [
+      { id: "B1", width: 100, height: 60, x: 0, y: 200 },
+      { id: "B2", width: 100, height: 60, x: 100, y: 200 },
+      { id: "B3", width: 100, height: 60, x: 200, y: 200 },
+      { id: "B4", width: 100, height: 60, x: 300, y: 200 },
+    ];
+    const sideAssignments = new Map<string, { srcSide: Side; tgtSide: Side }>(
+      remoteNodes.map((_node, index) => [
+        `e${index + 1}`,
+        { srcSide: "bottom", tgtSide: "top" },
+      ]),
+    );
+    const nodeMap = new Map<string, NormalizedNode & Point>([
+      ["A", nodeA],
+      ...remoteNodes.map((node) => [node.id, node] as const),
+    ]);
+    const config = resolveCustomLayoutConfig({ portEndpointPadding: 0 });
+
+    const portsFor = (count: number) => {
+      const edges = remoteNodes.slice(0, count).map((node, index) => ({
+        id: `e${index + 1}`,
+        source: "A",
+        target: node.id,
+      }));
+      const result = distributePorts(edges, sideAssignments, nodeMap, config);
+      return edges.map((edge) => result.portsByEdge.get(edge.id)!.sourcePort);
+    };
+
+    expect(portsFor(3).map((port) => port.point.x)).toEqual([50, 150, 250]);
+    expect(portsFor(4).map((port) => port.point.x)).toEqual([37.5, 112.5, 187.5, 262.5]);
   });
 
   it("orders ports by projected remote angle (Dispatcher right side -> W5, W6, W7)", () => {

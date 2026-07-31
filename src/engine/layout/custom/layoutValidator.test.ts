@@ -323,6 +323,75 @@ describe("layoutValidator", () => {
     expect(diag?.ids).toContain("e1");
   });
 
+  test("detects a badge crossing a sibling edge that shares its source node", () => {
+    const badgeEdge: RoutedPath = {
+      edgeId: "e-badge",
+      sourcePort: {
+        nodeId: "n-shared",
+        side: "bottom",
+        index: 0,
+        point: { x: 0, y: 0 },
+        stub: { x: 0, y: 20 },
+      },
+      targetPort: {
+        nodeId: "n-badge-target",
+        side: "top",
+        index: 0,
+        point: { x: 0, y: 300 },
+        stub: { x: 0, y: 280 },
+      },
+      points: [
+        { x: 0, y: 0 },
+        { x: 0, y: 300 },
+      ],
+    };
+    const siblingEdge: RoutedPath = {
+      edgeId: "e-sibling",
+      sourcePort: {
+        nodeId: "n-shared",
+        side: "bottom",
+        index: 1,
+        point: { x: 100, y: 0 },
+        stub: { x: 100, y: 20 },
+      },
+      targetPort: {
+        nodeId: "n-sibling-target",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
+      points: [
+        { x: 100, y: 0 },
+        { x: 100, y: 300 },
+      ],
+    };
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      edges: [badgeEdge, siblingEdge],
+      badges: [
+        {
+          edgeId: "e-badge",
+          label: "Badge",
+          rect: { x: 80, y: 180, width: 40, height: 20 },
+          anchorPoint: { x: 100, y: 190 },
+        },
+      ],
+    };
+
+    const validation = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+
+    expect(validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(1);
+    expect(
+      validation.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "BADGE_UNRELATED_EDGE_OVERLAP" &&
+          diagnostic.ids.includes("e-badge") &&
+          diagnostic.ids.includes("e-sibling"),
+      ),
+    ).toBe(true);
+  });
+
   test("compares layout scores lexicographically", () => {
     const resA = createEmptyResult();
     resA.validation.isValid = true;

@@ -125,13 +125,10 @@ export function distributePorts(
     const m = attachments.length;
     const sideLength = isHorizontalSide ? node.width : node.height;
     const p = config.portEndpointPadding;
+    const usable = Math.max(0, sideLength - 2 * p);
 
     attachments.forEach((att, idx) => {
-      let offset = sideLength / 2;
-      if (m > 1) {
-        const usable = Math.max(0, sideLength - 2 * p);
-        offset = p + (usable * (idx + 1)) / (m + 1);
-      }
+      const offset = p + usable * ((idx + 0.5) / m);
 
       let point: Point;
       let stub: Point;
