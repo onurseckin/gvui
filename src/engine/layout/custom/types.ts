@@ -172,6 +172,7 @@ export interface LayoutValidationResult {
   isValid: boolean;
   diagnostics: LayoutDiagnostic[];
   metrics: LayoutMetrics;
+  crossings?: EdgeCrossing[];
 }
 
 export interface RouteAestheticMetrics {
@@ -265,6 +266,10 @@ export interface OptimizationStats {
   evaluatedPortStates: number;
   spacingExpansions: number;
   repeatedStateStop: boolean;
+  totalPasses?: number;
+  totalEvaluatedStates?: number;
+  visitedStateHashes?: number;
+  durationMs?: number;
   evaluatedLayoutStates?: number;
   generatedNeighborStates?: number;
   routeSearchCalls?: number;
