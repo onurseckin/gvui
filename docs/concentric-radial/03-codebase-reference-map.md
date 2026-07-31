@@ -2,19 +2,36 @@
 
 [← Back to Master Index](../README.md)
 
-This document maps the **Concentric Radial Engine** to source code files in GVUI.
+This document maps the **Concentric Radial Engine** specification and mathematical equations directly to source files and line anchors in the GVUI codebase.
 
 ---
 
-## 🗺️ Codebase Directory
+## 🗺️ Codebase Directory & Symbol Matrix
 
-| File Path | Core Functionality | Primary Exported Symbols |
-| :--- | :--- | :--- |
-| [`layoutDispatcher.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L9-L66) | Polar coordinate calculation & quadratic Bezier generator | `computeRadialLayout` |
+| File Path | Core Functionality | Primary Exported / Internal Symbols | Line Anchors |
+| :--- | :--- | :--- | :--- |
+| [layoutDispatcher.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L9-L66) | Polar coordinate calculation & quadratic Bezier generator | `computeRadialLayout` | [L9-L66](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L9-L66) |
+| [layoutDispatcher.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L134-L152) | Layout dispatcher handling `"radial"` layout mode switch | `computeGraphLayout` | [L134-L152](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L134-L152) |
+
+---
+
+## 💻 Primary Source Code Snippet
+
+The complete implementation of `computeRadialLayout` in [layoutDispatcher.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L9-L66):
 
 ```typescript
-// Code Snippet from layoutDispatcher.ts
-function computeRadialLayout(dataset: GraphDataset): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
+/**
+ * Computes radial layout coordinates where nodes are arranged along concentric circular paths.
+ */
+function computeRadialLayout(dataset: GraphDataset): {
+  nodes: PositionedNode[];
+  edges: PositionedEdge[];
+} {
+  const nodeCount = dataset.nodes.length;
+  if (nodeCount === 0) {
+    return { nodes: [], edges: [] };
+  }
+
   const radius = Math.max(280, nodeCount * 45);
   const centerX = radius + 100;
   const centerY = radius + 100;
@@ -25,8 +42,65 @@ function computeRadialLayout(dataset: GraphDataset): { nodes: PositionedNode[]; 
 
     const cx = centerX + radius * Math.cos(angle);
     const cy = centerY + radius * Math.sin(angle);
-    return { ...node, x: cx - dims.width / 2, y: cy - dims.height / 2, width: dims.width, height: dims.height };
+
+    return {
+      ...node,
+      x: cx - dims.width / 2,
+      y: cy - dims.height / 2,
+      width: dims.width,
+      height: dims.height,
+    };
   });
-  // ...
+
+  const nodeMap = new Map<string, PositionedNode>(positionedNodes.map((n) => [n.id, n]));
+
+  const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
+    const srcNode = nodeMap.get(edge.source);
+    const tgtNode = nodeMap.get(edge.target);
+
+    if (!srcNode || !tgtNode) {
+      return { ...edge, path: "" };
+    }
+
+    const srcCx = srcNode.x + srcNode.width / 2;
+    const srcCy = srcNode.y + srcNode.height / 2;
+    const tgtCx = tgtNode.x + tgtNode.width / 2;
+    const tgtCy = tgtNode.y + tgtNode.height / 2;
+
+    const path = `M ${srcCx} ${srcCy} Q ${centerX} ${centerY} ${tgtCx} ${tgtCy}`;
+    const labelX = (srcCx + tgtCx) / 2;
+    const labelY = (srcCy + tgtCy) / 2;
+
+    return {
+      ...edge,
+      path,
+      labelX,
+      labelY,
+    };
+  });
+
+  return { nodes: positionedNodes, edges: positionedEdges };
 }
 ```
+
+---
+
+## 🔍 Step-by-Step Execution Breakdown
+
+1. **Base Case Validation** ([L14-L16](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L14-L16)):
+   Checks if `dataset.nodes.length === 0` and immediately returns empty arrays if no nodes exist.
+
+2. **Orbit Geometry Setup** ([L18-L20](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L18-L20)):
+   Calculates `radius = Math.max(280, nodeCount * 45)` and canvas center origin `centerX = radius + 100`, `centerY = radius + 100`.
+
+3. **Node Polar Transformation Loop** ([L22-L36](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L22-L36)):
+   Computes angular displacement `angle = (2 * Math.PI * index) / nodeCount - Math.PI / 2`, converts polar space to Cartesian center `(cx, cy)`, and subtracts half-dimensions `(width / 2, height / 2)` to determine node top-left origin `(x, y)`.
+
+4. **Node Lookup Map Creation** ([L38](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L38)):
+   Constructs a `Map<string, PositionedNode>` for $O(1)$ node lookup during edge routing.
+
+5. **Edge Quadratic Bezier Routing Loop** ([L40-L63](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L40-L63)):
+   Retrieves source and target node centers `(srcCx, srcCy)` and `(tgtCx, tgtCy)`, builds the SVG quadratic Bezier curve path string `M ${srcCx} ${srcCy} Q ${centerX} ${centerY} ${tgtCx} ${tgtCy}`, and computes label placement at linear chord midpoint `labelX = (srcCx + tgtCx) / 2`, `labelY = (srcCy + tgtCy) / 2`.
+
+6. **Dispatcher Mode Handler** ([L147-L148](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L147-L148)):
+   Executes `computeRadialLayout(dataset)` when `mode === "radial"` in `computeGraphLayout`.
