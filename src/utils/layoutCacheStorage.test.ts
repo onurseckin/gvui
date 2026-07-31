@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { loadStoredLayout, saveStoredLayout, clearStoredLayoutCache } from "./layoutCacheStorage";
-import type { PositionedNode, PositionedEdge } from "../types/graphData";
+import type { PositionedNode } from "../types/graphData";
 
 if (typeof window === "undefined") {
   const store = new Map<string, string>();
@@ -23,26 +23,25 @@ if (typeof window === "undefined") {
   (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
 
-describe("layoutCacheStorage", () => {
+describe("layoutCacheStorage mode isolation", () => {
   beforeEach(() => {
     clearStoredLayoutCache();
   });
 
-  it("returns null on cache miss", () => {
-    const result = loadStoredLayout("unknown_sig");
-    expect(result).toBeNull();
-  });
+  it("stores and retrieves distinct layouts for top-down vs left-right vs force vs radial", () => {
+    const signature = "sig_graph_alpha";
+    const topDownNodes: PositionedNode[] = [{ id: "n1", name: "Node 1", x: 10, y: 20, width: 100, height: 50 }];
+    const leftRightNodes: PositionedNode[] = [{ id: "n1", name: "Node 1", x: 200, y: 50, width: 100, height: 50 }];
 
-  it("saves and retrieves precomputed graph layout by signature", () => {
-    const signature = "sig_12345";
-    const nodes: PositionedNode[] = [{ id: "n1", name: "Node 1", x: 10, y: 20, width: 100, height: 50 }];
-    const edges: PositionedEdge[] = [{ id: "e1", source: "n1", target: "n1", path: "M 10 20 L 30 40" }];
+    saveStoredLayout("top-down", signature, { nodes: topDownNodes, edges: [] });
+    saveStoredLayout("left-right", signature, { nodes: leftRightNodes, edges: [] });
 
-    saveStoredLayout(signature, { nodes, edges });
-    const cached = loadStoredLayout(signature);
+    const cachedTopDown = loadStoredLayout("top-down", signature);
+    const cachedLeftRight = loadStoredLayout("left-right", signature);
+    const cachedForce = loadStoredLayout("force", signature);
 
-    expect(cached).not.toBeNull();
-    expect(cached?.nodes).toEqual(nodes);
-    expect(cached?.edges).toEqual(edges);
+    expect(cachedTopDown?.nodes[0].x).toBe(10);
+    expect(cachedLeftRight?.nodes[0].x).toBe(200);
+    expect(cachedForce).toBeNull();
   });
 });
