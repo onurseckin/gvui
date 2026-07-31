@@ -9,7 +9,7 @@ This document provides a comprehensive, pedagogical breakdown of the state-space
 ## 1. Problem & Trade-Off Journey
 
 ### The Core Challenge
-Graph visualization engines in interactive web applications must render nodes with dynamic, highly variable physical dimensions (such as rich UI cards containing title bars, metadata badges, expandable panels, and button clusters). Traditional graph layout algorithms (e.g., standard Dagre or force-directed layouts) treat nodes as dimensionless points or uniform bounding boxes. 
+Graph visualization engines in interactive web applications must render nodes with dynamic, highly variable physical dimensions (such as rich UI cards containing title bars, metadata badges, expandable panels, and button clusters). Traditional graph layout algorithms (e.g., standard Dagre or force-directed layouts) treat nodes as dimensionless points or uniform bounding boxes.
 
 When applied to heterogeneous UI components, naive layout approaches fail in critical ways:
 
@@ -37,124 +37,219 @@ To solve these trade-offs, the Custom State-Space Engine models the entire graph
 ## 2. Bottom-Up Mathematical Deconstruction
 
 ### Step 2.1: Constructing the Discrete State Tuple $\sigma$
+
+#### 1. Mathematical Sub-Component Formula
 We define a layout configuration as a discrete state tuple $\sigma$ assembled from 6 distinct subcomponents:
 
 $$\sigma = \left\langle \Pi_{\text{sides}}, \Omega_{\text{ports}}, \mathcal{D}_{\text{demands}}, \mathcal{L}_{\text{orders}}, \Delta_{\text{shifts}}, \mathcal{S}_{\text{visited}} \right\rangle$$
 
-Let us build each subcomponent incrementally:
+where:
+- $\Pi_{\text{sides}}: E \to \text{Side} \times \text{Side}$ maps directed edge $e=(u,v)$ to port sides $\langle \text{srcSide}, \text{tgtSide} \rangle \in \{\text{top}, \text{right}, \text{bottom}, \text{left}\}^2$.
+- $\Omega_{\text{ports}}: V \times \text{Side} \to \text{Permutation}(E_{\text{attached}}(v, \text{side}))$ orders edge pins along boundary sides.
+- $\mathcal{D}_{\text{demands}} \subseteq \mathcal{D}_{\text{exact}}$ contains active spacing overrides for badge collisions.
+- $\mathcal{L}_{\text{orders}}: R \to \text{Permutation}(V_R)$ specifies horizontal node orderings per rank layer $r \in R$.
+- $\Delta_{\text{shifts}}: V \to \mathbb{R}$ holds fine continuous coordinate shifts.
+- $\mathcal{S}_{\text{visited}} \subset \Sigma_{\text{hash}}$ tracks visited state signatures $\mathcal{H}(\sigma)$ for cycle prevention.
 
-1. **Port Side Assignment Function ($\Pi_{\text{sides}}$)**:
-   $$\Pi_{\text{sides}}: E \to \text{Side} \times \text{Side}, \quad \text{where } \text{Side} \in \{\text{top}, \text{right}, \text{bottom}, \text{left}\}$$
-   Maps each directed edge $e = (u, v) \in E$ to a pair of port attachment sides $\langle \text{srcSide}, \text{tgtSide} \rangle$ on the boundary of source node $u$ and target node $v$.
+#### 2. Concrete Numerical Graph Example
+Consider a 3-node microservice graph: $V = \{\text{Auth}, \text{User}, \text{DB}\}$ with edges $e_1 = (\text{Auth}, \text{User})$ and $e_2 = (\text{User}, \text{DB})$.
 
-2. **Pin Port Ordering Map ($\Omega_{\text{ports}}$)**:
-   $$\Omega_{\text{ports}}: V \times \text{Side} \to \text{Permutation}(E_{\text{attached}}(v, \text{side}))$$
-   Defines the spatial ordering sequence of connected edge pins along each boundary side of vertex $v$.
+- **Input Node Dimensions**:
+  - $\text{Auth}: 120\text{px} \times 60\text{px}$
+  - $\text{User}: 140\text{px} \times 80\text{px}$
+  - $\text{DB}: 100\text{px} \times 50\text{px}$
+- **State Assignments**:
+  - $\Pi_{\text{sides}}(e_1) = \langle \text{bottom}, \text{top} \rangle$, $\Pi_{\text{sides}}(e_2) = \langle \text{bottom}, \text{top} \rangle$
+  - $\Omega_{\text{ports}}(\text{User}, \text{top}) = [e_1]$, $\Omega_{\text{ports}}(\text{User}, \text{bottom}) = [e_2]$
+  - $\mathcal{D}_{\text{demands}} = \emptyset$
+  - $\mathcal{L}_{\text{orders}} = \{ 0: [\text{Auth}], 1: [\text{User}], 2: [\text{DB}] \}$
+  - $\Delta_{\text{shifts}} = \{ \text{Auth}: 0.0, \text{User}: 0.0, \text{DB}: 0.0 \}$
+- **Calculated State Hash $\mathcal{H}(\sigma)$**:
+  $$\mathcal{H}(\sigma) = \text{"e1:bottom->top|e2:bottom->top|L0:Auth|L1:User|L2:DB"}$$
 
-3. **Active Exact Spacing Demands Set ($\mathcal{D}_{\text{demands}}$)**:
-   $$\mathcal{D}_{\text{demands}} \subseteq \mathcal{D}_{\text{exact}} = \{ \langle k, r, u, M, \text{reason} \rangle \}$$
-   Injects dynamic spatial overrides (e.g., minimum rank gaps, node clearance gaps, or lane offsets) to resolve edge badge collisions and routing channel congestion.
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function createInitialSearchState(
+  nodes: Node[],
+  edges: Edge[],
+  layerOrders: Map<number, string[]>
+): LayoutSearchState {
+  const portSides = new Map<string, PortSidePair>();
+  for (const edge of edges) {
+    portSides.set(edge.id, { srcSide: "bottom", tgtSide: "top" });
+  }
+  const state: LayoutSearchState = {
+    portSides,
+    portOrders: new Map(),
+    exactSpacingDemands: [],
+    layerOrders: new Map(layerOrders),
+    nodeShifts: new Map(),
+    visitedSignatures: new Set<string>()
+  };
+  const hash = computeStateHash(state);
+  state.visitedSignatures.add(hash);
+  return state;
+}
+```
 
-4. **Layer Node Order Permutations ($\mathcal{L}_{\text{orders}}$)**:
-   $$\mathcal{L}_{\text{orders}}: R \to \text{Permutation}(V_R)$$
-   Defines the horizontal sequence of nodes assigned to rank layer $r \in R$.
-
-5. **Fine Coordinate Alignments ($\Delta_{\text{shifts}}$)**:
-   $$\Delta_{\text{shifts}}: V \to \mathbb{R}$$
-   Contains continuous sub-pixel X/Y coordinate shifts applied during final alignment pass.
-
-6. **Visited Hash Signatures ($\mathcal{S}_{\text{visited}}$)**:
-   $$\mathcal{S}_{\text{visited}} \subset \Sigma_{\text{hash}}$$
-   Set of unique state hashes $\mathcal{H}(\sigma)$ visited during the local search trajectory to guarantee cycle prevention.
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.1: State Tuple σ Assembly & Hash Signature
+┌────────────────────────────────────────────────────────────────────────┐
+│  Node Auth (Rank 0)                                                    │
+│  └─► Port Side: bottom ──┐                                             │
+└──────────────────────────┼─────────────────────────────────────────────┘
+                           │ Edge e1: bottom -> top
+┌──────────────────────────▼─────────────────────────────────────────────┐
+│  Node User (Rank 1)                                                    │
+│  ├─► Port Side: top (Pin Order: [e1])                                  │
+│  └─► Port Side: bottom ──┐                                             │
+└──────────────────────────┼─────────────────────────────────────────────┘
+                           │ Edge e2: bottom -> top
+┌──────────────────────────▼─────────────────────────────────────────────┐
+│  Node DB (Rank 2)                                                      │
+│  └─► Port Side: top (Pin Order: [e2])                                  │
+└────────────────────────────────────────────────────────────────────────┘
+ State Hash H(σ): "e1:bottom->top|e2:bottom->top|L0:Auth|L1:User|L2:DB"
+```
 
 ---
 
 ### Step 2.2: Constructing the 21-Element Lexicographic Fitness Vector $\mathbf{C}(\sigma)$
+
+#### 1. Mathematical Sub-Component Formula
 Evaluating candidate state $\sigma$ yields a multi-criteria cost vector evaluated in strict lexicographic priority order:
 
 $$\mathbf{C}(\sigma) = \left\langle C_1(\sigma), C_2(\sigma), \dots, C_{21}(\sigma) \right\rangle \in \mathbb{R}^{21}$$
 
-The 21 metrics are categorized into 5 conceptual priority tiers:
+The 21 metrics are categorized into 5 priority tiers:
+1. **Tier 1 (Hard Failures, $C_1 \dots C_5$)**: Topology errors, unroutable paths, node-node/edge-node penetrations.
+2. **Tier 2 (Badge Collisions, $C_6 \dots C_9$)**: Unplaced badges, badge-node, badge-badge, badge-edge overlaps.
+3. **Tier 3 (Aesthetics & Crossings, $C_{10} \dots C_{16}$)**: Crossings, hairpins, excess bends, direction penalties.
+4. **Tier 4 (Geometric Compactness, $C_{17}, C_{18}$)**: Manhattan edge length, port side imbalance.
+5. **Tier 5 (Secondary Metrics, $C_{19} \dots C_{21}$)**: Feedback leaders, leader length, total bounding area.
 
+#### 2. Concrete Numerical Evaluation Example
+Consider a candidate layout state $\sigma$ evaluated on a graph with 2 rank layers:
+- **Observed Metrics**:
+  - $0$ structural errors, $0$ unrouted edges, $0$ node overlaps, $0$ penetrations, $0$ collinear overlaps $\implies C_1=0, C_2=0, C_3=0, C_4=0, C_5=0$.
+  - $0$ unplaced badges, $0$ badge collisions $\implies C_6=0, C_7=0, C_8=0, C_9=0$.
+  - $1$ edge crossing $\implies C_{10} = 1$.
+  - $0$ ordinary leaders, $0$ hairpins, $0$ excess bends, $0$ hairpin total $\implies C_{11}=0, C_{12}=0, C_{13}=0, C_{14}=0$.
+  - $5$ orthogonal $90^\circ$ bends $\implies C_{15} = 5$.
+  - $0$ direction penalties $\implies C_{16} = 0$.
+  - Total Manhattan edge length $= 420.0\text{px} \implies C_{17} = 420.0$.
+  - Port side variance $= 0.5 \implies C_{18} = 0.5$.
+  - Total bounding area $= 800\text{px} \times 600\text{px} = 480,000\text{px}^2 \implies C_{21} = 480000.0$.
+
+$$\mathbf{C}(\sigma) = \left\langle 0, 0, 0, 0, 0, \;\; 0, 0, 0, 0, \;\; 1, 0, 0, 0, 0, 5, 0, \;\; 420.0, 0.5, \;\; 0, 0.0, 480000.0 \right\rangle$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function evaluateSearchState(
+  nodes: Node[],
+  edges: Edge[],
+  state: LayoutSearchState,
+  config: LayoutConfig
+): StateEvaluation {
+  const layout = computeCoordinates(nodes, state, config);
+  const routes = routeAllEdges(edges, layout, state, config);
+  const badges = placeEdgeBadges(routes, layout, config);
+  
+  const score: StateEvaluation = {
+    hardErrorCount: checkTopologyErrors(nodes, edges),
+    unresolvedRouteCount: routes.filter(r => !r.routed).length,
+    nodeNodeOverlaps: countNodeOverlaps(layout.nodes),
+    edgeNodePenetrations: countEdgeNodePenetrations(routes, layout.nodes),
+    sharedEdgeSegmentLength: countCollinearEdgeOverlaps(routes),
+    unresolvedBadgeCount: badges.unplacedCount,
+    badgeNodeOverlaps: badges.nodeOverlapCount,
+    badgeBadgeOverlaps: badges.badgeOverlapCount,
+    badgeUnrelatedEdgeOverlaps: badges.edgeOverlapCount,
+    crossingCount: countEdgeCrossings(routes),
+    bendCount: routes.reduce((acc, r) => acc + r.bends, 0),
+    totalLength: routes.reduce((acc, r) => acc + r.length, 0),
+    totalArea: layout.width * layout.height
+  };
+  return score;
+}
 ```
-                            Lexicographic Tier Hierarchy
-       ┌─────────────────────────────────────────────────────────────────┐
-       │ Priority 1: Hard Failures (C_1 to C_5)                        │
-       │ (Topology errors, unroutable paths, node/edge penetrations)     │
-       └────────────────────────────────┬────────────────────────────────┘
-                                        │ (Must be 0)
-                                        ▼
-       ┌─────────────────────────────────────────────────────────────────┐
-       │ Priority 2: Badge Placement Overlaps (C_6 to C_9)               │
-       │ (Unplaced badges, badge-node, badge-badge collisions)           │
-       └────────────────────────────────┬────────────────────────────────┘
-                                        │ (Minimize to 0)
-                                        ▼
-       ┌─────────────────────────────────────────────────────────────────┐
-       │ Priority 3: Aesthetics & Crossings (C_10 to C_16)               │
-       │ (Edge crossings, hairpins, excess bends, direction penalties)   │
-       └────────────────────────────────┬────────────────────────────────┘
-                                        │ (Minimize)
-                                        ▼
-       ┌─────────────────────────────────────────────────────────────────┐
-       │ Priority 4: Geometric Compactness (C_17, C_18)                  │
-       │ (Total Manhattan length, port side imbalance)                    │
-       └────────────────────────────────┬────────────────────────────────┘
-                                        │ (Minimize)
-                                        ▼
-       ┌─────────────────────────────────────────────────────────────────┐
-       │ Priority 5: Secondary Metrics (C_19 to C_21)                    │
-       │ (Feedback leader lines, leader length, bounding area)           │
-       └─────────────────────────────────────────────────────────────────┘
+
+#### 4. Sub-Step ASCII Infographic
 ```
-
-#### Detailed Metric Index Table:
-
-| Index $k$ | Metric Key | Category | Description | Goal |
-| :--- | :--- | :--- | :--- | :--- |
-| $C_1$ | `hardErrorCount` | Hard Failure | Structural topology validity violations | $= 0$ |
-| $C_2$ | `unresolvedRouteCount` | Hard Failure | Unroutable edge paths | $= 0$ |
-| $C_3$ | `nodeNodeOverlaps` | Hard Clearance | Bounding box collisions between nodes | $= 0$ |
-| $C_4$ | `edgeNodePenetrations` | Hard Clearance | Edge routes intersecting node interiors | $= 0$ |
-| $C_5$ | `sharedEdgeSegmentLength` | Hard Clearance | Collinear overlapping edge segments | $= 0$ |
-| $C_6$ | `unresolvedBadgeCount` | Badge Placement | Unplaced edge label badges | $= 0$ |
-| $C_7$ | `badgeNodeOverlaps` | Badge Placement | Badges overlapping node bounds | $= 0$ |
-| $C_8$ | `badgeBadgeOverlaps` | Badge Placement | Badges overlapping other badges | $= 0$ |
-| $C_9$ | `badgeUnrelatedEdgeOverlaps`| Badge Placement | Badges overlapping unattached edge routes | $= 0$ |
-| $C_{10}$ | `crossingCount` | Aesthetics | Intersecting edge-edge crossings | Minimize |
-| $C_{11}$ | `ordinaryLeaderCount` | Badge Aesthetics | Leader lines assigned to ordinary edges | Minimize |
-| $C_{12}$ | `avoidableHairpinCount` | Route Aesthetics | $180^\circ$ U-turn hairpins | Minimize |
-| $C_{13}$ | `excessBendCount` | Route Aesthetics | Bends exceeding max allowed limit | Minimize |
-| $C_{14}$ | `hairpinCount` | Route Aesthetics | Total hairpin count | Minimize |
-| $C_{15}$ | `bendCount` | Route Aesthetics | Total $90^\circ$ orthogonal bends | Minimize |
-| $C_{16}$ | `directionDeviationPenalty` | Route Aesthetics | Non-ideal port side exiting penalty | Minimize |
-| $C_{17}$ | `totalLength` | Geometry | Sum of Manhattan edge route lengths | Minimize |
-| $C_{18}$ | `portSideImbalance` | Port Balance | Variance of edge distribution per side | Minimize |
-| $C_{19}$ | `feedbackLeaderCount` | Badge Aesthetics | Leader lines assigned to feedback edges | Minimize |
-| $C_{20}$ | `totalLeaderLength` | Badge Aesthetics | Sum of leader segment lengths | Minimize |
-| $C_{21}$ | `totalArea` | Bounding Box | Total graph layout bounding area ($W \times H$) | Minimize |
+Step 2.2: 21-Vector Score Breakdown C(σ)
+ Tier 1: Hard Failures       [ C_1=0, C_2=0, C_3=0, C_4=0, C_5=0 ]       (PASS)
+ Tier 2: Badge Placement     [ C_6=0, C_7=0, C_8=0, C_9=0 ]              (PASS)
+ Tier 3: Aesthetics          [ C_10=1, C_11=0..14=0, C_15=5, C_16=0 ]    (1 Crossing, 5 Bends)
+ Tier 4: Geometry            [ C_17=420.0px, C_18=0.5 ]                  (Manhattan Len: 420)
+ Tier 5: Secondary           [ C_19=0, C_20=0.0, C_21=480000.0px² ]      (Area: 480k)
+```
 
 ---
 
 ### Step 2.3: Strict Lexicographic Comparison Operator ($\prec$)
+
+#### 1. Mathematical Sub-Component Formula
 State candidate $\sigma_A$ is strictly superior to candidate $\sigma_B$ (written $\sigma_A \prec \sigma_B$) if and only if at the first index $k \in \{1, 2, \dots, 21\}$ where $C_k(\sigma_A) \neq C_k(\sigma_B)$, we have:
-
-$$C_k(\sigma_A) < C_k(\sigma_B)$$
-
-Formally:
 
 $$\sigma_A \prec \sigma_B \iff \exists k \in \{1, \dots, 21\} \text{ s.t. } \left( C_k(\sigma_A) < C_k(\sigma_B) \land \forall j < k, C_j(\sigma_A) = C_j(\sigma_B) \right)$$
 
-If $C_k(\sigma_A) = C_k(\sigma_B)$ for all $k \in \{1, \dots, 21\}$, tie-breaking is performed deterministically using string comparison on state hash signatures:
+If $C_k(\sigma_A) = C_k(\sigma_B)$ for all $k$, tie-breaking is performed using deterministic string comparison on state hash signatures:
 
 $$\mathcal{H}(\sigma_A) <_{\text{lex}} \mathcal{H}(\sigma_B)$$
 
+#### 2. Concrete Numerical Comparison Example
+Compare two competing layout states $\sigma_A$ and $\sigma_B$:
+
+- **State A Score**:
+  $$\mathbf{C}(\sigma_A) = \langle 0,0,0,0,0, \;\; 0,0,0,0, \;\; \mathbf{1}, 0,0,0,0,5,0, \;\; 420.0, 0.5, \;\; 0, 0, 480000 \rangle$$
+- **State B Score**:
+  $$\mathbf{C}(\sigma_B) = \langle 0,0,0,0,0, \;\; 0,0,0,0, \;\; \mathbf{2}, 0,0,0,0,2,0, \;\; 350.0, 0.2, \;\; 0, 0, 380000 \rangle$$
+
+**Step-by-Step Lexicographic Evaluation**:
+1. Check $k=1 \dots 9$: $C_k(\sigma_A) = C_k(\sigma_B) = 0$. (Tie)
+2. Check $k=10$ (`crossingCount`): $C_{10}(\sigma_A) = 1$ vs $C_{10}(\sigma_B) = 2$.
+3. Since $1 < 2$, index $k=10$ yields $C_{10}(\sigma_A) < C_{10}(\sigma_B)$.
+4. **Conclusion**: $\sigma_A \prec \sigma_B$ evaluates to **TRUE**. State A is selected as superior, even though State B has fewer bends ($C_{15}=2 < 5$) and shorter total length ($C_{17}=350 < 420$). Higher-priority metrics strictly dominate lower-priority metrics.
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+function compareLayoutScores(scoreA: ValidationScore, scoreB: ValidationScore): number {
+  for (const key of LEXICOGRAPHIC_ORDER_KEYS) {
+    const valA = scoreA[key] ?? 0;
+    const valB = scoreB[key] ?? 0;
+    if (Math.abs(valA - valB) > 0.0001) {
+      return valA - valB; // Negative if A < B (A is better)
+    }
+  }
+  // Deterministic tie-break by state signature hash
+  return scoreA.signature.localeCompare(scoreB.signature);
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.3: Lexicographic Priority Vector Comparison (σ_A vs σ_B)
+ Index k   Metric              State A   State B    Result
+ ───────   ──────              ───────   ───────    ──────
+ C_1..5    Hard Failures          0         0       TIE
+ C_6..9    Badge Collisions       0         0       TIE
+ C_10      crossingCount          1    <    2       State A WINS (Early Exit!)
+ ──────────────────────────────────────────────────────────────────────────
+ (Lower tier metrics ignored: C_15: 5 vs 2, C_17: 420 vs 350 - DOMINATED)
+ Result: σ_A ≺ σ_B (State A selected)
+```
+
 ---
 
-## 3. Step-by-Step Computational Pseudocode
+## 3. Master Synthesis: Merged State-Space Frontier Queue Search Algorithm
 
-The following pseudocode details the neighborhood perturbation search loop (`searchBestLayoutState`):
+### 1. Unified Mathematical State Search Formulation
+Combining discrete state tuple construction (Step 2.1), 21-vector fitness evaluation (Step 2.2), and lexicographic comparison (Step 2.3), the master optimization problem is formulated as finding state $\sigma^*$ in state space $\Sigma$:
 
+$$\sigma^* = \arg\min_{\sigma \in \Sigma} \mathbf{C}(\sigma) \quad \text{subject to } \mathcal{H}(\sigma) \notin \mathcal{S}_{\text{visited}}$$
+
+### 2. Complete Frontier Queue State-Space Search Pseudocode
 ```typescript
 function searchBestLayoutState(
   nodes: Node[],
@@ -162,66 +257,53 @@ function searchBestLayoutState(
   config: LayoutConfig,
   initialState?: LayoutSearchState
 ): OptimizationResult {
-  // Step 1: Initialize baseline state and budgets
   let currentStatesEvaluated = 1;
   const maxStatesBudget = deriveSearchStateBudgets(nodes, edges, config).maxLayoutStates;
   
-  const startState = initialState ?? createInitialSearchState();
+  const startState = initialState ?? createInitialSearchState(nodes, edges, config);
   const startHash = computeStateHash(startState);
-  
   startState.visitedSignatures.add(startHash);
-  const visitedHashes = new Set<string>([startHash]);
 
-  // Step 2: Evaluate initial state
   let bestState = startState;
   let bestEval = evaluateSearchState(nodes, edges, startState, config);
 
-  // Step 3: Initialize priority frontier queue (sorted ascending by cost vector)
   const frontier: Array<{ state: LayoutSearchState; eval: StateEvaluation }> = [
     { state: startState, eval: bestEval }
   ];
 
-  // Step 4: Neighborhood search loop
   while (frontier.length > 0) {
     if (currentStatesEvaluated >= maxStatesBudget) break;
-    if (isObjectiveTargetEvaluation(bestEval)) break; // Perfect score achieved
+    if (bestEval.crossingCount === 0 && bestEval.hardErrorCount === 0) break; // Optimal
 
-    // Sort frontier by lexicographic score comparison
-    frontier.sort((a, b) => compareLayoutScores(a.eval.validation, b.eval.validation));
+    frontier.sort((a, b) => compareLayoutScores(a.eval, b.eval));
     const curr = frontier.shift()!;
 
-    // Check if popped candidate improves global best
-    if (compareLayoutScores(curr.eval.validation, bestEval.validation) < 0) {
+    if (compareLayoutScores(curr.eval, bestEval) < 0) {
       bestState = curr.state;
       bestEval = curr.eval;
     }
 
-    // Step 5: Generate candidate neighbors via discrete operators N(σ)
     const neighbors = generateNeighborhoodStates(curr.state, curr.eval, config);
-
     for (const nextState of neighbors) {
       if (currentStatesEvaluated >= maxStatesBudget) break;
 
       const hash = computeStateHash(nextState);
-      if (visitedHashes.has(hash)) continue; // Cycle prevention
+      if (curr.state.visitedSignatures.has(hash)) continue;
 
-      visitedHashes.add(hash);
+      nextState.visitedSignatures = new Set(curr.state.visitedSignatures);
       nextState.visitedSignatures.add(hash);
       currentStatesEvaluated++;
 
-      // Evaluate candidate neighbor
       const nextEval = evaluateSearchState(nodes, edges, nextState, config);
 
-      if (compareLayoutScores(nextEval.validation, bestEval.validation) < 0) {
+      if (compareLayoutScores(nextEval, bestEval) < 0) {
         bestState = nextState;
         bestEval = nextEval;
       }
 
       frontier.push({ state: nextState, eval: nextEval });
-
-      // Prune frontier if size exceeds limit
       if (frontier.length > config.maxFrontierSize) {
-        frontier.sort((a, b) => compareLayoutScores(a.eval.validation, b.eval.validation));
+        frontier.sort((a, b) => compareLayoutScores(a.eval, b.eval));
         frontier.length = config.maxFrontierSize;
       }
     }
@@ -231,50 +313,48 @@ function searchBestLayoutState(
 }
 ```
 
----
-
-## 4. Visual ASCII Diagrams
-
-### State Transition & Neighborhood Search Workflow
-
+### 3. Master Architecture & State Flow Diagram
 ```
-                        ┌─────────────────────────────────────┐
-                        │      Initial State Tuple σ^(0)      │
-                        └──────────────────┬──────────────────┘
-                                           │
-                                           ▼
-                        ┌─────────────────────────────────────┐
-                        │   Evaluate Score Vector C(σ^(0))    │
-                        └──────────────────┬──────────────────┘
-                                           │
-                                           ▼
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                             Neighborhood Search Loop                                │
-│                                                                                     │
-│  ┌───────────────────────┐   Apply N(σ)    ┌─────────────────────────────────────┐  │
-│  │ Current Best State σ  ├────────────────>│ Candidate Neighbors N_1..N_6        │  │
-│  └───────────▲───────────┘                 └──────────────────┬──────────────────┘  │
-│              │                                                │                     │
-│              │                                                │ Compute Hash H(σ')  │
-│              │                                                ▼                     │
-│              │                             ┌─────────────────────────────────────┐  │
-│              │                             │ Check Cycle Set: H(σ') ∈ S_visited? │  │
-│              │                             └──────────┬──────────────────┬───────┘  │
-│              │                                     No │              Yes │ (Skip)   │
-│              │                                        ▼                  ▼          │
-│              │                             ┌────────────────────┐ ┌──────────────┐  │
-│              │                             │ Evaluate C(σ')     │ │ Discard      │  │
-│              │                             └──────────┬─────────┘ └──────────────┘  │
-│              │                                        │                             │
-│              │          Is C(σ') ≺ C(σ)?              │                             │
-│              └────────────────────────────────────────┘                             │
-│                                Yes                                                  │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+Master Layout Optimization State Machine:
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Initial State Tuple σ^(0)                       │
+│      σ = < Π_sides, Ω_ports, D_demands, L_orders, Δ_shifts, S_vis >      │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│               Evaluate 21-Element Fitness Vector C(σ^(0))              │
+│       C = < C_1..C_5 (Hard), C_6..C_9 (Badge), C_10..C_16 (Aesth), >    │
+│           < C_17..C_18 (Geom), C_19..C_21 (Second) >                  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Frontier Priority Queue Loop                         │
+│                                                                        │
+│  ┌──────────────────────┐   Apply N(σ)   ┌──────────────────────────┐  │
+│  │ Current Best State σ ├───────────────►│ Candidate Neighbors N_i  │  │
+│  └──────────▲───────────┘                └────────────┬─────────────┘  │
+│             │                                         │                │
+│             │                                         ▼                │
+│             │                            ┌──────────────────────────┐  │
+│             │                            │ Hash Check: H(σ') ∈ S?   │  │
+│             │                            └──────┬────────────┬──────┘  │
+│             │                                No │        Yes │         │
+│             │                                   ▼            ▼ (Skip)  │
+│             │                            ┌────────────┐ ┌───────────┐  │
+│             │                            │ Eval C(σ') │ │ Discard   │  │
+│             │                            └──────┬─────┘ └───────────┘  │
+│             │                                   │                      │
+│             │        Is C(σ') ≺ C(σ)?           │                      │
+│             └───────────────────────────────────┘                      │
+│                           Yes (Update Best)                            │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Codebase Reference Map & Line Anchors
+## 4. Codebase Reference Map & Line Anchors
 
 - [`src/engine/layout/custom/searchState.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/searchState.ts#L4-L80)
   - [`createInitialSearchState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/searchState.ts#L4-L22) — Constructs initial state tuple $\sigma$.

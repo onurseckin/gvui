@@ -50,92 +50,216 @@ Minimizing edge length directly reduces the number of **dummy nodes** created wh
 
 ## 2. Bottom-Up Mathematical Deconstruction
 
-To understand Network Simplex, we build its mathematical model from basic node constraints up to spanning tree cut duality.
+To understand Network Simplex, we build its mathematical model from basic node constraints up to spanning tree cut duality using explicit numerical calculations.
 
-### Step 2.1: Primal Linear Program Formulation
-We represent the rank layer assignment problem as an Integer Linear Program (ILP):
+---
 
-$$\begin{aligned}
-\text{Minimize} \quad & f(\mathbf{r}) = \sum_{e=(u,v) \in E} w(e) \cdot (r(v) - r(u)) \\
-\text{Subject to} \quad & r(v) - r(u) \ge \delta(u, v) \quad \forall (u, v) \in E \\
-& r(v) \in \mathbb{Z}_{\ge 0} \quad \forall v \in V
-\end{aligned}$$
+### Step 2.1: Edge Slack $g(e)$ & Feasibility Condition
 
-Where:
-- $w(e) \ge 1$ is the edge weight (higher weight forces nodes closer together vertically).
-- $\delta(u, v) \ge 1$ is the minimum rank separation (default $\delta = 1$).
-
-### Step 2.2: Edge Slack $g(e)$ & Tight Edges
-For any directed edge $e = (u, v) \in E$, we define the **edge slack** $g(e)$ as:
+#### 1. Mathematical Sub-Component Formula
+For any directed edge $e = (u, v) \in E$, the **edge slack** $g(e)$ measures the excess vertical rank separation beyond the minimum required distance $\delta(u, v) \ge 1$:
 
 $$g(e) = r(v) - r(u) - \delta(u, v)$$
 
-From the rank separation constraint, a rank assignment is **feasible** if and only if:
-
-$$g(e) \ge 0 \quad \forall e \in E$$
-
-- An edge $e$ is **tight** if its slack is zero ($g(e) = 0$), meaning $r(v) - r(u) = \delta(u, v)$.
+- A rank assignment $\mathbf{r}$ is **feasible** if and only if $g(e) \ge 0$ for all edges $e \in E$.
+- An edge $e$ is **tight** if $g(e) = 0$, meaning $r(v) - r(u) = \delta(u, v)$.
 - An edge $e$ is **slack** if $g(e) > 0$.
 
-### Step 2.3: Dual Basis via Feasible Spanning Tree
-Rather than maintaining a full simplex tableau, Network Simplex maintains a **Feasible Spanning Tree** $T = (V, E_T)$ where $E_T \subseteq E$:
-1. $T$ spans all vertices $V$.
-2. Every tree edge $e \in E_T$ is **tight** ($g(e) = 0$).
-3. Non-tree edges $e \notin E_T$ satisfy $g(e) \ge 0$.
+#### 2. Concrete Numerical Graph Example
+Consider three nodes $u, v, w \in V$ with current rank assignments $r(u) = 0$, $r(w) = 1$, and $r(v) = 2$, with minimum separation $\delta = 1$:
 
-Because every tree edge is tight, fixing the rank of a single root node completely determines the ranks of all other nodes in the spanning tree $T$.
+1. **Tight Edge Calculation** for $e_1 = (u, w)$:
+   $$g(e_1) = r(w) - r(u) - \delta(u, w) = 1 - 0 - 1 = 0 \quad \text{(Tight Edge)}$$
 
-```
-              ┌─────────────────────────────────────────┐
-              │     Feasible Rank Assignment r(v)       │
-              └────────────────────┬────────────────────┘
-                                   │
-                                   ▼
-              ┌─────────────────────────────────────────┐
-              │    Tight Spanning Tree T = (V, E_T)     │
-              │     (Every e ∈ E_T satisfies g(e)=0)    │
-              └────────────────────┬────────────────────┘
-                                   │
-                                   ▼
-              ┌─────────────────────────────────────────┐
-              │   Compute Tree Edge Cut Values cutval(e)│
-              └────────────────────┬────────────────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    │                             │
-             cutval(e) >= 0                cutval(e) < 0
-             (for all e ∈ E_T)             (for some e ∈ E_T)
-                    │                             │
-                    ▼                             ▼
-         ┌───────────────────┐        ┌──────────────────────────┐
-         │ Optimal Layering  │        │ Pivot Step:              │
-         │ Found (Terminate) │        │ Swap e for min-slack e'  │
-         └───────────────────┘        │ Update ranks & tree cut  │
-                                      └──────────────────────────┘
+2. **Slack Edge Calculation** for $e_2 = (u, v)$:
+   $$g(e_2) = r(v) - r(u) - \delta(u, v) = 2 - 0 - 1 = 1 \quad \text{(Slack Edge, } g(e_2) = 1 \text{)}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.1: Computes the slack g(e) for a directed edge.
+ */
+function calculateEdgeSlack(
+  source: string,
+  target: string,
+  ranks: Map<string, number>,
+  minLen: number = 1
+): number {
+  const rSource = ranks.get(source) ?? 0;
+  const rTarget = ranks.get(target) ?? 0;
+  return rTarget - rSource - minLen;
+}
 ```
 
-### Step 2.4: Cut Values $\text{cutval}(e)$ Equation
-Removing any tree edge $e = (u, v) \in E_T$ disconnects $T$ into two disjoint components:
-- $T_{\text{tail}}(e)$: The component containing tail vertex $u$.
-- $T_{\text{head}}(e)$: The component containing head vertex $v$.
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.1: Edge Slack Calculation & Tightness Assessment
 
-The **cut value** $\text{cutval}(e)$ represents the exact rate of change in the objective function $f(\mathbf{r})$ if we increment the ranks of all nodes in $T_{\text{head}}(e)$ by $+1$:
+  Layer 0:  [ Node u ] (r(u) = 0)
+              │               \
+              │ (δ = 1)        \ (δ = 1)
+              ▼                 ▼
+  Layer 1:  [ Node w ]        (Intermediate)
+              r(w) = 1          │
+              g(e1) = 1-0-1     │
+              g(e1) = 0         ▼
+              [TIGHT EDGE]    [ Node v ] (r(v) = 2)
+                              g(e2) = 2 - 0 - 1 = 1
+                              [SLACK EDGE: g = 1]
+```
+
+---
+
+### Step 2.2: Spanning Tree Cut Value $\text{cutval}(e)$ Equation
+
+#### 1. Mathematical Sub-Component Formula
+Removing a tree edge $e = (u, v) \in E_T$ disconnects the feasible spanning tree $T$ into two disjoint components: $T_{\text{tail}}(e)$ containing tail node $u$, and $T_{\text{head}}(e)$ containing head node $v$.
+
+The **cut value** $\text{cutval}(e)$ measures the net change in total weighted edge length per unit rank shift of $T_{\text{head}}(e)$:
 
 $$\text{cutval}(e) = \sum_{g \in \text{InCut}(e)} w(g) - \sum_{g \in \text{OutCut}(e)} w(g)$$
 
 Where:
-- $\text{OutCut}(e) = \{ (x, y) \in E \mid x \in T_{\text{tail}}(e), y \in T_{\text{head}}(e) \}$ (directed edges pointing from tail component to head component).
-- $\text{InCut}(e) = \{ (x, y) \in E \mid x \in T_{\text{head}}(e), y \in T_{\text{tail}}(e) \}$ (directed edges pointing from head component to tail component).
+- $\text{OutCut}(e) = \{ (x, y) \in E \mid x \in T_{\text{tail}}(e), y \in T_{\text{head}}(e) \}$
+- $\text{InCut}(e) = \{ (x, y) \in E \mid x \in T_{\text{head}}(e), y \in T_{\text{tail}}(e) \}$
 
-### Step 2.5: Simplex Pivot Optimality & Rank Shift
-- **Optimality Condition**: If $\text{cutval}(e) \ge 0$ for all tree edges $e \in E_T$, no rank shift can decrease total edge length. The current rank assignment is **globally optimal**.
-- **Pivot Execution**: If an edge $e \in E_T$ has $\text{cutval}(e) < 0$:
-  1. **Leaving Edge**: Remove $e$ from tree $T$, forming cut components $T_{\text{tail}}(e)$ and $T_{\text{head}}(e)$.
-  2. **Entering Edge**: Select non-tree edge $e' = (x', y') \in \text{InCut}(e)$ with minimum slack:
-     $$\gamma = \min_{g \in \text{InCut}(e)} g(g)$$
-  3. **Rank Shift**: Add $\gamma$ to the ranks of all nodes in $T_{\text{head}}(e)$:
-     $$r(z) \leftarrow r(z) + \gamma \quad \forall z \in T_{\text{head}}(e)$$
-  4. **Tree Update**: Update spanning tree edges $E_T \leftarrow (E_T \setminus \{e\}) \cup \{e'\}$.
+#### 2. Concrete Numerical Graph Example
+Consider a 4-node graph $V = \{A, B, C, D\}$ with tree edges $E_T = \{(A, B), (A, C), (C, D)\}$ and all edge weights $w = 1$.
+
+Evaluate tree edge $e = (A, C)$:
+- Removing $e$ forms $T_{\text{tail}}(e) = \{A, B\}$ and $T_{\text{head}}(e) = \{C, D\}$.
+- Directed edges in graph $G$:
+  - $\text{OutCut}(e) = \{ (A, C), (B, D) \}$, with weights $w(A, C) = 1$ and $w(B, D) = 1 \implies \sum_{\text{OutCut}} w = 1 + 1 = 2$.
+  - $\text{InCut}(e) = \{ (D, B) \}$, with weight $w(D, B) = 1 \implies \sum_{\text{InCut}} w = 1$.
+
+Step-by-step arithmetic:
+$$\text{cutval}(e) = \sum_{\text{InCut}} w - \sum_{\text{OutCut}} w = 1 - 2 = -1$$
+
+Because $\text{cutval}(e) = -1 < 0$, shifting head component $T_{\text{head}}(e) = \{C, D\}$ down by $+1$ will strictly decrease the overall objective function!
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.2: Computes cutval(e) for a tree edge disconnecting T into tail/head sets.
+ */
+function computeCutValue(
+  leavingEdge: { source: string; target: string },
+  tailComponent: Set<string>,
+  headComponent: Set<string>,
+  allEdges: Array<{ source: string; target: string; weight: number }>
+): number {
+  let inCutWeight = 0;
+  let outCutWeight = 0;
+
+  for (const edge of allEdges) {
+    const srcInTail = tailComponent.has(edge.source);
+    const tgtInHead = headComponent.has(edge.target);
+    const srcInHead = headComponent.has(edge.source);
+    const tgtInTail = tailComponent.has(edge.target);
+
+    if (srcInTail && tgtInHead) outCutWeight += edge.weight;
+    if (srcInHead && tgtInTail) inCutWeight += edge.weight;
+  }
+
+  return inCutWeight - outCutWeight;
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.2: Tree Edge Cut Value Calculation (cutval(e) = -1)
+
+       Tail Component T_tail = {A, B}         Head Component T_head = {C, D}
+       ┌─────────────────────────────┐       ┌─────────────────────────────┐
+       │ [ A ] (r=0) ───(w=1)───────┼──────►│ [ C ] (r=1)                 │
+       │   │                         │ e(A,C)│   │                         │
+       │ (w=1)                       │       │ (w=1)                       │
+       │   ▼                         │       │   ▼                         │
+       │ [ B ] (r=1) ───(w=1)───────┼──────►│ [ D ] (r=2)                 │
+       └─────────────────────────────┘ Out1  └──────────────┬──────────────┘
+                                    (B,D)                   │ InCut (D,B)
+                                                            │ w(D,B) = 1
+                                                            ▼
+       Arithmetic: InCut Sum = 1, OutCut Sum = 2
+       cutval(e) = 1 - 2 = -1 < 0  ==> Pivot Required!
+```
+
+---
+
+### Step 2.3: Simplex Pivot Execution & Minimum Slack Rank Shift
+
+#### 1. Mathematical Sub-Component Formula
+When a tree edge $e \in E_T$ has $\text{cutval}(e) < 0$, it is removed from the tree (leaving edge). To restore tree connectivity while maintaining feasibility, we select an entering non-tree edge $e' \in \text{InCut}(e)$ with minimum slack $\gamma$:
+
+$$\gamma = \min_{g \in \text{InCut}(e)} g(g)$$
+
+All node ranks in the head component $T_{\text{head}}(e)$ are shifted by $+\gamma$:
+
+$$r(z) \leftarrow r(z) + \gamma \quad \forall z \in T_{\text{head}}(e)$$
+
+The net objective function improvement is exactly $\Delta f = \text{cutval}(e) \cdot \gamma < 0$.
+
+#### 2. Concrete Numerical Graph Example
+From Step 2.2, tree edge $e = (A, C)$ has $\text{cutval}(e) = -1$.
+- `InCut(e)` contains non-tree edge $e' = (D, B)$ with $r(D) = 2, r(B) = 1, \delta(D, B) = 0$ (or slack $g(e') = 1$).
+- Minimum slack calculation:
+  $$\gamma = g(e') = 1$$
+- Rank Shift for $T_{\text{head}} = \{C, D\}$:
+  $$r(C) \leftarrow 1 + 1 = 2$$
+  $$r(D) \leftarrow 2 + 1 = 3$$
+- Objective Function Change:
+  $$\Delta f = \text{cutval}(e) \cdot \gamma = (-1) \cdot 1 = -1 \quad \text{(Objective reduced by 1)}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.3: Executes simplex pivot rank shift on head component nodes.
+ */
+function executeSimplexPivot(
+  headComponent: Set<string>,
+  inCutEdges: Array<{ source: string; target: string; minLen: number }>,
+  ranks: Map<string, number>
+): { minSlack: number; enteringEdge: { source: string; target: string } } {
+  let minSlack = Infinity;
+  let enteringEdge = inCutEdges[0];
+
+  for (const edge of inCutEdges) {
+    const slack = calculateEdgeSlack(edge.source, edge.target, ranks, edge.minLen);
+    if (slack < minSlack) {
+      minSlack = slack;
+      enteringEdge = edge;
+    }
+  }
+
+  // Shift ranks of all nodes in head component by minSlack gamma
+  for (const nodeId of headComponent) {
+    ranks.set(nodeId, (ranks.get(nodeId) ?? 0) + minSlack);
+  }
+
+  return { minSlack, enteringEdge };
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.3: Pivot Rank Shift & Tree Reconstruction
+
+  BEFORE PIVOT (cutval = -1, gamma = 1):
+  Layer 0:  [ A ] (r=0)
+  Layer 1:  [ B ] (r=1)  ──e(A,C)──►  [ C ] (r=1)
+  Layer 2:                            [ D ] (r=2)
+
+  PIVOT TRANSFORMATION:
+  1. Remove leaving edge e(A, C)
+  2. Select entering edge e'(D, B) with gamma = 1
+  3. Add +1 to ranks of T_head = {C, D}
+
+  AFTER PIVOT (All tree edges tight, objective decreased by 1):
+  Layer 0:  [ A ] (r=0)
+  Layer 1:  [ B ] (r=1)
+  Layer 2:               ──e'(D,B)──► [ C ] (r=2)
+  Layer 3:                            [ D ] (r=3)
+```
 
 ---
 

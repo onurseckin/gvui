@@ -50,62 +50,170 @@ Dagre uses **Brandes-Köpf** because it achieves the aesthetic quality of Quadra
 
 ## 2. Bottom-Up Mathematical Deconstruction
 
-Brandes-Köpf decomposes coordinate assignment into three modular building blocks:
-1. **Vertical Block Alignment** (`root[v]`, `align[v]`)
-2. **Block Graph Compaction** (`x[root[v]]`)
-3. **Median Resolution** ($x(v) = \text{Median}(x_{\text{UL}}, x_{\text{UR}}, x_{\text{LL}}, x_{\text{LR}})$)
+To calculate aesthetic real-valued horizontal coordinates $x(v)$, Brandes-Köpf decomposes placement into vertical alignment blocks, linear compaction constraints, and 4-pass median resolution.
 
-### Step 2.1: Inner Segments & Conflict Graph
-Edges between dummy nodes spanning multiple layers are called **inner segments**. To prevent inner segments from being bent by non-dummy nodes, inner segments are given top priority during alignment.
+---
 
-Two edges $e_1 = (u_1, v_1)$ and $e_2 = (u_2, v_2)$ between layers $L_i$ and $L_{i+1}$ are marked as **type 0 conflicts** if they cross. If $e_1$ is an inner segment, alignment of $e_2$ is prohibited.
+### Step 2.1: Vertical Block Alignment & Pointer Arrays
 
-### Step 2.2: Vertical Block Alignment Array Structures
-Each of the 4 sub-passes aligns nodes into vertical chains called **blocks**. Blocks are stored using two array pointers:
+#### 1. Mathematical Sub-Component Formula
+Each of the 4 sub-passes aligns nodes into vertical chains called **blocks**. Blocks are maintained using two key pointer maps:
 - `root[v]`: Points to the root node (topmost node) of the block containing $v$.
-- `align[v]`: Points to the next node aligned below $v$ in the cyclic block chain (`align[bottom] = top`).
+- `align[v]`: Points to the next node aligned below $v$ in the cyclic block chain (`align[bottom] = root`).
 
+$$\text{root}[v] = \text{root}[u], \quad \text{align}[u] = v, \quad \text{align}[v] = \text{root}[v]$$
+
+#### 2. Concrete Numerical Graph Example
+Consider three vertically aligned nodes $A_1 \in L_0, B_1 \in L_1, C_1 \in L_2$.
+
+1. Initial state (isolated nodes):
+   $$\text{root}[A_1]=A_1, \text{align}[A_1]=A_1; \quad \text{root}[B_1]=B_1, \text{align}[B_1]=B_1; \quad \text{root}[C_1]=C_1, \text{align}[C_1]=C_1$$
+
+2. Aligning $A_1 \to B_1 \to C_1$:
+   - Align $A_1$ with $B_1$: `align[A1] = B1`, `root[B1] = A1`, `align[B1] = A1`
+   - Align $B_1$ with $C_1$: `align[B1] = C1`, `root[C1] = A1`, `align[C1] = A1`
+
+Final Array Pointers:
+$$\text{root}[A_1] = A_1, \quad \text{align}[A_1] = B_1$$
+$$\text{root}[B_1] = A_1, \quad \text{align}[B_1] = C_1$$
+$$\text{root}[C_1] = A_1, \quad \text{align}[C_1] = A_1 \quad \text{(Cyclic loop back to root)}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.1: Aligns node v with median predecessor u into block chain structure.
+ */
+function alignBlockPointers(
+  uId: string,
+  vId: string,
+  rootMap: Map<string, string>,
+  alignMap: Map<string, string>
+): void {
+  const rootU = rootMap.get(uId)!;
+  alignMap.set(uId, vId);
+  rootMap.set(vId, rootU);
+  alignMap.set(vId, rootU); // Complete cyclic loop back to block root
+}
 ```
-Block Alignment Arrays for Chain A1 -> B1 -> C1:
-root[A1] = A1,  align[A1] = B1
-root[B1] = A1,  align[B1] = C1
-root[C1] = A1,  align[C1] = A1  (Cyclic loop back to root)
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.1: Vertical Alignment Pointer Map (Chain A1 -> B1 -> C1)
+
+  Layer L_0:  [ A1 ] ──► root[A1]=A1, align[A1]=B1
+                │
+                ▼
+  Layer L_1:  [ B1 ] ──► root[B1]=A1, align[B1]=C1
+                │
+                ▼
+  Layer L_2:  [ C1 ] ──► root[C1]=A1, align[C1]=A1  (Cyclic loop)
 ```
 
-Alignment Rule for node $v \in L_i$:
-Align $v$ with its median upper neighbor $u \in N^-(v)$ if the segment $(u, v)$ does not cross any marked inner segment and neither $u$ nor $v$ is already aligned in the current pass.
+---
 
-### Step 2.3: Block Graph DAG & Compaction Constraints
-Once blocks are formed, each block $B$ is treated as a single rigid vertical unit. We construct a secondary **Block Graph DAG** where directed edges represent horizontal separation requirements between adjacent blocks:
+### Step 2.2: Block Graph Compaction & Minimum Separation Spacing
 
-$$x(\text{Block}_B) \ge x(\text{Block}_A) + \text{width}(\text{Block}_A) + \text{nodesep}$$
+#### 1. Mathematical Sub-Component Formula
+Once vertical blocks are defined, each block $B_i$ acts as a rigid unit. For two horizontally adjacent blocks $B_1$ and $B_2$, the separation constraint is:
 
-Linear compaction determines block coordinates $x(B)$ by solving longest path distances on the Block Graph DAG in $O(V + E)$ time.
+$$x(B_2) \ge x(B_1) + \text{width}(B_1) + \text{nodesep}$$
 
-The coordinate of any individual node $v$ within block $B = \text{root}[v]$ is:
+Where $\text{width}(B_1)$ is the maximum node width within block $B_1$, and $\text{nodesep}$ is the minimum required horizontal gap (e.g. $30\text{px}$).
 
-$$x(v) = x(\text{root}[v]) + \text{shift}[v]$$
+#### 2. Concrete Numerical Graph Example
+Consider Block $B_1 = \{A_1, B_1, C_1\}$ with root placed at initial $x(B_1) = 0\text{px}$, maximum node width $\text{width}(B_1) = 100\text{px}$, and $\text{nodesep} = 30\text{px}$. Block $B_2 = \{A_2, B_2, C_2\}$ is adjacent to $B_1$:
 
-### Step 2.4: The 4 Extremal Alignment Sub-Passes
-To balance layout asymmetry, Brandes-Köpf computes 4 candidate layouts:
+1. Minimum coordinate for Block $B_2$:
+   $$x(B_2) \ge x(B_1) + \text{width}(B_1) + \text{nodesep} = 0 + 100 + 30 = 130\text{px}$$
 
-1. **Upper-Left (UL)**: Top-down sweep aligning nodes to their leftmost upper median neighbor.
-2. **Upper-Right (UR)**: Top-down sweep aligning nodes to their rightmost upper median neighbor.
-3. **Lower-Left (LL)**: Bottom-up sweep aligning nodes to their leftmost lower median neighbor.
-4. **Lower-Right (LR)**: Bottom-up sweep aligning nodes to their rightmost lower median neighbor.
+2. Adding canvas origin margin shift $+50\text{px}$:
+   $$x(B_1) = 0 + 50 = 50\text{px}$$
+   $$x(B_2) = 130 + 50 = 180\text{px}$$
 
-Let $x_{\text{UL}}(v), x_{\text{UR}}(v), x_{\text{LL}}(v), x_{\text{LR}}(v)$ be the resulting coordinates (after aligning UR, LL, LR candidate spaces to the UL origin).
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.2: Computes minimum coordinate for block B2 relative to block B1.
+ */
+function compactBlockPair(
+  b1X: number,
+  b1Width: number,
+  nodeSep: number = 30
+): number {
+  return b1X + b1Width + nodeSep;
+}
+```
 
-### Step 2.5: Median Coordinate Resolution Equation
-The final horizontal coordinate $x(v)$ is computed as the **average of the two inner medians** (or average of the two middle values of the sorted candidate coordinates):
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.2: Block Graph Horizontal Compaction Spacing
 
-$$x(v) = \text{Median}\left( x_{\text{UL}}(v), x_{\text{UR}}(v), x_{\text{LL}}(v), x_{\text{LR}}(v) \right)$$
+            Block B1 (width = 100px)           Gap (30px)       Block B2
+         ┌───────────────────────────┐     ┌──────────────┐  ┌───────────────┐
+         │ [A1]                      │     │              │  │ [A2]          │
+         │  │                        │     │  nodesep =   │  │  │            │
+         │ [B1]                      │     │    30px      │  │ [B2]          │
+         │  │                        │     │              │  │  │            │
+         │ [C1]                      │     │              │  │ [C2]          │
+         └───────────────────────────┘     └──────────────┘  └───────────────┘
+         x(B1) = 50px                                        x(B2) = 180px
+```
 
-For candidate vector $[x_1, x_2, x_3, x_4]$ sorted in ascending order:
+---
 
-$$x(v) = \frac{x_2 + x_3}{2}$$
+### Step 2.3: 4 Extremal Alignment Passes & Median Resolution
 
-Taking the median balances subtree structures around vertical centerlines and guarantees zero distortion on symmetric subgraphs.
+#### 1. Mathematical Sub-Component Formula
+To balance layout asymmetry, Brandes-Köpf computes 4 extremal candidate passes ($x_{\text{UL}}, x_{\text{UR}}, x_{\text{LL}}, x_{\text{LR}}$). The final horizontal coordinate $x(v)$ is computed as the **average of the two inner medians** of the sorted candidate vector $[x_{(1)}, x_{(2)}, x_{(3)}, x_{(4)}]$:
+
+$$x(v) = \text{Median}\left( x_{\text{UL}}(v), x_{\text{UR}}(v), x_{\text{LL}}(v), x_{\text{LR}}(v) \right) = \frac{x_{(2)} + x_{(3)}}{2}$$
+
+#### 2. Concrete Numerical Graph Example
+Consider candidate horizontal coordinates for node $v$ from the 4 passes:
+- $x_{\text{UL}}(v) = 100\text{px}$
+- $x_{\text{UR}}(v) = 120\text{px}$
+- $x_{\text{LL}}(v) = 110\text{px}$
+- $x_{\text{LR}}(v) = 130\text{px}$
+
+Step-by-step resolution:
+1. **Sort Candidates**:
+   $$[x_{(1)}, x_{(2)}, x_{(3)}, x_{(4)}] = [100, 110, 120, 130]$$
+
+2. **Extract Inner Medians**:
+   $$x_{(2)} = 110\text{px}, \quad x_{(3)} = 120\text{px}$$
+
+3. **Compute Average**:
+   $$x(v) = \frac{110 + 120}{2} = 115\text{px}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.3: Computes the final coordinate x(v) via median average of 4 passes.
+ */
+function resolveNodeMedianCoordinate(
+  xUL: number,
+  xUR: number,
+  xLL: number,
+  xLR: number
+): number {
+  const sorted = [xUL, xUR, xLL, xLR].sort((a, b) => a - b);
+  return (sorted[1] + sorted[2]) / 2;
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.3: Median Coordinate Resolution Flow
+
+  Candidate Values:  UL=100px, LL=110px, UR=120px, LR=130px
+  
+  Number Line:  ---[100px]-------[110px]=======│=======[120px]-------[130px]--->
+                   (x_UL)        (x_LL)        │       (x_UR)        (x_LR)
+                                               ▼
+                                   Median x(v) = (110 + 120)/2 = 115px
+```
+
+---
 
 ---
 

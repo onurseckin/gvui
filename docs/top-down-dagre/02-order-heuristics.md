@@ -43,46 +43,200 @@ Dagre uses alternating multi-pass **Barycentric and Median Sweeps** paired with 
 
 ## 2. Bottom-Up Mathematical Deconstruction
 
-### Step 2.1: Binary Crossing Predicate & Crossing Matrix
-Consider two layers $L_i$ and $L_{i+1}$. Let $u_1, u_2 \in L_i$ with positions $\text{pos}(u_1) < \text{pos}(u_2)$, and let $v_1, v_2 \in L_{i+1}$ with positions $\text{pos}(v_1)$ and $\text{pos}(v_2)$.
+To minimize edge crossings, we construct the ordering framework from isolated node neighbor medians up to adjacent transposition swap matrices.
 
-Two edges $e_1 = (u_1, v_1)$ and $e_2 = (u_2, v_2)$ cross if and only if their relative endpoint orderings are inverted:
+---
 
-$$\chi(e_1, e_2) = \begin{cases} 1 & \text{if } (\text{pos}(u_1) < \text{pos}(u_2) \land \text{pos}(v_1) > \text{pos}(v_2)) \lor (\text{pos}(u_1) > \text{pos}(u_2) \land \text{pos}(v_1) < \text{pos}(v_2)) \\ 0 & \text{otherwise} \end{cases}$$
+### Step 2.1: Downward Median & Barycenter Calculation
 
-The total crossings $C(L_i, L_{i+1})$ between two adjacent layers is:
-
-$$C(L_i, L_{i+1}) = \sum_{e_1, e_2 \in E(L_i, L_{i+1})} \chi(e_1, e_2)$$
-
-### Step 2.2: Downward Barycenter & Median Equations
-When sweeping downward from top layer $L_0$ to bottom layer $L_k$, the ordering of layer $L_i$ is held fixed as a reference anchor. For each node $v \in L_{i+1}$, let $N^-(v) \subseteq L_i$ denote its set of upper predecessors.
-
-- **Downward Barycenter**:
-  $$\text{barycenter}_{\text{down}}(v) = \frac{1}{|N^-(v)|} \sum_{u \in N^-(v)} \text{pos}(u)$$
+#### 1. Mathematical Sub-Component Formula
+When sweeping downward from top layer $L_0$ to bottom layer $L_k$, the sequence of layer $L_i$ is fixed. For a node $v \in L_{i+1}$ with sorted upper predecessor positions $P = [\text{pos}(u_1), \text{pos}(u_2), \dots, \text{pos}(u_m)]$:
 
 - **Downward Median**:
-  Let $P = [\text{pos}(u_1), \text{pos}(u_2), \dots, \text{pos}(u_m)]$ be the sorted sequence of positions of $N^-(v)$.
   $$\text{median}_{\text{down}}(v) = \begin{cases} P[\lfloor m/2 \rfloor] & \text{if } m \text{ is odd} \\ \frac{P[m/2 - 1] + P[m/2]}{2} & \text{if } m \text{ is even} \end{cases}$$
 
-If $N^-(v) = \emptyset$ (isolated node or root), $\text{barycenter}(v)$ defaults to its current index $\text{pos}(v)$.
+- **Downward Barycenter**:
+  $$\text{barycenter}_{\text{down}}(v) = \frac{1}{m} \sum_{j=1}^{m} P[j]$$
 
-### Step 2.3: Upward Barycenter & Median Equations
-When sweeping upward from layer $L_k$ to $L_0$, layer $L_{i+1}$ is fixed. For each node $u \in L_i$, let $N^+(u) \subseteq L_{i+1}$ denote its lower successors.
+#### 2. Concrete Numerical Graph Example
+Consider reference layer $L_0$ with node positions $\text{pos}(A)=0, \text{pos}(B)=2, \text{pos}(C)=5$.
 
-- **Upward Barycenter**:
-  $$\text{barycenter}_{\text{up}}(u) = \frac{1}{|N^+(u)|} \sum_{v \in N^+(u)} \text{pos}(v)$$
+1. **Odd Degree Node $v$**: Predecessors $N^-(v) = \{A, B, C\}$ at positions $P = [0, 2, 5]$ ($m = 3$):
+   - Median calculation ($m=3$ is odd, index $\lfloor 3/2 \rfloor = 1$):
+     $$\text{median}(v) = P[1] = 2$$
+   - Barycenter comparison:
+     $$\text{barycenter}(v) = \frac{0 + 2 + 5}{3} = \frac{7}{3} \approx 2.333$$
 
-Nodes in the active layer are then re-sorted in ascending order of their computed barycenters or medians.
+2. **Even Degree Node $w$**: Predecessors $N^-(w) = \{A, B\}$ at positions $P = [1, 3]$ ($m = 2$):
+   - Median calculation ($m=2$ is even):
+     $$\text{median}(w) = \frac{P[0] + P[1]}{2} = \frac{1 + 3}{2} = 2.0$$
 
-### Step 2.4: Adjacent Transposition $\Delta \text{cross}$ Delta Matrix
-For any two adjacent nodes $v_a, v_b \in L_i$ with $\text{pos}(v_a) = k$ and $\text{pos}(v_b) = k+1$, swapping their order affects only edges incident to $v_a$ and $v_b$.
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.1: Calculates the median position of a node's upper neighbors.
+ */
+function calculateNodeMedian(
+  nodeId: string,
+  refPosMap: Map<string, number>,
+  inEdges: Array<{ source: string }>
+): number {
+  const positions = inEdges
+    .map(e => refPosMap.get(e.source))
+    .filter((pos): pos is number => pos !== undefined)
+    .sort((a, b) => a - b);
 
-Let $c(v_a, v_b)$ be the number of crossings between edges incident to $v_a$ and $v_b$ when $v_a$ precedes $v_b$.
-The crossing change $\Delta \text{cross}$ resulting from swapping $v_a$ and $v_b$ is:
+  const m = positions.length;
+  if (m === 0) return 0;
+  if (m % 2 === 1) {
+    return positions[Math.floor(m / 2)];
+  }
+  return (positions[m / 2 - 1] + positions[m / 2]) / 2;
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.1: Downward Median Calculation
+
+  Layer L_0 (Fixed Anchors):  [ A ](pos=0)     [ B ](pos=2)     [ C ](pos=5)
+                                │               │               │
+                                └───────────────┼───────────────┘
+                                                ▼
+  Layer L_1 (Target Node v):                 [ Node v ]
+                                             Neighbors: P = [0, 2, 5] (m=3)
+                                             Median = P[1] = 2
+                                             Barycenter = 7/3 = 2.333
+```
+
+---
+
+### Step 2.2: Binary Crossing Predicate & Pairwise Crossing Count
+
+#### 1. Mathematical Sub-Component Formula
+For two adjacent nodes $u, v \in L_i$ with $\text{pos}(u) < \text{pos}(v)$, the crossing count $c(u, v)$ counts the number of edge intersections when $u$ precedes $v$:
+
+$$c(u, v) = \sum_{e_1 = (u, y_1) \in E} \sum_{e_2 = (v, y_2) \in E} \chi(e_1, e_2)$$
+
+Where binary predicate $\chi(e_1, e_2) = 1$ if $\text{pos}(y_1) > \text{pos}(y_2)$, and $0$ otherwise.
+
+#### 2. Concrete Numerical Graph Example
+Let $u, v \in L_i$ be placed at positions $\text{pos}(u) = 0, \text{pos}(v) = 1$.
+- $u$ connects to targets in $L_{i+1}$ at positions $\{2, 4\}$.
+- $v$ connects to targets in $L_{i+1}$ at positions $\{1, 3\}$.
+
+Evaluating all 4 edge pairs for $c(u, v)$:
+1. Pair $(u \to 2, v \to 1)$: $\text{pos}(2) > \text{pos}(1) \implies \chi = 1$ (Crosses!)
+2. Pair $(u \to 2, v \to 3)$: $\text{pos}(2) < \text{pos}(3) \implies \chi = 0$
+3. Pair $(u \to 4, v \to 1)$: $\text{pos}(4) > \text{pos}(1) \implies \chi = 1$ (Crosses!)
+4. Pair $(u \to 4, v \to 3)$: $\text{pos}(4) > \text{pos}(3) \implies \chi = 1$ (Crosses!)
+
+$$c(u, v) = 1 + 0 + 1 + 1 = 3 \quad \text{(3 Crossings when } u \text{ precedes } v \text{)}$$
+
+Evaluating all 4 edge pairs for swapped order $c(v, u)$ (where $v$ precedes $u$):
+1. Pair $(v \to 1, u \to 2)$: $\text{pos}(1) < \text{pos}(2) \implies \chi = 0$
+2. Pair $(v \to 1, u \to 4)$: $\text{pos}(1) < \text{pos}(4) \implies \chi = 0$
+3. Pair $(v \to 3, u \to 2)$: $\text{pos}(3) > \text{pos}(2) \implies \chi = 1$ (Crosses!)
+4. Pair $(v \to 3, u \to 4)$: $\text{pos}(3) < \text{pos}(4) \implies \chi = 0$
+
+$$c(v, u) = 0 + 0 + 1 + 0 = 1 \quad \text{(1 Crossing when } v \text{ precedes } u \text{)}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.2: Computes crossings c(u, v) between edges of node u and node v.
+ */
+function countPairCrossings(
+  uId: string,
+  vId: string,
+  refPosMap: Map<string, number>,
+  graph: { outEdges: (node: string) => Array<{ target: string }> }
+): number {
+  const uTargets = graph.outEdges(uId).map(e => refPosMap.get(e.target)!);
+  const vTargets = graph.outEdges(vId).map(e => refPosMap.get(e.target)!);
+  let crossings = 0;
+
+  for (const uPos of uTargets) {
+    for (const vPos of vTargets) {
+      if (uPos > vPos) crossings++;
+    }
+  }
+
+  return crossings;
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.2: Pairwise Edge Crossing Matrix (c(u,v) = 3 vs c(v,u) = 1)
+
+   ORIGINAL ORDER (u before v):                 SWAPPED ORDER (v before u):
+   Layer L_i:   [ u ](pos=0)  [ v ](pos=1)       Layer L_i:   [ v ](pos=0)  [ u ](pos=1)
+                 │ \          / │                             │   \        / │
+                 │  \        /  │                             │    \      /  │
+                 │   \      /   │                             │     \    /   │
+                 │    X    X    │                             │      \  /    │
+                 │   / \  / \   │                             │       \/     │
+                 │  /   \/   \  │                             │       /\     │
+   Layer L_i+1: [1]    [2]   [3]   [4]           Layer L_i+1: [1]    [2]   [3]   [4]
+   Crossings: c(u, v) = 3                        Crossings: c(v, u) = 1
+```
+
+---
+
+### Step 2.3: Adjacent Transposition Pass & $\Delta \text{cross}$ Delta Matrix
+
+#### 1. Mathematical Sub-Component Formula
+For adjacent nodes $v_a, v_b \in L_i$ with $\text{pos}(v_a) = k$ and $\text{pos}(v_b) = k+1$, the crossing change $\Delta \text{cross}$ resulting from swapping $v_a$ and $v_b$ is:
 
 $$\Delta \text{cross}(v_a, v_b) = c(v_b, v_a) - c(v_a, v_b)$$
 
-- **Swap Decision Rule**: If $\Delta \text{cross}(v_a, v_b) < 0$, swap $v_a$ and $v_b$ immediately.
+- **Decision Rule**: Perform swap if $\Delta \text{cross}(v_a, v_b) < 0$.
+
+#### 2. Concrete Numerical Graph Example
+Using values from Step 2.2 for adjacent pair $(u, v)$:
+- $c(u, v) = 3$
+- $c(v, u) = 1$
+
+Step-by-step delta calculation:
+$$\Delta \text{cross}(u, v) = c(v, u) - c(u, v) = 1 - 3 = -2$$
+
+Since $\Delta \text{cross} = -2 < 0$, swapping $u$ and $v$ strictly reduces layer crossings by 2. The swap is executed immediately.
+
+#### 3. Targeted Sub-Step Pseudocode
+```typescript
+/**
+ * Sub-step 2.3: Evaluates and executes an adjacent transposition swap if delta < 0.
+ */
+function tryAdjacentSwap(
+  uId: string,
+  vId: string,
+  refPosMap: Map<string, number>,
+  graph: { outEdges: (node: string) => Array<{ target: string }> }
+): { swapped: boolean; delta: number } {
+  const cUV = countPairCrossings(uId, vId, refPosMap, graph);
+  const cVU = countPairCrossings(vId, uId, refPosMap, graph);
+  const delta = cVU - cUV;
+
+  if (delta < 0) {
+    return { swapped: true, delta };
+  }
+  return { swapped: false, delta };
+}
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+Step 2.3: Adjacent Transposition Swap Transformation
+
+   BEFORE SWAP:                                 AFTER SWAP:
+   Layer L_i:  [ u ] (pos=0) ──► [ v ] (pos=1)   Layer L_i:  [ v ] (pos=0) ──► [ u ] (pos=1)
+   Total Crossings = 3                          Total Crossings = 1
+
+   Delta: Δcross = 1 - 3 = -2 < 0  ==> Swap Executed! (Saved 2 crossings)
+```
+
+---
 
 ---
 
