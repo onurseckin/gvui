@@ -236,6 +236,112 @@ describe("neighborhoodSearch", () => {
     expect(alternatives.length).toBeGreaterThan(0);
   });
 
+  it("keeps spacing expansion first without exceeding the neighbor limit", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 1 });
+    const exactDemands = [
+      {
+        kind: "rank-gap" as const,
+        rank: 0,
+        affectedEdgeIds: ["e-demand"],
+        minimum: 88,
+        reason: "blocked-direct-badge" as const,
+      },
+    ];
+    const evalResult = {
+      routes: [],
+      classifiedEdges: [
+        { id: "e-demand", source: "A", target: "B", role: "forward", reversed: false },
+      ],
+      validation: { crossings: [], diagnostics: [{ ids: ["e-demand"] }] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands,
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const neighbors = generateNeighborhoodStates(state, evalResult, config);
+
+    expect(neighbors).toHaveLength(1);
+    expect(neighbors[0].exactDemands).toEqual(exactDemands);
+  });
+
+  it("does not let clean feedback fillers starve a demanded edge beyond the neighbor cap", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const exactDemands = [
+      {
+        kind: "rank-gap" as const,
+        rank: 0,
+        affectedEdgeIds: ["z-demand"],
+        minimum: 88,
+        reason: "blocked-direct-badge" as const,
+      },
+    ];
+    const evalResult = {
+      routes: [],
+      classifiedEdges: [
+        { id: "a-feedback", source: "C", target: "A", role: "feedback", reversed: true },
+        { id: "b-feedback", source: "D", target: "A", role: "feedback", reversed: true },
+        { id: "c-feedback", source: "E", target: "A", role: "feedback", reversed: true },
+        { id: "z-demand", source: "A", target: "B", role: "forward", reversed: false },
+      ],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands,
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const neighbors = generateNeighborhoodStates(state, evalResult, config);
+
+    expect(neighbors).toHaveLength(2);
+    expect(neighbors[0].exactDemands).toEqual(exactDemands);
+    expect(neighbors[1].sideAssignments.has("z-demand")).toBe(true);
+  });
+
+  it("gives a clean forward route with excess bends a port-side alternative", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const edge: NormalizedEdge = { id: "e-bends", source: "B", target: "C" };
+    const route = {
+      edgeId: edge.id,
+      points: [
+        { x: 0, y: 0 },
+        { x: 20, y: 0 },
+        { x: 20, y: 20 },
+        { x: 40, y: 20 },
+        { x: 40, y: 40 },
+        { x: 60, y: 40 },
+      ],
+      sourcePort: {
+        nodeId: "B",
+        side: "right",
+        index: 0,
+        point: { x: 0, y: 0 },
+        stub: { x: 20, y: 0 },
+      },
+      targetPort: {
+        nodeId: "C",
+        side: "left",
+        index: 0,
+        point: { x: 60, y: 40 },
+        stub: { x: 40, y: 40 },
+      },
+    } satisfies RoutedPath;
+    const evalResult = {
+      routes: [route],
+      classifiedEdges: [{ ...edge, role: "forward", reversed: false }],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const alternatives = generateNeighborhoodStates(state, evalResult, config)
+      .map((neighbor) => neighbor.sideAssignments.get(edge.id))
+      .filter(
+        (assignment): assignment is NonNullable<typeof assignment> => assignment !== undefined,
+      );
+
+    expect(alternatives.length).toBeGreaterThan(0);
+  });
+
   it("uses routed sides for unassigned edges and ignores diagnostic node IDs", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });

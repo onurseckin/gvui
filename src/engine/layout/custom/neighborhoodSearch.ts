@@ -1,5 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
-import { countPathHairpins } from "./layoutObjective";
+import { calculateExcessBends, countPathHairpins } from "./layoutObjective";
 import { cloneSearchState } from "./searchState";
 import { exactSpacingDemandSignature } from "./spacingDemand";
 import type { StateEvaluationResult } from "./stateEvaluator";
@@ -43,7 +43,8 @@ export function generateNeighborhoodStates(
   const maxNeighbors = config.maxNeighborsPerState;
 
   // 1. Generate Port Side Swap Moves for edges with crossings, hairpins, or excess bends
-  const problemEdgeIds = new Set<string>();
+  const priorityProblemEdgeIds = new Set<string>();
+  const feedbackFillerEdgeIds = new Set<string>();
   const crossings = evalResult.validation.crossings ?? [];
   const classifiedById = new Map(evalResult.classifiedEdges.map((edge) => [edge.id, edge]));
   const routesByEdgeId = new Map(evalResult.routes.map((route) => [route.edgeId, route]));
@@ -86,8 +87,8 @@ export function generateNeighborhoodStates(
     neighbors.push(resetState);
   }
   for (const cross of crossings) {
-    problemEdgeIds.add(cross.edgeIdA);
-    problemEdgeIds.add(cross.edgeIdB);
+    priorityProblemEdgeIds.add(cross.edgeIdA);
+    priorityProblemEdgeIds.add(cross.edgeIdB);
   }
 
   // Include every affected edge from diagnostics. A badge/edge collision names
@@ -95,7 +96,7 @@ export function generateNeighborhoodStates(
   for (const diag of evalResult.validation.diagnostics) {
     for (const edgeId of diag.ids ?? []) {
       if (classifiedById.has(edgeId)) {
-        problemEdgeIds.add(edgeId);
+        priorityProblemEdgeIds.add(edgeId);
       }
     }
   }
@@ -106,7 +107,7 @@ export function generateNeighborhoodStates(
   for (const demand of evalResult.exactDemands) {
     for (const edgeId of demand.affectedEdgeIds ?? []) {
       if (classifiedById.has(edgeId)) {
-        problemEdgeIds.add(edgeId);
+        priorityProblemEdgeIds.add(edgeId);
       }
     }
   }
@@ -116,7 +117,7 @@ export function generateNeighborhoodStates(
   // every feedback route eligible for its bounded side alternatives.
   for (const edge of evalResult.classifiedEdges) {
     if (edge.role === "feedback" || edge.isCycle) {
-      problemEdgeIds.add(edge.id);
+      feedbackFillerEdgeIds.add(edge.id);
     }
   }
 
@@ -131,29 +132,35 @@ export function generateNeighborhoodStates(
     if (!route) continue;
     const hairpinCount = countPathHairpins(route.points);
     const isStructuralRoute = edge.role === "feedback" || edge.role === "self" || edge.isCycle;
-    if (hairpinCount > (isStructuralRoute ? 1 : 0)) {
-      problemEdgeIds.add(edge.id);
+    const hasExcessBends = calculateExcessBends([route], evalResult.classifiedEdges) > 0;
+    if (hairpinCount > (isStructuralRoute ? 1 : 0) || hasExcessBends) {
+      priorityProblemEdgeIds.add(edge.id);
     }
   }
 
-  const candidateQueues = Array.from(problemEdgeIds)
-    .sort()
-    .map((edgeId) => {
-      const routed = routesByEdgeId.get(edgeId);
-      const currentSide =
-        state.sideAssignments.get(edgeId) ??
-        (routed
-          ? { srcSide: routed.sourcePort.side, tgtSide: routed.targetPort.side }
-          : { srcSide: "bottom" as Side, tgtSide: "top" as Side });
-      const classified = classifiedById.get(edgeId);
-      return {
-        edgeId,
-        alternatives: sideAlternatives(currentSide, classified?.role, Boolean(classified?.isCycle)),
-      };
-    });
+  const orderedProblemEdgeIds = [
+    ...Array.from(priorityProblemEdgeIds).sort(),
+    ...Array.from(feedbackFillerEdgeIds)
+      .filter((edgeId) => !priorityProblemEdgeIds.has(edgeId))
+      .sort(),
+  ];
+  const candidateQueues = orderedProblemEdgeIds.map((edgeId) => {
+    const routed = routesByEdgeId.get(edgeId);
+    const currentSide =
+      state.sideAssignments.get(edgeId) ??
+      (routed
+        ? { srcSide: routed.sourcePort.side, tgtSide: routed.targetPort.side }
+        : { srcSide: "bottom" as Side, tgtSide: "top" as Side });
+    const classified = classifiedById.get(edgeId);
+    return {
+      edgeId,
+      alternatives: sideAlternatives(currentSide, classified?.role, Boolean(classified?.isCycle)),
+    };
+  });
 
-  // Round-robin candidates so a diagnostic affecting multiple edges gives each
-  // edge one deterministic opportunity before either receives a second move.
+  // Round-robin candidates so every prioritized problem edge gets a
+  // deterministic first opportunity before clean feedback filler and before
+  // either edge receives a second move.
   for (let alternativeIndex = 0; neighbors.length < maxNeighbors; alternativeIndex++) {
     let addedInRound = false;
     for (const queue of candidateQueues) {
@@ -217,6 +224,9 @@ export function generateNeighborhoodStates(
     const nextState = cloneCanonicalState();
     nextState.exactDemands = [...evalResult.exactDemands];
     neighbors.unshift(nextState);
+    if (neighbors.length > maxNeighbors) {
+      neighbors.length = maxNeighbors;
+    }
   }
 
   return neighbors;
