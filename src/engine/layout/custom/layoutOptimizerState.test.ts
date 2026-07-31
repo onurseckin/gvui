@@ -2,13 +2,82 @@ import { describe, expect, it } from "bun:test";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 import { resolveCustomLayoutConfig } from "./config";
 import { computeCustomLayout } from "./computeCustomLayout";
-import { searchBestLayoutState } from "./layoutOptimizerState";
+import { deriveSearchStateBudgets, searchBestLayoutState } from "./layoutOptimizerState";
 import { generateNeighborhoodStates } from "./neighborhoodSearch";
 import { createInitialSearchState } from "./searchState";
 import { evaluateSearchState } from "./stateEvaluator";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("layoutOptimizerState", () => {
+  it("derives a structural conflict-permutation cap without shrinking other budgets", () => {
+    const nodes: NormalizedNode[] = Array.from({ length: 6 }, (_, index) => ({
+      id: `n${index}`,
+      width: 100,
+      height: 50,
+    }));
+    const denseEdges: NormalizedEdge[] = Array.from({ length: 15 }, (_, index) => ({
+      id: `e${index}`,
+      source: `n${Math.floor(index / 3)}`,
+      target: `n${Math.floor(index / 3) + 1}`,
+    }));
+    const config = resolveCustomLayoutConfig();
+
+    expect(deriveSearchStateBudgets(nodes, denseEdges, config)).toEqual({
+      maxLayoutStates: 50,
+      maxAestheticEvaluations: 12,
+      maxAStarStatesPerRoute: 2000,
+      maxConflictPermutations: 1,
+    });
+    expect(
+      deriveSearchStateBudgets(
+        nodes,
+        denseEdges,
+        resolveCustomLayoutConfig({ maxLayoutStates: 10 }),
+      ),
+    ).toEqual({
+      maxLayoutStates: 10,
+      maxAestheticEvaluations: 12,
+      maxAStarStatesPerRoute: 2000,
+      maxConflictPermutations: 1,
+    });
+
+    expect(deriveSearchStateBudgets(nodes, [], config)).toEqual({
+      maxLayoutStates: 50,
+      maxAestheticEvaluations: 12,
+      maxAStarStatesPerRoute: 2000,
+      maxConflictPermutations: 32,
+    });
+
+    const feedbackRichEdges = Array.from(
+      { length: 11 },
+      (_, index): NormalizedEdge => ({
+        id: `feedback-${index}`,
+        source: `n${index % 6}`,
+        target: `n${(index + 1) % 6}`,
+        isCycle: index < 3,
+        layoutRole: index < 3 ? "feedback" : undefined,
+      }),
+    );
+    expect(deriveSearchStateBudgets(nodes, feedbackRichEdges, config)).toEqual({
+      maxLayoutStates: 50,
+      maxAestheticEvaluations: 12,
+      maxAStarStatesPerRoute: 2000,
+      maxConflictPermutations: 1,
+    });
+    expect(
+      deriveSearchStateBudgets(
+        nodes,
+        denseEdges,
+        resolveCustomLayoutConfig({ maxConflictPermutations: 1 }),
+      ),
+    ).toEqual({
+      maxLayoutStates: 50,
+      maxAestheticEvaluations: 12,
+      maxAStarStatesPerRoute: 2000,
+      maxConflictPermutations: 1,
+    });
+  });
+
   it("runs Best-First Search returning best evaluation and stats", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
