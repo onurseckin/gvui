@@ -11,7 +11,13 @@ import type {
 } from "./CommandPalette.types";
 import "./CommandPalette.css";
 
-const PRESET_FILES = ["ai_agent_trace.json", "decision_tree.json", "cyclic_mesh.json"];
+const PRESET_FILES = [
+  "ai_agent_trace.json",
+  "decision_tree.json",
+  "cyclic_mesh.json",
+  "distributed_saga_workflow.json",
+  "kubernetes_cluster_topology.json",
+];
 
 export const CommandPalette: FC<CommandPaletteProps> = ({
   isOpen,

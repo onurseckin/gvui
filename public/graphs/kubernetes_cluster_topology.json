@@ -1,0 +1,136 @@
+{
+  "id": "k8s-topology-01",
+  "title": "Enterprise Kubernetes Multi-Region Topology",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "k8s-ingress",
+      "name": "NGINX Ingress Controller",
+      "type": "gateway",
+      "description": "TLS Termination & L7 Load Balancer",
+      "badges": [
+        { "label": "RPS: 48.5k", "variant": "info" },
+        { "label": "Status: Healthy", "variant": "success" }
+      ]
+    },
+    {
+      "id": "k8s-auth",
+      "name": "OIDC Auth Service",
+      "type": "service",
+      "description": "OAuth2 / OpenID Connect token validator",
+      "badges": [
+        { "label": "Pods: 8", "variant": "info" },
+        { "label": "Latency: 4ms", "variant": "success" }
+      ]
+    },
+    {
+      "id": "k8s-user",
+      "name": "User Profile Service",
+      "type": "service",
+      "description": "User account CRUD and preference store",
+      "badges": [
+        { "label": "Pods: 12", "variant": "info" },
+        { "label": "CPU: 42%", "variant": "info" }
+      ]
+    },
+    {
+      "id": "k8s-cart",
+      "name": "Cart Service",
+      "type": "service",
+      "description": "Shopping cart session manager",
+      "badges": [
+        { "label": "Pods: 6", "variant": "info" }
+      ]
+    },
+    {
+      "id": "k8s-checkout",
+      "name": "Checkout API",
+      "type": "service",
+      "description": "Transaction processor & invoice generator",
+      "badges": [
+        { "label": "Pods: 10", "variant": "info" },
+        { "label": "Latency: 85ms", "variant": "info" }
+      ]
+    },
+    {
+      "id": "k8s-recommendation",
+      "name": "ML Recommendation Engine",
+      "type": "executor",
+      "description": "TensorFlow serving model inference",
+      "badges": [
+        { "label": "GPU: 82%", "variant": "amber" },
+        { "label": "Latency: 210ms", "variant": "amber" }
+      ]
+    },
+    {
+      "id": "k8s-redis-primary",
+      "name": "Redis Primary (us-east)",
+      "type": "datastore",
+      "description": "In-memory cache master node",
+      "badges": [
+        { "label": "Hit Ratio: 98.2%", "variant": "success" },
+        { "label": "Memory: 24GB", "variant": "info" }
+      ]
+    },
+    {
+      "id": "k8s-redis-replica",
+      "name": "Redis Replica (us-west)",
+      "type": "datastore",
+      "description": "Read-only replica cluster",
+      "badges": [
+        { "label": "Replication Lag: 1.1ms", "variant": "success" }
+      ]
+    },
+    {
+      "id": "k8s-postgres-primary",
+      "name": "PostgreSQL Primary",
+      "type": "datastore",
+      "description": "ACID relational database engine",
+      "badges": [
+        { "label": "Connections: 450/500", "variant": "amber" }
+      ]
+    },
+    {
+      "id": "k8s-kafka",
+      "name": "Kafka Event Bus",
+      "type": "datastore",
+      "description": "High-throughput event streaming cluster",
+      "badges": [
+        { "label": "Msg/sec: 120k", "variant": "info" }
+      ]
+    },
+    {
+      "id": "k8s-audit-logger",
+      "name": "Audit Logging Worker",
+      "type": "executor",
+      "description": "Compliance & security log consumer",
+      "badges": [
+        { "label": "Status: Healthy", "variant": "success" }
+      ]
+    },
+    {
+      "id": "k8s-prometheus",
+      "name": "Prometheus Monitoring",
+      "type": "datastore",
+      "description": "Time-series metric storage",
+      "badges": [
+        { "label": "Scrape Rate: 5s", "variant": "info" }
+      ]
+    }
+  ],
+  "edges": [
+    { "id": "ke1", "source": "k8s-ingress", "target": "k8s-auth", "label": "verify jwt" },
+    { "id": "ke2", "source": "k8s-ingress", "target": "k8s-user", "label": "route /user" },
+    { "id": "ke3", "source": "k8s-ingress", "target": "k8s-cart", "label": "route /cart" },
+    { "id": "ke4", "source": "k8s-user", "target": "k8s-redis-primary", "label": "session cache lookup" },
+    { "id": "ke5", "source": "k8s-redis-primary", "target": "k8s-redis-replica", "label": "↺ async sync", "isCycle": true },
+    { "id": "ke6", "source": "k8s-cart", "target": "k8s-checkout", "label": "initiate checkout" },
+    { "id": "ke7", "source": "k8s-checkout", "target": "k8s-recommendation", "label": "fetch upsell items" },
+    { "id": "ke8", "source": "k8s-checkout", "target": "k8s-postgres-primary", "label": "write transaction" },
+    { "id": "ke9", "source": "k8s-checkout", "target": "k8s-kafka", "label": "publish order_created" },
+    { "id": "ke10", "source": "k8s-kafka", "target": "k8s-audit-logger", "label": "consume events" },
+    { "id": "ke11", "source": "k8s-audit-logger", "target": "k8s-postgres-primary", "label": "store audit log" },
+    { "id": "ke12", "source": "k8s-ingress", "target": "k8s-prometheus", "label": "metrics scrape" },
+    { "id": "ke13", "source": "k8s-user", "target": "k8s-auth", "label": "↺ validate permissions", "isCycle": true }
+  ]
+}

@@ -7,6 +7,8 @@ const SAMPLE_GRAPHS = [
   { id: "ai_agent_trace.json", name: "AI Agent Trace", icon: "🤖" },
   { id: "decision_tree.json", name: "Decision Tree", icon: "🌲" },
   { id: "cyclic_mesh.json", name: "Cyclic Mesh", icon: "🔄" },
+  { id: "distributed_saga_workflow.json", name: "Saga Workflow", icon: "⚡" },
+  { id: "kubernetes_cluster_topology.json", name: "K8s Topology", icon: "☸️" },
 ];
 
 interface SidebarProps {
