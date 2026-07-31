@@ -145,7 +145,27 @@ export async function computeGraphLayout(
 
 ---
 
-## 4. 📊 Asymptotic Complexity Bounds
+## 4. 📊 Asymptotic Complexity Bounds & Step-by-Step Derivation
+
+### 4.1 Step-by-Step Operational Arithmetic for Sample Graph ($|V|=20, |E|=30$)
+
+For a typical graph with $|V| = 20$ nodes, $|E| = 30$ edges, and $K = 24$ crossing minimization sweeps:
+
+1. **Network Simplex Layering Phase**:
+   $$T_{\text{simplex}} = O(|V| \cdot |E|) = 20 \cdot 30 = 600 \text{ operations (worst-case pivot iterations)}$$
+
+2. **Barycentric Order Sweeps Phase ($K = 24$)**:
+   $$T_{\text{bary}} = O\left(K \cdot (|V| + |E| \log_2 |E|)\right) = 24 \cdot (20 + 30 \cdot \log_2(30))$$
+   $$\log_2(30) \approx 4.907 \implies 30 \cdot 4.907 \approx 147.2$$
+   $$T_{\text{bary}} = 24 \cdot (20 + 147.2) = 24 \cdot 167.2 = 4012.8 \text{ operations}$$
+
+3. **Brandes-Köpf Coordinate Alignment Phase**:
+   $$T_{\text{BK}} = O(|V| + |E|) = 20 + 30 = 50 \text{ operations (4 linear passes)}$$
+
+4. **Total Layout Engine Execution**:
+   $$T_{\text{total}} = 600 + 4012.8 + 50 = 4662.8 \text{ operations}$$
+
+### 4.2 Complexity Summary Table
 
 | Phase / Algorithm | Time Complexity (Average) | Time Complexity (Worst-Case) | Space Complexity | Theoretical Driver |
 | :--- | :--- | :--- | :--- | :--- |
@@ -154,6 +174,46 @@ export async function computeGraphLayout(
 | **Brandes-Köpf Alignment** | $O(V + E)$ | $O(V + E)$ | $O(V + E)$ | 4 linear sweeps + block graph compaction + median calculation. |
 | **Edge Clipping & Badge Repulsion** | $O(E)$ | $O(E^2)$ | $O(E)$ | Pairwise badge overlap check on edge midpoints. |
 | **Total Engine Execution** | **$O(V \cdot E + K \cdot E \log E)$** | **$O(V^2 \cdot E)$** | **$O(V + E)$** | **Guaranteed polynomial execution time.** |
+
+### 4.3 Sub-Step Pseudocode: Complexity Estimator
+```typescript
+/**
+ * Computes estimated total operation count for Top-Down Dagre engine phases.
+ */
+function estimateDagreOperations(V: number, E: number, K: number = 24): {
+  simplexOps: number;
+  barycenterOps: number;
+  brandesKopfOps: number;
+  totalOps: number;
+} {
+  const simplexOps = V * E;
+  const barycenterOps = K * (V + E * Math.log2(E));
+  const brandesKopfOps = V + E;
+  return {
+    simplexOps,
+    barycenterOps,
+    brandesKopfOps,
+    totalOps: simplexOps + barycenterOps + brandesKopfOps,
+  };
+}
+```
+
+### 4.4 Visual ASCII Complexity Pipeline Breakdown
+```
+  [ DAG Input (|V|=20, |E|=30) ]
+                 │
+                 ▼
+  Phase 1: Network Simplex (600 ops)  ──► Layer Ranks r(v)
+                 │
+                 ▼
+  Phase 2: Barycentric Sweeps (4012.8 ops) ──► Permutations π(L_i)
+                 │
+                 ▼
+  Phase 3: Brandes-Köpf Placement (50 ops) ──► Final Coordinates (x, y)
+                 │
+                 ▼
+  [ Total Execution: ~4663 ops (Linear / Log-Linear Bound) ]
+```
 
 ---
 
