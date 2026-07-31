@@ -34,6 +34,14 @@ export interface CustomLayoutConfig {
   maxPortAlternativesPerEdge: number;
   maxRouteOrderVariants: number;
   coordinateSweepLimit: number;
+  maxLayoutStates: number;
+  maxFrontierSize: number;
+  maxNeighborsPerState: number;
+  maxAStarStatesPerRoute: number;
+  maxConflictPermutationSize: number;
+  maxConflictPermutations: number;
+  maxRouteCandidatesPerEdge: number;
+  maxBadgeStates: number;
 }
 
 export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object.freeze({
@@ -65,6 +73,14 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   maxPortAlternativesPerEdge: 4,
   maxRouteOrderVariants: 4,
   coordinateSweepLimit: 16,
+  maxLayoutStates: 200,
+  maxFrontierSize: 50,
+  maxNeighborsPerState: 16,
+  maxAStarStatesPerRoute: 50000,
+  maxConflictPermutationSize: 6,
+  maxConflictPermutations: 32,
+  maxRouteCandidatesPerEdge: 4,
+  maxBadgeStates: 200,
 });
 
 export function resolveCustomLayoutConfig(
@@ -98,6 +114,14 @@ export function resolveCustomLayoutConfig(
     "maxPortAlternativesPerEdge",
     "maxRouteOrderVariants",
     "coordinateSweepLimit",
+    "maxLayoutStates",
+    "maxFrontierSize",
+    "maxNeighborsPerState",
+    "maxAStarStatesPerRoute",
+    "maxConflictPermutationSize",
+    "maxConflictPermutations",
+    "maxRouteCandidatesPerEdge",
+    "maxBadgeStates",
   ];
 
   for (const field of positiveFields) {
@@ -127,3 +151,4 @@ export function resolveCustomLayoutConfig(
 
   return merged;
 }
+

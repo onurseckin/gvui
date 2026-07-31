@@ -11,6 +11,7 @@ import {
   simplifyOrthogonalPath,
 } from "./geometry";
 import {
+  calculateExcessBends,
   calculateHairpinCount,
   calculateLeaderMetrics,
   calculatePortSideImbalance,
@@ -582,7 +583,10 @@ export function validateCustomLayout(
   metrics.feedbackLeaderCount = leaderMetrics.feedbackLeaderCount;
   metrics.totalLeaderLength = leaderMetrics.totalLeaderLength;
 
-  metrics.hairpinCount = calculateHairpinCount(edges, config.epsilon);
+  const hairpinMetrics = calculateHairpinCount(edges, roles, config.epsilon);
+  metrics.hairpinCount = hairpinMetrics.totalHairpins;
+  metrics.avoidableHairpinCount = hairpinMetrics.avoidableHairpins;
+  metrics.excessBendCount = calculateExcessBends(edges, roles);
   metrics.portSideImbalance = calculatePortSideImbalance(nodes, edges);
 
   const hasError = diagnostics.some((d) => d.severity === "error");
@@ -608,6 +612,8 @@ function validationResultToScore(res: LayoutValidationResult): LayoutScore {
     badgeUnrelatedEdgeOverlaps: res.metrics.badgeUnrelatedEdgeOverlaps,
     crossingCount: res.metrics.crossingCount,
     ordinaryLeaderCount: res.metrics.ordinaryLeaderCount ?? 0,
+    avoidableHairpinCount: res.metrics.avoidableHairpinCount ?? 0,
+    excessBendCount: res.metrics.excessBendCount ?? 0,
     hairpinCount: res.metrics.hairpinCount ?? 0,
     bendCount: res.metrics.bendCount,
     directionDeviationPenalty: res.metrics.directionDeviationPenalty,
@@ -618,6 +624,7 @@ function validationResultToScore(res: LayoutValidationResult): LayoutScore {
     totalArea: res.metrics.totalArea,
     stateHash: "",
   };
+
 }
 
 export function compareLayoutScores(a: LayoutValidationResult, b: LayoutValidationResult): number {

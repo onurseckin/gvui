@@ -13,6 +13,8 @@ function score(overrides: Partial<LayoutScore> = {}): LayoutScore {
     badgeUnrelatedEdgeOverlaps: 0,
     crossingCount: 0,
     ordinaryLeaderCount: 0,
+    avoidableHairpinCount: 0,
+    excessBendCount: 0,
     hairpinCount: 0,
     bendCount: 0,
     directionDeviationPenalty: 0,
@@ -27,6 +29,12 @@ function score(overrides: Partial<LayoutScore> = {}): LayoutScore {
 }
 
 describe("layoutObjective", () => {
+  test("prefers zero badge/unrelated-edge overlaps over any reduction in crossings", () => {
+    const noBadgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 0, crossingCount: 5 });
+    const badgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 1, crossingCount: 0 });
+    expect(compareLayoutScore(noBadgeOverlap, badgeOverlap)).toBeLessThan(0);
+  });
+
   test("prefers zero crossings over any reduction in length or area", () => {
     const crossingFree = score({ totalLength: 100000, totalArea: 10000000 });
     const compactWithCrossing = score({ crossingCount: 1, totalLength: 10, totalArea: 100 });
@@ -37,6 +45,12 @@ describe("layoutObjective", () => {
     const direct = score({ bendCount: 10 });
     const leader = score({ ordinaryLeaderCount: 1, bendCount: 0 });
     expect(compareLayoutScore(direct, leader)).toBeLessThan(0);
+  });
+
+  test("prefers zero excess bends over shorter route length", () => {
+    const noExcess = score({ excessBendCount: 0, totalLength: 500 });
+    const excess = score({ excessBendCount: 1, totalLength: 100 });
+    expect(compareLayoutScore(noExcess, excess)).toBeLessThan(0);
   });
 
   test("uses area only after route and port aesthetics tie", () => {
@@ -66,3 +80,4 @@ describe("layoutObjective", () => {
     ).toBe(0);
   });
 });
+

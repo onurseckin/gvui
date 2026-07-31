@@ -21,6 +21,8 @@ export const ORDER: (keyof LayoutScore)[] = [
   "badgeUnrelatedEdgeOverlaps",
   "crossingCount",
   "ordinaryLeaderCount",
+  "avoidableHairpinCount",
+  "excessBendCount",
   "hairpinCount",
   "bendCount",
   "directionDeviationPenalty",
@@ -122,16 +124,45 @@ export function calculateLeaderMetrics(
 }
 
 export function calculateHairpinCount(
-  edges: { points?: Point[] }[],
+  edges: { id?: string; points?: Point[] }[],
+  edgeRoles?: Map<string, EdgeRole> | Record<string, EdgeRole> | ClassifiedEdge[],
   epsilon = 0.001,
-): number {
+): { totalHairpins: number; avoidableHairpins: number } {
   let totalHairpins = 0;
+  let avoidableHairpins = 0;
   for (const edge of edges) {
     if (edge.points && edge.points.length >= 2) {
-      totalHairpins += countPathHairpins(edge.points, epsilon);
+      const count = countPathHairpins(edge.points, epsilon);
+      totalHairpins += count;
+      const role = edge.id ? getEdgeRole(edge.id, edgeRoles) : undefined;
+      const isStructurallyNecessary = role === "feedback" || role === "self";
+      if (!isStructurallyNecessary) {
+        avoidableHairpins += count;
+      } else if (count > 1) {
+        avoidableHairpins += count - 1;
+      }
     }
   }
-  return totalHairpins;
+  return { totalHairpins, avoidableHairpins };
+}
+
+export function calculateExcessBends(
+  edges: { id?: string; points?: Point[] }[],
+  edgeRoles?: Map<string, EdgeRole> | Record<string, EdgeRole> | ClassifiedEdge[],
+): number {
+  let excess = 0;
+  for (const edge of edges) {
+    if (edge.points && edge.points.length >= 2) {
+      const simplified = simplifyOrthogonalPath(edge.points);
+      const bendCount = Math.max(0, simplified.length - 2);
+      const role = edge.id ? getEdgeRole(edge.id, edgeRoles) : undefined;
+      const maxAllowed = role === "feedback" || role === "self" ? 4 : 3;
+      if (bendCount > maxAllowed) {
+        excess += bendCount - maxAllowed;
+      }
+    }
+  }
+  return excess;
 }
 
 export function calculatePortSideImbalance(
@@ -191,8 +222,10 @@ export function buildLayoutScore(
 
   const roles = edgeRoles ?? result.edgeRoles ?? result.classifiedEdges;
   const leaderMetrics = calculateLeaderMetrics(result.badges ?? [], roles);
-  const hairpinCount =
-    validation.metrics.hairpinCount ?? calculateHairpinCount(result.edges ?? []);
+  const hairpinMetrics = calculateHairpinCount(result.edges ?? [], roles);
+  const hairpinCount = validation.metrics.hairpinCount ?? hairpinMetrics.totalHairpins;
+  const avoidableHairpinCount = validation.metrics.avoidableHairpinCount ?? hairpinMetrics.avoidableHairpins;
+  const excessBendCount = validation.metrics.excessBendCount ?? calculateExcessBends(result.edges ?? [], roles);
   const portSideImbalance =
     validation.metrics.portSideImbalance ??
     calculatePortSideImbalance(result.nodes ?? [], result.edges ?? []);
@@ -207,6 +240,8 @@ export function buildLayoutScore(
     badgeUnrelatedEdgeOverlaps: validation.metrics.badgeUnrelatedEdgeOverlaps,
     crossingCount: validation.metrics.crossingCount,
     ordinaryLeaderCount: validation.metrics.ordinaryLeaderCount ?? leaderMetrics.ordinaryLeaderCount,
+    avoidableHairpinCount,
+    excessBendCount,
     hairpinCount,
     bendCount: validation.metrics.bendCount,
     directionDeviationPenalty: validation.metrics.directionDeviationPenalty,
@@ -219,3 +254,4 @@ export function buildLayoutScore(
     stateHash,
   };
 }
+

@@ -164,6 +164,64 @@ export interface LayoutValidationResult {
   metrics: LayoutMetrics;
 }
 
+export interface RouteAestheticMetrics {
+  avoidableHairpinCount: number;
+  excessBendCount: number;
+  maximumOrdinaryEdgeBends: number;
+  maximumFeedbackEdgeBends: number;
+}
+
+export interface CanonicalSpacingOverrides {
+  rankGaps?: Record<number, number>;
+  nodeGaps?: Record<string, number>;
+  nodeGapByRank?: Map<number, number>;
+  rankGapAfterRank?: Map<number, number>;
+  nodeGapAfterNodeId?: Map<string, number>;
+  outerPadding?: number;
+}
+
+export type RouteOrderStrategy =
+  | "natural"
+  | "longest_first"
+  | "shortest_first"
+  | "feedback_last"
+  | "crossings_first";
+
+export interface LayoutSearchState {
+  orderedLayerIds: string[][];
+  spacing: CanonicalSpacingOverrides;
+  graphPadding: number;
+  portSides: Record<string, PortSideAssignment>;
+  portOrders: Record<string, string[]>;
+  routeOrderStrategy: RouteOrderStrategy;
+}
+
+export interface ExactSpacingDemand {
+  kind: "rank-gap" | "node-gap" | "lane-x" | "lane-y" | "graph-padding";
+  rank?: number;
+  afterNodeId?: string;
+  affectedEdgeIds: string[];
+  minimum: number;
+  reason:
+    | "same-rank-label"
+    | "parallel-labels"
+    | "blocked-direct-badge"
+    | "endpoint-fan-out"
+    | "crossing-channel";
+}
+
+export type SearchStopReason =
+  | "objective-target"
+  | "frontier-exhausted"
+  | "layout-state-budget"
+  | "route-state-budget"
+  | "badge-state-budget"
+  | "conflict-permutation-budget"
+  | "deadline-exceeded"
+  | "cancelled"
+  | "repeated-logical-state"
+  | "hard-failure";
+
 export interface LayoutMetrics {
   nodeNodeOverlaps: number;
   edgeNodePenetrations: number;
@@ -182,6 +240,10 @@ export interface LayoutMetrics {
   totalLeaderLength?: number;
   hairpinCount?: number;
   portSideImbalance?: number;
+  avoidableHairpinCount?: number;
+  excessBendCount?: number;
+  maximumOrdinaryEdgeBends?: number;
+  maximumFeedbackEdgeBends?: number;
 }
 
 export interface OptimizationStats {
@@ -189,6 +251,13 @@ export interface OptimizationStats {
   evaluatedPortStates: number;
   spacingExpansions: number;
   repeatedStateStop: boolean;
+  evaluatedLayoutStates?: number;
+  generatedNeighborStates?: number;
+  routeSearchCalls?: number;
+  aStarExpandedStates?: number;
+  routeCacheHits?: number;
+  stateCacheHits?: number;
+  stopReason?: SearchStopReason;
 }
 
 export interface RouteCost {
@@ -210,6 +279,8 @@ export interface LayoutScore {
   badgeUnrelatedEdgeOverlaps: number;
   crossingCount: number;
   ordinaryLeaderCount: number;
+  avoidableHairpinCount: number;
+  excessBendCount: number;
   hairpinCount: number;
   bendCount: number;
   directionDeviationPenalty: number;
@@ -244,3 +315,4 @@ export interface CustomLayoutResult {
   status: "success" | "unresolved_soft_conflicts" | "invalid_hard_failure";
   optimizationStats?: OptimizationStats;
 }
+
