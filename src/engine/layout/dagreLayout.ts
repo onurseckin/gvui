@@ -572,5 +572,33 @@ export function computeDagreLayout(
     };
   });
 
+  // Apply badge repulsion pass for parallel/overlapping edge labels
+  const BADGE_WIDTH = 84;
+  const BADGE_HEIGHT = 34;
+  for (let i = 0; i < positionedEdges.length; i++) {
+    const e1 = positionedEdges[i];
+    if (e1.labelX === undefined || e1.labelY === undefined) continue;
+    for (let j = i + 1; j < positionedEdges.length; j++) {
+      const e2 = positionedEdges[j];
+      if (e2.labelX === undefined || e2.labelY === undefined) continue;
+
+      const dx = Math.abs(e2.labelX - e1.labelX);
+      const dy = Math.abs(e2.labelY - e1.labelY);
+
+      if (dx < BADGE_WIDTH && dy < BADGE_HEIGHT) {
+        const shiftX = (BADGE_WIDTH - dx + 4) / 2;
+        const shiftY = (BADGE_HEIGHT - dy + 4) / 2;
+
+        if (dx <= dy) {
+          e1.labelX -= shiftX;
+          e2.labelX += shiftX;
+        } else {
+          e1.labelY -= shiftY;
+          e2.labelY += shiftY;
+        }
+      }
+    }
+  }
+
   return { nodes: positionedNodes, edges: positionedEdges };
 }
