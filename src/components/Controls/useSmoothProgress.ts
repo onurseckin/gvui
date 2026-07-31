@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 
+const safeRequestAnimationFrame =
+  typeof requestAnimationFrame !== "undefined"
+    ? requestAnimationFrame
+    : (cb: FrameRequestCallback): number =>
+        setTimeout(() => cb(performance.now()), 16) as unknown as number;
+
+const safeCancelAnimationFrame =
+  typeof cancelAnimationFrame !== "undefined"
+    ? cancelAnimationFrame
+    : (id: number): void => clearTimeout(id);
+
 export function interpolateProgress(
   current: number,
   target: number,
@@ -36,12 +47,13 @@ export function useSmoothProgress(targetPercent: number, isCalculating: boolean)
         return Math.round(next * 10) / 10;
       });
 
-      animationFrameId = requestAnimationFrame(animate);
+      animationFrameId = safeRequestAnimationFrame(animate);
     };
 
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
+    animationFrameId = safeRequestAnimationFrame(animate);
+    return () => safeCancelAnimationFrame(animationFrameId);
   }, [targetPercent, isCalculating]);
 
   return displayPercent;
 }
+
