@@ -161,6 +161,81 @@ describe("neighborhoodSearch", () => {
     expect(changedEdgeIds).toEqual(["e-badge", "e-sibling"]);
   });
 
+  it("gives a clean forward hairpin a port-side alternative", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const edge: NormalizedEdge = { id: "e-hairpin", source: "B", target: "C" };
+    const route = {
+      edgeId: edge.id,
+      points: [
+        { x: 140, y: 320 },
+        { x: 140, y: 340 },
+        { x: 493, y: 340 },
+        { x: 493, y: 320 },
+      ],
+      sourcePort: {
+        nodeId: "B",
+        side: "bottom",
+        index: 0,
+        point: { x: 140, y: 320 },
+        stub: { x: 140, y: 340 },
+      },
+      targetPort: {
+        nodeId: "C",
+        side: "bottom",
+        index: 0,
+        point: { x: 493, y: 320 },
+        stub: { x: 493, y: 340 },
+      },
+    } satisfies RoutedPath;
+    const evalResult = {
+      routes: [route],
+      classifiedEdges: [{ ...edge, role: "forward", reversed: false }],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const alternatives = generateNeighborhoodStates(state, evalResult, config)
+      .map((neighbor) => neighbor.sideAssignments.get(edge.id))
+      .filter(
+        (assignment): assignment is NonNullable<typeof assignment> => assignment !== undefined,
+      );
+
+    expect(alternatives.length).toBeGreaterThan(0);
+    expect(alternatives[0]).not.toEqual({ srcSide: "bottom", tgtSide: "bottom" });
+  });
+
+  it("gives an edge named by a spacing demand a port-side alternative", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
+    const evalResult = {
+      routes: [],
+      classifiedEdges: [
+        { id: "e-demand", source: "A", target: "B", role: "forward", reversed: false },
+      ],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [
+        {
+          kind: "rank-gap",
+          rank: 0,
+          affectedEdgeIds: ["e-demand"],
+          minimum: 88,
+          reason: "blocked-direct-badge",
+        },
+      ],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const alternatives = generateNeighborhoodStates(state, evalResult, config)
+      .map((neighbor) => neighbor.sideAssignments.get("e-demand"))
+      .filter(
+        (assignment): assignment is NonNullable<typeof assignment> => assignment !== undefined,
+      );
+
+    expect(alternatives.length).toBeGreaterThan(0);
+  });
+
   it("uses routed sides for unassigned edges and ignores diagnostic node IDs", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });

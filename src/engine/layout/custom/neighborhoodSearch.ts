@@ -1,4 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
+import { countPathHairpins } from "./layoutObjective";
 import { cloneSearchState } from "./searchState";
 import { exactSpacingDemandSignature } from "./spacingDemand";
 import type { StateEvaluationResult } from "./stateEvaluator";
@@ -99,11 +100,38 @@ export function generateNeighborhoodStates(
     }
   }
 
+  // A spacing demand identifies every route whose badge needs a different
+  // local corridor. Treat those edge IDs like diagnostics so the search can
+  // try the alternate ports that make the requested space useful.
+  for (const demand of evalResult.exactDemands) {
+    for (const edgeId of demand.affectedEdgeIds ?? []) {
+      if (classifiedById.has(edgeId)) {
+        problemEdgeIds.add(edgeId);
+      }
+    }
+  }
+
   // Feedback is graph semantics, not a naming convention for generated IDs.
   // Even a clean outer corridor can improve a later score component, so keep
   // every feedback route eligible for its bounded side alternatives.
   for (const edge of evalResult.classifiedEdges) {
     if (edge.role === "feedback" || edge.isCycle) {
+      problemEdgeIds.add(edge.id);
+    }
+  }
+
+  // A clean-looking forward route can still make the layout fail its
+  // aesthetics contract when it doubles back through a U-shaped hairpin.
+  // That route has no collision diagnostic, so make it eligible explicitly.
+  // Feedback/self edges keep their existing clean-route eligibility above;
+  // their hairpins only add a new reason to move after the first necessary
+  // outer-corridor turn.
+  for (const edge of evalResult.classifiedEdges) {
+    const route = routesByEdgeId.get(edge.id);
+    if (!route) continue;
+    const hairpinCount = countPathHairpins(route.points);
+    const isStructuralRoute = edge.role === "feedback" || edge.role === "self" || edge.isCycle;
+    if (hairpinCount > (isStructuralRoute ? 1 : 0)) {
       problemEdgeIds.add(edge.id);
     }
   }
