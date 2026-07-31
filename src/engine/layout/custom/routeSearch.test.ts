@@ -113,17 +113,33 @@ describe("routeSearch", () => {
     const route = searchOrthogonalRoute("e1", sourcePort, targetPort, grid, [], config, {
       maxIterations: 1,
       allowDoglegFallback: true,
+      requiredXCorridor: Math.max(...Array.from(grid.vertices.values()).map((point) => point.x)),
     });
 
     expect(route).toBeDefined();
+    const requiredXCorridor = Math.max(
+      ...Array.from(grid.vertices.values()).map((point) => point.x),
+    );
+    expect(route!.points.some((point) => point.x === requiredXCorridor)).toBe(true);
+
+    const sourcePoint = route!.points[0];
+    const firstTurn = route!.points[1];
+    const targetPoint = route!.points[route!.points.length - 1];
+    const finalTurn = route!.points[route!.points.length - 2];
+    expect(firstTurn.y).toBeGreaterThan(sourcePoint.y);
+    expect(finalTurn.y).toBeLessThan(targetPoint.y);
+
     for (let index = 0; index < route!.points.length - 1; index++) {
-      expect(
-        segmentIntersectsRectInterior(
-          { a: route!.points[index], b: route!.points[index + 1] },
-          { x: 110, y: 90, width: 80, height: 50 },
-          config.epsilon,
-        ),
-      ).toBe(false);
+      const segment = { a: route!.points[index], b: route!.points[index + 1] };
+      for (const node of nodes) {
+        expect(
+          segmentIntersectsRectInterior(
+            segment,
+            { x: node.x, y: node.y, width: node.width, height: node.height },
+            config.epsilon,
+          ),
+        ).toBe(false);
+      }
     }
   });
 

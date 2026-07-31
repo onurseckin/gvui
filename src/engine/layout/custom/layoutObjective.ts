@@ -37,7 +37,7 @@ export const ORDER: (keyof LayoutScore)[] = [
 
 export function compareLayoutScore(a: LayoutScore, b: LayoutScore): number {
   for (const key of ORDER) {
-    const diff = (a[key] as number) - (b[key] as number);
+    const diff = ((a[key] as number | undefined) ?? 0) - ((b[key] as number | undefined) ?? 0);
     if (diff !== 0) return diff;
   }
   return a.stateHash.localeCompare(b.stateHash);
@@ -239,11 +239,11 @@ export function buildLayoutScore(
 
   return {
     hardErrorCount,
-    unresolvedRouteCount: validation.metrics.unresolvedRouteCount,
+    unresolvedRouteCount: validation.metrics.unresolvedRouteCount ?? 0,
     nodeNodeOverlaps: validation.metrics.nodeNodeOverlaps,
     edgeNodePenetrations: validation.metrics.edgeNodePenetrations,
     sharedEdgeSegmentLength: validation.metrics.sharedEdgeSegmentLength,
-    unresolvedBadgeCount: validation.metrics.unresolvedBadgeCount,
+    unresolvedBadgeCount: validation.metrics.unresolvedBadgeCount ?? 0,
     badgeNodeOverlaps: validation.metrics.badgeNodeOverlaps,
     badgeBadgeOverlaps: validation.metrics.badgeBadgeOverlaps,
     badgeUnrelatedEdgeOverlaps: validation.metrics.badgeUnrelatedEdgeOverlaps,

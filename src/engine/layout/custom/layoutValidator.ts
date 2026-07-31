@@ -124,7 +124,7 @@ export function validateCustomLayout(
             ids: [expectedEdge.id],
           })
         ) {
-          metrics.unresolvedRouteCount++;
+          metrics.unresolvedRouteCount = (metrics.unresolvedRouteCount ?? 0) + 1;
         }
       }
 
@@ -138,7 +138,7 @@ export function validateCustomLayout(
             ids: [expectedEdge.id],
           })
         ) {
-          metrics.unresolvedBadgeCount++;
+          metrics.unresolvedBadgeCount = (metrics.unresolvedBadgeCount ?? 0) + 1;
         }
       }
     }
@@ -241,7 +241,7 @@ export function validateCustomLayout(
           ids: [edge.edgeId],
         })
       ) {
-        metrics.unresolvedRouteCount++;
+        metrics.unresolvedRouteCount = (metrics.unresolvedRouteCount ?? 0) + 1;
       }
       continue;
     }
@@ -650,11 +650,11 @@ export function validationResultToScore(res: LayoutValidationResult): LayoutScor
   const hardErrorCount = res.diagnostics.filter((d) => d.severity === "error").length;
   return {
     hardErrorCount: res.isValid ? hardErrorCount : Math.max(1, hardErrorCount),
-    unresolvedRouteCount: res.metrics.unresolvedRouteCount,
+    unresolvedRouteCount: res.metrics.unresolvedRouteCount ?? 0,
     nodeNodeOverlaps: res.metrics.nodeNodeOverlaps,
     edgeNodePenetrations: res.metrics.edgeNodePenetrations,
     sharedEdgeSegmentLength: res.metrics.sharedEdgeSegmentLength,
-    unresolvedBadgeCount: res.metrics.unresolvedBadgeCount,
+    unresolvedBadgeCount: res.metrics.unresolvedBadgeCount ?? 0,
     badgeNodeOverlaps: res.metrics.badgeNodeOverlaps,
     badgeBadgeOverlaps: res.metrics.badgeBadgeOverlaps,
     badgeUnrelatedEdgeOverlaps: res.metrics.badgeUnrelatedEdgeOverlaps,

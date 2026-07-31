@@ -118,6 +118,7 @@ function findGridDoglegRoute(
   occupancy: OccupancyRecord[],
   config: CustomLayoutConfig,
   stats: RouteSearchStats,
+  options: RouteSearchOptions,
 ): RoutedPath | null {
   const xCoords = Array.from(
     new Set(Array.from(grid.vertices.values()).map((point) => point.x)),
@@ -144,21 +145,52 @@ function findGridDoglegRoute(
       ]),
     );
   };
-  const candidateXTracks = selectTracks(xCoords, sourcePort.stub.x, targetPort.stub.x);
+  const requiredXCorridor = options.requiredXCorridor ?? options.requiredCorridorX;
+  const candidateXTracks = Array.from(
+    new Set([
+      ...(requiredXCorridor === undefined ? [] : [requiredXCorridor]),
+      ...selectTracks(xCoords, sourcePort.stub.x, targetPort.stub.x),
+    ]),
+  );
   const candidateYTracks = selectTracks(yCoords, sourcePort.stub.y, targetPort.stub.y);
   const indexedOccupancy = new IndexedOccupancy(occupancy, config.epsilon);
 
   const tryCandidate = (points: Point[]): RoutedPath | null => {
     const simplified = simplifyOrthogonalPath(points, config.epsilon);
+    if (simplified.length < 2) return null;
+
+    if (
+      getSegmentDirection(simplified[0], simplified[1]) !== sideToOutwardDir(sourcePort.side) ||
+      getSegmentDirection(simplified[simplified.length - 2], simplified[simplified.length - 1]) !==
+        sideToInwardDir(targetPort.side)
+    ) {
+      return null;
+    }
+
+    if (
+      requiredXCorridor !== undefined &&
+      !simplified.some((point) => Math.abs(point.x - requiredXCorridor) <= config.epsilon)
+    ) {
+      return null;
+    }
+
     for (let index = 0; index < simplified.length - 1; index++) {
       const segment = { a: simplified[index], b: simplified[index + 1] };
+      const isSourceEndpointLeg = index === 0;
+      const isTargetEndpointLeg = index === simplified.length - 2;
       if (
         !isOrthogonalSegment(segment, config.epsilon) ||
         grid.nodeObstacles.some(
           ({ nodeId, rect }) =>
             segmentIntersectsRectInterior(segment, rect, config.epsilon) &&
-            !(index === 0 && nodeId === sourcePort.nodeId) &&
-            !(index === simplified.length - 2 && nodeId === targetPort.nodeId),
+            !(isSourceEndpointLeg && nodeId === sourcePort.nodeId) &&
+            !(isTargetEndpointLeg && nodeId === targetPort.nodeId),
+        ) ||
+        options.forbiddenRects?.some(
+          (rect) =>
+            !isSourceEndpointLeg &&
+            !isTargetEndpointLeg &&
+            segmentIntersectsRectInterior(segment, rect, config.epsilon),
         )
       ) {
         return null;
@@ -646,7 +678,16 @@ export function searchOrthogonalRoute(
 
   if (!bestGoalNode) {
     return stopReason === "max_iterations" && options?.allowDoglegFallback
-      ? findGridDoglegRoute(edgeId, sourcePort, targetPort, grid, combinedOccupancy, config, stats)
+      ? findGridDoglegRoute(
+          edgeId,
+          sourcePort,
+          targetPort,
+          grid,
+          combinedOccupancy,
+          config,
+          stats,
+          options,
+        )
       : null;
   }
 

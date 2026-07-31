@@ -468,7 +468,11 @@ export function routeAllEdges(
               grid,
               trialLedger.toOccupancyRecords(),
               config,
-              { role: isFeedback ? "feedback" : undefined, forbiddenRects: forbiddenNodeRects },
+              {
+                role: isFeedback ? "feedback" : undefined,
+                forbiddenRects: forbiddenNodeRects,
+                allowDoglegFallback: true,
+              },
             );
 
             if (route) {
@@ -545,7 +549,11 @@ export function routeAllEdges(
             grid,
             ledger.toOccupancyRecords(),
             config,
-            { role: isFeedback ? "feedback" : undefined, forbiddenRects: forbiddenNodeRects },
+            {
+              role: isFeedback ? "feedback" : undefined,
+              forbiddenRects: forbiddenNodeRects,
+              allowDoglegFallback: true,
+            },
           );
 
           if (route) {

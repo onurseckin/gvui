@@ -63,7 +63,7 @@ export function optimizeLayout(
     validation: bestEval.validation,
     status: !bestEval.validation.isValid
       ? "invalid_hard_failure"
-      : bestEval.validation.metrics.unresolvedBadgeCount > 0 ||
+      : (bestEval.validation.metrics.unresolvedBadgeCount ?? 0) > 0 ||
           hasAestheticDefect(bestEval.validation)
         ? "unresolved_soft_conflicts"
         : "success",
@@ -74,13 +74,16 @@ export function optimizeLayout(
   };
 }
 
-function hasAestheticDefect(result: CustomLayoutResult["validation"]): boolean {
+export function hasAestheticDefect(result: CustomLayoutResult["validation"]): boolean {
   const metrics = result.metrics;
   return (
     metrics.badgeNodeOverlaps > 0 ||
     metrics.badgeBadgeOverlaps > 0 ||
     metrics.badgeUnrelatedEdgeOverlaps > 0 ||
     metrics.crossingCount > 0 ||
-    metrics.sharedEdgeSegmentLength > 0
+    metrics.sharedEdgeSegmentLength > 0 ||
+    (metrics.ordinaryLeaderCount ?? 0) > 0 ||
+    (metrics.avoidableHairpinCount ?? 0) > 0 ||
+    (metrics.excessBendCount ?? 0) > 0
   );
 }

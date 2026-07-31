@@ -408,6 +408,16 @@ describe("layoutValidator", () => {
     expect(compareLayoutScores(resA.validation, resB.validation)).toBeLessThan(0);
   });
 
+  test("defaults unresolved metrics omitted by legacy validation callers to zero", () => {
+    const legacy = createEmptyResult().validation;
+    delete (legacy.metrics as Partial<typeof legacy.metrics>).unresolvedRouteCount;
+    delete (legacy.metrics as Partial<typeof legacy.metrics>).unresolvedBadgeCount;
+
+    const compared = compareLayoutScores(legacy, createEmptyResult().validation);
+    expect(Number.isFinite(compared)).toBe(true);
+    expect(compared).toBe(0);
+  });
+
   test("detects missing routes", () => {
     const edge: RoutedPath = {
       edgeId: "e1",

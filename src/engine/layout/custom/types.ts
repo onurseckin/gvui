@@ -237,8 +237,8 @@ export type SearchStopReason =
   | "hard-failure";
 
 export interface LayoutMetrics {
-  unresolvedRouteCount: number;
-  unresolvedBadgeCount: number;
+  unresolvedRouteCount?: number;
+  unresolvedBadgeCount?: number;
   nodeNodeOverlaps: number;
   edgeNodePenetrations: number;
   sharedEdgeSegmentLength: number;
@@ -291,11 +291,11 @@ export interface RouteCost {
 
 export interface LayoutScore {
   hardErrorCount: number;
-  unresolvedRouteCount: number;
+  unresolvedRouteCount?: number;
   nodeNodeOverlaps: number;
   edgeNodePenetrations: number;
   sharedEdgeSegmentLength: number;
-  unresolvedBadgeCount: number;
+  unresolvedBadgeCount?: number;
   badgeNodeOverlaps: number;
   badgeBadgeOverlaps: number;
   badgeUnrelatedEdgeOverlaps: number;

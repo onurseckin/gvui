@@ -43,6 +43,16 @@ describe("layoutObjective", () => {
     expect(compareLayoutScore(resolved, missingBadge)).toBeLessThan(0);
   });
 
+  test("treats unresolved fields omitted by legacy score callers as zero", () => {
+    const legacy = score({ totalLength: 10 });
+    delete (legacy as Partial<LayoutScore>).unresolvedRouteCount;
+    delete (legacy as Partial<LayoutScore>).unresolvedBadgeCount;
+    const comparison = compareLayoutScore(legacy, score({ totalLength: 20 }));
+
+    expect(Number.isFinite(comparison)).toBe(true);
+    expect(comparison).toBeLessThan(0);
+  });
+
   test("prefers zero badge/unrelated-edge overlaps over any reduction in crossings", () => {
     const noBadgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 0, crossingCount: 5 });
     const badgeOverlap = score({ badgeUnrelatedEdgeOverlaps: 1, crossingCount: 0 });

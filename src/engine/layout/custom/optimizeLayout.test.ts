@@ -1,8 +1,28 @@
 import { describe, expect, it } from "bun:test";
-import { optimizeLayout } from "./optimizeLayout";
+import { hasAestheticDefect, optimizeLayout } from "./optimizeLayout";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("optimizeLayout", () => {
+  it("treats excess bends as an unresolved aesthetic defect", () => {
+    const result = optimizeLayout(
+      [
+        { id: "A", width: 100, height: 50 },
+        { id: "B", width: 100, height: 50 },
+      ],
+      [{ id: "e1", source: "A", target: "B" }],
+    );
+
+    expect(
+      hasAestheticDefect({
+        ...result.validation,
+        metrics: {
+          ...result.validation.metrics,
+          excessBendCount: 1,
+        },
+      }),
+    ).toBe(true);
+  });
+
   it("handles local badge retry for edge badges in tight layouts", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 120, height: 60 },
