@@ -110,7 +110,15 @@ function badgeOtherRouteIntersections(badges: BadgePlacement[], routes: RoutedPa
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   it("keeps badges out of every non-owner route in collision scenarios", () => {
     for (const scenarioId of [8, 9, 12, 14, 19, 20]) {
-      const { result } = computeScenario(scenarioId);
+      const { edges, result } = computeScenario(scenarioId);
+      const requiredBadgeCount = edges.filter(
+        (edge) => edge.isCycle || (edge.label?.trim().length ?? 0) > 0,
+      ).length;
+
+      expect(result.edges).toHaveLength(edges.length);
+      expect(result.badges).toHaveLength(requiredBadgeCount);
+      expect(result.validation.metrics.unresolvedRouteCount ?? 0).toBe(0);
+      expect(result.validation.metrics.unresolvedBadgeCount ?? 0).toBe(0);
       expect(badgeOtherRouteIntersections(result.badges, result.edges)).toEqual([]);
     }
   }, 60000);

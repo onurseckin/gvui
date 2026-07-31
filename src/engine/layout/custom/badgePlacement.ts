@@ -620,10 +620,6 @@ export function placeEdgeBadges(
             break;
           }
         }
-        if (!partialMap.has(bItem.edgeId) && bItem.candidates.length > 0) {
-          partialMap.set(bItem.edgeId, bItem.candidates[0]);
-        }
-
         if (partialMap.has(bItem.edgeId)) {
           const cand = partialMap.get(bItem.edgeId)!;
           finalPlacementsMap.set(bItem.edgeId, {
@@ -633,15 +629,19 @@ export function placeEdgeBadges(
             anchorPoint: cand.point,
             ...(cand.leaderPoints ? { leaderPoints: cand.leaderPoints } : {}),
           });
-        }
-        unresolvedEdgeIds.push(bItem.edgeId);
-        const edge = edgeMap.get(bItem.edgeId);
-        if (edge) {
-          const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
-          const role = edge.layoutRole ?? classifiedRole;
-          const isFeedbackOrSelf = role === "feedback" || role === "self" || Boolean(edge.isCycle);
-          if (!isFeedbackOrSelf) {
-            spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
+        } else {
+          unresolvedEdgeIds.push(bItem.edgeId);
+          const edge = edgeMap.get(bItem.edgeId);
+          if (edge) {
+            const classifiedRole = nodeLayout.classifiedEdges?.find(
+              (ce) => ce.id === edge.id,
+            )?.role;
+            const role = edge.layoutRole ?? classifiedRole;
+            const isFeedbackOrSelf =
+              role === "feedback" || role === "self" || Boolean(edge.isCycle);
+            if (!isFeedbackOrSelf) {
+              spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
+            }
           }
         }
       }

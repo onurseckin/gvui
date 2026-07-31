@@ -64,7 +64,7 @@ export function generatePortCandidates(
   edge: NormalizedEdge,
   srcNode: NormalizedNode & Point,
   tgtNode: NormalizedNode & Point,
-  _role: EdgeRole,
+  role: EdgeRole,
   _nodePositions: Map<string, Point>,
   config: CustomLayoutConfig,
   allNodes?: (NormalizedNode & Point)[],
@@ -149,9 +149,14 @@ export function generatePortCandidates(
       let angularPenalty = (srcDev + tgtDev) * config.directionPenalty;
 
       // Upward feedback edge preference discount: prefer leaving right/left and entering top/right/left
-      const isUpwardFeedback = tgtCenter.y < srcCenter.y - config.nodeGap;
+      const isUpwardFeedback =
+        (role === "feedback" || Boolean(edge.isCycle)) &&
+        tgtCenter.y < srcCenter.y - config.nodeGap;
       if (isUpwardFeedback) {
-        if ((srcSide === "right" || srcSide === "left") && (tgtSide === "top" || tgtSide === "right" || tgtSide === "left")) {
+        if (
+          (srcSide === "right" || srcSide === "left") &&
+          (tgtSide === "top" || tgtSide === "right" || tgtSide === "left")
+        ) {
           angularPenalty *= 0.1; // heavily discount side-looping candidate for feedback edge
         }
       }

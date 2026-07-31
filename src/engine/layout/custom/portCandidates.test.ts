@@ -77,4 +77,42 @@ describe("portCandidates", () => {
     expect(indexRR).toBeGreaterThanOrEqual(0);
     expect(indexBT).toBeLessThan(indexRR);
   });
+
+  it("applies the upward side-loop discount only to feedback edges", () => {
+    const srcNode: NormalizedNode & Point = { id: "A", width: 100, height: 50, x: 0, y: 200 };
+    const tgtNode: NormalizedNode & Point = { id: "B", width: 100, height: 50, x: 0, y: 0 };
+    const edge: NormalizedEdge = { id: "e1", source: "A", target: "B" };
+    const nodePositions = new Map<string, Point>([
+      ["A", { x: 0, y: 200 }],
+      ["B", { x: 0, y: 0 }],
+    ]);
+    const config = resolveCustomLayoutConfig();
+
+    const forward = generatePortCandidates(
+      edge,
+      srcNode,
+      tgtNode,
+      "forward",
+      nodePositions,
+      config,
+    );
+    const feedback = generatePortCandidates(
+      edge,
+      srcNode,
+      tgtNode,
+      "feedback",
+      nodePositions,
+      config,
+    );
+    const forwardRightRight = forward.find(
+      (candidate) => candidate.srcSide === "right" && candidate.tgtSide === "right",
+    );
+    const feedbackRightRight = feedback.find(
+      (candidate) => candidate.srcSide === "right" && candidate.tgtSide === "right",
+    );
+
+    expect(forwardRightRight).toBeDefined();
+    expect(feedbackRightRight).toBeDefined();
+    expect(feedbackRightRight!.baseCost).toBeLessThan(forwardRightRight!.baseCost);
+  });
 });

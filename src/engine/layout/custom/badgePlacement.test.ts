@@ -139,6 +139,65 @@ describe("badgePlacement", () => {
     expect(result.spacingRequests?.[0]?.edgeId).toBe("e1");
   });
 
+  it("never forces a conflicting candidate after component backtracking fails", () => {
+    const config = resolveCustomLayoutConfig({ maxBadgeBacktrackSteps: 1 });
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "A", target: "B", label: "first long ordinary label" },
+      { id: "e2", source: "A", target: "B", label: "second long ordinary label" },
+    ];
+    const makeRoute = (edgeId: string, y: number): RoutedPath => ({
+      edgeId,
+      points: [
+        { x: 0, y },
+        { x: 10, y },
+      ],
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 0, y },
+        stub: { x: 1, y },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 10, y },
+        stub: { x: 9, y },
+      },
+    });
+    const nodeLayout = {
+      normalizedGraph: {
+        nodes: [],
+        edges,
+        nodeMap: new Map(),
+        edgeMap: new Map(edges.map((edge) => [edge.id, edge])),
+        outgoingMap: new Map(),
+        incomingMap: new Map(),
+      },
+      nodePositions: new Map<string, Point>(),
+      classifiedEdges: edges.map((edge) => ({
+        ...edge,
+        role: "forward" as const,
+        reversed: false,
+      })),
+    } as unknown as NodeLayoutResult;
+
+    const result = placeEdgeBadges(
+      [makeRoute("e1", 100), makeRoute("e2", 120)],
+      nodeLayout,
+      config,
+    );
+
+    expect(result.placements).toHaveLength(1);
+    expect(result.unresolvedEdgeIds).toHaveLength(1);
+    const unresolvedEdgeId = result.unresolvedEdgeIds![0];
+    expect(result.placements[0].edgeId === unresolvedEdgeId).toBe(false);
+    expect(result.spacingRequests?.some((request) => request.edgeId === unresolvedEdgeId)).toBe(
+      true,
+    );
+  });
+
   it("places edge badges without overlapping node cards or other badges", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 120, height: 50 },
