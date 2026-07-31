@@ -6,8 +6,24 @@ interface CustomLayoutMetricsProps {
 }
 
 export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult }) => {
-  const { metrics, isValid } = layoutResult.validation;
-  const status = layoutResult.status;
+  const validation = layoutResult?.validation || {
+    isValid: false,
+    diagnostics: [],
+    metrics: {
+      crossingCount: 0,
+      bendCount: 0,
+      totalLength: 0,
+      totalArea: 0,
+    },
+  };
+  const metrics = validation.metrics || {
+    crossingCount: 0,
+    bendCount: 0,
+    totalLength: 0,
+    totalArea: 0,
+  };
+  const isValid = validation.isValid;
+  const status = layoutResult?.status || "invalid_hard_failure";
 
   const getStatusBadge = () => {
     if (status === "success" && isValid) {
@@ -19,6 +35,10 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
     return <span className="status-badge status-invalid">❌ Invalid</span>;
   };
 
+  const nodeCount = (layoutResult?.nodes || []).length;
+  const edgeCount = (layoutResult?.edges || []).length;
+  const diagnostics = validation.diagnostics || [];
+
   return (
     <div className="custom-layout-metrics-panel">
       <div className="metrics-header">
@@ -29,11 +49,11 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
       <div className="metrics-grid">
         <div className="metric-card">
           <span className="metric-label">Nodes</span>
-          <span className="metric-value">{layoutResult.nodes.length}</span>
+          <span className="metric-value">{nodeCount}</span>
         </div>
         <div className="metric-card">
           <span className="metric-label">Edges</span>
-          <span className="metric-value">{layoutResult.edges.length}</span>
+          <span className="metric-value">{edgeCount}</span>
         </div>
         <div className="metric-card">
           <span className="metric-label">Crossings</span>
@@ -55,20 +75,20 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
         </div>
       </div>
 
-      {layoutResult.validation.diagnostics.length > 0 && (
+      {diagnostics.length > 0 && (
         <div className="metrics-diagnostics">
           <div className="diagnostics-title">
-            ⚠️ Diagnostics ({layoutResult.validation.diagnostics.length})
+            ⚠️ Diagnostics ({diagnostics.length})
           </div>
           <ul className="diagnostics-list">
-            {layoutResult.validation.diagnostics.slice(0, 5).map((diag, idx) => (
+            {diagnostics.slice(0, 5).map((diag, idx) => (
               <li key={`${diag.code}-${idx}`} className={`diag-item diag-${diag.severity}`}>
                 <span className="diag-code">[{diag.code}]</span> {diag.message}
               </li>
             ))}
-            {layoutResult.validation.diagnostics.length > 5 && (
+            {diagnostics.length > 5 && (
               <li className="diag-more">
-                ...and {layoutResult.validation.diagnostics.length - 5} more issues
+                ...and {diagnostics.length - 5} more issues
               </li>
             )}
           </ul>

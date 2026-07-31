@@ -15,7 +15,7 @@ interface GraphTestingPageProps {
 }
 
 export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => {
-  // Default to Scenario #20 (Full DevOps Microservice Mesh) so a rich graph is rendered on initial load
+  // Default to Scenario #20 (Full DevOps Microservice Mesh)
   const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
   const [debugOptions, setDebugOptions] = useState<DebugOptions>({
     showPorts: true,
@@ -25,17 +25,17 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   });
 
   const activeScenario: TestScenario = useMemo(() => {
-    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[20];
+    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[20] ?? { id: 20, title: "DevOps Mesh", nodes: [], edges: [] };
   }, [selectedScenarioId]);
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
-    const nodes: NormalizedNode[] = activeScenario.nodes.map((n) => ({
+    const nodes: NormalizedNode[] = (activeScenario.nodes || []).map((n) => ({
       id: n.id,
       label: n.name,
       width: n.w,
       height: n.h,
     }));
-    const edges: NormalizedEdge[] = activeScenario.edges.map((e, idx) => ({
+    const edges: NormalizedEdge[] = (activeScenario.edges || []).map((e, idx) => ({
       id: `e-${e.source}-${e.target}-${idx}`,
       source: e.source,
       target: e.target,
@@ -46,12 +46,41 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   }, [activeScenario]);
 
   const layoutResult = useMemo(() => {
-    return computeCustomLayout(normalizedNodes, normalizedEdges);
+    try {
+      return computeCustomLayout(normalizedNodes, normalizedEdges);
+    } catch (err) {
+      console.error("Layout computation error:", err);
+      return {
+        nodes: [],
+        edges: [],
+        badges: [],
+        crossings: [],
+        status: "invalid_hard_failure" as const,
+        validation: {
+          isValid: false,
+          diagnostics: [{ code: "RENDER_ERROR", severity: "error" as const, message: String(err), ids: [] }],
+          metrics: {
+            nodeNodeOverlaps: 0,
+            edgeNodePenetrations: 0,
+            sharedEdgeSegmentLength: 0,
+            badgeNodeOverlaps: 0,
+            badgeBadgeOverlaps: 0,
+            badgeUnrelatedEdgeOverlaps: 0,
+            crossingCount: 0,
+            bendCount: 0,
+            totalLength: 0,
+            directionDeviationPenalty: 0,
+            portSideReusePenalty: 0,
+            totalArea: 0,
+          },
+        },
+      };
+    }
   }, [normalizedNodes, normalizedEdges]);
 
   // Build lookup maps for rendering details
   const originalNodeMap = useMemo(() => {
-    return new Map(activeScenario.nodes.map((n) => [n.id, n]));
+    return new Map((activeScenario.nodes || []).map((n) => [n.id, n]));
   }, [activeScenario]);
 
   const originalEdgeMap = useMemo(() => {
@@ -59,8 +88,13 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   }, [normalizedEdges]);
 
   const crossingPoints = useMemo(() => {
-    return layoutResult.crossings.map((c) => c.point);
+    return (layoutResult.crossings || []).map((c) => c.point);
   }, [layoutResult]);
+
+  const renderedNodes = layoutResult.nodes || [];
+  const renderedEdges = layoutResult.edges || [];
+  const renderedBadges = layoutResult.badges || [];
+  const renderedCrossings = layoutResult.crossings || [];
 
   return (
     <div className="graph-testing-page-container">
@@ -132,13 +166,13 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               <span>{activeScenario.title}</span>
             </div>
             <div className="testing-stat-badge">
-              Nodes: {layoutResult.nodes.length} | Edges: {layoutResult.edges.length} | Status:{" "}
+              Nodes: {renderedNodes.length} | Edges: {renderedEdges.length} | Status:{" "}
               <strong>{layoutResult.status}</strong>
             </div>
           </div>
           <div className="testing-canvas-container">
             {/* Node Cards */}
-            {layoutResult.nodes.map((node) => {
+            {renderedNodes.map((node) => {
               const origNode = originalNodeMap.get(node.id);
               return (
                 <div
@@ -174,9 +208,9 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               </defs>
 
               {/* Edge Routes */}
-              {layoutResult.edges.map((routedPath) => {
+              {renderedEdges.map((routedPath) => {
                 const origEdge = originalEdgeMap.get(routedPath.edgeId);
-                const dPath = renderPathWithCrossingBridges(routedPath.points, crossingPoints);
+                const dPath = renderPathWithCrossingBridges(routedPath.points || [], crossingPoints);
 
                 return (
                   <g key={`edge-group-${routedPath.edgeId}`}>
@@ -191,7 +225,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                     />
 
                     {/* Port Indicators */}
-                    {debugOptions.showPorts && (
+                    {debugOptions.showPorts && routedPath.sourcePort && routedPath.targetPort && (
                       <>
                         <circle
                           cx={routedPath.sourcePort.point.x}
@@ -231,7 +265,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
               {/* Crossings */}
               {debugOptions.showCrossings &&
-                layoutResult.crossings.map((c, i) => (
+                renderedCrossings.map((c, i) => (
                   <circle
                     key={`crossing-${c.edgeIdA}-${c.edgeIdB}-${i}`}
                     cx={c.point.x}
@@ -245,10 +279,11 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
               {/* Badges */}
               {debugOptions.showBadges &&
-                layoutResult.badges.map((badge) => {
+                renderedBadges.map((badge) => {
                   const badgeCenterX = badge.rect.x + badge.rect.width / 2;
                   const badgeCenterY = badge.rect.y + badge.rect.height / 2;
                   const hasLeader =
+                    badge.anchorPoint &&
                     Math.hypot(
                       badge.anchorPoint.x - badgeCenterX,
                       badge.anchorPoint.y - badgeCenterY
