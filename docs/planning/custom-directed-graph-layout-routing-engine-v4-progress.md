@@ -65,7 +65,7 @@ Recorded from baseline execution:
 - [x] **Task 3: Make Route Search Fast Before Expanding Search Breadth** (`R1-routing-kernel`)
 - [ ] **Task 4: Add Conflict-Directed Rerouting** (`R1-routing-kernel`)
 - [x] **Task 5: Add Explicit Attachment Ordering and Side Search** (`P1-port-state`)
-- [ ] **Task 6: Implement Dynamic Label-Lane Demands** (`B1-label-lanes`)
+- [x] **Task 6: Implement Dynamic Label-Lane Demands** (`B1-label-lanes`)
 - [ ] **Task 7: Add Searchable Local Layer Order and Coordinate Shifts** (`L1-layer-state`)
 - [ ] **Task 8: Build canonical LayoutSearchState and Objective Evaluator** (`G1-global-search`)
 - [ ] **Task 9: Implement Best-First Search and Neighborhood Moves** (`G1-global-search`)
