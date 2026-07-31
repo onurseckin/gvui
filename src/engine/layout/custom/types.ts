@@ -228,6 +228,7 @@ export type SearchStopReason =
   | "objective-target"
   | "bounded-local-optimum"
   | "frontier-exhausted"
+  | "aesthetic-state-budget"
   | "layout-state-budget"
   | "route-state-budget"
   | "badge-state-budget"

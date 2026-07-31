@@ -94,10 +94,17 @@ export function searchBestLayoutState(
     }
 
     if (isPrimaryCleanEvaluation(bestEval) && hasRemainingAestheticDefect(bestEval)) {
+      const remainingGlobalStates = maxStates - evaluatedStates;
+      const maxEvaluations = Math.min(config.maxAestheticPasses, remainingGlobalStates);
+      const budgetStopReason =
+        remainingGlobalStates <= config.maxAestheticPasses
+          ? "layout-state-budget"
+          : "aesthetic-state-budget";
       const aestheticResult = runBoundedAestheticSearch({
         bestState,
         bestEvaluation: bestEval,
-        maxEvaluations: Math.min(config.maxAestheticPasses, maxStates - evaluatedStates),
+        maxEvaluations,
+        budgetStopReason,
         visitedHashes,
         dependencies: {
           evaluateState: (candidate) => evaluateSearchState(nodes, edges, candidate, config),

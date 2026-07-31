@@ -63,7 +63,7 @@ function changedEndpointCount(
 }
 
 describe("neighborhoodSearch", () => {
-  it("limits aesthetic trials to two one-endpoint moves per defect route deterministically", () => {
+  it("retains a bounded target move toward the other endpoint deterministically", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig();
     const defectRoute = makeRoute("defect", "S0", "T0", "right", "left");
@@ -105,6 +105,19 @@ describe("neighborhoodSearch", () => {
     expect(
       forwardTrials.every(
         (trial) => trial.sideAssignments.size === 1 && trial.sideAssignments.has("defect"),
+      ),
+    ).toBe(true);
+    const assignments = forwardTrials.map((trial) => trial.sideAssignments.get("defect"));
+    expect(
+      assignments.some(
+        (assignment) => assignment?.srcSide === "right" && assignment.tgtSide === "top",
+      ),
+    ).toBe(true);
+    expect(
+      assignments.some(
+        (assignment) =>
+          assignment !== undefined &&
+          changedEndpointCount(assignment, { srcSide: "right", tgtSide: "left" }) === 1,
       ),
     ).toBe(true);
     expect(stateSignatures(reversedTrials)).toEqual(stateSignatures(forwardTrials));

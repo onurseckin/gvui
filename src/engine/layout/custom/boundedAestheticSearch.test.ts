@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
+  isObjectiveTargetEvaluation,
+  isPrimaryCleanEvaluation,
   runBoundedAestheticSearch,
   type BoundedAestheticSearchDependencies,
 } from "./boundedAestheticSearch";
@@ -75,6 +77,145 @@ function dependencies(
 }
 
 describe("bounded aesthetic search", () => {
+  it("does not treat shared edge segments as primary-clean, objective-target, or success", () => {
+    const evaluation = makeEvaluation(
+      makeValidation({
+        sharedEdgeSegmentLength: 24,
+        avoidableHairpinCount: 0,
+        excessBendCount: 0,
+        hairpinCount: 0,
+      }),
+    );
+
+    expect(isPrimaryCleanEvaluation(evaluation)).toBe(false);
+    expect(isObjectiveTargetEvaluation(evaluation)).toBe(false);
+    expect(resolveLayoutStatus(evaluation.validation)).toBe("unresolved_soft_conflicts");
+  });
+
+  it("honors cancellation when the aesthetic portfolio is empty", () => {
+    const clean = makeState("clean");
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 3,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean)]),
+      dependencies: {
+        ...dependencies(new Map(), [], []),
+        interruptionReason: () => "cancelled",
+      },
+    });
+
+    expect(result.evaluatedStates).toBe(0);
+    expect(result.stopReason).toBe("cancelled");
+  });
+
+  it("honors a deadline after skipping a duplicate-only portfolio", () => {
+    const clean = makeState("clean");
+    const duplicate = makeState("duplicate");
+    let interruptionChecks = 0;
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 3,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean), computeStateHash(duplicate)]),
+      dependencies: {
+        ...dependencies(new Map(), [duplicate], []),
+        interruptionReason: () => (++interruptionChecks >= 2 ? "deadline-exceeded" : undefined),
+      },
+    });
+
+    expect(result.evaluatedStates).toBe(0);
+    expect(result.stopReason).toBe("deadline-exceeded");
+  });
+
+  it("honors cancellation raised while generating the trial portfolio", () => {
+    const clean = makeState("clean");
+    const trial = makeState("trial");
+    let cancelled = false;
+    let evaluationCalls = 0;
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 2,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean)]),
+      dependencies: {
+        evaluateState: () => {
+          evaluationCalls++;
+          return makeEvaluation(makeValidation());
+        },
+        generateTrialStates: () => {
+          cancelled = true;
+          return [trial];
+        },
+        generateCompletionStates: () => [],
+        interruptionReason: () => (cancelled ? "cancelled" : undefined),
+      },
+    });
+
+    expect(evaluationCalls).toBe(0);
+    expect(result.evaluatedStates).toBe(0);
+    expect(result.stopReason).toBe("cancelled");
+  });
+
+  it("checks cancellation after a crossing trial before generating completions", () => {
+    const clean = makeState("clean");
+    const trial = makeState("trial");
+    let cancelled = false;
+    let completionGenerationCalls = 0;
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 2,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean)]),
+      dependencies: {
+        evaluateState: () => {
+          cancelled = true;
+          return makeEvaluation(makeValidation({ crossingCount: 1 }));
+        },
+        generateTrialStates: () => [trial],
+        generateCompletionStates: () => {
+          completionGenerationCalls++;
+          return [makeState("completion")];
+        },
+        interruptionReason: () => (cancelled ? "cancelled" : undefined),
+      },
+    });
+
+    expect(result.evaluatedStates).toBe(1);
+    expect(completionGenerationCalls).toBe(0);
+    expect(result.stopReason).toBe("cancelled");
+  });
+
+  it("lets cancellation beat an exhausted local budget before the next trial", () => {
+    const clean = makeState("clean");
+    const trialA = makeState("trial-a");
+    const trialB = makeState("trial-b");
+    let cancelled = false;
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 1,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean)]),
+      dependencies: {
+        evaluateState: () => {
+          cancelled = true;
+          return makeEvaluation(makeValidation({ totalLength: 101 }));
+        },
+        generateTrialStates: () => [trialA, trialB],
+        generateCompletionStates: () => [],
+        interruptionReason: () => (cancelled ? "cancelled" : undefined),
+      },
+    });
+
+    expect(result.evaluatedStates).toBe(1);
+    expect(result.stopReason).toBe("cancelled");
+  });
+
   it("selects a coordinated child after its hairpin-reducing parent temporarily crosses", () => {
     const clean = makeState("clean");
     const trial = makeState("trial");
@@ -96,6 +237,7 @@ describe("bounded aesthetic search", () => {
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 3,
+      budgetStopReason: "aesthetic-state-budget",
       visitedHashes: new Set([computeStateHash(clean)]),
       dependencies: dependencies(evaluations, [trial], [completion]),
     });
@@ -127,6 +269,7 @@ describe("bounded aesthetic search", () => {
       bestState: clean,
       bestEvaluation: cleanEvaluation,
       maxEvaluations: 3,
+      budgetStopReason: "aesthetic-state-budget",
       visitedHashes: new Set([computeStateHash(clean)]),
       dependencies: dependencies(evaluations, [trial], [missingRoute, missingBadge]),
     });
@@ -150,6 +293,7 @@ describe("bounded aesthetic search", () => {
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 1,
+      budgetStopReason: "layout-state-budget",
       visitedHashes: new Set([computeStateHash(clean)]),
       dependencies: dependencies(evaluations, [trialA, trialB], []),
     });
@@ -157,6 +301,28 @@ describe("bounded aesthetic search", () => {
     expect(result.bestState).toBe(clean);
     expect(result.evaluatedStates).toBe(1);
     expect(result.stopReason).toBe("layout-state-budget");
+  });
+
+  it("reports the aesthetic budget when its local cap interrupts before the global cap", () => {
+    const clean = makeState("clean");
+    const trialA = makeState("trial-a");
+    const trialB = makeState("trial-b");
+    const evaluations = new Map([
+      [computeStateHash(trialA), makeEvaluation(makeValidation({ crossingCount: 1 }))],
+      [computeStateHash(trialB), makeEvaluation(makeValidation({ crossingCount: 1 }))],
+    ]);
+
+    const result = runBoundedAestheticSearch({
+      bestState: clean,
+      bestEvaluation: makeEvaluation(makeValidation()),
+      maxEvaluations: 1,
+      budgetStopReason: "aesthetic-state-budget",
+      visitedHashes: new Set([computeStateHash(clean)]),
+      dependencies: dependencies(evaluations, [trialA, trialB], []),
+    });
+
+    expect(result.evaluatedStates).toBe(1);
+    expect(result.stopReason).toBe("aesthetic-state-budget");
   });
 
   it("is deterministic when trial and completion inputs are reversed", () => {
@@ -183,6 +349,7 @@ describe("bounded aesthetic search", () => {
         bestState: clean,
         bestEvaluation: cleanEvaluation,
         maxEvaluations: 4,
+        budgetStopReason: "aesthetic-state-budget",
         visitedHashes: new Set([computeStateHash(clean)]),
         dependencies: {
           ...dependencies(

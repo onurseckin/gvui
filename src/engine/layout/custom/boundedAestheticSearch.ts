@@ -20,6 +20,7 @@ export interface BoundedAestheticSearchOptions {
   bestState: LayoutSearchState;
   bestEvaluation: StateEvaluationResult;
   maxEvaluations: number;
+  budgetStopReason: "aesthetic-state-budget" | "layout-state-budget";
   visitedHashes: Set<string>;
   dependencies: BoundedAestheticSearchDependencies;
 }
@@ -39,6 +40,7 @@ export function isPrimaryCleanEvaluation(evaluation: StateEvaluationResult): boo
     (metrics.unresolvedBadgeCount ?? 0) === 0 &&
     metrics.nodeNodeOverlaps === 0 &&
     metrics.edgeNodePenetrations === 0 &&
+    metrics.sharedEdgeSegmentLength === 0 &&
     metrics.badgeNodeOverlaps === 0 &&
     metrics.badgeBadgeOverlaps === 0 &&
     metrics.crossingCount === 0 &&
@@ -74,6 +76,7 @@ export function runBoundedAestheticSearch({
   bestState: initialBestState,
   bestEvaluation: initialBestEvaluation,
   maxEvaluations,
+  budgetStopReason,
   visitedHashes,
   dependencies,
 }: BoundedAestheticSearchOptions): BoundedAestheticSearchResult {
@@ -87,6 +90,10 @@ export function runBoundedAestheticSearch({
     evaluatedStates,
     stopReason,
   });
+  const interrupted = (): BoundedAestheticSearchResult | undefined => {
+    const reason = dependencies.interruptionReason?.();
+    return reason ? stop(reason) : undefined;
+  };
 
   const evaluateCandidate = (
     candidate: LayoutSearchState,
@@ -95,10 +102,10 @@ export function runBoundedAestheticSearch({
     | { kind: "interrupted"; reason: "cancelled" | "deadline-exceeded" }
     | { kind: "budget" }
     | { kind: "evaluated"; evaluation: StateEvaluationResult } => {
-    const hash = computeStateHash(candidate);
-    if (visitedHashes.has(hash)) return { kind: "duplicate" };
     const interruption = dependencies.interruptionReason?.();
     if (interruption) return { kind: "interrupted", reason: interruption };
+    const hash = computeStateHash(candidate);
+    if (visitedHashes.has(hash)) return { kind: "duplicate" };
     if (evaluatedStates >= maxEvaluations) return { kind: "budget" };
 
     visitedHashes.add(hash);
@@ -109,13 +116,23 @@ export function runBoundedAestheticSearch({
   };
 
   improvementRounds: for (let improvementRound = 0; improvementRound < 2; improvementRound++) {
-    const trials = uniqueStatesInOrder(dependencies.generateTrialStates(bestState, bestEvaluation));
+    const beforePortfolio = interrupted();
+    if (beforePortfolio) return beforePortfolio;
+    const generatedTrials = dependencies.generateTrialStates(bestState, bestEvaluation);
+    const afterTrialGeneration = interrupted();
+    if (afterTrialGeneration) return afterTrialGeneration;
+    const trials = uniqueStatesInOrder(generatedTrials);
 
     for (const trial of trials) {
+      const beforeTrial = interrupted();
+      if (beforeTrial) return beforeTrial;
       const trialResult = evaluateCandidate(trial);
       if (trialResult.kind === "interrupted") return stop(trialResult.reason);
-      if (trialResult.kind === "budget") return stop("layout-state-budget");
+      if (trialResult.kind === "budget") return interrupted() ?? stop(budgetStopReason);
       if (trialResult.kind === "duplicate") continue;
+
+      const afterTrialEvaluation = interrupted();
+      if (afterTrialEvaluation) return afterTrialEvaluation;
 
       const trialEvaluation = trialResult.evaluation;
       if (
@@ -129,14 +146,22 @@ export function runBoundedAestheticSearch({
       }
 
       if (trialEvaluation.validation.metrics.crossingCount <= 0) continue;
-      const completions = uniqueStatesInOrder(
-        dependencies.generateCompletionStates(trial, trialEvaluation),
-      ).slice(0, 2);
+      const beforeCompletionGeneration = interrupted();
+      if (beforeCompletionGeneration) return beforeCompletionGeneration;
+      const generatedCompletions = dependencies.generateCompletionStates(trial, trialEvaluation);
+      const afterCompletionGeneration = interrupted();
+      if (afterCompletionGeneration) return afterCompletionGeneration;
+      const completions = uniqueStatesInOrder(generatedCompletions).slice(0, 2);
       for (const completion of completions) {
+        const beforeCompletion = interrupted();
+        if (beforeCompletion) return beforeCompletion;
         const completionResult = evaluateCandidate(completion);
         if (completionResult.kind === "interrupted") return stop(completionResult.reason);
-        if (completionResult.kind === "budget") return stop("layout-state-budget");
+        if (completionResult.kind === "budget") return interrupted() ?? stop(budgetStopReason);
         if (completionResult.kind === "duplicate") continue;
+
+        const afterCompletionEvaluation = interrupted();
+        if (afterCompletionEvaluation) return afterCompletionEvaluation;
 
         const completionEvaluation = completionResult.evaluation;
         if (
@@ -151,8 +176,9 @@ export function runBoundedAestheticSearch({
       }
     }
 
-    return stop("bounded-local-optimum");
+    const afterPortfolio = interrupted();
+    return afterPortfolio ?? stop("bounded-local-optimum");
   }
 
-  return stop("bounded-local-optimum");
+  return interrupted() ?? stop("bounded-local-optimum");
 }

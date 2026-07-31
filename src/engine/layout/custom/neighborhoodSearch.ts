@@ -1,6 +1,6 @@
 import type { CustomLayoutConfig } from "./config";
 import { calculateExcessBends, countPathHairpins } from "./layoutObjective";
-import { generatePortCandidates, type PortCandidate } from "./portCandidates";
+import { generatePortCandidates, getSideNormal, type PortCandidate } from "./portCandidates";
 import { cloneSearchState, computeStateHash } from "./searchState";
 import { exactSpacingDemandSignature } from "./spacingDemand";
 import type { StateEvaluationResult } from "./stateEvaluator";
@@ -55,7 +55,12 @@ function candidateAssignments(
   current: PortSideAssignment,
   evalResult: StateEvaluationResult,
   config: CustomLayoutConfig,
-): Array<{ assignment: PortSideAssignment; baseCost: number }> {
+): Array<{
+  assignment: PortSideAssignment;
+  baseCost: number;
+  estimatedLength: number;
+  bendEstimate: number;
+}> {
   const nodes = evalResult.nodes ?? [];
   const source = nodes.find((node) => node.id === edge.source);
   const target = nodes.find((node) => node.id === edge.target);
@@ -64,10 +69,14 @@ function candidateAssignments(
       ...adjacentSides(current.tgtSide).map((tgtSide) => ({
         assignment: { srcSide: current.srcSide, tgtSide },
         baseCost: 0,
+        estimatedLength: 0,
+        bendEstimate: 0,
       })),
       ...adjacentSides(current.srcSide).map((srcSide) => ({
         assignment: { srcSide, tgtSide: current.tgtSide },
         baseCost: 0,
+        estimatedLength: 0,
+        bendEstimate: 0,
       })),
     ];
   }
@@ -85,6 +94,8 @@ function candidateAssignments(
   return candidates.map((candidate: PortCandidate) => ({
     assignment: { srcSide: candidate.srcSide, tgtSide: candidate.tgtSide },
     baseCost: candidate.baseCost,
+    estimatedLength: candidate.estimatedLength,
+    bendEstimate: candidate.bendEstimate,
   }));
 }
 
@@ -127,8 +138,13 @@ function oneEndpointAlternatives(
   );
 }
 
-/** Aesthetic trials move one endpoint to its most outward adjacent side and
- * emit only one source move plus one target move. */
+/**
+ * Keep the aesthetic portfolio deliberately small while allowing the router
+ * to escape a one-endpoint local minimum. The first candidate moves only the
+ * source toward the graph exterior. The second preserves that source side and
+ * moves the target toward the source node, then ranks ties by side congestion
+ * and the port candidate's bend/length estimates.
+ */
 function oneEndpointAestheticAlternatives(
   edge: ClassifiedEdge,
   current: PortSideAssignment,
@@ -153,15 +169,9 @@ function oneEndpointAestheticAlternatives(
     if (side === "top") return -dy;
     return dy;
   };
-  const selectBest = (kind: "target" | "source"): PortSideAssignment | undefined =>
+  const selectBestSourceMove = (): PortSideAssignment | undefined =>
     candidates
       .filter(({ assignment }) => {
-        if (kind === "target") {
-          return (
-            assignment.srcSide === current.srcSide &&
-            adjacentSides(current.tgtSide).includes(assignment.tgtSide)
-          );
-        }
         return (
           assignment.tgtSide === current.tgtSide &&
           adjacentSides(current.srcSide).includes(assignment.srcSide)
@@ -169,15 +179,54 @@ function oneEndpointAestheticAlternatives(
       })
       .sort(
         (left, right) =>
-          (kind === "target"
-            ? outwardScore(edge.target, right.assignment.tgtSide) -
-              outwardScore(edge.target, left.assignment.tgtSide)
-            : outwardScore(edge.source, right.assignment.srcSide) -
-              outwardScore(edge.source, left.assignment.srcSide)) ||
+          outwardScore(edge.source, right.assignment.srcSide) -
+            outwardScore(edge.source, left.assignment.srcSide) ||
           left.baseCost - right.baseCost ||
           assignmentKey(left.assignment).localeCompare(assignmentKey(right.assignment)),
       )[0]?.assignment;
-  return [selectBest("source"), selectBest("target")].filter(
+
+  const source = nodeById.get(edge.source);
+  const target = nodeById.get(edge.target);
+  const sideLoads = new Map<string, number>();
+  for (const route of evalResult.routes) {
+    if (route.edgeId === edge.id) continue;
+    const sourceKey = `${route.sourcePort.nodeId}:${route.sourcePort.side}`;
+    const targetKey = `${route.targetPort.nodeId}:${route.targetPort.side}`;
+    sideLoads.set(sourceKey, (sideLoads.get(sourceKey) ?? 0) + 1);
+    sideLoads.set(targetKey, (sideLoads.get(targetKey) ?? 0) + 1);
+  }
+  const targetTowardSource = (() => {
+    if (!source || !target) return undefined;
+    const dx = source.x + source.width / 2 - (target.x + target.width / 2);
+    const dy = source.y + source.height / 2 - (target.y + target.height / 2);
+    const distance = Math.hypot(dx, dy);
+    const towardSource =
+      distance > config.epsilon ? { x: dx / distance, y: dy / distance } : { x: 0, y: 0 };
+    const alignment = (side: Side): number => {
+      const normal = getSideNormal(side);
+      return normal.x * towardSource.x + normal.y * towardSource.y;
+    };
+    const congestion = (assignment: PortSideAssignment): number =>
+      (sideLoads.get(`${edge.source}:${assignment.srcSide}`) ?? 0) +
+      (sideLoads.get(`${edge.target}:${assignment.tgtSide}`) ?? 0);
+    return candidates
+      .filter(
+        ({ assignment }) =>
+          assignment.srcSide === current.srcSide &&
+          adjacentSides(current.tgtSide).includes(assignment.tgtSide),
+      )
+      .sort(
+        (left, right) =>
+          alignment(right.assignment.tgtSide) - alignment(left.assignment.tgtSide) ||
+          congestion(left.assignment) - congestion(right.assignment) ||
+          left.bendEstimate - right.bendEstimate ||
+          left.estimatedLength - right.estimatedLength ||
+          left.baseCost - right.baseCost ||
+          assignmentKey(left.assignment).localeCompare(assignmentKey(right.assignment)),
+      )[0]?.assignment;
+  })();
+
+  return [selectBestSourceMove(), targetTowardSource].filter(
     (assignment): assignment is PortSideAssignment => assignment !== undefined,
   );
 }
@@ -267,7 +316,8 @@ function aestheticDefectMetrics(
 /**
  * Build the deliberately small first step of the aesthetic completion phase.
  * Only routes that currently contribute a hairpin or excess bend participate,
- * and every defect receives at most one target-side and one source-side trial.
+ * and every defect receives at most one outward-source and one target-toward-
+ * source trial.
  */
 export function generateAestheticTrialStates(
   state: LayoutSearchState,

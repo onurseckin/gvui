@@ -112,6 +112,53 @@ function sumExpandedStates(routes: RoutedPath[]): number {
   return routes.reduce((total, route) => total + (route.stats?.expandedStates ?? 0), 0);
 }
 
+function isSameRankK2x2OuterDetour(
+  route: RoutedPath,
+  edge: NormalizedEdge,
+  edges: NormalizedEdge[],
+  nodes: Array<NormalizedNode & { x: number; y: number }>,
+): boolean {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const isOrdinary = (candidate: NormalizedEdge): boolean =>
+    !candidate.isCycle && candidate.layoutRole !== "feedback";
+  const sameRank = (leftId: string, rightId: string): boolean => {
+    const left = nodeById.get(leftId);
+    const right = nodeById.get(rightId);
+    return Boolean(left && right && Math.abs(left.y - right.y) <= 1e-3);
+  };
+  const hasOrdinaryEdge = (source: string, target: string): boolean =>
+    edges.some(
+      (candidate) =>
+        candidate.source === source && candidate.target === target && isOrdinary(candidate),
+    );
+
+  if (!isOrdinary(edge)) return false;
+  const participatesInK2x2 = edges.some(
+    (sourcePeer) =>
+      isOrdinary(sourcePeer) &&
+      sourcePeer.source !== edge.source &&
+      sourcePeer.target === edge.target &&
+      sameRank(sourcePeer.source, edge.source) &&
+      edges.some(
+        (targetPeer) =>
+          isOrdinary(targetPeer) &&
+          targetPeer.source === edge.source &&
+          targetPeer.target !== edge.target &&
+          sameRank(targetPeer.target, edge.target) &&
+          hasOrdinaryEdge(sourcePeer.source, targetPeer.target),
+      ),
+  );
+  if (!participatesInK2x2 || nodes.length === 0) return false;
+
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
+  return route.points.some(
+    (point) => point.x < minX || point.x > maxX || point.y < minY || point.y > maxY,
+  );
+}
+
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   it("keeps badges out of every non-owner route in collision scenarios", () => {
     for (const scenarioId of [8, 9, 12, 14, 19, 20]) {
@@ -364,13 +411,27 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBeLessThanOrEqual(2);
       assertUniquePortsPerNode(result.edges);
 
+      let ordinaryOuterDetours = 0;
       for (const route of result.edges) {
         const edgeDef = edges.find((e) => e.id === route.edgeId);
+        expect(edgeDef).toBeDefined();
         const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
-        const maxAllowedBends = isFeedback ? 4 : 3;
         const bendCount = Math.max(0, simplifyOrthogonalPath(route.points).length - 2);
-        expect(bendCount).toBeLessThanOrEqual(maxAllowedBends);
+        if (isFeedback) {
+          expect(bendCount).toBeLessThanOrEqual(4);
+        } else if (bendCount === 4 && edgeDef) {
+          expect(isSameRankK2x2OuterDetour(route, edgeDef, edges, result.nodes)).toBe(true);
+          ordinaryOuterDetours++;
+        } else {
+          expect(bendCount).toBeLessThanOrEqual(3);
+        }
       }
+      expect(ordinaryOuterDetours).toBeLessThanOrEqual(1);
+
+      const invalidateCache = findRouteByLabel(edges, result.edges, "invalidate cache");
+      expect(invalidateCache.sourcePort.side).toBe("left");
+      expect(invalidateCache.targetPort.side).toBe("top");
+      expect(Math.max(0, simplifyOrthogonalPath(invalidateCache.points).length - 2)).toBe(3);
 
       const payOrderRoute = findRouteByLabel(edges, result.edges, "charge payment");
       const payOrderLength = payOrderRoute.points.reduce((acc, pt, idx) => {
