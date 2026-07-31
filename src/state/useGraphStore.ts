@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../types/graphData";
 
-export type LayoutMode = "top-down" | "left-right" | "force" | "radial";
+export type LayoutMode = "top-down" | "top-down-dagre" | "left-right" | "force" | "radial";
 export type FilterCategory = "all" | "success" | "error" | "tools";
 
 export interface GraphState {

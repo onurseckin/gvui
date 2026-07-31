@@ -54,7 +54,7 @@ function isSavedFileViewport(obj: unknown): obj is SavedFileViewport {
   }
   if (
     typeof candidate.layoutMode !== "string" ||
-    !["top-down", "left-right", "force", "radial"].includes(candidate.layoutMode)
+    !["top-down", "top-down-dagre", "left-right", "force", "radial"].includes(candidate.layoutMode)
   ) {
     return false;
   }

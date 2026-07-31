@@ -25,6 +25,13 @@ describe("layoutDispatcher all 4 modes", () => {
     expect(res.nodes[0].y).toBeDefined();
   });
 
+  it("computes positioned nodes and edges for top-down-dagre layout", async () => {
+    const res = await computeGraphLayout(sampleDataset, "top-down-dagre");
+    expect(res.nodes).toHaveLength(3);
+    expect(res.edges).toHaveLength(2);
+    expect(res.nodes[1].y).toBeGreaterThan(res.nodes[0].y);
+  });
+
   it("computes positioned nodes and edges for left-right layout", async () => {
     const res = await computeGraphLayout(sampleDataset, "left-right");
     expect(res.nodes).toHaveLength(3);

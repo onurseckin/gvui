@@ -138,6 +138,8 @@ export async function computeGraphLayout(
   switch (mode) {
     case "top-down":
       return await computeCustomEngineGraphLayout(dataset);
+    case "top-down-dagre":
+      return computeDagreLayout(dataset, "TB");
     case "left-right":
       return computeDagreLayout(dataset, "LR");
     case "force":

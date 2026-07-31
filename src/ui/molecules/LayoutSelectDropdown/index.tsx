@@ -7,7 +7,7 @@ import type { LayoutSelectDropdownProps } from "./LayoutSelectDropdown.types";
 const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
   {
     value: "top-down",
-    label: "Hierarchical Top-Down",
+    label: "Top-Down",
     icon: (
       <svg
         width="14"
@@ -22,6 +22,26 @@ const LAYOUT_OPTIONS: SelectOption<LayoutMode>[] = [
         <path d="M12 3v12" />
         <path d="m8 11 4 4 4-4" />
         <rect width="6" height="4" x="9" y="17" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    value: "top-down-dagre",
+    label: "Top-Down (Dagre)",
+    icon: (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 3v12" />
+        <path d="m8 11 4 4 4-4" />
+        <path d="M4 21h16" />
       </svg>
     ),
   },
