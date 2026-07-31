@@ -18,8 +18,7 @@ export interface SpacingOverrides {
 }
 
 export function requiredSameRankBadgeGap(badgeWidth: number, config: CustomLayoutConfig): number {
-  const endpointApproachClearance = 2 * config.badgeClearance + 2 * config.portStubLength;
-  return badgeWidth + Math.max(config.nodeGap, endpointApproachClearance);
+  return badgeWidth + 2 * config.badgeClearance + 2 * config.portStubLength;
 }
 
 function spacingAxis(kind: ExactSpacingDemand["kind"]): "x" | "y" | "padding" {

@@ -13,12 +13,18 @@ describe("spacingDemand", () => {
   it("reserves a same-rank badge corridor plus endpoint approach clearance", () => {
     expect(requiredSameRankBadgeGap(80, DEFAULT_CUSTOM_LAYOUT_CONFIG)).toBe(
       80 +
-        Math.max(
-          DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap,
-          2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.badgeClearance +
-            2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.portStubLength,
-        ),
+        2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.badgeClearance +
+        2 * DEFAULT_CUSTOM_LAYOUT_CONFIG.portStubLength,
     );
+  });
+
+  it("does not add the base node gap to an already sufficient same-rank badge corridor", () => {
+    expect(
+      requiredSameRankBadgeGap(129, {
+        ...DEFAULT_CUSTOM_LAYOUT_CONFIG,
+        nodeGap: 100,
+      }),
+    ).toBe(189);
   });
 
   describe("computeBadgeSpacingDemands", () => {
