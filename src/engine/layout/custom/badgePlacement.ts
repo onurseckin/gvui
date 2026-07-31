@@ -77,7 +77,7 @@ export function generateBadgeCandidates(
           if (segmentIntersectsRectInterior(seg, pRect, config.epsilon)) return false;
         }
         for (const uSeg of unrelatedSegments) {
-          if (segmentsCross(seg, uSeg, config.epsilon) || collinearOverlapLength(seg, uSeg, config.epsilon) > config.epsilon) return false;
+          if (collinearOverlapLength(seg, uSeg, config.epsilon) > config.epsilon) return false;
         }
       }
       return true;

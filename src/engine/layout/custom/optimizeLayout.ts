@@ -238,6 +238,7 @@ export function optimizeLayout(
     const currentConfig: CustomLayoutConfig = {
       ...config,
       graphPadding: currentGraphPadding,
+      maxLaneRings: Math.min(24, config.maxLaneRings + pass * 4),
     };
 
     const coordResult = assignCoordinates(
@@ -425,6 +426,22 @@ export function optimizeLayout(
     for (const edgeId of routeConflicts) {
       const currentOffset = portCandidateOffsets.get(edgeId) ?? 0;
       portCandidateOffsets.set(edgeId, currentOffset + 1);
+
+      const edge = edges.find((e) => e.id === edgeId);
+      if (edge) {
+        const srcRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.source);
+        const tgtRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.target);
+        if (srcRank !== undefined && tgtRank !== undefined && srcRank !== tgtRank) {
+          const minRank = Math.min(srcRank, tgtRank);
+          const currentRankGap = spacingOverrides.rankGaps?.[minRank] ?? config.rankGap;
+          spacingOverrides.rankGaps = {
+            ...spacingOverrides.rankGaps,
+            [minRank]: currentRankGap + 40,
+          };
+        } else {
+          currentGraphPadding += 30;
+        }
+      }
     }
 
     for (const edgeId of badgeConflicts) {

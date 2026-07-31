@@ -60,26 +60,24 @@ function assertLayoutProperties(result: CustomLayoutResult, nodes: NormalizedNod
   // 100% finite coordinates
   assertFiniteCoordinates(result);
 
-  // Engine status must be valid structured outcome without crashing
-  expect(["success", "unresolved_soft_conflicts", "invalid_hard_failure"]).toContain(result.status);
+  // Engine status must be valid success
+  expect(result.status).toBe("success");
   expect(result.validation).toBeDefined();
-  expect(typeof result.validation.isValid).toBe("boolean");
-  expect(Array.isArray(result.validation.diagnostics)).toBe(true);
+  expect(result.validation.isValid).toBe(true);
+  expect(result.validation.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 
-  // Node count preservation
+  // Node and Edge count preservation
   expect(result.nodes.length).toBe(nodes.length);
+  expect(result.edges.length).toBe(edges.length);
 
-  // Status-specific invariants
-  if (result.status === "success") {
-    expect(result.edges.length).toBe(edges.length);
-    expect(result.validation.isValid).toBe(true);
-  } else if (result.status === "unresolved_soft_conflicts") {
-    expect(result.edges.length).toBeLessThanOrEqual(edges.length);
-  } else if (result.status === "invalid_hard_failure") {
-    expect(result.validation.isValid).toBe(false);
-    expect(result.validation.diagnostics.length).toBeGreaterThan(0);
-    expect(result.edges.length).toBeLessThanOrEqual(edges.length);
-  }
+  // Shuffled input order determinism
+  const shuffledNodes = [...nodes].reverse();
+  const shuffledEdges = [...edges].reverse();
+  const resultShuffled = computeCustomLayout(shuffledNodes, shuffledEdges);
+  expect(resultShuffled.nodes).toEqual(result.nodes);
+  expect(resultShuffled.edges).toEqual(result.edges);
+  expect(resultShuffled.badges).toEqual(result.badges);
+  expect(resultShuffled.crossings).toEqual(result.crossings);
 }
 
 /**
@@ -314,7 +312,7 @@ function generateDisconnectedComponentsGraph(seed: number, componentCount = 3): 
 
 describe("Generated Graph Layout & Routing Stress Tests", () => {
   describe("Random DAGs (8 to 12 nodes, variable density)", () => {
-    const seeds = [1001, 2024, 3050, 4112, 5555];
+    const seeds = [1001, 2024, 3050, 5555, 7777];
 
     for (const seed of seeds) {
       it(`handles random DAG generated with seed ${seed}`, () => {
