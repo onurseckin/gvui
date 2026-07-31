@@ -107,7 +107,11 @@ export function validateCustomLayout(
   const badges = result.badges ?? [];
 
   if (result.expectedEdges) {
-    const routesByEdgeId = new Map(edges.map((edge) => [edge.edgeId, edge]));
+    const routesByEdgeId = new Map(
+      edges
+        .filter((edge) => edge.points && edge.points.length >= 2)
+        .map((edge) => [edge.edgeId, edge]),
+    );
     const badgesByEdgeId = new Map(badges.map((badge) => [badge.edgeId, badge]));
 
     for (const expectedEdge of result.expectedEdges) {
@@ -229,12 +233,16 @@ export function validateCustomLayout(
   // 3. Edge endpoint, direction, missing route, and non-orthogonal segment checks
   for (const edge of edges) {
     if (!edge.points || edge.points.length < 2) {
-      addDiagnostic(diagnostics, seenDiagnosticKeys, {
-        code: "MISSING_ROUTE",
-        severity: "error",
-        message: `Edge ${edge.edgeId} has a missing or incomplete route`,
-        ids: [edge.edgeId],
-      });
+      if (
+        addDiagnostic(diagnostics, seenDiagnosticKeys, {
+          code: "MISSING_ROUTE",
+          severity: "error",
+          message: `Edge ${edge.edgeId} has a missing or incomplete route`,
+          ids: [edge.edgeId],
+        })
+      ) {
+        metrics.unresolvedRouteCount++;
+      }
       continue;
     }
 

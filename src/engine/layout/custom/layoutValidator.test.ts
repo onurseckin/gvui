@@ -435,6 +435,7 @@ describe("layoutValidator", () => {
 
     const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
     expect(val.isValid).toBe(false);
+    expect(val.metrics.unresolvedRouteCount).toBe(1);
     const diag = val.diagnostics.find((d) => d.code === "MISSING_ROUTE");
     expect(diag).toBeDefined();
     expect(diag?.ids).toContain("e1");
