@@ -483,12 +483,12 @@ export function placeEdgeBadges(
     const badgeDim = measureBadgeRect(label ?? "", config, isCycle);
     const area = badgeDim.width * badgeDim.height;
 
-    if (candidates.length === 0) {
-      unresolvedEdgeIds.push(route.edgeId);
-      if (!isFeedbackOrSelf) {
-        spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
-      }
-    } else {
+    const hasOnPathCandidate = candidates.some((c) => c.score < 500);
+
+    if (candidates.length === 0 || !hasOnPathCandidate) {
+      spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
+    }
+    if (candidates.length > 0) {
       badgeItems.push({
         edgeId: route.edgeId,
         label: label ?? (isCycle ? "Cycle" : ""),

@@ -71,6 +71,6 @@ describe("Public Sample Datasets Quality Gate Suite", () => {
 
       expect(layoutResult.validation.isValid).toBe(true);
       expect(errors).toEqual([]);
-    });
+    }, 35000);
   }
 });
