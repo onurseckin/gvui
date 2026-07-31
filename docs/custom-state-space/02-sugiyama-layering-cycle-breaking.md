@@ -1,187 +1,217 @@
 # 02. Sugiyama Layering & Cycle Breaking
 
-[← Back to Master Index](../README.md)
+[← Previous: State-Space Search & Lexicographic Fitness](./01-state-space-search.md) | [← Back to Custom State-Space Engine Overview](./README.md) | [Next: Barycentric Crossing Minimization →](./03-barycentric-crossing-minimization.md)
 
-This module documents cycle breaking via Tarjan SCC decomposition, Eades-style greedy back-edge reversal, longest-path topological rank assignment, and virtual dummy node chain insertion.
-
----
-
-## 1. Tarjan SCC Decomposition & Cycle Breaking
-
-Graphs containing directed cycles (e.g. $A \to B \to C \to A$) cannot be directly assigned to topological layers. The engine decomposes directed graph $G = (V, E)$ into Strongly Connected Components (SCCs) using Tarjan's algorithm.
-
-```
-       Cyclic Graph                          Decomposed DAG (Back-Edge Reversed)
-       ┌───┐       ┌───┐                     ┌───┐       ┌───┐
-       │ A │──────>│ B │                     │ A │──────>│ B │
-       └───┘       └───┘                     └───┘       └───┘
-         ▲           │                         │           │
-         │           ▼                         ▼           ▼
-       ┌───────────────┐                     ┌───────────────┐
-       │       C       │                     │       C       │
-       └───────────────┘                     └───────────────┘
-     (Cycle: A -> B -> C -> A)           (Reversed Edge: C -> A becomes A -> C)
-```
-
-### Tarjan SCC Formal Mathematical Definitions
-
-For vertex $v \in V$, Tarjan's algorithm maintains:
-1. **Discovery Index** $d(v) \in \mathbb{N}$: Timestamp when vertex $v$ was first visited during Depth-First Search (DFS).
-2. **Low-Link Value** $\text{low}(v) \in \mathbb{N}$: Smallest discovery index reachable from $v$ via tree edges and cross/back-edges to vertices currently on the DFS stack:
-   $$\text{low}(v) = \min \left( \{ d(v) \} \cup \{ d(w) \mid (v, w) \in E \land w \in \text{DFS\_Stack} \} \cup \{ \text{low}(w) \mid (v, w) \in E_{\text{tree}} \} \right)$$
-
-A vertex $u$ is the root of an SCC if and only if $\text{low}(u) = d(u)$. The set of vertices popped from $\text{DFS\_Stack}$ up to $u$ forms a strongly connected component $C_i \subseteq V$.
-
-### Eades-Style Greedy Cycle Breaking Math
-
-For any cyclic SCC $C_i$ ($|C_i| > 1$), the engine classifies edges into forward and feedback sets using Eades' greedy ordering algorithm:
-
-1. Maintain active vertex set $S \subseteq C_i$, initialized to $S = C_i$.
-2. Maintain net outward flow metric $\delta(v)$ for each $v \in S$:
-   $$\delta(v) = \text{deg}^+(v, S) - \text{deg}^-(v, S)$$
-3. Iteratively construct linear order sequences $L_{\text{left}}$ (built left-to-right) and $L_{\text{right}}$ (built right-to-left):
-   - **Sink Removal**: If $\exists v \in S$ with $\text{deg}^+(v, S) = 0$, remove $v$ from $S$ and prepend to $L_{\text{right}}$.
-   - **Source Removal**: If $\exists v \in S$ with $\text{deg}^-(v, S) = 0$, remove $v$ from $S$ and append to $L_{\text{left}}$.
-   - **Max Flow Choice**: Otherwise, select $v^* = \arg\max_{v \in S} \delta(v)$ (tie-broken deterministically by node ID), remove $v^*$ from $S$ and append to $L_{\text{left}}$.
-4. Concatenate $L = L_{\text{left}} \parallel L_{\text{right}}$, yielding deterministic total order $\pi: C_i \to \{1, 2, \dots, |C_i|\}$.
-
-### Edge Classification Theorem
-
-An edge $e = (u, v) \in E$ inside cyclic SCC $C_i$ is classified as a **feedback edge** if and only if its endpoints violate the linear ordering $\pi$:
-
-$$\text{role}(e) = \begin{cases} \text{feedback} & \text{if } \pi(u) > \pi(v) \\ \text{forward} & \text{if } \pi(u) < \pi(v) \end{cases}$$
-
-Reversing all feedback edges $E_{\text{feedback}} = \{ (u, v) \in E \mid \pi(u) > \pi(v) \}$ yields acyclic DAG $G_{\text{DAG}} = (V, E_{\text{forward}})$.
-
-```
-                             Eades Greedy Cycle Breaking Flow
-   ┌──────────────────────┐    sinks / sources    ┌──────────────────────┐
-   │ Active Nodes Set S   │ ────────────────────> │ Build Linear Order L │
-   └──────────┬───────────┘                       └──────────┬───────────┘
-              │                                              │
-              │ max (deg+ - deg-)                            │ Compare π(u) vs π(v)
-              ▼                                              ▼
-   ┌──────────────────────┐                       ┌──────────────────────┐
-   │ Select Pivot Node v* │                       │  Classify Edge Roles │
-   └──────────────────────┘                       │ Forward vs Feedback  │
-                                                  └──────────────────────┘
-```
+This document details the cycle breaking, rank assignment, and graph normalization pipeline powering the **Custom State-Space Layout Engine**.
 
 ---
 
-## 2. Longest-Path Layer Rank Assignment
+## 1. Problem & Trade-Off Journey
 
-Given reduced acyclic DAG $G_{\text{DAG}} = (V, E_{\text{forward}})$, every vertex $v \in V$ is assigned an integer layer rank $r(v) \in \mathbb{Z}_{\ge 0}$.
+### The Core Challenge
+Hierarchical graph layouts (Sugiyama-style framework) organize nodes into discrete horizontal rank layers where edges flow directionally from top to bottom ($r(u) < r(v)$ for edge $(u, v)$).
 
-### Linear Programming Formulation
-
-$$\min_{r} \sum_{(u, v) \in E_{\text{forward}}} (r(v) - r(u))$$
-
-$$\text{subject to} \quad r(v) - r(u) \ge 1 \quad \forall (u, v) \in E_{\text{forward}}, \quad r(v) \in \mathbb{Z}_{\ge 0}$$
-
-### Recurrence Relation
-
-Using topological Kahn ordering, layer ranks are computed via:
-
-$$r(v) = \begin{cases} 0 & \text{if } \text{in-degree}_{\text{forward}}(v) = 0 \\ \max_{(u, v) \in E_{\text{forward}}} \{ r(u) + 1 \} & \text{otherwise} \end{cases}$$
+However, real-world workflow graphs and dependency networks frequently contain **directed cycles** (e.g., feedback loops, retries, or recursive parent-child relationships):
 
 ```
-       Rank 0 (Root):              [ API Gateway ]
-                                         │
-                                         ▼
-       Rank 1 (Services):     [ Auth Service ]  [ User Service ]
-                                         │
-                                         ▼
-       Rank 2 (Database):         [ Payment Gateway ]
+Cyclic Graph (Deadlock in Topological Sort):     Decoupled DAG (Feedback Edge Reversed):
+           ┌──────────┐                                     ┌──────────┐
+           │  Node A  │ (Rank 0)                            │  Node A  │ (Rank 0)
+           └────┬─────┘                                     └────┬─────┘
+                │                                                │
+                ▼                                                ▼
+           ┌──────────┐                                     ┌──────────┐
+           │  Node B  │ (Rank 1)                            │  Node B  │ (Rank 1)
+           └────┬─────┘                                     └────┬─────┘
+                │ ▲                                              │ │ (Feedback
+          Cycle │ │ Feedback                                     │ │  Reversed)
+                ▼ │                                              ▼ ▼
+           ┌──────────┐                                     ┌──────────┐
+           │  Node C  │ (Rank 2)                            │  Node C  │ (Rank 2)
+           └──────────┘                                     └──────────┘
+```
+
+If a graph contains cycles:
+1. **Topological sorting fails**: Kahn's algorithm or standard DFS cannot assign linear ranks because in-degrees never collapse to 0.
+2. **Infinite dummy node expansion**: If long-span edges traverse cycles, rank assignment produces negative or infinite rank gaps ($r(v) - r(u) < 0$).
+
+### Trade-Off Comparison of Cycle-Breaking Algorithms
+
+| Algorithm | Mechanism | Pros | Cons | Decision |
+| :--- | :--- | :--- | :--- | :--- |
+| **Simple DFS Back-Edge Reversal** | Reverses edges pointing to active call-stack nodes | $O(\|V\| + \|E\|)$ linear time | Arbitrary edge reversal based on DFS traversal order; often reverses long forward chains needlessly | ❌ Rejected for general graphs |
+| **Tarjan's SCC Decomposition + Eades Greedy Flow** | Identifies Strongly Connected Components, then greedily picks nodes with maximum net out-degree | Minimizes the total count of reversed feedback edges while preserving local sub-graph flow | Slightly higher setup overhead ($O(\|V\| + \|E\|)$ per component) | ✅ **Chosen Approach** |
+| **Exact Integer Linear Program (Feedback Arc Set)** | Solves NP-hard minimum feedback arc set via ILP | Guarantees minimum feedback arc set | Exponential worst-case complexity; unacceptable latency in browser JS thread | ❌ Rejected for UI performance |
+
+---
+
+## 2. Bottom-Up Mathematical Deconstruction
+
+### Step 2.1: Strongly Connected Component (SCC) Partitioning
+Using Tarjan's algorithm, the input graph $G = (V, E)$ is partitioned into disjoint strongly connected components $C_1, C_2, \dots, C_k$:
+
+$$V = \bigcup_{i=1}^k V_{C_i}, \quad \text{where } V_{C_i} \cap V_{C_j} = \emptyset \text{ for } i \neq j$$
+
+Component $C_i$ is **cyclic** if $|V_{C_i}| > 1$ or contains a self-loop $(v, v) \in E$. Cycle breaking is isolated strictly within cyclic SCCs.
+
+---
+
+### Step 2.2: Eades Net Flow Metric $\delta(v)$
+Within a cyclic component $C_i$, for any active node subset $V_{\text{active}} \subseteq V_{C_i}$, we define the in-degree $\text{deg}^-(v)$ and out-degree $\text{deg}^+(v)$ restricted to $V_{\text{active}}$:
+
+$$\text{deg}^+(v) = |\{ u \in V_{\text{active}} \mid (v, u) \in E \}|$$
+$$\text{deg}^-(v) = |\{ u \in V_{\text{active}} \mid (u, v) \in E \}|$$
+
+The net flow score $\delta(v)$ measures node $v$'s tendency to act as a source versus a sink:
+
+$$\delta(v) = \text{deg}^+(v) - \text{deg}^-(v)$$
+
+Nodes are assigned positions in a linear ordering sequence $\pi = (v_1, v_2, \dots, v_n)$ according to Eades greedy rules:
+1. **Sinks** ($\text{deg}^+(v) = 0$): Placed at the right end of sequence $\pi$.
+2. **Sources** ($\text{deg}^-(v) = 0$): Placed at the left end of sequence $\pi$.
+3. **Internal Nodes**: The node maximizing $\delta(v)$ is placed at the left end of sequence $\pi$.
+
+An edge $e = (u, v)$ is classified as a **feedback edge** if $\pi(u) \ge \pi(v)$, and is temporarily reversed during rank assignment.
+
+---
+
+### Step 2.3: Longest Path Rank Assignment $r(v)$
+Once cycle breaking converts the graph into an acyclic DAG $G_{\text{DAG}} = (V, E_{\text{forward}})$, Kahn's algorithm computes a topological ordering sequence $\text{Topo}(V)$.
+
+The rank layer $r(v)$ of each vertex $v \in V$ is computed incrementally using the longest path formulation:
+
+$$r(v) = \begin{cases} 0 & \text{if } \text{Pred}(v) = \emptyset \\ \max_{u \in \text{Pred}(v)} (r(u)) + 1 & \text{otherwise} \end{cases}$$
+
+where $\text{Pred}(v) = \{ u \in V \mid (u, v) \in E_{\text{forward}} \}$.
+
+---
+
+### Step 2.4: Dummy Node Injection Span $(r(v) - r(u) - 1)$
+An edge $e = (u, v) \in E_{\text{forward}}$ spanning multiple layers ($r(v) - r(u) > 1$) is split into a chain of $k - 1$ virtual dummy nodes, where:
+
+$$k = r(v) - r(u)$$
+
+$$\text{Chain}(e) = \left( u \to \omega_{e, 1} \to \omega_{e, 2} \to \dots \to \omega_{e, k-1} \to v \right)$$
+
+where each dummy node $\omega_{e, i}$ is assigned rank layer $r(\omega_{e, i}) = r(u) + i$.
+
+---
+
+## 3. Step-by-Step Computational Pseudocode
+
+The following pseudocode illustrates Eades cycle breaking and rank assignment:
+
+```typescript
+function classifyEdgeRolesAndAssignRanks(graph: NormalizedGraph): RankAssignmentResult {
+  // Step 1: Compute SCCs via Tarjan's algorithm
+  const sccResult = computeStronglyConnectedComponents(graph);
+  const edgeRoleMap = new Map<string, EdgeRole>();
+
+  // Step 2: Process cyclic components with Eades heuristic
+  for (const compNodes of sccResult.components) {
+    if (compNodes.length <= 1) continue;
+
+    const activeNodes = new Set(compNodes);
+    const leftList: string[] = [];
+    const rightList: string[] = [];
+
+    while (activeNodes.size > 0) {
+      // Find sink (out-degree === 0)
+      const sink = findNodeWithOutDegreeZero(activeNodes);
+      if (sink) {
+        activeNodes.delete(sink);
+        rightList.unshift(sink);
+        continue;
+      }
+
+      // Find source (in-degree === 0)
+      const source = findNodeWithInDegreeZero(activeNodes);
+      if (source) {
+        activeNodes.delete(source);
+        leftList.push(source);
+        continue;
+      }
+
+      // Maximize net flow delta(v) = deg+(v) - deg-(v)
+      const bestNode = findNodeWithMaxNetFlow(activeNodes);
+      activeNodes.delete(bestNode);
+      leftList.push(bestNode);
+    }
+
+    const sccOrder = [...leftList, ...rightList];
+    const posMap = new Map<string, number>(sccOrder.map((id, idx) => [id, idx]));
+
+    // Classify edges: srcPos < tgtPos => forward, else feedback
+    for (const edge of getInternalSCCEdges(compNodes)) {
+      if (posMap.get(edge.source)! < posMap.get(edge.target)!) {
+        edgeRoleMap.set(edge.id, "forward");
+      } else {
+        edgeRoleMap.set(edge.id, "feedback");
+      }
+    }
+  }
+
+  // Step 3: Compute Topological Order via Kahn's algorithm on forward edges
+  const forwardEdges = graph.edges.filter(e => edgeRoleMap.get(e.id) !== "feedback");
+  const topoOrder = kahnTopologicalSort(graph.nodes, forwardEdges);
+
+  // Step 4: Longest Path Rank Assignment
+  const nodeRankMap = new Map<string, number>();
+  for (const nodeId of topoOrder) {
+    const preds = getForwardPredecessors(nodeId, forwardEdges);
+    if (preds.length === 0) {
+      nodeRankMap.set(nodeId, 0);
+    } else {
+      const maxPredRank = Math.max(...preds.map(p => nodeRankMap.get(p)!));
+      nodeRankMap.set(nodeId, maxPredRank + 1);
+    }
+  }
+
+  return { nodeRankMap, edgeRoleMap };
+}
 ```
 
 ---
 
-## 3. Virtual Dummy Node Insertion
+## 4. Visual ASCII Diagrams
 
-If an edge $e = (u, v) \in E_{\text{forward}}$ spans rank distance $k = r(v) - r(u) > 1$, it is split into a chain of $k-1$ zero-width **virtual dummy nodes** $\{d_1^e, d_2^e, \dots, d_{k-1}^e\}$:
-
-$$u \to d_1^e \to d_2^e \to \dots \to d_{k-1}^e \to v$$
-
-Where $r(d_i^e) = r(u) + i$ for $i \in \{1, \dots, k-1\}$.
+### Back-Edge Reversal & Rank Layering Sequence
 
 ```
-       Rank 0:    [ Node u ]
-                      │
-                      ▼
-       Rank 1:    (Dummy Node d_1)   <-- Zero-width Virtual Node
-                      │
-                      ▼
-       Rank 2:    (Dummy Node d_2)   <-- Keeps Edge Segments Vertical
-                      │
-                      ▼
-       Rank 3:    [ Node v ]
+Initial Graph (Cycle: B -> C -> B):         Step 1: Eades Reversal (C -> B Reversed):
+        [Node A] (In-deg 0)                         [Node A] (Rank 0)
+           │                                           │
+           ▼                                           ▼
+        [Node B] <──────┐                           [Node B] (Rank 1)
+           │            │                              │
+           ▼            │                              ▼
+        [Node C] ───────┘                           [Node C] (Rank 2)
+                                                       │
+                                                       └──────> (Feedback Edge C -> B)
+
+Step 2: Rank Assignment & Longest Path Layering:
+ Rank 0:    ┌──────────┐
+            │  Node A  │
+            └────┬─────┘
+                 │
+ Rank 1:    ┌────┴─────┐
+            │  Node B  │
+            └────┬─────┘
+                 │
+ Rank 2:    ┌────┴─────┐
+            │  Node C  ├───────────────────┐
+            └──────────┘                   │ (Reversed Feedback)
+                 ▲                         │
+                 └─────────────────────────┘
 ```
-
-This guarantees that every routed edge segment connects nodes on strictly adjacent rank layers ($r = i$ to $r = i + 1$), enforcing Sugiyama layering invariants.
-
----
-
-## 4. Step-by-Step Developer Walkthrough
-
-1. **Graph Normalization**: Call `normalizeGraph()` to validate node dimensions, unique IDs, and build adjacency maps.
-2. **SCC Identification**: Run Tarjan's algorithm via `findStronglyConnectedComponents()` to identify cyclic sub-graphs.
-3. **Cycle Reversal**: Call `classifyEdgeRoles()` to run Eades' greedy cycle breaking within cyclic components, flagging back-edges with `role: "feedback"`.
-4. **Rank Assignment**: Call `assignRanks()` to execute Kahn topological traversal and apply longest-path layer assignment.
-5. **Dummy Expansion**: In `normalizeGraphStructure()`, identify edges spanning $k > 1$ ranks and inject virtual dummy node chains $\{d_1, \dots, d_{k-1}\}$.
 
 ---
 
 ## 5. Codebase Reference Map & Line Anchors
 
 - [`src/engine/layout/custom/cycleBreaking.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/cycleBreaking.ts#L10-L355)
-  - [`classifyEdgeRoles`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/cycleBreaking.ts#L10-L355) — Tarjan SCC & Eades greedy cycle breaking algorithm
-- [`src/engine/layout/custom/stronglyConnectedComponents.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stronglyConnectedComponents.ts#L1-L90)
-  - Tarjan strongly connected components solver
+  - [`classifyEdgeRoles`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/cycleBreaking.ts#L10-L355) — Classifies edge roles (`forward`, `feedback`, `cross`, `self`) via Tarjan SCCs + Eades flow.
 - [`src/engine/layout/custom/rankAssignment.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/rankAssignment.ts#L11-L105)
-  - [`assignRanks`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/rankAssignment.ts#L11-L105) — Longest-path topological layer rank assignment
+  - [`assignRanks`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/rankAssignment.ts#L11-L105) — Computes longest path rank layers and edge rank spans.
 - [`src/engine/layout/custom/normalizeGraph.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/normalizeGraph.ts#L14-L149)
-  - [`normalizeGraph`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/normalizeGraph.ts#L14-L149) — Graph validation & dummy node chain expansion
-
-```typescript
-// Code Snippet from cycleBreaking.ts (L10-L35)
-export function classifyEdgeRoles(
-  graph: NormalizedGraph,
-  sccResult: DetailedSCCResult,
-): CycleBreakingResult {
-  const edgeRoleMap = new Map<string, EdgeRole>();
-  const reversedMap = new Map<string, boolean>();
-
-  // Process explicit roles: self > explicit feedback > explicit cross > explicit forward
-  for (const edge of graph.edges) {
-    if (edge.source === edge.target) {
-      edgeRoleMap.set(edge.id, "self");
-      reversedMap.set(edge.id, false);
-    } else if (edge.isCycle || edge.layoutRole === "feedback") {
-      edgeRoleMap.set(edge.id, "feedback");
-      reversedMap.set(edge.id, true);
-    }
-  }
-  // Eades greedy ordering execution...
-}
-
-// Code Snippet from rankAssignment.ts (L57-L74)
-// Longest path rank assignment
-const nodeRankMap = new Map<string, number>();
-let maxRank = 0;
-
-for (const nodeId of topoOrder) {
-  const preds = forwardPredecessors.get(nodeId) ?? [];
-  if (preds.length === 0) {
-    nodeRankMap.set(nodeId, 0);
-  } else {
-    let maxPredRank = 0;
-    for (const p of preds) {
-      maxPredRank = Math.max(maxPredRank, nodeRankMap.get(p) ?? 0);
-    }
-    const rank = maxPredRank + 1;
-    nodeRankMap.set(nodeId, rank);
-    maxRank = Math.max(maxRank, rank);
-  }
-}
-```
+  - [`normalizeGraph`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/normalizeGraph.ts#L14-L149) — Validates input nodes/edges and extracts weak graph components.
