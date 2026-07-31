@@ -62,16 +62,23 @@ Consider 2 adjacent layers $L_0$ and $L_1$:
 4. Total crossings between $L_0$ and $L_1$: $C(L_0, L_1) = 1$.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function evaluateCrossingPredicate(e1: Edge, e2: Edge, posR: Map<string, number>, posR1: Map<string, number>): number {
-  const u1 = posR.get(e1.source)!;
-  const u2 = posR.get(e2.source)!;
-  const v1 = posR1.get(e1.target)!;
-  const v2 = posR1.get(e2.target)!;
+```text
+ALGORITHM evaluateCrossingPredicate(e1, e2, posR, posR1)
+  INPUT: edge e1, edge e2, layer r node positions posR, layer r+1 node positions posR1
+  OUTPUT: 1 if edges cross, 0 otherwise
 
-  const crosses = (u1 < u2 && v1 > v2) || (u1 > u2 && v1 < v2);
-  return crosses ? 1 : 0;
-}
+  u1 <- posR[e1.source]
+  u2 <- posR[e2.source]
+  v1 <- posR1[e1.target]
+  v2 <- posR1[e2.target]
+
+  crosses <- (u1 < u2 AND v1 > v2) OR (u1 > u2 AND v1 < v2)
+  IF crosses THEN
+    RETURN 1
+  ELSE
+    RETURN 0
+  END IF
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -116,32 +123,29 @@ $$0.0 \text{ (Node E)} < 0.5 \text{ (Node F)} < 1.5 \text{ (Node D)}$$
 $$\text{Reordered Layer 1}: [E, F, D]$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeDownwardBarycentersAndSort(
-  layer: LayerNode[],
-  prevPos: Map<string, number>,
-  predMap: Map<string, string[]>
-): LayerNode[] {
-  const barycenters = new Map<string, number>();
+```text
+ALGORITHM computeDownwardBarycentersAndSort(layer, prevPos, predMap)
+  INPUT: layer nodes array, previous layer positions map prevPos, predecessor mapping predMap
+  OUTPUT: sorted layer array by barycenter value
 
-  for (let i = 0; i < layer.length; i++) {
-    const node = layer[i];
-    const preds = (predMap.get(node.id) ?? []).filter(p => prevPos.has(p));
-    if (preds.length > 0) {
-      const sum = preds.reduce((acc, p) => acc + prevPos.get(p)!, 0);
-      barycenters.set(node.id, sum / preds.length);
-    } else {
-      barycenters.set(node.id, i);
-    }
-  }
+  barycenters <- EMPTY MAP
 
-  return [...layer].sort((a, b) => {
-    const bA = barycenters.get(a.id)!;
-    const bB = barycenters.get(b.id)!;
-    if (Math.abs(bA - bB) > 0.0001) return bA - bB;
-    return a.id.localeCompare(b.id);
-  });
-}
+  FOR EACH node IN layer DO
+    preds <- FILTER(predMap[node.id] WHERE p IN prevPos)
+    IF preds IS NOT EMPTY THEN
+      sum <- SUM(prevPos[p] FOR EACH p IN preds)
+      barycenters[node.id] <- sum / LENGTH(preds)
+    ELSE
+      barycenters[node.id] <- INDEX_OF(node IN layer)
+    END IF
+  END FOR
+
+  sortedLayer <- SORT layer BY:
+    PRIMARY KEY: barycenters[node.id] ASCENDING
+    SECONDARY KEY: node.id STRING ASCENDING
+
+  RETURN sortedLayer
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -184,36 +188,32 @@ $$\Delta \text{cross} = c(v_2, v_1) - c(v_1, v_2) = 0 - 2 = -2$$
 Since $\Delta \text{cross} = -2 < 0$, swapping $[v_1, v_2] \to [v_2, v_1]$ reduces graph crossings by 2. Swap is **COMMITTED**.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function adjacentTranspositionPass(
-  layers: LayerNode[][],
-  succMap: Map<string, string[]>
-): { layers: LayerNode[][]; reducedCount: number } {
-  let bestLayers = layers.map(l => [...l]);
-  let currentCrossings = countTotalGraphCrossings(bestLayers, succMap);
-  let reduced = 0;
+```text
+ALGORITHM adjacentTranspositionPass(layers, succMap)
+  INPUT: layer array of node lists, successor mapping succMap
+  OUTPUT: optimized layers and total reduced crossing count
 
-  for (let r = 0; r < bestLayers.length; r++) {
-    const layer = bestLayers[r];
-    for (let i = 0; i < layer.length - 1; i++) {
-      // Swap adjacent nodes
-      const temp = layer[i];
-      layer[i] = layer[i + 1];
-      layer[i + 1] = temp;
+  bestLayers <- DEEP_COPY(layers)
+  currentCrossings <- countTotalGraphCrossings(bestLayers, succMap)
+  reduced <- 0
 
-      const newCrossings = countTotalGraphCrossings(bestLayers, succMap);
-      if (newCrossings < currentCrossings) {
-        reduced += (currentCrossings - newCrossings);
-        currentCrossings = newCrossings;
-      } else {
-        // Revert swap if no improvement
-        layer[i + 1] = layer[i];
-        layer[i] = temp;
-      }
-    }
-  }
-  return { layers: bestLayers, reducedCount: reduced };
-}
+  FOR r FROM 0 TO LENGTH(bestLayers) - 1 DO
+    layer <- bestLayers[r]
+    FOR i FROM 0 TO LENGTH(layer) - 2 DO
+      SWAP layer[i] AND layer[i + 1]
+
+      newCrossings <- countTotalGraphCrossings(bestLayers, succMap)
+      IF newCrossings < currentCrossings THEN
+        reduced <- reduced + (currentCrossings - newCrossings)
+        currentCrossings <- newCrossings
+      ELSE
+        SWAP BACK layer[i] AND layer[i + 1] // Revert swap if no improvement
+      END IF
+    END FOR
+  END FOR
+
+  RETURN { layers: bestLayers, reducedCount: reduced }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -238,45 +238,49 @@ Combining binary crossing predicates (2.1), alternating top-down/bottom-up baryc
 $$\mathcal{L}^* = \arg\min_{\mathcal{L} \in \text{Perm}(V_R)} \sum_{r=0}^{K-2} C(L_r, L_{r+1})$$
 
 ### 2. Complete Master Crossing Minimization Pseudocode
-```typescript
-function minimizeCrossings(
-  layerGraph: ExpandedLayerGraph,
-  maxSweeps = 24
-): CrossingMinimizationResult {
-  let currentLayers = layerGraph.layers.map(l => [...l]);
-  let bestLayers = currentLayers.map(l => [...l]);
-  let bestCrossings = countTotalGraphCrossings(bestLayers, layerGraph.successorsMap);
+```text
+ALGORITHM minimizeCrossings(layerGraph, maxSweeps)
+  INPUT: expanded layer graph, maximum sweep count (default 24)
+  OUTPUT: ordered layers and final crossing count
 
-  if (bestCrossings === 0) return { orderedLayers: bestLayers, crossingCount: 0 };
+  currentLayers <- DEEP_COPY(layerGraph.layers)
+  bestLayers <- DEEP_COPY(currentLayers)
+  bestCrossings <- countTotalGraphCrossings(bestLayers, layerGraph.successorsMap)
 
-  for (let sweep = 0; sweep < maxSweeps; sweep++) {
+  IF bestCrossings = 0 THEN
+    RETURN { orderedLayers: bestLayers, crossingCount: 0 }
+  END IF
+
+  FOR sweep FROM 0 TO maxSweeps - 1 DO
     // 1. Downward Sweep (Rank 1 to K-1)
-    for (let r = 1; r < currentLayers.length; r++) {
-      const prevPos = new Map<string, number>(currentLayers[r - 1].map((n, idx) => [n.id, idx]));
-      currentLayers[r] = computeDownwardBarycentersAndSort(currentLayers[r], prevPos, layerGraph.predecessorsMap);
-    }
+    FOR r FROM 1 TO LENGTH(currentLayers) - 1 DO
+      prevPos <- MAP_NODE_IDS_TO_INDICES(currentLayers[r - 1])
+      currentLayers[r] <- computeDownwardBarycentersAndSort(currentLayers[r], prevPos, layerGraph.predecessorsMap)
+    END FOR
 
     // 2. Upward Sweep (Rank K-2 down to 0)
-    for (let r = currentLayers.length - 2; r >= 0; r--) {
-      const nextPos = new Map<string, number>(currentLayers[r + 1].map((n, idx) => [n.id, idx]));
-      currentLayers[r] = computeUpwardBarycentersAndSort(currentLayers[r], nextPos, layerGraph.successorsMap);
-    }
+    FOR r FROM LENGTH(currentLayers) - 2 DOWN TO 0 DO
+      nextPos <- MAP_NODE_IDS_TO_INDICES(currentLayers[r + 1])
+      currentLayers[r] <- computeUpwardBarycentersAndSort(currentLayers[r], nextPos, layerGraph.successorsMap)
+    END FOR
 
     // 3. Adjacent Transposition Pass
-    const transposeResult = adjacentTranspositionPass(currentLayers, layerGraph.successorsMap);
-    currentLayers = transposeResult.layers;
+    transposeResult <- adjacentTranspositionPass(currentLayers, layerGraph.successorsMap)
+    currentLayers <- transposeResult.layers
 
-    const newCrossings = countTotalGraphCrossings(currentLayers, layerGraph.successorsMap);
-    if (newCrossings < bestCrossings) {
-      bestCrossings = newCrossings;
-      bestLayers = currentLayers.map(l => [...l]);
-    }
+    newCrossings <- countTotalGraphCrossings(currentLayers, layerGraph.successorsMap)
+    IF newCrossings < bestCrossings THEN
+      bestCrossings <- newCrossings
+      bestLayers <- DEEP_COPY(currentLayers)
+    END IF
 
-    if (bestCrossings === 0 || (transposeResult.reducedCount === 0 && sweep > 4)) break;
-  }
+    IF bestCrossings = 0 OR (transposeResult.reducedCount = 0 AND sweep > 4) THEN
+      BREAK
+    END IF
+  END FOR
 
-  return { orderedLayers: bestLayers, crossingCount: bestCrossings };
-}
+  RETURN { orderedLayers: bestLayers, crossingCount: bestCrossings }
+END ALGORITHM
 ```
 
 ### 3. Master Sweeping Flow Diagram

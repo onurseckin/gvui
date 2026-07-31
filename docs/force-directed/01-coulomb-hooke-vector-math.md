@@ -73,18 +73,18 @@ $$\sqrt{60\,000} \approx 244.94897\text{px}$$
 $$k = 0.75 \times 244.94897 = 183.7117 \approx 183.71\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeEquilibriumDistance(
-  width: number,
-  height: number,
-  nodeCount: number,
-  densityFactor = 0.75
-): number {
-  if (nodeCount <= 0) return 0;
-  const area = width * height;
-  return densityFactor * Math.sqrt(area / nodeCount);
-}
-// Example execution: computeEquilibriumDistance(1200, 800, 16) => 183.71
+```
+ALGORITHM computeEquilibriumDistance
+INPUT: width, height, nodeCount, densityFactor (default 0.75)
+OUTPUT: ideal spacing distance k
+
+IF nodeCount <= 0 THEN
+    RETURN 0
+END IF
+
+area = width * height
+k = densityFactor * SQRT(area / nodeCount)
+RETURN k
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -136,18 +136,20 @@ $$d_{\epsilon}(u, v) = \max(10^{-4}, 50.0) = 50.0\text{px}$$
 $$\hat{u}_{uv} = \begin{pmatrix} \frac{40.0}{50.0} \\[4pt] \frac{30.0}{50.0} \end{pmatrix} = \begin{pmatrix} +0.8 \\[4pt] +0.6 \end{pmatrix}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeDisplacementAndDistance(
-  pu: { x: number; y: number },
-  pv: { x: number; y: number },
-  epsilon = 1e-4
-): { dx: number; dy: number; dist: number; ux: number; uy: number } {
-  const dx = pu.x - pv.x;
-  const dy = pu.y - pv.y;
-  const dist = Math.max(epsilon, Math.sqrt(dx * dx + dy * dy));
-  return { dx, dy, dist, ux: dx / dist, uy: dy / dist };
-}
-// Example execution: (140,230), (100,200) => { dx: 40, dy: 30, dist: 50, ux: 0.8, uy: 0.6 }
+```
+ALGORITHM computeDisplacementAndDistance
+INPUT: nodePosU, nodePosV, epsilon (default 0.0001)
+OUTPUT: dx, dy, distance, unitX, unitY
+
+dx = nodePosU.x - nodePosV.x
+dy = nodePosU.y - nodePosV.y
+rawDist = SQRT(dx * dx + dy * dy)
+distance = MAX(epsilon, rawDist)
+
+unitX = dx / distance
+unitY = dy / distance
+
+RETURN dx, dy, distance, unitX, unitY
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -193,20 +195,16 @@ $$F_{ry}(u, v) = 675.0 \times (+0.6) = +405.0\text{px}$$
 $$\vec{F}_r(u, v) = \begin{pmatrix} +540.0 \\ +405.0 \end{pmatrix}\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeCoulombRepulsion(
-  dx: number,
-  dy: number,
-  dist: number,
-  k: number
-): { frx: number; fry: number; fRep: number } {
-  const k2 = k * k;
-  const fRep = k2 / dist; // Repulsive force magnitude
-  const frx = (dx / dist) * fRep;
-  const fry = (dy / dist) * fRep;
-  return { frx, fry, fRep };
-}
-// Example execution: dx=40, dy=30, dist=50, k=183.71 => fRep=675.0, frx=540.0, fry=405.0
+```
+ALGORITHM computeCoulombRepulsion
+INPUT: dx, dy, distance, k
+OUTPUT: repulsionX, repulsionY, repulsionMagnitude
+
+repulsionMagnitude = (k * k) / distance
+repulsionX = (dx / distance) * repulsionMagnitude
+repulsionY = (dy / distance) * repulsionMagnitude
+
+RETURN repulsionX, repulsionY, repulsionMagnitude
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -250,19 +248,16 @@ $$F_{ay}(u, v) = -13.6083 \times (+0.6) = -8.1650 \approx -8.17\text{px}$$
 $$\vec{F}_a(u, v) = \begin{pmatrix} -10.89 \\ -8.17 \end{pmatrix}\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeHookeAttraction(
-  dx: number,
-  dy: number,
-  dist: number,
-  k: number
-): { fax: number; fay: number; fAtt: number } {
-  const fAtt = (dist * dist) / k; // Quadratic attraction magnitude
-  const fax = -(dx / dist) * fAtt;
-  const fay = -(dy / dist) * fAtt;
-  return { fax, fay, fAtt };
-}
-// Example execution: dx=40, dy=30, dist=50, k=183.71 => fAtt=13.61, fax=-10.89, fay=-8.17
+```
+ALGORITHM computeHookeAttraction
+INPUT: dx, dy, distance, k
+OUTPUT: attractionX, attractionY, attractionMagnitude
+
+attractionMagnitude = (distance * distance) / k
+attractionX = -(dx / distance) * attractionMagnitude
+attractionY = -(dy / distance) * attractionMagnitude
+
+RETURN attractionX, attractionY, attractionMagnitude
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -309,19 +304,15 @@ $$\vec{F}_g(u) = \begin{pmatrix} +9.20 \\ +3.40 \end{pmatrix}\text{px}$$
 *(Note: For Node $v$ at $(100.0, 200.0)$, $x_v - x_{\text{center}} = -500.0 \implies F_{gx}(v) = +10.0\text{px}$, $y_v - y_{\text{center}} = -200.0 \implies F_{gy}(v) = +4.0\text{px}$.)*
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeCenterGravity(
-  px: number,
-  py: number,
-  centerX: number,
-  centerY: number,
-  cGravity = 0.02
-): { fgx: number; fgy: number } {
-  const fgx = -cGravity * (px - centerX);
-  const fgy = -cGravity * (py - centerY);
-  return { fgx, fgy };
-}
-// Example execution: px=140, py=230, center=(600,400) => fgx = +9.20, fgy = +3.40
+```
+ALGORITHM computeCenterGravity
+INPUT: posX, posY, centerX, centerY, cGravity (default 0.02)
+OUTPUT: gravityX, gravityY
+
+gravityX = -cGravity * (posX - centerX)
+gravityY = -cGravity * (posY - centerY)
+
+RETURN gravityX, gravityY
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -367,51 +358,44 @@ Net force magnitude $\|\vec{F}_{\text{net}}(u)\|_2$:
 $$\|\vec{F}_{\text{net}}(u)\|_2 = \sqrt{538.31^2 + 400.23^2} = \sqrt{289\,777.66 + 160\,184.05} = \sqrt{449\,961.71} \approx 670.79\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeNetForceOnNode(
-  uIndex: number,
-  nodes: { x: number; y: number }[],
-  edges: { source: number; target: number }[],
-  k: number,
-  cGravity: number,
-  center: { x: number; y: number }
-): { fnx: number; fny: number; fmag: number } {
-  let fnx = 0;
-  let fny = 0;
-  const u = nodes[uIndex];
+```
+ALGORITHM computeNetForceOnNode
+INPUT: targetNodeIndex, nodes, edges, k, cGravity, canvasCenter
+OUTPUT: netForceX, netForceY, forceMagnitude
 
-  // 1. Repulsion from all other nodes
-  for (let j = 0; j < nodes.length; j++) {
-    if (j === uIndex) continue;
-    const v = nodes[j];
-    const { dx, dy, dist } = computeDisplacementAndDistance(u, v);
-    const { frx, fry } = computeCoulombRepulsion(dx, dy, dist, k);
-    fnx += frx;
-    fny += fry;
-  }
+netForceX = 0
+netForceY = 0
+targetNode = nodes[targetNodeIndex]
 
-  // 2. Attraction to connected neighbors
-  for (const edge of edges) {
-    let neighborIdx = -1;
-    if (edge.source === uIndex) neighborIdx = edge.target;
-    else if (edge.target === uIndex) neighborIdx = edge.source;
-    if (neighborIdx === -1) continue;
+// 1. Repulsion from all other nodes
+FOR EACH node IN nodes DO
+    IF node != targetNode THEN
+        dx, dy, distance = computeDisplacementAndDistance(targetNode, node)
+        repulsionX, repulsionY = computeCoulombRepulsion(dx, dy, distance, k)
+        netForceX = netForceX + repulsionX
+        netForceY = netForceY + repulsionY
+    END IF
+END FOR
 
-    const v = nodes[neighborIdx];
-    const { dx, dy, dist } = computeDisplacementAndDistance(u, v);
-    const { fax, fay } = computeHookeAttraction(dx, dy, dist, k);
-    fnx += fax;
-    fny += fay;
-  }
+// 2. Attraction to connected neighbors
+FOR EACH edge IN edges DO
+    neighbor = GET_NEIGHBOR(edge, targetNode)
+    IF neighbor EXISTS THEN
+        dx, dy, distance = computeDisplacementAndDistance(targetNode, neighbor)
+        attractionX, attractionY = computeHookeAttraction(dx, dy, distance, k)
+        netForceX = netForceX + attractionX
+        netForceY = netForceY + attractionY
+    END IF
+END FOR
 
-  // 3. Gravity
-  const { fgx, fgy } = computeCenterGravity(u.x, u.y, center.x, center.y, cGravity);
-  fnx += fgx;
-  fny += fgy;
+// 3. Center gravity
+gravityX, gravityY = computeCenterGravity(targetNode.x, targetNode.y, canvasCenter.x, canvasCenter.y, cGravity)
+netForceX = netForceX + gravityX
+netForceY = netForceY + gravityY
 
-  const fmag = Math.sqrt(fnx * fnx + fny * fny);
-  return { fnx, fny, fmag };
-}
+forceMagnitude = SQRT(netForceX * netForceX + netForceY * netForceY)
+
+RETURN netForceX, netForceY, forceMagnitude
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -474,81 +458,67 @@ $$F_{\text{net, pairwise}} = F_{\text{rep}} - F_{\text{att}} = 183.71 - 183.71 =
 
 Merging all sub-steps 2.1 through 2.6 into a clean, complete modular force calculation engine:
 
-```typescript
-/**
- * Accumulates net force vectors acting on all nodes in graph G = (V, E).
- * Synthesizes Sub-steps 2.1 through 2.6 into a master algorithm.
- */
-function accumulateForceVectors(
-  nodes: { id: string; x: number; y: number }[],
-  edges: { source: string; target: string }[],
-  k: number,
-  cGravity: number,
-  canvasCenter: { x: number; y: number }
-): { fx: number; fy: number }[] {
-  const nodeCount = nodes.length;
-  const k2 = k * k;
-  const epsilon = 1e-4;
-  const forces = Array.from({ length: nodeCount }, () => ({ fx: 0, fy: 0 }));
+```
+ALGORITHM accumulateForceVectors
+INPUT: nodes, edges, k, cGravity, canvasCenter
+OUTPUT: forces (array of force vectors for each node)
 
-  const nodeIndexMap = new Map<string, number>(nodes.map((n, i) => [n.id, i]));
+nodeCount = LENGTH(nodes)
+forces = ARRAY of size nodeCount initialized to (fx = 0, fy = 0)
 
-  // 1. Repulsive forces between ALL node pairs O(|V|^2) (Sub-steps 2.2 & 2.3)
-  for (let i = 0; i < nodeCount; i++) {
-    for (let j = i + 1; j < nodeCount; j++) {
-      const u = nodes[i];
-      const v = nodes[j];
+// 1. Repulsive forces between ALL node pairs
+FOR i FROM 0 TO nodeCount - 1 DO
+    FOR j FROM i + 1 TO nodeCount - 1 DO
+        nodeU = nodes[i]
+        nodeV = nodes[j]
 
-      const dx = u.x - v.x;
-      const dy = u.y - v.y;
-      const distSq = Math.max(epsilon, dx * dx + dy * dy);
-      const dist = Math.sqrt(distSq);
+        dx = nodeU.x - nodeV.x
+        dy = nodeU.y - nodeV.y
+        distance = MAX(0.0001, SQRT(dx * dx + dy * dy))
 
-      // Repulsive magnitude F_r = k^2 / dist
-      const fRep = k2 / dist;
-      const fx = (dx / dist) * fRep;
-      const fy = (dy / dist) * fRep;
+        repulsionMagnitude = (k * k) / distance
+        fx = (dx / distance) * repulsionMagnitude
+        fy = (dy / distance) * repulsionMagnitude
 
-      forces[i].fx += fx;
-      forces[i].fy += fy;
-      forces[j].fx -= fx;
-      forces[j].fy -= fy;
-    }
-  }
+        forces[i].fx = forces[i].fx + fx
+        forces[i].fy = forces[i].fy + fy
+        forces[j].fx = forces[j].fx - fx
+        forces[j].fy = forces[j].fy - fy
+    END FOR
+END FOR
 
-  // 2. Attractive forces along connected edges O(|E|) (Sub-step 2.4)
-  for (const edge of edges) {
-    const idxU = nodeIndexMap.get(edge.source);
-    const idxV = nodeIndexMap.get(edge.target);
-    if (idxU === undefined || idxV === undefined) continue;
+// 2. Attractive forces along connected edges
+FOR EACH edge IN edges DO
+    nodeU = GET_NODE(nodes, edge.source)
+    nodeV = GET_NODE(nodes, edge.target)
 
-    const u = nodes[idxU];
-    const v = nodes[idxV];
+    IF nodeU EXISTS AND nodeV EXISTS THEN
+        dx = nodeU.x - nodeV.x
+        dy = nodeU.y - nodeV.y
+        distance = MAX(0.0001, SQRT(dx * dx + dy * dy))
 
-    const dx = u.x - v.x;
-    const dy = u.y - v.y;
-    const dist = Math.max(epsilon, Math.sqrt(dx * dx + dy * dy));
+        attractionMagnitude = (distance * distance) / k
+        fx = (dx / distance) * attractionMagnitude
+        fy = (dy / distance) * attractionMagnitude
 
-    // Attractive magnitude F_a = dist^2 / k
-    const fAtt = (dist * dist) / k;
-    const fx = (dx / dist) * fAtt;
-    const fy = (dy / dist) * fAtt;
+        forces[nodeU].fx = forces[nodeU].fx - fx
+        forces[nodeU].fy = forces[nodeU].fy - fy
+        forces[nodeV].fx = forces[nodeV].fx + fx
+        forces[nodeV].fy = forces[nodeV].fy + fy
+    END IF
+END FOR
 
-    forces[idxU].fx -= fx;
-    forces[idxU].fy -= fy;
-    forces[idxV].fx += fx;
-    forces[idxV].fy += fy;
-  }
+// 3. Center gravity forces
+FOR i FROM 0 TO nodeCount - 1 DO
+    nodeU = nodes[i]
+    gravityX = -cGravity * (nodeU.x - canvasCenter.x)
+    gravityY = -cGravity * (nodeU.y - canvasCenter.y)
 
-  // 3. Center gravity forces O(|V|) (Sub-step 2.5)
-  for (let i = 0; i < nodeCount; i++) {
-    const u = nodes[i];
-    forces[i].fx -= cGravity * (u.x - canvasCenter.x);
-    forces[i].fy -= cGravity * (u.y - canvasCenter.y);
-  }
+    forces[i].fx = forces[i].fx + gravityX
+    forces[i].fy = forces[i].fy + gravityY
+END FOR
 
-  return forces;
-}
+RETURN forces
 ```
 
 ---

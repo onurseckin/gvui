@@ -76,48 +76,53 @@ $e_1 = (A, B), \; e_2 = (B, C), \; e_3 = (C, A), \; e_4 = (C, D)$.
   - $\text{SCC}_2 = \{A, B, C\}$ (Cyclic, $|V_{\text{SCC}}| = 3 > 1$)
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeSCCs(graph: Graph): string[][] {
-  let index = 0;
-  const stack: string[] = [];
-  const inStack = new Set<string>();
-  const d = new Map<string, number>();
-  const low = new Map<string, number>();
-  const sccs: string[][] = [];
+```text
+ALGORITHM computeSCCs(graph)
+  INPUT: graph containing nodes and edges
+  OUTPUT: list of strongly connected components (lists of node IDs)
 
-  function strongConnect(v: string) {
-    d.set(v, index);
-    low.set(v, index);
-    index++;
-    stack.push(v);
-    inStack.add(v);
+  index <- 0
+  stack <- EMPTY STACK
+  inStack <- EMPTY SET
+  d <- EMPTY MAP
+  low <- EMPTY MAP
+  sccs <- EMPTY LIST
 
-    for (const w of graph.getOutEdges(v)) {
-      if (!d.has(w)) {
-        strongConnect(w);
-        low.set(v, Math.min(low.get(v)!, low.get(w)!));
-      } else if (inStack.has(w)) {
-        low.set(v, Math.min(low.get(v)!, d.get(w)!));
-      }
-    }
+  ALGORITHM strongConnect(v)
+    d[v] <- index
+    low[v] <- index
+    index <- index + 1
+    PUSH v ONTO stack
+    ADD v TO inStack
 
-    if (low.get(v) === d.get(v)) {
-      const comp: string[] = [];
-      let w: string;
-      do {
-        w = stack.pop()!;
-        inStack.delete(w);
-        comp.push(w);
-      } while (w !== v);
-      sccs.push(comp);
-    }
-  }
+    FOR EACH w IN graph.getOutEdges(v) DO
+      IF w NOT IN d THEN
+        strongConnect(w)
+        low[v] <- MIN(low[v], low[w])
+      ELSE IF w IN inStack THEN
+        low[v] <- MIN(low[v], d[w])
+      END IF
+    END FOR
 
-  for (const node of graph.nodes) {
-    if (!d.has(node.id)) strongConnect(node.id);
-  }
-  return sccs;
-}
+    IF low[v] = d[v] THEN
+      component <- EMPTY LIST
+      REPEAT
+        w <- POP stack
+        REMOVE w FROM inStack
+        APPEND w TO component
+      UNTIL w = v
+      APPEND component TO sccs
+    END IF
+  END ALGORITHM
+
+  FOR EACH node IN graph.nodes DO
+    IF node.id NOT IN d THEN
+      strongConnect(node.id)
+    END IF
+  END FOR
+
+  RETURN sccs
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -180,27 +185,38 @@ On cyclic component $\text{SCC}_2 = \{A, B, C\}$ with edges $(A,B), (B,C), (C,A)
   - Edge $e_3=(C,A): \pi(C)=2 > \pi(A)=0 \implies$ **FEEDBACK EDGE (REVERSED!)**
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function eadesGreedyOrdering(sccNodes: string[], sccEdges: Edge[]): Map<string, number> {
-  const activeNodes = new Set(sccNodes);
-  const leftList: string[] = [];
-  const rightList: string[] = [];
+```text
+ALGORITHM eadesGreedyOrdering(sccNodes, sccEdges)
+  INPUT: nodes in SCC component, internal edges of SCC
+  OUTPUT: map of node IDs to linear sequence indices
 
-  while (activeNodes.size > 0) {
-    const sink = findNodeWithOutDegreeZero(activeNodes, sccEdges);
-    if (sink) { activeNodes.delete(sink); rightList.unshift(sink); continue; }
+  activeNodes <- COPY_SET(sccNodes)
+  leftList <- EMPTY LIST
+  rightList <- EMPTY LIST
 
-    const source = findNodeWithInDegreeZero(activeNodes, sccEdges);
-    if (source) { activeNodes.delete(source); leftList.push(source); continue; }
+  WHILE activeNodes IS NOT EMPTY DO
+    sink <- FIND node IN activeNodes WITH outDegree = 0 IN activeNodes
+    IF sink IS FOUND THEN
+      REMOVE sink FROM activeNodes
+      PREPEND sink TO rightList
+      CONTINUE
+    END IF
 
-    const bestNode = findNodeWithMaxNetFlow(activeNodes, sccEdges); // max deg+ - deg-
-    activeNodes.delete(bestNode);
-    leftList.push(bestNode);
-  }
+    source <- FIND node IN activeNodes WITH inDegree = 0 IN activeNodes
+    IF source IS FOUND THEN
+      REMOVE source FROM activeNodes
+      APPEND source TO leftList
+      CONTINUE
+    END IF
 
-  const sccOrder = [...leftList, ...rightList];
-  return new Map(sccOrder.map((id, idx) => [id, idx]));
-}
+    bestNode <- FIND node IN activeNodes WITH MAX (outDegree - inDegree) IN activeNodes
+    REMOVE bestNode FROM activeNodes
+    APPEND bestNode TO leftList
+  END WHILE
+
+  sccOrder <- COMBINE(leftList, rightList)
+  RETURN MAP_INDICES(sccOrder)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -243,20 +259,24 @@ Consider our DAG with nodes $\{A, B, C, D\}$ and forward edges $(A, B), (B, C), 
 $$\text{Final Rank Assignment}: r(A) = 0, \; r(B) = 1, \; r(C) = 2, \; r(D) = 3$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function assignRanks(topoOrder: string[], forwardEdges: Edge[]): Map<string, number> {
-  const nodeRankMap = new Map<string, number>();
-  for (const nodeId of topoOrder) {
-    const preds = forwardEdges.filter(e => e.target === nodeId).map(e => e.source);
-    if (preds.length === 0) {
-      nodeRankMap.set(nodeId, 0);
-    } else {
-      const maxPredRank = Math.max(...preds.map(p => nodeRankMap.get(p)!));
-      nodeRankMap.set(nodeId, maxPredRank + 1);
-    }
-  }
-  return nodeRankMap;
-}
+```text
+ALGORITHM assignRanks(topoOrder, forwardEdges)
+  INPUT: topological node ordering list topoOrder, forward edges
+  OUTPUT: map of node IDs to assigned rank numbers
+
+  nodeRankMap <- EMPTY MAP
+  FOR EACH nodeId IN topoOrder DO
+    preds <- FIND source nodes of forwardEdges WHERE target = nodeId
+    IF preds IS EMPTY THEN
+      nodeRankMap[nodeId] <- 0
+    ELSE
+      maxPredRank <- MAX(nodeRankMap[p] FOR EACH p IN preds)
+      nodeRankMap[nodeId] <- maxPredRank + 1
+    END IF
+  END FOR
+
+  RETURN nodeRankMap
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -312,31 +332,35 @@ For long-span edge $e_4 = (A, D)$ connecting Node $A$ ($r(A) = 0$) to Node $D$ (
   - Layer 3: $[D]$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function normalizeGraphLayers(nodes: Node[], edges: Edge[], rankMap: Map<string, number>): LayeredGraph {
-  const dummyNodes: DummyNode[] = [];
-  const normalizedEdges: Edge[] = [];
+```text
+ALGORITHM normalizeGraphLayers(nodes, edges, rankMap)
+  INPUT: graph nodes, edges, rank mapping
+  OUTPUT: normalized graph with virtual dummy nodes inserted
 
-  for (const edge of edges) {
-    const rSrc = rankMap.get(edge.source)!;
-    const rTgt = rankMap.get(edge.target)!;
-    const span = rTgt - rSrc;
+  dummyNodes <- EMPTY LIST
+  normalizedEdges <- EMPTY LIST
 
-    if (span <= 1) {
-      normalizedEdges.push(edge);
-    } else {
-      let prevId = edge.source;
-      for (let i = 1; i < span; i++) {
-        const dummyId = `dummy_${edge.id}_${i}`;
-        dummyNodes.push({ id: dummyId, rank: rSrc + i, parentEdgeId: edge.id });
-        normalizedEdges.push({ id: `${edge.id}_sub_${i}`, source: prevId, target: dummyId });
-        prevId = dummyId;
-      }
-      normalizedEdges.push({ id: `${edge.id}_sub_${span}`, source: prevId, target: edge.target });
-    }
-  }
-  return { dummyNodes, normalizedEdges };
-}
+  FOR EACH edge IN edges DO
+    rSrc <- rankMap[edge.source]
+    rTgt <- rankMap[edge.target]
+    span <- rTgt - rSrc
+
+    IF span <= 1 THEN
+      APPEND edge TO normalizedEdges
+    ELSE
+      prevId <- edge.source
+      FOR i FROM 1 TO span - 1 DO
+        dummyId <- GENERATE_ID("dummy", edge.id, i)
+        APPEND { id: dummyId, rank: rSrc + i, parentEdgeId: edge.id } TO dummyNodes
+        APPEND { id: GENERATE_ID(edge.id, "sub", i), source: prevId, target: dummyId } TO normalizedEdges
+        prevId <- dummyId
+      END FOR
+      APPEND { id: GENERATE_ID(edge.id, "sub", span), source: prevId, target: edge.target } TO normalizedEdges
+    END IF
+  END FOR
+
+  RETURN { dummyNodes, normalizedEdges }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -365,36 +389,42 @@ Combining Tarjan SCC partitioning (2.1), Eades greedy cycle breaking (2.2), long
 $$G(V, E) \xrightarrow{\text{Tarjan}} \{C_i\} \xrightarrow{\text{Eades}} G_{\text{DAG}}(V, E_{\text{forward}}) \xrightarrow{\text{LongestPath}} r(V) \xrightarrow{\text{DummyInject}} G_{\text{norm}}(V \cup \Omega, E_{\text{norm}})$$
 
 ### 2. Master Pipeline Pseudocode
-```typescript
-function classifyEdgeRolesAndAssignRanks(graph: NormalizedGraph): RankAssignmentResult {
+```text
+ALGORITHM classifyEdgeRolesAndAssignRanks(graph)
+  INPUT: normalized graph containing nodes and edges
+  OUTPUT: node ranks, edge roles, and layered graph with dummy nodes
+
   // Step 1: Tarjan SCC Decomposition
-  const sccs = computeSCCs(graph);
-  const edgeRoleMap = new Map<string, EdgeRole>();
+  sccs <- computeSCCs(graph)
+  edgeRoleMap <- EMPTY MAP
 
   // Step 2: Eades Greedy Cycle Breaking on cyclic components
-  for (const compNodes of sccs) {
-    if (compNodes.length <= 1) continue;
-    const posMap = eadesGreedyOrdering(compNodes, graph.edges);
+  FOR EACH compNodes IN sccs DO
+    IF LENGTH(compNodes) <= 1 THEN
+      CONTINUE
+    END IF
 
-    for (const edge of getInternalSCCEdges(compNodes, graph.edges)) {
-      if (posMap.get(edge.source)! < posMap.get(edge.target)!) {
-        edgeRoleMap.set(edge.id, "forward");
-      } else {
-        edgeRoleMap.set(edge.id, "feedback"); // Reversed!
-      }
-    }
-  }
+    posMap <- eadesGreedyOrdering(compNodes, graph.edges)
+
+    FOR EACH edge IN getInternalSCCEdges(compNodes, graph.edges) DO
+      IF posMap[edge.source] < posMap[edge.target] THEN
+        edgeRoleMap[edge.id] <- "forward"
+      ELSE
+        edgeRoleMap[edge.id] <- "feedback" // Reversed edge
+      END IF
+    END FOR
+  END FOR
 
   // Step 3: Topological Longest Path Rank Assignment
-  const forwardEdges = graph.edges.filter(e => edgeRoleMap.get(e.id) !== "feedback");
-  const topoOrder = kahnTopologicalSort(graph.nodes, forwardEdges);
-  const nodeRankMap = assignRanks(topoOrder, forwardEdges);
+  forwardEdges <- FILTER(graph.edges WHERE edgeRoleMap[id] != "feedback")
+  topoOrder <- kahnTopologicalSort(graph.nodes, forwardEdges)
+  nodeRankMap <- assignRanks(topoOrder, forwardEdges)
 
   // Step 4: Dummy Node Insertion for Spans > 1
-  const layeredGraph = normalizeGraphLayers(graph.nodes, forwardEdges, nodeRankMap);
+  layeredGraph <- normalizeGraphLayers(graph.nodes, forwardEdges, nodeRankMap)
 
-  return { nodeRankMap, edgeRoleMap, layeredGraph };
-}
+  RETURN { nodeRankMap, edgeRoleMap, layeredGraph }
+END ALGORITHM
 ```
 
 ### 3. Master Pipeline ASCII Architecture

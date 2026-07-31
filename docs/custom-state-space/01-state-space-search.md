@@ -68,28 +68,29 @@ Consider a 3-node microservice graph: $V = \{\text{Auth}, \text{User}, \text{DB}
   $$\mathcal{H}(\sigma) = \text{"e1:bottom->top|e2:bottom->top|L0:Auth|L1:User|L2:DB"}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function createInitialSearchState(
-  nodes: Node[],
-  edges: Edge[],
-  layerOrders: Map<number, string[]>
-): LayoutSearchState {
-  const portSides = new Map<string, PortSidePair>();
-  for (const edge of edges) {
-    portSides.set(edge.id, { srcSide: "bottom", tgtSide: "top" });
+```text
+ALGORITHM createInitialSearchState(nodes, edges, layerOrders)
+  INPUT: nodes, edges, initial layer node ordering map
+  OUTPUT: initial layout search state tuple
+
+  portSides <- EMPTY MAP
+  FOR EACH edge IN edges DO
+    portSides[edge.id] <- { srcSide: "bottom", tgtSide: "top" }
+  END FOR
+
+  state <- {
+    portSides: portSides,
+    portOrders: EMPTY MAP,
+    exactSpacingDemands: EMPTY LIST,
+    layerOrders: COPY(layerOrders),
+    nodeShifts: EMPTY MAP,
+    visitedSignatures: EMPTY SET
   }
-  const state: LayoutSearchState = {
-    portSides,
-    portOrders: new Map(),
-    exactSpacingDemands: [],
-    layerOrders: new Map(layerOrders),
-    nodeShifts: new Map(),
-    visitedSignatures: new Set<string>()
-  };
-  const hash = computeStateHash(state);
-  state.visitedSignatures.add(hash);
-  return state;
-}
+
+  hash <- computeStateHash(state)
+  ADD hash TO state.visitedSignatures
+  RETURN state
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -145,20 +146,18 @@ Consider a candidate layout state $\sigma$ evaluated on a graph with 2 rank laye
 $$\mathbf{C}(\sigma) = \left\langle 0, 0, 0, 0, 0, \;\; 0, 0, 0, 0, \;\; 1, 0, 0, 0, 0, 5, 0, \;\; 420.0, 0.5, \;\; 0, 0.0, 480000.0 \right\rangle$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function evaluateSearchState(
-  nodes: Node[],
-  edges: Edge[],
-  state: LayoutSearchState,
-  config: LayoutConfig
-): StateEvaluation {
-  const layout = computeCoordinates(nodes, state, config);
-  const routes = routeAllEdges(edges, layout, state, config);
-  const badges = placeEdgeBadges(routes, layout, config);
-  
-  const score: StateEvaluation = {
+```text
+ALGORITHM evaluateSearchState(nodes, edges, state, config)
+  INPUT: graph nodes, edges, current search state, configuration settings
+  OUTPUT: 21-element fitness evaluation score vector
+
+  layout <- computeCoordinates(nodes, state, config)
+  routes <- routeAllEdges(edges, layout, state, config)
+  badges <- placeEdgeBadges(routes, layout, config)
+
+  score <- {
     hardErrorCount: checkTopologyErrors(nodes, edges),
-    unresolvedRouteCount: routes.filter(r => !r.routed).length,
+    unresolvedRouteCount: COUNT(routes WHERE routed IS FALSE),
     nodeNodeOverlaps: countNodeOverlaps(layout.nodes),
     edgeNodePenetrations: countEdgeNodePenetrations(routes, layout.nodes),
     sharedEdgeSegmentLength: countCollinearEdgeOverlaps(routes),
@@ -167,12 +166,12 @@ function evaluateSearchState(
     badgeBadgeOverlaps: badges.badgeOverlapCount,
     badgeUnrelatedEdgeOverlaps: badges.edgeOverlapCount,
     crossingCount: countEdgeCrossings(routes),
-    bendCount: routes.reduce((acc, r) => acc + r.bends, 0),
-    totalLength: routes.reduce((acc, r) => acc + r.length, 0),
+    bendCount: SUM(r.bends FOR EACH r IN routes),
+    totalLength: SUM(r.length FOR EACH r IN routes),
     totalArea: layout.width * layout.height
-  };
-  return score;
-}
+  }
+  RETURN score
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -213,18 +212,22 @@ Compare two competing layout states $\sigma_A$ and $\sigma_B$:
 4. **Conclusion**: $\sigma_A \prec \sigma_B$ evaluates to **TRUE**. State A is selected as superior, even though State B has fewer bends ($C_{15}=2 < 5$) and shorter total length ($C_{17}=350 < 420$). Higher-priority metrics strictly dominate lower-priority metrics.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function compareLayoutScores(scoreA: ValidationScore, scoreB: ValidationScore): number {
-  for (const key of LEXICOGRAPHIC_ORDER_KEYS) {
-    const valA = scoreA[key] ?? 0;
-    const valB = scoreB[key] ?? 0;
-    if (Math.abs(valA - valB) > 0.0001) {
-      return valA - valB; // Negative if A < B (A is better)
-    }
-  }
-  // Deterministic tie-break by state signature hash
-  return scoreA.signature.localeCompare(scoreB.signature);
-}
+```text
+ALGORITHM compareLayoutScores(scoreA, scoreB)
+  INPUT: two evaluation scores scoreA and scoreB
+  OUTPUT: negative if scoreA is better, positive if scoreB is better, zero if identical
+
+  FOR EACH key IN LEXICOGRAPHIC_ORDER_KEYS DO
+    valA <- scoreA[key] OR 0
+    valB <- scoreB[key] OR 0
+    IF ABS(valA - valB) > 0.0001 THEN
+      RETURN valA - valB
+    END IF
+  END FOR
+
+  // Deterministic tie-break by state signature string
+  RETURN COMPARE_STRINGS(scoreA.signature, scoreB.signature)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -250,67 +253,72 @@ Combining discrete state tuple construction (Step 2.1), 21-vector fitness evalua
 $$\sigma^* = \arg\min_{\sigma \in \Sigma} \mathbf{C}(\sigma) \quad \text{subject to } \mathcal{H}(\sigma) \notin \mathcal{S}_{\text{visited}}$$
 
 ### 2. Complete Frontier Queue State-Space Search Pseudocode
-```typescript
-function searchBestLayoutState(
-  nodes: Node[],
-  edges: Edge[],
-  config: LayoutConfig,
-  initialState?: LayoutSearchState
-): OptimizationResult {
-  let currentStatesEvaluated = 1;
-  const maxStatesBudget = deriveSearchStateBudgets(nodes, edges, config).maxLayoutStates;
-  
-  const startState = initialState ?? createInitialSearchState(nodes, edges, config);
-  const startHash = computeStateHash(startState);
-  startState.visitedSignatures.add(startHash);
+```text
+ALGORITHM searchBestLayoutState(nodes, edges, config, initialState)
+  INPUT: nodes, edges, search configuration, optional initial state
+  OUTPUT: best layout state and its fitness evaluation
 
-  let bestState = startState;
-  let bestEval = evaluateSearchState(nodes, edges, startState, config);
+  currentStatesEvaluated <- 1
+  maxStatesBudget <- deriveBudget(nodes, edges, config).maxLayoutStates
 
-  const frontier: Array<{ state: LayoutSearchState; eval: StateEvaluation }> = [
-    { state: startState, eval: bestEval }
-  ];
+  IF initialState IS NOT PROVIDED THEN
+    startState <- createInitialSearchState(nodes, edges, config)
+  ELSE
+    startState <- initialState
+  END IF
 
-  while (frontier.length > 0) {
-    if (currentStatesEvaluated >= maxStatesBudget) break;
-    if (bestEval.crossingCount === 0 && bestEval.hardErrorCount === 0) break; // Optimal
+  startHash <- computeStateHash(startState)
+  ADD startHash TO startState.visitedSignatures
 
-    frontier.sort((a, b) => compareLayoutScores(a.eval, b.eval));
-    const curr = frontier.shift()!;
+  bestState <- startState
+  bestEval <- evaluateSearchState(nodes, edges, startState, config)
 
-    if (compareLayoutScores(curr.eval, bestEval) < 0) {
-      bestState = curr.state;
-      bestEval = curr.eval;
-    }
+  frontier <- PRIORITY_QUEUE containing { state: startState, eval: bestEval }
 
-    const neighbors = generateNeighborhoodStates(curr.state, curr.eval, config);
-    for (const nextState of neighbors) {
-      if (currentStatesEvaluated >= maxStatesBudget) break;
+  WHILE frontier IS NOT EMPTY DO
+    IF currentStatesEvaluated >= maxStatesBudget THEN
+      BREAK
+    END IF
+    IF bestEval.crossingCount = 0 AND bestEval.hardErrorCount = 0 THEN
+      BREAK  // Optimal solution found
+    END IF
 
-      const hash = computeStateHash(nextState);
-      if (curr.state.visitedSignatures.has(hash)) continue;
+    curr <- POP_MIN(frontier)  // Lowest cost state according to lexicographic comparison
 
-      nextState.visitedSignatures = new Set(curr.state.visitedSignatures);
-      nextState.visitedSignatures.add(hash);
-      currentStatesEvaluated++;
+    IF compareLayoutScores(curr.eval, bestEval) < 0 THEN
+      bestState <- curr.state
+      bestEval <- curr.eval
+    END IF
 
-      const nextEval = evaluateSearchState(nodes, edges, nextState, config);
+    neighbors <- generateNeighborhoodStates(curr.state, curr.eval, config)
+    FOR EACH nextState IN neighbors DO
+      IF currentStatesEvaluated >= maxStatesBudget THEN
+        BREAK
+      END IF
 
-      if (compareLayoutScores(nextEval, bestEval) < 0) {
-        bestState = nextState;
-        bestEval = nextEval;
-      }
+      hash <- computeStateHash(nextState)
+      IF hash IN curr.state.visitedSignatures THEN
+        CONTINUE
+      END IF
 
-      frontier.push({ state: nextState, eval: nextEval });
-      if (frontier.length > config.maxFrontierSize) {
-        frontier.sort((a, b) => compareLayoutScores(a.eval, b.eval));
-        frontier.length = config.maxFrontierSize;
-      }
-    }
-  }
+      nextState.visitedSignatures <- COPY(curr.state.visitedSignatures)
+      ADD hash TO nextState.visitedSignatures
+      currentStatesEvaluated <- currentStatesEvaluated + 1
 
-  return { bestState, bestEvaluation: bestEval, evaluatedStates: currentStatesEvaluated };
-}
+      nextEval <- evaluateSearchState(nodes, edges, nextState, config)
+
+      IF compareLayoutScores(nextEval, bestEval) < 0 THEN
+        bestState <- nextState
+        bestEval <- nextEval
+      END IF
+
+      PUSH { state: nextState, eval: nextEval } INTO frontier
+      PRUNE frontier TO maxFrontierSize IF LENGTH(frontier) > config.maxFrontierSize
+    END FOR
+  END WHILE
+
+  RETURN { bestState, bestEvaluation: bestEval, evaluatedStates: currentStatesEvaluated }
+END ALGORITHM
 ```
 
 ### 3. Master Architecture & State Flow Diagram

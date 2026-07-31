@@ -28,16 +28,20 @@ Consider a representative workflow graph with $|V| = 20$ nodes and $|E| = 30$ ed
 $$\text{Ops}_{\text{stage1}} = |V| + |E| = 20 + 30 = \mathbf{50 \text{ operations}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function benchmarkStage1(nodes: Node[], edges: Edge[]): { ops: number; timeMs: number } {
-  const t0 = performance.now();
-  const graph = normalizeGraph(nodes, edges);
-  const sccs = detectStronglyConnectedComponents(graph); // |V| + |E|
-  const roles = classifyEdgeRoles(graph, sccs); // |V| + |E|
-  const ranks = assignRanks(graph, roles); // |V| + |E|
-  const t1 = performance.now();
-  return { ops: nodes.length + edges.length, timeMs: t1 - t0 };
-}
+```text
+ALGORITHM benchmarkStage1(nodes, edges)
+  INPUT: graph nodes and edges
+  OUTPUT: operation count and benchmark execution duration
+
+  tStart <- GET_CURRENT_TIME()
+  graph <- normalizeGraph(nodes, edges)
+  sccs <- detectStronglyConnectedComponents(graph)
+  roles <- classifyEdgeRoles(graph, sccs)
+  ranks <- assignRanks(graph, roles)
+  tEnd <- GET_CURRENT_TIME()
+
+  RETURN { ops: LENGTH(nodes) + LENGTH(edges), timeMs: tEnd - tStart }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -68,13 +72,17 @@ For sample graph $|V| = 20, \; |E| = 30$, and maximum sweeps $N_{\text{sweeps}} 
 $$\text{Total Stage 2 Ops} = 24 \times 116.44 = \mathbf{2,794.56 \text{ operations}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function benchmarkStage2(layerGraph: ExpandedLayerGraph, sweeps = 24): { ops: number } {
-  const v = layerGraph.nodes.length;
-  const e = layerGraph.edges.length;
-  const perSweepOps = v * Math.log2(v) + e;
-  return { ops: Math.round(sweeps * perSweepOps) };
-}
+```text
+ALGORITHM benchmarkStage2(layerGraph, sweeps)
+  INPUT: layer graph, number of sweeps (default 24)
+  OUTPUT: estimated operation count
+
+  v <- LENGTH(layerGraph.nodes)
+  e <- LENGTH(layerGraph.edges)
+  perSweepOps <- v * LOG2(v) + e
+
+  RETURN { ops: ROUND(sweeps * perSweepOps) }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -102,12 +110,16 @@ For sample graph $|V| = 20, \; |E| = 30$, PAVA stack compaction $|V| = 20$, and 
 $$\text{Ops}_{\text{stage3}} = 4 \times (20 + 30 + 20) = 4 \times 70 = \mathbf{280 \text{ operations}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function benchmarkStage3(vCount: number, eCount: number, coordSweeps = 4): { ops: number } {
-  const pavaSinglePassOps = vCount;
-  const totalOps = coordSweeps * (vCount + eCount + pavaSinglePassOps);
-  return { ops: totalOps };
-}
+```text
+ALGORITHM benchmarkStage3(vCount, eCount, coordSweeps)
+  INPUT: node count vCount, edge count eCount, coordinate sweeps (default 4)
+  OUTPUT: estimated operation count
+
+  pavaSinglePassOps <- vCount
+  totalOps <- coordSweeps * (vCount + eCount + pavaSinglePassOps)
+
+  RETURN { ops: totalOps }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -139,13 +151,17 @@ For sample graph $|V| = 20, \; |E| = 30$, max expansions per edge $I_{\text{max}
 $$\text{Total Stage 4 Routing Ops} = 30 \times 5,644 = \mathbf{169,320 \text{ operations}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function benchmarkStage4(eCount: number, vCount: number, iMax = 500): { ops: number } {
-  const vGrid = Math.pow(vCount + eCount, 2);
-  const logVGrid = Math.log2(vGrid);
-  const totalOps = eCount * iMax * logVGrid;
-  return { ops: Math.round(totalOps) };
-}
+```text
+ALGORITHM benchmarkStage4(eCount, vCount, iMax)
+  INPUT: edge count eCount, node count vCount, max expansions iMax (default 500)
+  OUTPUT: estimated operation count
+
+  vGrid <- (vCount + eCount) ^ 2
+  logVGrid <- LOG2(vGrid)
+  totalOps <- eCount * iMax * logVGrid
+
+  RETURN { ops: ROUND(totalOps) }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -179,17 +195,21 @@ $$\text{Total Master Engine Ops} = 10 \times 172,395 = \mathbf{1,723,950 \text{ 
 $$\text{Estimated Execution Latency} \approx \frac{1,723,950}{10^9 \text{ ops/sec}} \approx \mathbf{1.72\text{ ms}} \ll 100\text{ms threshold} \quad (\mathbf{PASS})$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function auditEnginePerformance(vCount: number, eCount: number, sMax = 10): { totalOps: number; estimatedMs: number } {
-  const stage2 = 24 * (vCount * Math.log2(vCount) + eCount);
-  const stage3 = 4 * (vCount + eCount);
-  const stage4 = eCount * 500 * Math.log2(Math.pow(vCount + eCount, 2));
-  
-  const singleState = stage2 + stage3 + stage4;
-  const totalOps = Math.round(sMax * singleState);
-  const estimatedMs = totalOps / 1_000_000; // 1M ops per ms in modern JS V8
-  return { totalOps, estimatedMs };
-}
+```text
+ALGORITHM auditEnginePerformance(vCount, eCount, sMax)
+  INPUT: node count vCount, edge count eCount, max search budget sMax (default 10)
+  OUTPUT: total operations and estimated execution duration in milliseconds
+
+  stage2 <- 24 * (vCount * LOG2(vCount) + eCount)
+  stage3 <- 4 * (vCount + eCount)
+  stage4 <- eCount * 500 * LOG2((vCount + eCount) ^ 2)
+
+  singleState <- stage2 + stage3 + stage4
+  totalOps <- ROUND(sMax * singleState)
+  estimatedMs <- totalOps / 1000000 // 1 million operations per millisecond
+
+  RETURN { totalOps: totalOps, estimatedMs: estimatedMs }
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic

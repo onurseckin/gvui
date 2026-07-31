@@ -54,15 +54,16 @@ Consider an edge badge displaying label `"HTTP 200 OK"`:
   $$G_{\text{req}, Y} = 24 + 2(12) + 2(18) = 24 + 24 + 36 = \mathbf{84\text{px}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function requiredSameRankBadgeGap(
-  badgeDim: { width: number; height: number },
-  config: LayoutConfig
-): number {
-  const padding = config.badgeClearance ?? 12;
-  const stub = config.portStubLength ?? 18;
-  return badgeDim.width + 2 * padding + 2 * stub;
-}
+```text
+ALGORITHM requiredSameRankBadgeGap(badgeDim, config)
+  INPUT: badge dimensions object, layout config
+  OUTPUT: minimum required horizontal gap distance
+
+  padding <- config.badgeClearance OR 12
+  stub <- config.portStubLength OR 18
+
+  RETURN badgeDim.width + (2 * padding) + (2 * stub)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -100,18 +101,20 @@ Consider Node A ($W_A = 120\text{px}$) at $X(A) = 100\text{px}$ and adjacent Nod
 - **Position Offset**: Node B is shifted right by $\Delta X = 448 - 266 = \mathbf{182\text{px}}$ to make room for the badge.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function resolveEffectiveGap(
-  rank: number,
-  nodeId: string,
-  config: LayoutConfig,
-  demands: ExactSpacingDemand[]
-): number {
-  const defaultGap = config.nodeSpacing ?? 56;
-  const match = demands.find(d => d.kind === "node-gap" && d.rank === rank && d.afterNodeId === nodeId);
-  if (!match) return defaultGap;
-  return Math.max(defaultGap, match.minimum);
-}
+```text
+ALGORITHM resolveEffectiveGap(rank, nodeId, config, demands)
+  INPUT: layer rank, node ID, configuration, list of spacing demands
+  OUTPUT: effective horizontal gap distance
+
+  defaultGap <- config.nodeSpacing OR 56
+  match <- FIND demand IN demands WHERE kind = "node-gap" AND rank = rank AND afterNodeId = nodeId
+
+  IF match IS NOT FOUND THEN
+    RETURN defaultGap
+  ELSE
+    RETURN MAX(defaultGap, match.minimum)
+  END IF
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -170,43 +173,42 @@ Consider 3 nodes in layer $L_0$ with desired X-coordinates $\widetilde{X} = [100
   - $X_3 - X_2 = 310 - 160 = 150 \ge 150$ (PASS)
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function projectLayerCentersPAVA(
-  layer: LayerNode[],
-  desiredXMap: Map<string, number>,
-  s: number[]
-): Map<string, number> {
-  const k = layer.length;
-  const a = layer.map((item, i) => desiredXMap.get(item.id)! - s[i]);
-  const w = layer.map(() => 1);
+```text
+ALGORITHM projectLayerCentersPAVA(layer, desiredXMap, s)
+  INPUT: list of layer nodes, map of desired X positions, array of cumulative separation offsets s
+  OUTPUT: map of node IDs to monotonic X coordinates
 
-  interface Block { weight: number; sumWA: number; value: number; size: number }
-  const stack: Block[] = [];
+  k <- LENGTH(layer)
+  a <- ARRAY OF (desiredXMap[layer[i].id] - s[i]) FOR i FROM 0 TO k - 1
+  w <- ARRAY OF 1 FOR i FROM 0 TO k - 1
 
-  for (let i = 0; i < k; i++) {
-    let b: Block = { weight: w[i], sumWA: w[i] * a[i], value: a[i], size: 1 };
-    while (stack.length > 0 && stack[stack.length - 1].value > b.value) {
-      const top = stack.pop()!;
-      b = {
+  stack <- EMPTY STACK
+
+  FOR i FROM 0 TO k - 1 DO
+    b <- { weight: w[i], sumWA: w[i] * a[i], value: a[i], size: 1 }
+    WHILE stack IS NOT EMPTY AND PEEK_TOP(stack).value > b.value DO
+      top <- POP stack
+      b <- {
         weight: top.weight + b.weight,
         sumWA: top.sumWA + b.sumWA,
         value: (top.sumWA + b.sumWA) / (top.weight + b.weight),
-        size: top.size + b.size,
-      };
-    }
-    stack.push(b);
-  }
+        size: top.size + b.size
+      }
+    END WHILE
+    PUSH b ONTO stack
+  END FOR
 
-  const result = new Map<string, number>();
-  let idx = 0;
-  for (const block of stack) {
-    for (let j = 0; j < block.size; j++) {
-      result.set(layer[idx].id, block.value + s[idx]);
-      idx++;
-    }
-  }
-  return result;
-}
+  result <- EMPTY MAP
+  idx <- 0
+  FOR EACH block IN stack DO
+    FOR j FROM 0 TO block.size - 1 DO
+      result[layer[idx].id] <- block.value + s[idx]
+      idx <- idx + 1
+    END FOR
+  END FOR
+
+  RETURN result
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -234,29 +236,28 @@ Combining gap equations (2.1), spacing demand emission (2.2), and PAVA isotonic 
 $$\sigma^{(t+1)} = \sigma^{(t)} \cup \mathcal{D}_{\text{new}} \quad \text{where } \mathbf{X}^{(t+1)} = \text{PAVA}\left(\widetilde{\mathbf{X}}, \mathcal{D}^{(t+1)}\right)$$
 
 ### 2. Complete Pipeline Pseudocode
-```typescript
-function placeBadgesAndProjectCoordinates(
-  routes: RoutedPath[],
-  layers: LayerNode[][],
-  config: LayoutConfig
-): { finalCoordinates: Map<string, number>; emittedDemands: ExactSpacingDemand[] } {
-  const badgeResult = placeEdgeBadges(routes, layers, config);
-  const emittedDemands = badgeResult.spacingRequests;
+```text
+ALGORITHM placeBadgesAndProjectCoordinates(routes, layers, config)
+  INPUT: routed edge paths, layer node lists, layout configuration
+  OUTPUT: final node X-coordinates and emitted spacing demands
 
-  const finalCoordinates = new Map<string, number>();
-  for (let r = 0; r < layers.length; r++) {
-    const layer = layers[r];
-    const s = computeCumulativeSeparations(layer, r, config, emittedDemands);
-    const desiredXMap = computeBarycentricDesiredX(layer, r);
-    const projMap = projectLayerCentersPAVA(layer, desiredXMap, s);
+  badgeResult <- placeEdgeBadges(routes, layers, config)
+  emittedDemands <- badgeResult.spacingRequests
 
-    for (const [id, x] of projMap.entries()) {
-      finalCoordinates.set(id, x);
-    }
-  }
+  finalCoordinates <- EMPTY MAP
+  FOR r FROM 0 TO LENGTH(layers) - 1 DO
+    layer <- layers[r]
+    s <- computeCumulativeSeparations(layer, r, config, emittedDemands)
+    desiredXMap <- computeBarycentricDesiredX(layer, r)
+    projMap <- projectLayerCentersPAVA(layer, desiredXMap, s)
 
-  return { finalCoordinates, emittedDemands };
-}
+    FOR EACH (id, x) IN projMap DO
+      finalCoordinates[id] <- x
+    END FOR
+  END FOR
+
+  RETURN { finalCoordinates: finalCoordinates, emittedDemands: emittedDemands }
+END ALGORITHM
 ```
 
 ### 3. Master Feedback Loop Flow Diagram

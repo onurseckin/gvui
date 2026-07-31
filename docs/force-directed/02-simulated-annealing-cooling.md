@@ -81,26 +81,21 @@ Consider Node $u$ at initial position $\vec{p}_u^{(0)} = (140.0, 230.0)\text{px}
    $$\vec{p}_u^{(1)} = (236.30, 301.60)\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function clampDisplacementAndUpdatePosition(
-  pos: { x: number; y: number },
-  force: { fx: number; fy: number },
-  temperature: number,
-  epsilon = 1e-4
-): { x: number; y: number; stepX: number; stepY: number; fmag: number } {
-  const fmag = Math.max(epsilon, Math.sqrt(force.fx * force.fx + force.fy * force.fy));
-  const limitedDist = Math.min(fmag, temperature);
-  const stepX = (force.fx / fmag) * limitedDist;
-  const stepY = (force.fy / fmag) * limitedDist;
-  return {
-    x: pos.x + stepX,
-    y: pos.y + stepY,
-    stepX,
-    stepY,
-    fmag,
-  };
-}
-// Example execution: pos=(140,230), force=(538.31,400.23), temp=120 => pos=(236.30, 301.60)
+```
+ALGORITHM clampDisplacementAndUpdatePosition
+INPUT: position, force, temperature, epsilon (default 0.0001)
+OUTPUT: newPosition, stepX, stepY, forceMagnitude
+
+forceMagnitude = MAX(epsilon, SQRT(force.x * force.x + force.y * force.y))
+limitedDist = MIN(forceMagnitude, temperature)
+
+stepX = (force.x / forceMagnitude) * limitedDist
+stepY = (force.y / forceMagnitude) * limitedDist
+
+newPosition.x = position.x + stepX
+newPosition.y = position.y + stepY
+
+RETURN newPosition, stepX, stepY, forceMagnitude
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -144,20 +139,13 @@ With initial temperature $T_0 = 120.0\text{px}$ and cooling factor $\gamma = 0.9
   $$T(100) = 120.0 \times 0.95^{100} = 120.0 \times 0.00592 = 0.71\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function computeExponentialTemperature(
-  T0: number,
-  gamma: number,
-  step: number
-): number {
-  return T0 * Math.pow(gamma, step);
-}
-// Example executions for T0=120, gamma=0.95:
-// step=0   => 120.00 px
-// step=1   => 114.00 px
-// step=10  => 71.85 px
-// step=50  => 9.23 px
-// step=100 => 0.71 px
+```
+ALGORITHM computeExponentialTemperature
+INPUT: initialTemp, coolingFactor, currentStep
+OUTPUT: temperature
+
+temperature = initialTemp * (coolingFactor ^ currentStep)
+RETURN temperature
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -203,19 +191,15 @@ $$T(184) = 120.0 \times 0.95^{184} \approx 0.0099\text{px}$$
 Since $T(184) = 0.0099\text{px} < T_{\min} = 0.01\text{px}$, simulation exits early at step 184 without waiting for $t_{\max}$.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-function evaluateDecayAndCheckTermination(
-  T0: number,
-  t: number,
-  maxIter: number,
-  gamma = 0.95,
-  minTemp = 0.01
-): { temp: number; shouldTerminate: boolean } {
-  const temp = T0 * Math.pow(gamma, t);
-  const shouldTerminate = temp < minTemp || t >= maxIter;
-  return { temp, shouldTerminate };
-}
-// Example execution at t=184: { temp: 0.0099, shouldTerminate: true }
+```
+ALGORITHM evaluateDecayAndCheckTermination
+INPUT: initialTemp, currentStep, maxIterations, coolingFactor (default 0.95), minTemp (default 0.01)
+OUTPUT: temperature, shouldTerminate
+
+temperature = initialTemp * (coolingFactor ^ currentStep)
+shouldTerminate = (temperature < minTemp) OR (currentStep >= maxIterations)
+
+RETURN temperature, shouldTerminate
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -281,127 +265,101 @@ function evaluateDecayAndCheckTermination(
 
 ## 4. Complete Simulation Loop Pseudocode
 
-```typescript
-export interface Point2D {
-  x: number;
-  y: number;
-}
+```
+ALGORITHM runForceDirectedSimulation
+INPUT: nodes, edges, canvasWidth (default 1200), canvasHeight (default 800), maxIterations (default 100)
+OUTPUT: updatedNodes
 
-export interface ForceNode extends Point2D {
-  id: string;
-  width: number;
-  height: number;
-}
+IF LENGTH(nodes) == 0 THEN
+    RETURN []
+END IF
 
-export interface ForceEdge {
-  source: string;
-  target: string;
-}
+// 1. Compute ideal equilibrium distance k
+area = canvasWidth * canvasHeight
+k = 0.75 * SQRT(area / LENGTH(nodes))
+centerX = canvasWidth / 2
+centerY = canvasHeight / 2
+cGravity = 0.02
+epsilon = 0.0001
 
-/**
- * Runs iterative Fruchterman-Reingold force-directed simulation with simulated annealing cooling.
- * Synthesizes all vector force sub-steps and temperature clamping schedules.
- */
-export function runForceDirectedSimulation(
-  nodes: ForceNode[],
-  edges: ForceEdge[],
-  canvasWidth = 1200,
-  canvasHeight = 800,
-  maxIterations = 100
-): ForceNode[] {
-  const nodeCount = nodes.length;
-  if (nodeCount === 0) return [];
+// Initialize cooling temperature and parameters
+temperature = canvasWidth / 10
+coolingFactor = 0.95
+minTemperature = 0.01
 
-  // 1. Compute ideal equilibrium distance k (Sub-step 2.1 in Doc 01)
-  const area = canvasWidth * canvasHeight;
-  const k = 0.75 * Math.sqrt(area / nodeCount);
-  const k2 = k * k;
+positions = COPY(nodes)
 
-  const centerX = canvasWidth / 2;
-  const centerY = canvasHeight / 2;
-  const cGravity = 0.02;
-  const epsilon = 1e-4;
+// 2. Iterative Physics Simulation Loop
+FOR iteration FROM 0 TO maxIterations - 1 DO
+    IF temperature <= minTemperature THEN
+        BREAK
+    END IF
 
-  // Initialize temperature T0 and cooling factor gamma (Sub-step 2.2)
-  let temperature = canvasWidth / 10;
-  const gamma = 0.95;
-  const minTemperature = 0.01;
+    forces = INITIALIZE_FORCES_ARRAY(LENGTH(positions), x = 0, y = 0)
 
-  // Deep copy initial node positions
-  const positions = nodes.map((n) => ({ ...n }));
-  const posMap = new Map<string, ForceNode>(positions.map((n) => [n.id, n]));
+    // 2a. Repulsive forces between ALL node pairs
+    FOR i FROM 0 TO LENGTH(positions) - 1 DO
+        FOR j FROM i + 1 TO LENGTH(positions) - 1 DO
+            nodeU = positions[i]
+            nodeV = positions[j]
 
-  // 2. Iterative Physics Simulation Loop
-  for (let iter = 0; iter < maxIterations && temperature > minTemperature; iter++) {
-    const forces: Point2D[] = positions.map(() => ({ x: 0, y: 0 }));
+            dx = nodeU.x - nodeV.x
+            dy = nodeU.y - nodeV.y
+            distance = MAX(epsilon, SQRT(dx * dx + dy * dy))
 
-    // 2a. Repulsive forces between ALL node pairs O(|V|^2) (Sub-step 2.3 in Doc 01)
-    for (let i = 0; i < nodeCount; i++) {
-      for (let j = i + 1; j < nodeCount; j++) {
-        const u = positions[i];
-        const v = positions[j];
+            fRep = (k * k) / distance
+            fx = (dx / distance) * fRep
+            fy = (dy / distance) * fRep
 
-        const dx = u.x - v.x;
-        const dy = u.y - v.y;
-        const distSq = Math.max(epsilon, dx * dx + dy * dy);
-        const dist = Math.sqrt(distSq);
+            forces[i].x = forces[i].x + fx
+            forces[i].y = forces[i].y + fy
+            forces[j].x = forces[j].x - fx
+            forces[j].y = forces[j].y - fy
+        END FOR
+    END FOR
 
-        const fRep = k2 / dist;
-        const fx = (dx / dist) * fRep;
-        const fy = (dy / dist) * fRep;
+    // 2b. Attractive forces along connected edges
+    FOR EACH edge IN edges DO
+        nodeU = FIND_NODE(positions, edge.source)
+        nodeV = FIND_NODE(positions, edge.target)
 
-        forces[i].x += fx;
-        forces[i].y += fy;
-        forces[j].x -= fx;
-        forces[j].y -= fy;
-      }
-    }
+        IF nodeU EXISTS AND nodeV EXISTS THEN
+            dx = nodeU.x - nodeV.x
+            dy = nodeU.y - nodeV.y
+            distance = MAX(epsilon, SQRT(dx * dx + dy * dy))
 
-    // 2b. Attractive forces along connected edges O(|E|) (Sub-step 2.4 in Doc 01)
-    for (const edge of edges) {
-      const u = posMap.get(edge.source);
-      const v = posMap.get(edge.target);
-      if (!u || !v) continue;
+            fAtt = (distance * distance) / k
+            fx = (dx / distance) * fAtt
+            fy = (dy / distance) * fAtt
 
-      const idxU = positions.findIndex((n) => n.id === u.id);
-      const idxV = positions.findIndex((n) => n.id === v.id);
+            forces[nodeU].x = forces[nodeU].x - fx
+            forces[nodeU].y = forces[nodeU].y - fy
+            forces[nodeV].x = forces[nodeV].x + fx
+            forces[nodeV].y = forces[nodeV].y + fy
+        END IF
+    END FOR
 
-      const dx = u.x - v.x;
-      const dy = u.y - v.y;
-      const dist = Math.max(epsilon, Math.sqrt(dx * dx + dy * dy));
+    // 2c. Gravity & temperature-bounded position updates
+    FOR i FROM 0 TO LENGTH(positions) - 1 DO
+        node = positions[i]
 
-      const fAtt = (dist * dist) / k;
-      const fx = (dx / dist) * fAtt;
-      const fy = (dy / dist) * fAtt;
+        // Add centripetal restoration force
+        forces[i].x = forces[i].x - cGravity * (node.x - centerX)
+        forces[i].y = forces[i].y - cGravity * (node.y - centerY)
 
-      forces[idxU].x -= fx;
-      forces[idxU].y -= fy;
-      forces[idxV].x += fx;
-      forces[idxV].y += fy;
-    }
+        forceMag = MAX(epsilon, SQRT(forces[i].x * forces[i].x + forces[i].y * forces[i].y))
+        limitedDist = MIN(forceMag, temperature)
 
-    // 2c. Center gravity & temperature-bounded position updates O(|V|) (Sub-steps 2.1 & 2.5)
-    for (let i = 0; i < nodeCount; i++) {
-      const node = positions[i];
+        // Apply temperature-clamped displacement
+        node.x = node.x + (forces[i].x / forceMag) * limitedDist
+        node.y = node.y + (forces[i].y / forceMag) * limitedDist
+    END FOR
 
-      // Add centripetal restoration force
-      forces[i].x -= cGravity * (node.x - centerX);
-      forces[i].y -= cGravity * (node.y - centerY);
+    // 2d. Exponential Simulated Annealing Cooling Decay
+    temperature = temperature * coolingFactor
+END FOR
 
-      const forceMag = Math.max(epsilon, Math.sqrt(forces[i].x ** 2 + forces[i].y ** 2));
-      const limitedDist = Math.min(forceMag, temperature);
-
-      // Apply temperature-clamped displacement
-      node.x += (forces[i].x / forceMag) * limitedDist;
-      node.y += (forces[i].y / forceMag) * limitedDist;
-    }
-
-    // 2d. Exponential Simulated Annealing Cooling Decay (Sub-step 2.2)
-    temperature *= gamma;
-  }
-
-  return positions;
-}
+RETURN positions
 ```
 
 ---

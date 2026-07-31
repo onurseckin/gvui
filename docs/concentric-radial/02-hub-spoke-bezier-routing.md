@@ -65,15 +65,19 @@ Given edge $e = (u, v)$ connecting Source Node $u$ at origin $(40, 170)$ with di
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ExtractEndpointsAndHub(srcNode, tgtNode, centerX, centerY):
-    // Input: srcNode (x=40,y=170,w=120,h=60), tgtNode (x=640,y=170,w=120,h=60), hub=(400,500)
-    // Output: P_s, P_t, P_0 points
-    srcCx <- srcNode.x + (srcNode.width / 2)   // 40 + 60 = 100
-    srcCy <- srcNode.y + (srcNode.height / 2)  // 170 + 30 = 200
-    tgtCx <- tgtNode.x + (tgtNode.width / 2)   // 640 + 60 = 700
-    tgtCy <- tgtNode.y + (tgtNode.height / 2)  // 170 + 30 = 200
-    RETURN { P_s: (srcCx, srcCy), P_t: (tgtCx, tgtCy), P_0: (centerX, centerY) }
-END FUNCTION
+ALGORITHM ExtractEndpointsAndHub(srcNode, tgtNode, centerX, centerY):
+    INPUT: srcNode, tgtNode, center hub origin (centerX, centerY)
+    OUTPUT: endpoint centers P_s, P_t and hub anchor P_0
+
+    srcCx <- srcNode.x + (srcNode.width / 2)
+    srcCy <- srcNode.y + (srcNode.height / 2)
+    tgtCx <- tgtNode.x + (tgtNode.width / 2)
+    tgtCy <- tgtNode.y + (tgtNode.height / 2)
+    P_s <- (srcCx, srcCy)
+    P_t <- (tgtCx, tgtCy)
+    P_0 <- (centerX, centerY)
+    RETURN P_s, P_t, P_0
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -113,14 +117,15 @@ Given $\mathbf{P}_s = (100, 200)$, $\mathbf{P}_t = (700, 200)$, $\mathbf{P}_0 = 
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION EvaluateQuadraticBezier(P_s, P_0, P_t, t):
-    // Input: P_s=(100,200), P_0=(400,500), P_t=(700,200), t=0.5
-    // Output: B(t) point and SVG path string
-    bx <- ((1 - t)^2 * P_s.x) + (2 * (1 - t) * t * P_0.x) + (t^2 * P_t.x) // 400
-    by <- ((1 - t)^2 * P_s.y) + (2 * (1 - t) * t * P_0.y) + (t^2 * P_t.y) // 350
-    pathStr <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", P_s.x, P_s.y, P_0.x, P_0.y, P_t.x, P_t.y)
-    RETURN { B_t: (bx, by), pathString: pathStr }
-END FUNCTION
+ALGORITHM EvaluateQuadraticBezier(P_s, P_0, P_t, t):
+    INPUT: endpoint centers P_s, P_t, hub control P_0, parameter t
+    OUTPUT: curve point B(t) and SVG path string
+
+    bx <- ((1 - t)^2 * P_s.x) + (2 * (1 - t) * t * P_0.x) + (t^2 * P_t.x)
+    by <- ((1 - t)^2 * P_s.y) + (2 * (1 - t) * t * P_0.y) + (t^2 * P_t.y)
+    pathString <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", P_s.x, P_s.y, P_0.x, P_0.y, P_t.x, P_t.y)
+    RETURN (bx, by), pathString
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -162,15 +167,16 @@ Given $\mathbf{P}_s = (100, 200)$, $\mathbf{P}_t = (700, 200)$, $\mathbf{P}_0 = 
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeBezierTangents(P_s, P_0, P_t):
-    // Input: P_s=(100,200), P_0=(400,500), P_t=(700,200)
-    // Output: tangent vectors B'(0) and B'(1)
-    v0_x <- 2 * (P_0.x - P_s.x)              // 2 * 300 = 600
-    v0_y <- 2 * (P_0.y - P_s.y)              // 2 * 300 = 600
-    v1_x <- 2 * (P_t.x - P_0.x)              // 2 * 300 = 600
-    v1_y <- 2 * (P_t.y - P_0.y)              // 2 * (-300) = -600
-    RETURN { B_prime_0: (v0_x, v0_y), B_prime_1: (v1_x, v1_y) }
-END FUNCTION
+ALGORITHM ComputeBezierTangents(P_s, P_0, P_t):
+    INPUT: endpoint centers P_s, P_t, hub control P_0
+    OUTPUT: tangent vectors B'(0) and B'(1)
+
+    v0_x <- 2 * (P_0.x - P_s.x)
+    v0_y <- 2 * (P_0.y - P_s.y)
+    v1_x <- 2 * (P_t.x - P_0.x)
+    v1_y <- 2 * (P_t.y - P_0.y)
+    RETURN (v0_x, v0_y), (v1_x, v1_y)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -203,13 +209,14 @@ Given $\mathbf{P}_s = (100, 200)$ and $\mathbf{P}_t = (700, 200)$:
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeChordLabelPlacement(P_s, P_t):
-    // Input: P_s=(100,200), P_t=(700,200)
-    // Output: P_label (labelX, labelY)
-    labelX <- (P_s.x + P_t.x) / 2            // (100 + 700) / 2 = 400
-    labelY <- (P_s.y + P_t.y) / 2            // (200 + 200) / 2 = 200
-    RETURN { labelX: labelX, labelY: labelY } // Returns (400, 200)
-END FUNCTION
+ALGORITHM ComputeChordLabelPlacement(P_s, P_t):
+    INPUT: endpoint centers P_s, P_t
+    OUTPUT: label midpoint coordinates (labelX, labelY)
+
+    labelX <- (P_s.x + P_t.x) / 2
+    labelY <- (P_s.y + P_t.y) / 2
+    RETURN (labelX, labelY)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -239,14 +246,15 @@ Given $\mathbf{P}_0 = (400, 500)$, $\mathbf{P}_{\text{label}} = (400, 200)$, and
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeDeflectionVector(P_0, P_label, B_05):
-    // Input: P_0=(400,500), P_label=(400,200), B_05=(400,350)
-    // Output: Deflection vector D (dx, dy) and magnitude
-    dx <- B_05.x - P_label.x                 // 400 - 400 = 0
-    dy <- B_05.y - P_label.y                 // 350 - 200 = 150
-    dist <- SQRT(dx^2 + dy^2)                // 150px
-    RETURN { dx: dx, dy: dy, magnitude: dist }
-END FUNCTION
+ALGORITHM ComputeDeflectionVector(P_0, P_label, B_05):
+    INPUT: hub origin P_0, label midpoint P_label, curve apex B_05
+    OUTPUT: deflection vector (dx, dy) and magnitude
+
+    dx <- B_05.x - P_label.x
+    dy <- B_05.y - P_label.y
+    dist <- SQRT(dx^2 + dy^2)
+    RETURN (dx, dy), dist
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -270,37 +278,37 @@ Combining sub-steps 2.1 through 2.5 into the complete master hub-and-spoke Bezie
 
 ```text
 ALGORITHM RouteHubSpokeBeziers(dataset, nodeMap, centerX, centerY):
-    INPUT: dataset containing edges array E, nodeMap dictionary, central hub origin (centerX, centerY)
-    OUTPUT: positionedEdges array with SVG path strings and label (X, Y) coordinates
+    INPUT: dataset containing edges list E, nodeMap lookup table, central hub origin (centerX, centerY)
+    OUTPUT: positionedEdges list with SVG path strings and label (X, Y) coordinates
 
-    1. INITIALIZE positionedEdges as empty list
+    positionedEdges <- empty list
 
-    2. FOR EACH edge IN E DO
-           srcNode <- nodeMap.GET(edge.source)
-           tgtNode <- nodeMap.GET(edge.target)
+    FOR EACH edge IN E DO
+        srcNode <- LOOKUP edge.source IN nodeMap
+        tgtNode <- LOOKUP edge.target IN nodeMap
 
-           IF srcNode IS NULL OR tgtNode IS NULL THEN
-               APPEND { ...edge, path: "", labelX: 0, labelY: 0 } TO positionedEdges
-               CONTINUE
-           END IF
+        IF srcNode IS NULL OR tgtNode IS NULL THEN
+            APPEND (edge.id, "", 0, 0) TO positionedEdges
+            CONTINUE
+        END IF
 
-           // Sub-step 2.1: Extract node center points
-           srcCx <- srcNode.x + (srcNode.width / 2)
-           srcCy <- srcNode.y + (srcNode.height / 2)
-           tgtCx <- tgtNode.x + (tgtNode.width / 2)
-           tgtCy <- tgtNode.y + (tgtNode.height / 2)
+        // Sub-step 2.1: Extract node center points
+        srcCx <- srcNode.x + (srcNode.width / 2)
+        srcCy <- srcNode.y + (srcNode.height / 2)
+        tgtCx <- tgtNode.x + (tgtNode.width / 2)
+        tgtCy <- tgtNode.y + (tgtNode.height / 2)
 
-           // Sub-step 2.2: Build SVG Quadratic Bezier path string (Control point = centerX, centerY)
-           pathString <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", srcCx, srcCy, centerX, centerY, tgtCx, tgtCy)
+        // Sub-step 2.2: Build SVG Quadratic Bezier path string (Control point = centerX, centerY)
+        pathString <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", srcCx, srcCy, centerX, centerY, tgtCx, tgtCy)
 
-           // Sub-step 2.4: Compute linear chord midpoint for label badge
-           labelX <- (srcCx + tgtCx) / 2
-           labelY <- (srcCy + tgtCy) / 2
+        // Sub-step 2.4: Compute linear chord midpoint for label badge
+        labelX <- (srcCx + tgtCx) / 2
+        labelY <- (srcCy + tgtCy) / 2
 
-           APPEND { ...edge, path: pathString, labelX: labelX, labelY: labelY } TO positionedEdges
-       END FOR
+        APPEND (edge.id, pathString, labelX, labelY) TO positionedEdges
+    END FOR
 
-    3. RETURN positionedEdges
+    RETURN positionedEdges
 END ALGORITHM
 ```
 

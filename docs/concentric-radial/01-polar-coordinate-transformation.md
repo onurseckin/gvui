@@ -73,15 +73,16 @@ Given a graph dataset with $N = 8$ satellite nodes:
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeOrbitGeometry(nodeCount):
-    // Input: integer nodeCount N = 8
-    // Output: tuple (radius R, centerX X_0, centerY Y_0, canvasSize)
-    R <- MAX(280, nodeCount * 45)             // MAX(280, 360) = 360px
-    X_0 <- R + 100                            // 360 + 100 = 460px
-    Y_0 <- R + 100                            // 360 + 100 = 460px
-    canvasSize <- 2 * R + 200                 // 2 * 360 + 200 = 920px
-    RETURN { radius: R, centerX: X_0, centerY: Y_0, canvasSize: canvasSize }
-END FUNCTION
+ALGORITHM ComputeOrbitGeometry(nodeCount):
+    INPUT: integer nodeCount N
+    OUTPUT: radius R, centerX X_0, centerY Y_0, canvasSize
+
+    R <- MAX(280, nodeCount * 45)
+    X_0 <- R + 100
+    Y_0 <- R + 100
+    canvasSize <- 2 * R + 200
+    RETURN R, X_0, Y_0, canvasSize
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -128,14 +129,15 @@ For $N = 8$ nodes indexed $i \in \{0, \dots, 7\}$:
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeNodeAngle(index, totalNodes):
-    // Input: node index i = 2, totalNodes N = 8
-    // Output: angle theta in radians
-    stepAngle <- (2 * PI) / totalNodes        // 2*PI / 8 = PI/4 rad (45 deg)
-    phaseShift <- PI / 2                      // PI/2 rad (90 deg top offset)
-    theta <- (index * stepAngle) - phaseShift // 2*(PI/4) - PI/2 = 0 rad
-    RETURN theta                             // Returns 0.0 rad for i=2
-END FUNCTION
+ALGORITHM ComputeNodeAngle(index, totalNodes):
+    INPUT: node index i, totalNodes N
+    OUTPUT: angle theta in radians
+
+    stepAngle <- (2 * PI) / totalNodes
+    phaseShift <- PI / 2
+    theta <- (index * stepAngle) - phaseShift
+    RETURN theta
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -177,13 +179,14 @@ Given $R = 360\text{px}$ and $N = 8$:
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeArcSeparation(radius, totalNodes):
-    // Input: radius R = 360px, totalNodes N = 8
-    // Output: arc length distance s between adjacent node centers
-    stepAngle <- (2 * PI) / totalNodes        // PI/4 rad (45 deg)
-    arcLength <- radius * stepAngle           // 360 * (PI/4) = 282.74px
-    RETURN arcLength                          // Returns 282.74px
-END FUNCTION
+ALGORITHM ComputeArcSeparation(radius, totalNodes):
+    INPUT: radius R, totalNodes N
+    OUTPUT: arc length distance s between adjacent node centers
+
+    stepAngle <- (2 * PI) / totalNodes
+    arcLength <- radius * stepAngle
+    RETURN arcLength
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -218,13 +221,14 @@ Given $X_0 = 460\text{px}, Y_0 = 460\text{px}, R = 360\text{px}$, evaluating for
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ProjectPolarToCartesianCenter(centerX, centerY, radius, theta):
-    // Input: (X_0=460, Y_0=460), radius R=360, theta=0.0
-    // Output: Cartesian center point (cx, cy)
-    cx <- centerX + radius * COS(theta)      // 460 + 360 * 1.0 = 820
-    cy <- centerY + radius * SIN(theta)      // 460 + 360 * 0.0 = 460
-    RETURN { cx: cx, cy: cy }                // Returns (820, 460)
-END FUNCTION
+ALGORITHM ProjectPolarToCartesianCenter(centerX, centerY, radius, theta):
+    INPUT: centerX X_0, centerY Y_0, radius R, angle theta
+    OUTPUT: center point (cx, cy)
+
+    cx <- centerX + radius * COS(theta)
+    cy <- centerY + radius * SIN(theta)
+    RETURN (cx, cy)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -256,13 +260,14 @@ Given Node 2 Center $(cx_2, cy_2) = (820, 460)$ and dimensions $W_2 = 120\text{p
 
 #### 3. Targeted Sub-Step Pseudocode
 ```text
-FUNCTION ComputeTopLeftOrigin(cx, cy, width, height):
-    // Input: center (820, 460), dimensions (120, 60)
-    // Output: top-left rendering origin (x, y)
-    x <- cx - (width / 2)                    // 820 - 60 = 760
-    y <- cy - (height / 2)                   // 460 - 30 = 430
-    RETURN { x: x, y: y }                    // Returns (760, 430)
-END FUNCTION
+ALGORITHM ComputeTopLeftOrigin(cx, cy, width, height):
+    INPUT: center point (cx, cy), dimensions (width, height)
+    OUTPUT: top-left origin (x, y)
+
+    x <- cx - (width / 2)
+    y <- cy - (height / 2)
+    RETURN (x, y)
+END ALGORITHM
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -284,39 +289,39 @@ Combining sub-steps 2.1 through 2.5 into the complete master polar transformatio
 
 ```text
 ALGORITHM ComputePolarRadialPositions(dataset):
-    INPUT: dataset containing nodes array V of size N
-    OUTPUT: positionedNodes array with Cartesian coordinates (x, y, width, height)
+    INPUT: dataset containing nodes list V of size N
+    OUTPUT: positionedNodes list with Cartesian coordinates (x, y, width, height)
 
-    1. IF N == 0 THEN
-           RETURN empty array
-       END IF
+    IF N == 0 THEN
+        RETURN empty list
+    END IF
 
-    2. // Sub-step 2.1: Dynamic radius & center setup
-       radius <- MAX(280, N * 45)
-       centerX <- radius + 100
-       centerY <- radius + 100
+    // Sub-step 2.1: Dynamic radius & center setup
+    radius <- MAX(280, N * 45)
+    centerX <- radius + 100
+    centerY <- radius + 100
 
-    3. INITIALIZE positionedNodes as empty list
+    positionedNodes <- empty list
 
-    4. FOR i FROM 0 TO N - 1 DO
-           node <- V[i]
-           dims <- CalculateNodeDimensions(node)   // Returns (width, height)
+    FOR EACH i FROM 0 TO N - 1 DO
+        node <- V[i]
+        width, height <- CalculateNodeDimensions(node)
 
-           // Sub-step 2.2: Compute angular position with 12 o'clock offset (-PI/2)
-           angle <- (2 * PI * i / N) - (PI / 2)
+        // Sub-step 2.2: Compute angular position with 12 o'clock offset (-PI/2)
+        angle <- (2 * PI * i / N) - (PI / 2)
 
-           // Sub-step 2.4: Project polar coordinates to Cartesian center
-           cx <- centerX + radius * COS(angle)
-           cy <- centerY + radius * SIN(angle)
+        // Sub-step 2.4: Project polar coordinates to Cartesian center
+        cx <- centerX + radius * COS(angle)
+        cy <- centerY + radius * SIN(angle)
 
-           // Sub-step 2.5: Offset center to obtain top-left rendering origin
-           topLx <- cx - (dims.width / 2)
-           topLy <- cy - (dims.height / 2)
+        // Sub-step 2.5: Offset center to obtain top-left rendering origin
+        topLx <- cx - (width / 2)
+        topLy <- cy - (height / 2)
 
-           APPEND { id: node.id, x: topLx, y: topLy, width: dims.width, height: dims.height } TO positionedNodes
-       END FOR
+        APPEND (node.id, topLx, topLy, width, height) TO positionedNodes
+    END FOR
 
-    5. RETURN positionedNodes
+    RETURN positionedNodes
 END ALGORITHM
 ```
 
