@@ -1,6 +1,6 @@
 # 02. Sugiyama Layering & Cycle Breaking
 
-[← Previous: State-Space Search & Lexicographic Fitness](./01-state-space-search.md) | [← Back to Custom State-Space Engine Overview](./README.md) | [Next: Barycentric Crossing Minimization →](./03-barycentric-crossing-minimization.md)
+[← Previous: State-Space Search & Lexicographic Fitness](./01-state-space-search.md) | [← Back to Master Index](../README.md) | [Next: Barycentric Crossing Minimization →](./03-barycentric-crossing-minimization.md)
 
 This document details the cycle breaking, rank assignment, and graph normalization pipeline powering the **Custom State-Space Layout Engine**.
 

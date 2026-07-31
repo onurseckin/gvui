@@ -32,7 +32,7 @@ $$\text{Ops}_{\text{stage1}} = |V| + |E| = 20 + 30 = \mathbf{50 \text{ operation
 function benchmarkStage1(nodes: Node[], edges: Edge[]): { ops: number; timeMs: number } {
   const t0 = performance.now();
   const graph = normalizeGraph(nodes, edges);
-  const sccs = computeSCCs(graph); // |V| + |E|
+  const sccs = detectStronglyConnectedComponents(graph); // |V| + |E|
   const roles = classifyEdgeRoles(graph, sccs); // |V| + |E|
   const ranks = assignRanks(graph, roles); // |V| + |E|
   const t1 = performance.now();
@@ -97,9 +97,9 @@ Stage 3 executes $N_{\text{coord\_sweeps}}$ iterations of coordinate averaging f
 $$\text{Time}_{\text{stage3}} = \mathcal{O}\left( N_{\text{coord\_sweeps}} \cdot (|V| + |E|) \right), \quad \text{Space}_{\text{stage3}} = \mathcal{O}(|V|)$$
 
 #### 2. Concrete Numerical Arithmetic Example
-For sample graph $|V| = 20, \; |E| = 30$, and coordinate sweeps $N_{\text{coord\_sweeps}} = 4$:
+For sample graph $|V| = 20, \; |E| = 30$, PAVA stack compaction $|V| = 20$, and coordinate sweeps $N_{\text{coord\_sweeps}} = 4$:
 
-$$\text{Ops}_{\text{stage3}} = 4 \times (20 + 30) = 4 \times 50 = \mathbf{200 \text{ operations}}$$
+$$\text{Ops}_{\text{stage3}} = 4 \times (20 + 30 + 20) = 4 \times 70 = \mathbf{280 \text{ operations}}$$
 
 #### 3. Targeted Sub-Step Pseudocode
 ```typescript
@@ -210,13 +210,13 @@ All implementation files reside under [`src/engine/layout/custom/`](file:///User
 
 | File Path | Description | Key Exports & Line Anchors |
 | :--- | :--- | :--- |
-| [`src/engine/layout/custom/types.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L1-L260) | Core TypeScript interface definitions | [`LayoutSearchState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L40-L70), [`ExactSpacingDemand`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L80-L110), [`RoutedPath`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L150-L190) |
+| [`src/engine/layout/custom/types.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L1-L346) | Core TypeScript interface definitions | [`LayoutSearchState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L200-L211), [`ExactSpacingDemand`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L213-L225), [`RoutedPath`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/types.ts#L34-L40) |
 | [`src/engine/layout/custom/searchState.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/searchState.ts#L4-L80) | State tuple construction & hashing | [`createInitialSearchState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/searchState.ts#L4-L22), [`computeStateHash`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/searchState.ts#L55-L79) |
-| [`src/engine/layout/custom/layoutOptimizerState.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L96-L308) | State-space neighborhood search loop | [`searchBestLayoutState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L96-L308), [`deriveSearchStateBudgets`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L56-L94) |
+| [`src/engine/layout/custom/layoutOptimizerState.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L55-L310) | State-space neighborhood search loop | [`searchBestLayoutState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L96-L308), [`deriveSearchStateBudgets`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutOptimizerState.ts#L56-L94) |
 | [`src/engine/layout/custom/stateEvaluator.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stateEvaluator.ts#L35-L217) | Full candidate evaluation pipeline | [`evaluateSearchState`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stateEvaluator.ts#L35-L217) |
 | [`src/engine/layout/custom/layoutObjective.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutObjective.ts#L14-L268) | 21-element lexicographic priority vector | [`ORDER`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutObjective.ts#L14-L36), [`compareLayoutScore`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/layoutObjective.ts#L38-L44) |
 | [`src/engine/layout/custom/normalizeGraph.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/normalizeGraph.ts#L14-L149) | Graph validation & weak component partitioning | [`normalizeGraph`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/normalizeGraph.ts#L14-L149) |
-| [`src/engine/layout/custom/stronglyConnectedComponents.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stronglyConnectedComponents.ts#L10-L90) | Tarjan's SCC decomposition algorithm | [`computeSCCs`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stronglyConnectedComponents.ts#L10-L90) |
+| [`src/engine/layout/custom/stronglyConnectedComponents.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stronglyConnectedComponents.ts#L10-L103) | Tarjan's SCC decomposition algorithm | [`detectStronglyConnectedComponents`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/stronglyConnectedComponents.ts#L10-L102) |
 | [`src/engine/layout/custom/cycleBreaking.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/cycleBreaking.ts#L10-L355) | Eades greedy flow cycle breaking | [`classifyEdgeRoles`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/cycleBreaking.ts#L10-L355) |
 | [`src/engine/layout/custom/rankAssignment.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/rankAssignment.ts#L11-L105) | Longest path topological rank assignment | [`assignRanks`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/rankAssignment.ts#L11-L105) |
 | [`src/engine/layout/custom/crossingMinimization.ts`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/crossingMinimization.ts#L9-L204) | Alternating barycentric sweeps & transposition | [`minimizeCrossings`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/crossingMinimization.ts#L95-L204), [`countTotalGraphCrossings`](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/custom/crossingMinimization.ts#L44-L66) |

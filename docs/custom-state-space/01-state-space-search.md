@@ -1,6 +1,6 @@
 # 01. State-Space Search & Lexicographic Fitness Vectors
 
-[← Back to Custom State-Space Engine Overview](./README.md) | [Next: Sugiyama Layering & Cycle Breaking →](./02-sugiyama-layering-cycle-breaking.md)
+[← Back to Master Index](../README.md) | [Next: Sugiyama Layering & Cycle Breaking →](./02-sugiyama-layering-cycle-breaking.md)
 
 This document provides a comprehensive, pedagogical breakdown of the state-space search framework powering the **Custom State-Space Layout Engine**.
 
