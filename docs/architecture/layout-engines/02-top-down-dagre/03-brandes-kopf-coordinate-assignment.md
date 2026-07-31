@@ -36,3 +36,10 @@ Each sub-pass aligns vertices with their median neighbor and builds blocks of co
 $$x(v) = \text{Median}\left( x_{\text{UL}}(v), x_{\text{UR}}(v), x_{\text{LL}}(v), x_{\text{LR}}(v) \right)$$
 
 This guarantees balanced subtree placement and aesthetic symmetry.
+
+---
+
+## 3. Codebase Reference Map
+
+- [nodeDimensions.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) — `computeDagreLayout`
+- [layoutDispatcher.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L138-L152) — Mode dispatcher

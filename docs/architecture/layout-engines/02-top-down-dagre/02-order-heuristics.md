@@ -18,4 +18,5 @@ To minimize edge crossings between adjacent ranks $L_i$ and $L_{i+1}$:
 
 ## 2. Codebase Reference Map
 
-- [nodeDimensions.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L60-L100) — `computeDagreLayout`
+- [nodeDimensions.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/nodeDimensions.ts#L451-L604) — `computeDagreLayout`
+- [layoutDispatcher.ts](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L138-L144) — Mode dispatcher
