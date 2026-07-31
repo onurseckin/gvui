@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 import { computeCustomLayout } from "./computeCustomLayout";
-import type { CustomLayoutConfig } from "./config";
+import { DEFAULT_CUSTOM_LAYOUT_CONFIG, type CustomLayoutConfig } from "./config";
 import { simplifyOrthogonalPath } from "./geometry";
 import { buildLayoutScore, compareLayoutScore } from "./layoutObjective";
-import type { NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
+import type { BadgePlacement, NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
 
 function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig>) {
   const scenario = Object.values(CUSTOM_LAYOUT_SCENARIOS).find((s) => s.id === id);
@@ -24,6 +24,14 @@ function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig
     layoutRole: e.layoutRole,
   }));
   return { scenario, nodes, edges, result: computeCustomLayout(nodes, edges, configOverride) };
+}
+
+function findRouteByLabel(edges: NormalizedEdge[], routes: RoutedPath[], label: string): RoutedPath {
+  const edge = edges.find((e) => e.label === label);
+  if (!edge) throw new Error(`Edge with label "${label}" not found`);
+  const route = routes.find((r) => r.edgeId === edge.id);
+  if (!route) throw new Error(`Route for edge ID "${edge.id}" (label "${label}") not found`);
+  return route;
 }
 
 function assertUniquePortsPerNode(routes: RoutedPath[]): void {
@@ -48,14 +56,47 @@ function assertUniquePortsPerNode(routes: RoutedPath[]): void {
   }
 }
 
+function isDirectlyAssociatedBadge(badge: BadgePlacement, route: RoutedPath): boolean {
+  if (badge.leaderPoints && badge.leaderPoints.length > 0) {
+    return false;
+  }
+  const anchor = badge.anchorPoint;
+  const isInsideOrOn =
+    anchor.x >= badge.rect.x - 1e-3 &&
+    anchor.x <= badge.rect.x + badge.rect.width + 1e-3 &&
+    anchor.y >= badge.rect.y - 1e-3 &&
+    anchor.y <= badge.rect.y + badge.rect.height + 1e-3;
+  if (!isInsideOrOn) return false;
+
+  const points = simplifyOrthogonalPath(route.points);
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const minX = Math.min(p1.x, p2.x) - 1e-3;
+    const maxX = Math.max(p1.x, p2.x) + 1e-3;
+    const minY = Math.min(p1.y, p2.y) - 1e-3;
+    const maxY = Math.max(p1.y, p2.y) + 1e-3;
+    if (anchor.x >= minX && anchor.x <= maxX && anchor.y >= minY && anchor.y <= maxY) {
+      return true;
+    }
+  }
+  return false;
+}
+
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   describe("Scenario #5 (Fan-Out 8-Node Broadcaster)", () => {
     it("meets V3 aesthetic acceptance criteria", () => {
-      const { result } = computeScenario(5);
+      const { edges, result } = computeScenario(5);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
       assertUniquePortsPerNode(result.edges);
+
+      for (let i = 1; i <= 7; i++) {
+        const route = findRouteByLabel(edges, result.edges, `msg ${i}`);
+        const bendCount = Math.max(0, simplifyOrthogonalPath(route.points).length - 2);
+        expect(bendCount).toBeLessThanOrEqual(2);
+      }
     });
   });
 
@@ -73,6 +114,17 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
           .map((e) => e.targetPort.side),
       );
       expect(colTargetSides.size).toBeGreaterThanOrEqual(2);
+
+      const colNode = result.nodes.find((n) => n.id === "COL");
+      const srcNodes = result.nodes.filter((n) => n.id !== "COL");
+      if (colNode && srcNodes.length > 0) {
+        const srcMinX = Math.min(...srcNodes.map((n) => n.x));
+        const srcMaxX = Math.max(...srcNodes.map((n) => n.x + n.width));
+        const srcCenter = (srcMinX + srcMaxX) / 2;
+        const srcSpan = srcMaxX - srcMinX;
+        const colCenter = colNode.x + colNode.width / 2;
+        expect(Math.abs(colCenter - srcCenter)).toBeLessThanOrEqual(srcSpan * 0.2);
+      }
     });
   });
 
@@ -81,13 +133,22 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       const { result } = computeScenario(8);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
-      expect(result.validation.metrics.crossingCount).toBeLessThanOrEqual(1);
+      expect(result.validation.metrics.crossingCount).toBe(0);
+      expect(result.validation.metrics.avoidableHairpinCount).toBe(0);
       assertUniquePortsPerNode(result.edges);
 
       const syncBadge = result.badges.find((b) => b.label === "horizontal sync");
       expect(syncBadge).toBeDefined();
       if (syncBadge) {
         expect(syncBadge.leaderPoints ?? []).toHaveLength(0);
+      }
+
+      const nodeA = result.nodes.find((n) => n.id === "A");
+      const nodeB = result.nodes.find((n) => n.id === "B");
+      if (nodeA && nodeB && syncBadge) {
+        const peerGap = Math.abs(nodeB.x - (nodeA.x + nodeA.width));
+        const minRequiredGap = syncBadge.rect.width + 2 * (DEFAULT_CUSTOM_LAYOUT_CONFIG.nodeGap / 2);
+        expect(peerGap).toBeGreaterThanOrEqual(minRequiredGap);
       }
     });
   });
@@ -99,6 +160,14 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
       assertUniquePortsPerNode(result.edges);
+
+      for (const badge of result.badges) {
+        const route = result.edges.find((e) => e.edgeId === badge.edgeId);
+        expect(route).toBeDefined();
+        if (route) {
+          expect(isDirectlyAssociatedBadge(badge, route)).toBe(true);
+        }
+      }
     });
   });
 
@@ -114,7 +183,15 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
         (e) => e.sourcePort.nodeId === "A" && e.targetPort.nodeId === "B",
       );
       expect(routeAB).toBeDefined();
-      expect(["top", "right"]).toContain(routeAB?.targetPort.side);
+      expect(routeAB?.targetPort.side).toBe("top");
+
+      for (const badge of result.badges) {
+        const route = result.edges.find((e) => e.edgeId === badge.edgeId);
+        expect(route).toBeDefined();
+        if (route) {
+          expect(isDirectlyAssociatedBadge(badge, route)).toBe(true);
+        }
+      }
     });
   });
 
@@ -122,14 +199,31 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
     it(
       "meets V3 aesthetic acceptance criteria",
       () => {
-        const { result } = computeScenario(20);
+        const { edges, result } = computeScenario(20);
+        expect(result.validation.isValid).toBe(true);
         expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
+        expect(result.validation.metrics.crossingCount).toBe(0);
+        expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
         assertUniquePortsPerNode(result.edges);
 
         for (const route of result.edges) {
+          const edgeDef = edges.find((e) => e.id === route.edgeId);
+          const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
+          const maxAllowedBends = isFeedback ? 4 : 3;
           const bendCount = Math.max(0, simplifyOrthogonalPath(route.points).length - 2);
-          expect(bendCount).toBeLessThanOrEqual(4);
+          expect(bendCount).toBeLessThanOrEqual(maxAllowedBends);
         }
+
+        const payOrderRoute = findRouteByLabel(edges, result.edges, "process payment");
+        const payOrderLength = payOrderRoute.points.reduce((acc, pt, idx) => {
+          if (idx === 0) return 0;
+          const prev = payOrderRoute.points[idx - 1];
+          return acc + Math.hypot(pt.x - prev.x, pt.y - prev.y);
+        }, 0);
+        const maxX = Math.max(...result.nodes.map((n) => n.x + n.width));
+        const maxY = Math.max(...result.nodes.map((n) => n.y + n.height));
+        const outerBoundaryLength = 2 * (maxX + maxY);
+        expect(payOrderLength).toBeLessThan(outerBoundaryLength);
       },
       60000,
     );
@@ -141,8 +235,19 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
         `scenario #${id} satisfies V3 acceptance, zero ordinary leaders, score non-regression, and port uniqueness`,
         () => {
           const { nodes, edges, result } = computeScenario(id);
+          expect(result.validation.isValid).toBe(true);
+          expect(result.status).not.toBe("invalid_hard_failure");
           expect(result.validation.metrics.ordinaryLeaderCount ?? 0).toBe(0);
           assertUniquePortsPerNode(result.edges);
+
+          for (const badge of result.badges) {
+            const route = result.edges.find((e) => e.edgeId === badge.edgeId);
+            const edgeDef = edges.find((e) => e.id === badge.edgeId);
+            const isFeedback = edgeDef?.isCycle || edgeDef?.layoutRole === "feedback";
+            if (!isFeedback && route) {
+              expect(isDirectlyAssociatedBadge(badge, route)).toBe(true);
+            }
+          }
 
           const initialResult = computeCustomLayout(nodes, edges, { maxGlobalPasses: 1 });
           const edgeRoles = new Map<string, "feedback" | "forward" | "self" | "cross">(
@@ -172,3 +277,5 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
     }
   });
 });
+
+
