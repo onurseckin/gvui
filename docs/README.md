@@ -1,76 +1,82 @@
-# GVUI Graph Layout Algorithms & Architecture Documentation
+# GVUI Layout Engine Documentation
 
-Welcome to the master documentation index for the **GVUI Graph Layout Visualization Engine**.
+This documentation teaches you how GVUI transforms a set of nodes and edges into a readable, visually clean graph layout. It covers five layout engines, from simple grid placement to a sophisticated state-space optimization system.
 
-This repository implements 5 distinct layout engine paradigms designed for visualizing directed acyclic/cyclic graphs, microservice architectures, execution trace logs, and network topologies.
+**No prior knowledge of graph algorithms is assumed.** Each section builds from fundamental concepts to the complete picture.
 
 ---
 
-## 🎨 Layout Engine Matrix & Algorithmic Index
+## How to Read These Docs
+
+If you're new to graph layout, start with the **Custom Engine** tutorials — they teach graph theory from scratch and progressively build to the full optimization pipeline. If you're looking for something specific, use the section index below.
+
+---
+
+## The Five Layout Engines at a Glance
 
 ```
-                                    ┌──────────────────────────────────┐
-                                    │     GVUI Graph Layout Engine     │
-                                    └────────────────┬─────────────────┘
-                                                     │
-         ┌──────────────────┬────────────────────────┼────────────────────────┬──────────────────┐
-         │                  │                        │                        │                  │
-         ▼                  ▼                        ▼                        ▼                  ▼
-┌─────────────────┐┌─────────────────┐    ┌────────────────────┐   ┌────────────────────┐┌────────────────────┐
-│   custom-state- ││ top-down-dagre  │    │  left-right-dagre  │   │   force-directed   ││ concentric-radial  │
-│   space/        ││ /               │    │  /                 │   │   /                ││ /                  │
-└────────┬────────┘└────────┬────────┘    └─────────┬──────────┘   └─────────┬──────────┘└─────────┬──────────┘
-         │                  │                       │                        │                     │
-     6 Topics            4 Topics                3 Topics                 3 Topics              3 Topics
+┌─────────────────────────────────────────────────────────────────┐
+│                        GVUI Layout System                       │
+├──────────────────┬──────────────────┬───────────────────────────┤
+│   Custom Engine  │  Dagre Layouts   │     Simple Layouts        │
+│   (State-Space   │  (Library-Based) │     (Fast Exploration)    │
+│    Optimization) │                  │                           │
+│                  │  • Top-Down      │  • Grid Layout            │
+│  • Top-Down      │  • Left-to-Right │  • Circular Layout        │
+│    (default)     │                  │                           │
+├──────────────────┼──────────────────┼───────────────────────────┤
+│  Quality: ★★★★★  │  Quality: ★★★    │  Quality: ★               │
+│  Speed:   ★★     │  Speed:   ★★★★   │  Speed:   ★★★★★           │
+└──────────────────┴──────────────────┴───────────────────────────┘
 ```
 
 ---
 
-## 📚 Direct Documentation Navigation Sitemap
+## Documentation Index
 
-### 1. ⚙️ Custom State-Space Engine (`custom-state-space/`)
-*Multi-Objective State-Space Search, Sugiyama Layering, Grid A* Orthogonal Routing & Dynamic Spacing Demands*
+### [Custom Engine](./custom-engine/README.md) — The Deep Dive
 
-- [**01. State-Space Search & Fitness Vectors**](./custom-state-space/01-state-space-search.md) — State tuple $\sigma$, lexicographic cost vector $\mathbf{C}(\sigma)$, perturbation neighborhood operators.
-- [**02. Sugiyama Layering & Cycle Breaking**](./custom-state-space/02-sugiyama-layering-cycle-breaking.md) — Tarjan SCC cycle breaking, stack DFS back-edge reversal, longest-path ranking, dummy nodes.
-- [**03. Barycentric Crossing Minimization**](./custom-state-space/03-barycentric-crossing-minimization.md) — Alternating top-down/bottom-up sweeps, median/mean neighbor sorting, crossing counts.
-- [**04. Grid A* Orthogonal Edge Routing**](./custom-state-space/04-astar-orthogonal-routing.md) — 2D spatial grid pathfinding, 90° turn penalty ($P_{\text{bend}} = 40$), perpendicular SVG arc bridges ($r = 6\text{px}$).
-- [**05. Dynamic Spacing Demands**](./custom-state-space/05-dynamic-spacing-demands.md) — Required badge gap calculation ($G_{\text{req}}$), spacing demand emission $\mathcal{D}$, coordinate gap expansion.
-- [**06. Codebase Reference Map**](./custom-state-space/06-codebase-reference-map.md) — File-by-file directory map, TypeScript symbol dictionary, unit test commands.
+The crown jewel: an 82-file custom layout engine that wraps a Sugiyama pipeline in a state-space optimization search. This section teaches every algorithm from scratch.
 
----
+| Chapter | Topic | What You'll Learn |
+|---------|-------|-------------------|
+| [01](./custom-engine/01-foundations.md) | Graph Theory Foundations | Nodes, edges, directed graphs, cycles — from zero |
+| [02](./custom-engine/02-the-sugiyama-framework.md) | The Sugiyama Framework | The 4-phase approach to layered graph drawing |
+| [03](./custom-engine/03-cycle-detection.md) | Cycle Detection | DFS, back edges, Tarjan's SCC algorithm |
+| [04](./custom-engine/04-cycle-breaking.md) | Cycle Breaking | Eades greedy heuristic, feedback edge marking |
+| [05](./custom-engine/05-rank-assignment.md) | Rank Assignment | Topological sort, longest-path layering, dummy nodes |
+| [06](./custom-engine/06-crossing-minimization.md) | Crossing Minimization | Barycenters, bidirectional sweeps, transposition |
+| [07](./custom-engine/07-coordinate-assignment.md) | Coordinate Assignment | PAVA isotonic regression for optimal positioning |
+| [08](./custom-engine/08-edge-routing.md) | Edge Routing | A* pathfinding on a 3D state grid |
+| [09](./custom-engine/09-badge-placement.md) | Badge Placement | Label collision resolution, spacing demands |
+| [10](./custom-engine/10-optimization-loop.md) | Optimization Loop | State-space search, neighborhood generation, scoring |
+| [11](./custom-engine/11-aesthetic-refinement.md) | Aesthetic Refinement | Hairpin elimination, bend reduction — the polish phase |
 
-### 2. 🌲 Top-Down Dagre Engine (`top-down-dagre/`)
-*Sugiyama Hierarchical Framework with Top-to-Bottom (`TB`) Rank Direction*
+### [Dagre Integration](./dagre-integration/README.md) — Library-Based Layouts
 
-- [**01. Network Simplex Layering**](./top-down-dagre/01-network-simplex-layering.md) — Linear programming rank constraints $r(v) - r(u) \ge 1$, dual spanning tree tight edges, cut values.
-- [**02. Order Heuristics**](./top-down-dagre/02-order-heuristics.md) — Adjacent rank barycentric sorting, crossing minimization.
-- [**03. Brandes-Köpf Coordinate Assignment**](./top-down-dagre/03-brandes-kopf-coordinate-assignment.md) — 4-pass alignments (UL, UR, LL, LR), block compaction, median X-coordinate calculation.
-- [**04. Codebase Reference Map**](./top-down-dagre/04-codebase-reference-map.md) — `computeDagreLayout` integration map and line anchors in `nodeDimensions.ts`.
+How GVUI uses the Dagre library for fast hierarchical layouts, and what we build on top.
 
----
+| Chapter | Topic | What You'll Learn |
+|---------|-------|-------------------|
+| [01](./dagre-integration/01-dagre-internals.md) | Dagre Internals | What happens inside `dagre.layout()` (for context) |
+| [02](./dagre-integration/02-our-integration-layer.md) | Our Integration Layer | Node dimensions, LR transform, edge clipping, badge repulsion |
 
-### 3. ➡️ Left-to-Right Dagre Engine (`left-right-dagre/`)
-*Transposed Sugiyama Framework for Sequential Pipelines (`LR` Direction)*
+### [Simple Layouts](./simple-layouts/README.md) — Fast Exploration Modes
 
-- [**01. Coordinate Space Transformation**](./left-right-dagre/01-coordinate-space-transformation.md) — Rotated matrix transformation $\begin{pmatrix} X_{\text{final}} \\ Y_{\text{final}} \end{pmatrix} = \begin{pmatrix} Y_{\text{sugiyama}} \\ X_{\text{sugiyama}} \end{pmatrix}$, dimension swapping ($\text{EffWidth} = \text{Height}$).
-- [**02. Horizontal Bezier Routing**](./left-right-dagre/02-horizontal-bezier-routing.md) — Cubic Bezier control points $C_1, C_2$, horizontal delta $\Delta X$, label midpoint placement at $t=0.5$.
-- [**03. Codebase Reference Map**](./left-right-dagre/03-codebase-reference-map.md) — `computeDagreLayout(dataset, "LR")` reference map in `layoutDispatcher.ts`.
+Topology-unaware layouts for quick visualization.
 
----
+| Chapter | Topic | What You'll Learn |
+|---------|-------|-------------------|
+| [01](./simple-layouts/01-grid-layout.md) | Grid Layout | Static grid placement (what "Organic Force" actually does) |
+| [02](./simple-layouts/02-circular-layout.md) | Circular Layout | Polar placement, trigonometry from scratch, Bézier routing |
 
-### 4. ⚛️ Organic Force Engine (`force-directed/`)
-*Fruchterman-Reingold Spring Embedder Physics Simulation*
+### [Shared Concepts](./concepts/) — Cross-Cutting Knowledge
 
-- [**01. Coulomb-Hooke Vector Math**](./force-directed/01-coulomb-hooke-vector-math.md) — Electrostatic repulsion $\vec{F}_r$, Hooke spring attraction $\vec{F}_a$, center gravity $\vec{F}_g$, net force summation.
-- [**02. Simulated Annealing Cooling**](./force-directed/02-simulated-annealing-cooling.md) — Exponential temperature decay $T(t) = T_{\text{initial}} \cdot \gamma^t$, velocity bounding $\min(\|\vec{F}_{\text{net}}\|, T(t))$, numerical safeguards $\epsilon$.
-- [**03. Codebase Reference Map**](./force-directed/03-codebase-reference-map.md) — `computeForceLayout` simulation loop reference map in `layoutDispatcher.ts`.
+Fundamental concepts referenced across multiple sections, documented once.
 
----
-
-### 5. 🎯 Concentric Radial Engine (`concentric-radial/`)
-*Polar Coordinate Orbit Projection & Hub-Spoke Bezier Routing*
-
-- [**01. Polar Coordinate Transformation**](./concentric-radial/01-polar-coordinate-transformation.md) — Polar transformation $\langle R, \theta_i \rangle \to \langle X_i, Y_i \rangle$, angular displacement $\theta_i = \frac{2\pi \cdot i}{N} - \frac{\pi}{2}$, radius $R = \max(280, N \cdot 45)$.
-- [**02. Hub-Spoke Bezier Routing**](./concentric-radial/02-hub-spoke-bezier-routing.md) — Quadratic Bezier curves $\mathbf{B}(t)$ through central hub control point $\mathbf{P}_0 = (X_0, Y_0)$, label midpoint placement.
-- [**03. Codebase Reference Map**](./concentric-radial/03-codebase-reference-map.md) — `computeRadialLayout` reference map in `layoutDispatcher.ts`.
+| Document | Topic |
+|----------|-------|
+| [Sugiyama Framework](./concepts/sugiyama-framework.md) | The meta-framework for layered graph drawing |
+| [Node Dimension Estimation](./concepts/node-dimension-estimation.md) | How pixel sizes are calculated from content |
+| [Lexicographic Scoring](./concepts/lexicographic-scoring.md) | Multi-objective optimization with priority ordering |
+| [Computational Complexity](./concepts/computational-complexity.md) | Time/space analysis for all engines |
