@@ -92,9 +92,9 @@ describe("bounded aesthetic search", () => {
     expect(resolveLayoutStatus(evaluation.validation)).toBe("unresolved_soft_conflicts");
   });
 
-  it("honors cancellation when the aesthetic portfolio is empty", () => {
+  it("honors cancellation when the aesthetic portfolio is empty", async () => {
     const clean = makeState("clean");
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 3,
@@ -110,11 +110,11 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("cancelled");
   });
 
-  it("honors a deadline after skipping a duplicate-only portfolio", () => {
+  it("honors a deadline after skipping a duplicate-only portfolio", async () => {
     const clean = makeState("clean");
     const duplicate = makeState("duplicate");
     let interruptionChecks = 0;
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 3,
@@ -130,12 +130,12 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("deadline-exceeded");
   });
 
-  it("honors cancellation raised while generating the trial portfolio", () => {
+  it("honors cancellation raised while generating the trial portfolio", async () => {
     const clean = makeState("clean");
     const trial = makeState("trial");
     let cancelled = false;
     let evaluationCalls = 0;
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 2,
@@ -160,12 +160,12 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("cancelled");
   });
 
-  it("checks cancellation after a crossing trial before generating completions", () => {
+  it("checks cancellation after a crossing trial before generating completions", async () => {
     const clean = makeState("clean");
     const trial = makeState("trial");
     let cancelled = false;
     let completionGenerationCalls = 0;
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 2,
@@ -190,12 +190,12 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("cancelled");
   });
 
-  it("lets cancellation beat an exhausted local budget before the next trial", () => {
+  it("lets cancellation beat an exhausted local budget before the next trial", async () => {
     const clean = makeState("clean");
     const trialA = makeState("trial-a");
     const trialB = makeState("trial-b");
     let cancelled = false;
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 1,
@@ -216,7 +216,7 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("cancelled");
   });
 
-  it("selects a coordinated child after its hairpin-reducing parent temporarily crosses", () => {
+  it("selects a coordinated child after its hairpin-reducing parent temporarily crosses", async () => {
     const clean = makeState("clean");
     const trial = makeState("trial");
     const completion = makeState("completion");
@@ -233,7 +233,7 @@ describe("bounded aesthetic search", () => {
       ],
     ]);
 
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 3,
@@ -247,7 +247,7 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("objective-target");
   });
 
-  it("rejects incomplete completions and truthfully reports an exhausted bounded portfolio", () => {
+  it("rejects incomplete completions and truthfully reports an exhausted bounded portfolio", async () => {
     const clean = makeState("clean");
     const trial = makeState("trial");
     const missingRoute = makeState("missing-route");
@@ -265,7 +265,7 @@ describe("bounded aesthetic search", () => {
       ],
     ]);
 
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: cleanEvaluation,
       maxEvaluations: 3,
@@ -280,7 +280,7 @@ describe("bounded aesthetic search", () => {
     expect(resolveLayoutStatus(result.bestEvaluation.validation)).toBe("unresolved_soft_conflicts");
   });
 
-  it("reports the layout budget when the evaluation cap interrupts the portfolio", () => {
+  it("reports the layout budget when the evaluation cap interrupts the portfolio", async () => {
     const clean = makeState("clean");
     const trialA = makeState("trial-a");
     const trialB = makeState("trial-b");
@@ -289,7 +289,7 @@ describe("bounded aesthetic search", () => {
       [computeStateHash(trialB), makeEvaluation(makeValidation({ crossingCount: 1 }))],
     ]);
 
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 1,
@@ -303,7 +303,7 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("layout-state-budget");
   });
 
-  it("reports the aesthetic budget when its local cap interrupts before the global cap", () => {
+  it("reports the aesthetic budget when its local cap interrupts before the global cap", async () => {
     const clean = makeState("clean");
     const trialA = makeState("trial-a");
     const trialB = makeState("trial-b");
@@ -312,7 +312,7 @@ describe("bounded aesthetic search", () => {
       [computeStateHash(trialB), makeEvaluation(makeValidation({ crossingCount: 1 }))],
     ]);
 
-    const result = runBoundedAestheticSearch({
+    const result = await runBoundedAestheticSearch({
       bestState: clean,
       bestEvaluation: makeEvaluation(makeValidation()),
       maxEvaluations: 1,
@@ -325,7 +325,7 @@ describe("bounded aesthetic search", () => {
     expect(result.stopReason).toBe("aesthetic-state-budget");
   });
 
-  it("is deterministic when trial and completion inputs are reversed", () => {
+  it("is deterministic when trial and completion inputs are reversed", async () => {
     const clean = makeState("clean");
     const trialA = makeState("trial-a");
     const trialB = makeState("trial-b");
@@ -344,8 +344,8 @@ describe("bounded aesthetic search", () => {
         makeEvaluation(makeValidation({ avoidableHairpinCount: 2, totalLength: 110 })),
       ],
     ]);
-    const run = (reverse: boolean) =>
-      runBoundedAestheticSearch({
+    const run = async (reverse: boolean) =>
+      await runBoundedAestheticSearch({
         bestState: clean,
         bestEvaluation: cleanEvaluation,
         maxEvaluations: 4,
@@ -362,8 +362,8 @@ describe("bounded aesthetic search", () => {
         },
       });
 
-    const forward = run(false);
-    const reversed = run(true);
+    const forward = await run(false);
+    const reversed = await run(true);
     expect(computeStateHash(reversed.bestState)).toBe(computeStateHash(forward.bestState));
     expect(reversed.bestEvaluation.validation.metrics).toEqual(
       forward.bestEvaluation.validation.metrics,

@@ -4,7 +4,9 @@ import type { StateEvaluationResult } from "./stateEvaluator";
 import type { LayoutSearchState, SearchStopReason } from "./types";
 
 export interface BoundedAestheticSearchDependencies {
-  evaluateState: (state: LayoutSearchState) => StateEvaluationResult;
+  evaluateState: (
+    state: LayoutSearchState,
+  ) => Promise<StateEvaluationResult> | StateEvaluationResult;
   generateTrialStates: (
     state: LayoutSearchState,
     evaluation: StateEvaluationResult,
@@ -72,14 +74,14 @@ function uniqueStatesInOrder(states: LayoutSearchState[]): LayoutSearchState[] {
   });
 }
 
-export function runBoundedAestheticSearch({
+export async function runBoundedAestheticSearch({
   bestState: initialBestState,
   bestEvaluation: initialBestEvaluation,
   maxEvaluations,
   budgetStopReason,
   visitedHashes,
   dependencies,
-}: BoundedAestheticSearchOptions): BoundedAestheticSearchResult {
+}: BoundedAestheticSearchOptions): Promise<BoundedAestheticSearchResult> {
   let bestState = initialBestState;
   let bestEvaluation = initialBestEvaluation;
   let evaluatedStates = 0;
@@ -95,13 +97,14 @@ export function runBoundedAestheticSearch({
     return reason ? stop(reason) : undefined;
   };
 
-  const evaluateCandidate = (
+  const evaluateCandidate = async (
     candidate: LayoutSearchState,
-  ):
+  ): Promise<
     | { kind: "duplicate" }
     | { kind: "interrupted"; reason: "cancelled" | "deadline-exceeded" }
     | { kind: "budget" }
-    | { kind: "evaluated"; evaluation: StateEvaluationResult } => {
+    | { kind: "evaluated"; evaluation: StateEvaluationResult }
+  > => {
     const interruption = dependencies.interruptionReason?.();
     if (interruption) return { kind: "interrupted", reason: interruption };
     const hash = computeStateHash(candidate);
@@ -110,7 +113,7 @@ export function runBoundedAestheticSearch({
 
     visitedHashes.add(hash);
     candidate.visitedSignatures.add(hash);
-    const evaluation = dependencies.evaluateState(candidate);
+    const evaluation = await dependencies.evaluateState(candidate);
     evaluatedStates++;
     return { kind: "evaluated", evaluation };
   };
@@ -126,7 +129,7 @@ export function runBoundedAestheticSearch({
     for (const trial of trials) {
       const beforeTrial = interrupted();
       if (beforeTrial) return beforeTrial;
-      const trialResult = evaluateCandidate(trial);
+      const trialResult = await evaluateCandidate(trial);
       if (trialResult.kind === "interrupted") return stop(trialResult.reason);
       if (trialResult.kind === "budget") return interrupted() ?? stop(budgetStopReason);
       if (trialResult.kind === "duplicate") continue;
@@ -155,7 +158,7 @@ export function runBoundedAestheticSearch({
       for (const completion of completions) {
         const beforeCompletion = interrupted();
         if (beforeCompletion) return beforeCompletion;
-        const completionResult = evaluateCandidate(completion);
+        const completionResult = await evaluateCandidate(completion);
         if (completionResult.kind === "interrupted") return stop(completionResult.reason);
         if (completionResult.kind === "budget") return interrupted() ?? stop(budgetStopReason);
         if (completionResult.kind === "duplicate") continue;

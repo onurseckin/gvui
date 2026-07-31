@@ -184,26 +184,17 @@ export async function searchBestLayoutState(
           : "aesthetic-state-budget";
 
       let localAestheticEvaluations = 0;
-      const aestheticResult = runBoundedAestheticSearch({
+      const aestheticResult = await runBoundedAestheticSearch({
         bestState,
         bestEvaluation: bestEval,
         maxEvaluations,
         budgetStopReason,
         visitedHashes,
         dependencies: {
-          evaluateState: (candidate) => {
+          evaluateState: async (candidate) => {
             localAestheticEvaluations++;
             const currentPass = evaluatedStates + localAestheticEvaluations;
-            if (searchOpts.onProgress) {
-              const percent = Math.round((currentPass / maxStates) * 100);
-              searchOpts.onProgress({
-                stageIndex: currentPass,
-                totalStages: maxStates,
-                percent,
-                stageText: `Pass ${currentPass}/${maxStates}`,
-                detail: `Evaluating pass ${currentPass}/${maxStates}: bounded aesthetic optimization pass`,
-              });
-            }
+            await notifyProgress(currentPass, "bounded aesthetic optimization pass");
             return evaluateSearchState(nodes, edges, candidate, searchConfig);
           },
           generateTrialStates: (candidate, evaluation) =>
