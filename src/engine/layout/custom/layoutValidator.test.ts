@@ -286,4 +286,141 @@ describe("layoutValidator", () => {
     // Valid layout should rank higher (lower score number) than invalid layout even with higher crossings
     expect(compareLayoutScores(resA.validation, resB.validation)).toBeLessThan(0);
   });
+
+  test("detects missing routes", () => {
+    const edge: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
+      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 300 }, stub: { x: 100, y: 280 } },
+      points: [],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      edges: [edge],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    expect(val.isValid).toBe(false);
+    const diag = val.diagnostics.find((d) => d.code === "MISSING_ROUTE");
+    expect(diag).toBeDefined();
+    expect(diag?.ids).toContain("e1");
+  });
+
+  test("detects non-orthogonal internal segments and attaches segment", () => {
+    const edge: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
+      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 200, y: 300 }, stub: { x: 200, y: 280 } },
+      points: [
+        { x: 100, y: 100 },
+        { x: 150, y: 200 },
+        { x: 200, y: 300 },
+      ],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      edges: [edge],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    expect(val.isValid).toBe(false);
+    const diag = val.diagnostics.find((d) => d.code === "NON_ORTHOGONAL_SEGMENT");
+    expect(diag).toBeDefined();
+    expect(diag?.ids).toContain("e1");
+    const segDiag = diag as unknown as { segment?: { a: Point; b: Point } };
+    expect(segDiag.segment).toBeDefined();
+  });
+
+  test("detects badge leader collisions", () => {
+    const node: NormalizedNode & Point = { id: "obstacle", x: 100, y: 100, width: 80, height: 40 };
+    const badge: BadgePlacement = {
+      edgeId: "e1",
+      label: "Badge",
+      rect: { x: 250, y: 100, width: 40, height: 20 },
+      anchorPoint: { x: 50, y: 120 },
+      leaderPoints: [
+        { x: 50, y: 120 },
+        { x: 250, y: 120 },
+      ],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      nodes: [node],
+      badges: [badge],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    expect(val.isValid).toBe(false);
+    const diag = val.diagnostics.find((d) => d.code === "LEADER_COLLISION");
+    expect(diag).toBeDefined();
+    expect(diag?.ids).toContain("e1");
+    expect(diag?.ids).toContain("obstacle");
+  });
+
+  test("emits one diagnostic per code and canonical entity pair (scenario #5 duplicate diagnostic test)", () => {
+    const node: NormalizedNode & Point = { id: "obs", x: 100, y: 100, width: 80, height: 100 };
+    const edge: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 120, y: 90 }, stub: { x: 120, y: 110 } },
+      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 160, y: 210 }, stub: { x: 160, y: 190 } },
+      points: [
+        { x: 120, y: 90 },
+        { x: 120, y: 150 },
+        { x: 160, y: 150 },
+        { x: 160, y: 210 },
+      ],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      nodes: [node],
+      edges: [edge],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    const penetrationDiags = val.diagnostics.filter((d) => d.code === "EDGE_NODE_PENETRATION");
+    expect(penetrationDiags.length).toBe(1);
+    expect(penetrationDiags[0].ids).toEqual(["e1", "obs"]);
+  });
+
+  test("returns crossing records and makes metrics.crossingCount equal crossings.length", () => {
+    const edge1: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 0, y: 50 }, stub: { x: 10, y: 50 } },
+      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 50 }, stub: { x: 90, y: 50 } },
+      points: [
+        { x: 0, y: 50 },
+        { x: 100, y: 50 },
+      ],
+    };
+
+    const edge2: RoutedPath = {
+      edgeId: "e2",
+      sourcePort: { nodeId: "nC", side: "bottom", index: 0, point: { x: 50, y: 0 }, stub: { x: 50, y: 10 } },
+      targetPort: { nodeId: "nD", side: "top", index: 0, point: { x: 50, y: 100 }, stub: { x: 50, y: 90 } },
+      points: [
+        { x: 50, y: 0 },
+        { x: 50, y: 100 },
+      ],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      edges: [edge1, edge2],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG) as unknown as {
+      metrics: { crossingCount: number };
+      crossings: { point: Point; bridgeOwnerEdgeId?: string }[];
+    };
+    expect(val.crossings).toBeDefined();
+    expect(val.crossings.length).toBe(1);
+    expect(val.metrics.crossingCount).toBe(val.crossings.length);
+    expect(val.crossings[0].point).toEqual({ x: 50, y: 50 });
+    expect(val.crossings[0].bridgeOwnerEdgeId).toBe("e2");
+  });
 });
+
