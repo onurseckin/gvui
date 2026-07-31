@@ -1,5 +1,7 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 
+import { getBadgeDisplayText, hasBadge, measureBadgeRect } from "../../engine/layout/custom/badgeMeasurement";
+
 export interface EdgeBadgeOverlayProps {
   x: number;
   y: number;
@@ -17,14 +19,14 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
   isSelected = false,
   onClick,
 }) => {
-  const hasLabel = Boolean(label && label.trim().length > 0);
-  if (!hasLabel && !isCycle) {
+  if (!hasBadge(label, isCycle)) {
     return null;
   }
 
-  const displayText = isCycle ? (label ? `↺ ${label}` : "↺") : (label ?? "");
-  const width = Math.max(60, displayText.length * 7 + 24);
-  const height = 28;
+  const displayText = getBadgeDisplayText(label, isCycle) ?? "";
+  const rect = measureBadgeRect(label ?? "", undefined, isCycle);
+  const width = rect.width;
+  const height = rect.height;
 
   const handleClick = (e: MouseEvent<SVGGElement>): void => {
     e.stopPropagation();
