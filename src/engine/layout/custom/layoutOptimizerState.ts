@@ -1,6 +1,16 @@
 import type { CustomLayoutConfig } from "./config";
+import {
+  hasRemainingAestheticDefect,
+  isObjectiveTargetEvaluation,
+  isPrimaryCleanEvaluation,
+  runBoundedAestheticSearch,
+} from "./boundedAestheticSearch";
 import { compareLayoutScores } from "./layoutValidator";
-import { generateNeighborhoodStates } from "./neighborhoodSearch";
+import {
+  generateAestheticTrialStates,
+  generateCrossingCompletionStates,
+  generateNeighborhoodStates,
+} from "./neighborhoodSearch";
 import { computeStateHash, createInitialSearchState } from "./searchState";
 import { evaluateSearchState, type StateEvaluationResult } from "./stateEvaluator";
 import type {
@@ -78,16 +88,34 @@ export function searchBestLayoutState(
       break;
     }
 
-    if (
-      bestEval.validation.isValid &&
-      bestEval.validation.metrics.crossingCount === 0 &&
-      (bestEval.validation.metrics.ordinaryLeaderCount ?? 0) === 0 &&
-      (bestEval.validation.metrics.badgeUnrelatedEdgeOverlaps ?? 0) === 0 &&
-      (bestEval.validation.metrics.avoidableHairpinCount ?? 0) === 0 &&
-      (bestEval.validation.metrics.excessBendCount ?? 0) === 0 &&
-      bestEval.validation.diagnostics.length === 0
-    ) {
+    if (isObjectiveTargetEvaluation(bestEval)) {
       stopReason = "objective-target";
+      break;
+    }
+
+    if (isPrimaryCleanEvaluation(bestEval) && hasRemainingAestheticDefect(bestEval)) {
+      const aestheticResult = runBoundedAestheticSearch({
+        bestState,
+        bestEvaluation: bestEval,
+        maxEvaluations: Math.min(config.maxAestheticPasses, maxStates - evaluatedStates),
+        visitedHashes,
+        dependencies: {
+          evaluateState: (candidate) => evaluateSearchState(nodes, edges, candidate, config),
+          generateTrialStates: (candidate, evaluation) =>
+            generateAestheticTrialStates(candidate, evaluation, config),
+          generateCompletionStates: (candidate, evaluation) =>
+            generateCrossingCompletionStates(candidate, evaluation, config, 2),
+          interruptionReason: () => {
+            if (signal?.aborted) return "cancelled";
+            if (deadlineTime && Date.now() >= deadlineTime) return "deadline-exceeded";
+            return undefined;
+          },
+        },
+      });
+      evaluatedStates += aestheticResult.evaluatedStates;
+      bestState = aestheticResult.bestState;
+      bestEval = aestheticResult.bestEvaluation;
+      stopReason = aestheticResult.stopReason;
       break;
     }
 
@@ -101,6 +129,10 @@ export function searchBestLayoutState(
     if (compareLayoutScores(curr.evalResult.validation, bestEval.validation) < 0) {
       bestState = curr.state;
       bestEval = curr.evalResult;
+    }
+
+    if (isPrimaryCleanEvaluation(bestEval) && hasRemainingAestheticDefect(bestEval)) {
+      continue;
     }
 
     // Generate neighbors
@@ -138,16 +170,12 @@ export function searchBestLayoutState(
 
       frontier.push({ state: nextState, evalResult: nextEval });
 
-      if (
-        bestEval.validation.isValid &&
-        bestEval.validation.metrics.crossingCount === 0 &&
-        (bestEval.validation.metrics.ordinaryLeaderCount ?? 0) === 0 &&
-        (bestEval.validation.metrics.badgeUnrelatedEdgeOverlaps ?? 0) === 0 &&
-        (bestEval.validation.metrics.avoidableHairpinCount ?? 0) === 0 &&
-        (bestEval.validation.metrics.excessBendCount ?? 0) === 0 &&
-        bestEval.validation.diagnostics.length === 0
-      ) {
+      if (isObjectiveTargetEvaluation(bestEval)) {
         stopReason = "objective-target";
+        break;
+      }
+
+      if (isPrimaryCleanEvaluation(bestEval) && hasRemainingAestheticDefect(bestEval)) {
         break;
       }
 

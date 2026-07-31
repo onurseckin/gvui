@@ -159,8 +159,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
 
     expect(scenario11.result.edges).toHaveLength(scenario11.edges.length);
     expect(scenario13.result.edges).toHaveLength(scenario13.edges.length);
-    expect(scenario11.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(12);
-    expect(scenario13.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(8);
+    expect(scenario11.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(4);
+    expect(scenario13.result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(3);
     expect(sumExpandedStates(scenario11.result.edges)).toBeLessThanOrEqual(12_000);
     expect(sumExpandedStates(scenario13.result.edges)).toBeLessThanOrEqual(10_000);
   }, 60000);
@@ -239,7 +239,7 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       ).toBeLessThanOrEqual(2);
       expect(syncBadge?.leaderPoints).toBe(undefined);
       expect(result.validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
-      expect(result.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(2);
+      expect(result.optimizationStats?.totalEvaluatedStates).toBe(1);
       expect(result.optimizationStats?.stopReason).toBe("objective-target");
 
       const mid1 = result.nodes.find((node) => node.id === "MID1");
@@ -300,6 +300,36 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #20 (Full DevOps Microservice Mesh)", () => {
+    it("bounds the aesthetic portfolio without reopening the broad frontier", () => {
+      const startedAt = performance.now();
+      const { nodes, edges, result } = computeScenario(20);
+      const forwardDuration = performance.now() - startedAt;
+      const reversedStartedAt = performance.now();
+      const reversed = computeCustomLayout([...nodes].reverse(), [...edges].reverse());
+      const reversedDuration = performance.now() - reversedStartedAt;
+
+      for (const candidate of [result, reversed]) {
+        expect(candidate.edges).toHaveLength(12);
+        expect(candidate.badges).toHaveLength(12);
+        expect(candidate.validation.isValid).toBe(true);
+        expect(candidate.validation.metrics.crossingCount).toBe(0);
+        expect(candidate.validation.metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
+        expect(
+          (candidate.validation.metrics.avoidableHairpinCount ?? 0) +
+            (candidate.validation.metrics.excessBendCount ?? 0),
+        ).toBeGreaterThan(0);
+        expect(candidate.status).toBe("unresolved_soft_conflicts");
+        expect(candidate.optimizationStats?.stopReason).toBe("bounded-local-optimum");
+        expect(candidate.optimizationStats?.totalEvaluatedStates).toBeLessThanOrEqual(20);
+      }
+      expect(forwardDuration).toBeLessThan(15_000);
+      expect(reversedDuration).toBeLessThan(15_000);
+      expect(reversed.nodes).toEqual(result.nodes);
+      expect(reversed.edges).toEqual(result.edges);
+      expect(reversed.badges).toEqual(result.badges);
+      expect(reversed.validation.metrics).toEqual(result.validation.metrics);
+    }, 45000);
+
     it("reaches the bounded crossing-free repair deterministically", () => {
       const config = { maxLayoutStates: 8, maxFrontierSize: 8 };
       const { nodes, edges, result } = computeScenario(20, config);

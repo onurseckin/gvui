@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { resolveCustomLayoutConfig } from "./config";
-import { generateNeighborhoodStates } from "./neighborhoodSearch";
+import {
+  generateAestheticTrialStates,
+  generateCrossingCompletionStates,
+  generateNeighborhoodStates,
+} from "./neighborhoodSearch";
 import { generatePortCandidates } from "./portCandidates";
 import { computeStateHash, createInitialSearchState } from "./searchState";
 import { evaluateSearchState } from "./stateEvaluator";
@@ -59,6 +63,106 @@ function changedEndpointCount(
 }
 
 describe("neighborhoodSearch", () => {
+  it("limits aesthetic trials to two one-endpoint moves per defect route deterministically", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig();
+    const defectRoute = makeRoute("defect", "S0", "T0", "right", "left");
+    defectRoute.points = [
+      { x: 0, y: 0 },
+      { x: 40, y: 0 },
+      { x: 40, y: 40 },
+      { x: 80, y: 40 },
+      { x: 80, y: 80 },
+      { x: 120, y: 80 },
+    ];
+    const cleanRoute = makeRoute("clean", "S1", "T1");
+    const classifiedEdges = [
+      { id: "defect", source: "S0", target: "T0", role: "forward" as const, reversed: false },
+      { id: "clean", source: "S1", target: "T1", role: "forward" as const, reversed: false },
+    ];
+    const evaluation = {
+      routes: [defectRoute, cleanRoute],
+      classifiedEdges,
+      nodes: [
+        { id: "S0", width: 80, height: 40, x: 0, y: 0 },
+        { id: "T0", width: 80, height: 40, x: 200, y: 200 },
+        { id: "S1", width: 80, height: 40, x: 0, y: 200 },
+        { id: "T1", width: 80, height: 40, x: 200, y: 0 },
+      ],
+      validation: { crossings: [], diagnostics: [] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+    const reversed = {
+      ...evaluation,
+      routes: [...evaluation.routes].reverse(),
+      classifiedEdges: [...classifiedEdges].reverse(),
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const forwardTrials = generateAestheticTrialStates(state, evaluation, config);
+    const reversedTrials = generateAestheticTrialStates(state, reversed, config);
+    expect(forwardTrials).toHaveLength(2);
+    expect(
+      forwardTrials.every(
+        (trial) => trial.sideAssignments.size === 1 && trial.sideAssignments.has("defect"),
+      ),
+    ).toBe(true);
+    expect(stateSignatures(reversedTrials)).toEqual(stateSignatures(forwardTrials));
+  });
+
+  it("bounds coordinated aesthetic completions and carries discovered spacing demands", () => {
+    const state = createInitialSearchState();
+    state.sideAssignments.set("defect", { srcSide: "right", tgtSide: "left" });
+    const config = resolveCustomLayoutConfig();
+    const demand = {
+      kind: "rank-gap" as const,
+      rank: 0,
+      affectedEdgeIds: ["defect"],
+      minimum: 180,
+      reason: "blocked-direct-badge" as const,
+    };
+    const evaluation = {
+      routes: [
+        makeRoute("defect", "S0", "T0", "right", "left"),
+        makeRoute("partner", "S1", "T1", "bottom", "top"),
+      ],
+      classifiedEdges: [
+        {
+          id: "defect",
+          source: "S0",
+          target: "T0",
+          role: "forward" as const,
+          reversed: false,
+        },
+        {
+          id: "partner",
+          source: "S1",
+          target: "T1",
+          role: "forward" as const,
+          reversed: false,
+        },
+      ],
+      validation: {
+        crossings: [
+          {
+            edgeIdA: "defect",
+            edgeIdB: "partner",
+            point: { x: 100, y: 100 },
+            bridgeOwnerEdgeId: "defect",
+          },
+        ],
+        diagnostics: [],
+      },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [demand],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const completions = generateCrossingCompletionStates(state, evaluation, config, 2);
+    expect(completions.length).toBeLessThanOrEqual(2);
+    expect(completions.length).toBeGreaterThan(0);
+    expect(completions.every((completion) => completion.exactDemands[0] === demand)).toBe(true);
+  });
+
   it("generates neighbor states for edges with crossings and port side swaps", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },

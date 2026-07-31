@@ -61,17 +61,22 @@ export function optimizeLayout(
     badges: bestEval.badges,
     crossings: bestEval.validation.crossings ?? [],
     validation: bestEval.validation,
-    status: !bestEval.validation.isValid
-      ? "invalid_hard_failure"
-      : (bestEval.validation.metrics.unresolvedBadgeCount ?? 0) > 0 ||
-          hasAestheticDefect(bestEval.validation)
-        ? "unresolved_soft_conflicts"
-        : "success",
+    status: resolveLayoutStatus(bestEval.validation),
     optimizationStats: optResult.stats,
     nodePositions: bestEval.nodeLayout.nodePositions,
     rankBandMap: bestEval.nodeLayout.rankBandMap,
     boundingBox: bestEval.nodeLayout.boundingBox,
   };
+}
+
+export function resolveLayoutStatus(
+  validation: CustomLayoutResult["validation"],
+): CustomLayoutResult["status"] {
+  if (!validation.isValid) return "invalid_hard_failure";
+  if ((validation.metrics.unresolvedBadgeCount ?? 0) > 0 || hasAestheticDefect(validation)) {
+    return "unresolved_soft_conflicts";
+  }
+  return "success";
 }
 
 export function hasAestheticDefect(result: CustomLayoutResult["validation"]): boolean {

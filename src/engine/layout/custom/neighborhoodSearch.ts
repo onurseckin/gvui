@@ -127,6 +127,61 @@ function oneEndpointAlternatives(
   );
 }
 
+/** Aesthetic trials move one endpoint to its most outward adjacent side and
+ * emit only one source move plus one target move. */
+function oneEndpointAestheticAlternatives(
+  edge: ClassifiedEdge,
+  current: PortSideAssignment,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+): PortSideAssignment[] {
+  const candidates = candidateAssignments(edge, current, evalResult, config);
+  const positionedNodes = evalResult.nodes ?? [];
+  const minX = Math.min(...positionedNodes.map((node) => node.x));
+  const maxX = Math.max(...positionedNodes.map((node) => node.x + node.width));
+  const minY = Math.min(...positionedNodes.map((node) => node.y));
+  const maxY = Math.max(...positionedNodes.map((node) => node.y + node.height));
+  const graphCenter = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+  const nodeById = new Map(positionedNodes.map((node) => [node.id, node]));
+  const outwardScore = (nodeId: string, side: Side): number => {
+    const node = nodeById.get(nodeId);
+    if (!node || !Number.isFinite(graphCenter.x) || !Number.isFinite(graphCenter.y)) return 0;
+    const dx = node.x + node.width / 2 - graphCenter.x;
+    const dy = node.y + node.height / 2 - graphCenter.y;
+    if (side === "left") return -dx;
+    if (side === "right") return dx;
+    if (side === "top") return -dy;
+    return dy;
+  };
+  const selectBest = (kind: "target" | "source"): PortSideAssignment | undefined =>
+    candidates
+      .filter(({ assignment }) => {
+        if (kind === "target") {
+          return (
+            assignment.srcSide === current.srcSide &&
+            adjacentSides(current.tgtSide).includes(assignment.tgtSide)
+          );
+        }
+        return (
+          assignment.tgtSide === current.tgtSide &&
+          adjacentSides(current.srcSide).includes(assignment.srcSide)
+        );
+      })
+      .sort(
+        (left, right) =>
+          (kind === "target"
+            ? outwardScore(edge.target, right.assignment.tgtSide) -
+              outwardScore(edge.target, left.assignment.tgtSide)
+            : outwardScore(edge.source, right.assignment.srcSide) -
+              outwardScore(edge.source, left.assignment.srcSide)) ||
+          left.baseCost - right.baseCost ||
+          assignmentKey(left.assignment).localeCompare(assignmentKey(right.assignment)),
+      )[0]?.assignment;
+  return [selectBest("source"), selectBest("target")].filter(
+    (assignment): assignment is PortSideAssignment => assignment !== undefined,
+  );
+}
+
 function semanticFeedbackAlternatives(
   current: PortSideAssignment,
   edge: ClassifiedEdge,
@@ -184,6 +239,154 @@ function crossingComponents(
     components.push(component.sort());
   }
   return components.sort((left, right) => left.join("\u0000").localeCompare(right.join("\u0000")));
+}
+
+function isAestheticDefectRoute(
+  route: StateEvaluationResult["routes"][number],
+  edge: ClassifiedEdge,
+  classifiedEdges: ClassifiedEdge[],
+): boolean {
+  const hairpinCount = countPathHairpins(route.points);
+  const isStructuralRoute = edge.role === "feedback" || edge.role === "self" || edge.isCycle;
+  const avoidableHairpins = isStructuralRoute ? Math.max(0, hairpinCount - 1) : hairpinCount;
+  return avoidableHairpins > 0 || calculateExcessBends([route], classifiedEdges) > 0;
+}
+
+function aestheticDefectMetrics(
+  route: StateEvaluationResult["routes"][number],
+  edge: ClassifiedEdge,
+  classifiedEdges: ClassifiedEdge[],
+): { avoidableHairpins: number; excessBends: number } {
+  const hairpinCount = countPathHairpins(route.points);
+  const isStructuralRoute = edge.role === "feedback" || edge.role === "self" || edge.isCycle;
+  const avoidableHairpins = isStructuralRoute ? Math.max(0, hairpinCount - 1) : hairpinCount;
+  const excessBends = calculateExcessBends([route], classifiedEdges);
+  return { avoidableHairpins, excessBends };
+}
+
+/**
+ * Build the deliberately small first step of the aesthetic completion phase.
+ * Only routes that currently contribute a hairpin or excess bend participate,
+ * and every defect receives at most one target-side and one source-side trial.
+ */
+export function generateAestheticTrialStates(
+  state: LayoutSearchState,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+): LayoutSearchState[] {
+  const routesByEdgeId = new Map(evalResult.routes.map((route) => [route.edgeId, route]));
+  const defectEdges = evalResult.classifiedEdges
+    .filter((edge) => {
+      const route = routesByEdgeId.get(edge.id);
+      return route ? isAestheticDefectRoute(route, edge, evalResult.classifiedEdges) : false;
+    })
+    .sort((left, right) => {
+      const leftRoute = routesByEdgeId.get(left.id)!;
+      const rightRoute = routesByEdgeId.get(right.id)!;
+      const leftMetrics = aestheticDefectMetrics(leftRoute, left, evalResult.classifiedEdges);
+      const rightMetrics = aestheticDefectMetrics(rightRoute, right, evalResult.classifiedEdges);
+      return (
+        rightMetrics.excessBends - leftMetrics.excessBends ||
+        rightMetrics.avoidableHairpins - leftMetrics.avoidableHairpins ||
+        Number(state.sideAssignments.has(right.id)) - Number(state.sideAssignments.has(left.id)) ||
+        left.id.localeCompare(right.id)
+      );
+    });
+  const byHash = new Map<string, LayoutSearchState>();
+  const currentHash = computeStateHash(state);
+
+  for (const edge of defectEdges) {
+    const current = currentAssignment(state, edge.id, routesByEdgeId);
+    for (const alternative of oneEndpointAestheticAlternatives(
+      edge,
+      current,
+      evalResult,
+      config,
+    ).slice(0, 2)) {
+      const trial = cloneSearchState(state);
+      trial.sideAssignments.set(edge.id, alternative);
+      const hash = computeStateHash(trial);
+      if (hash !== currentHash) byHash.set(hash, trial);
+    }
+  }
+
+  return [...byHash.values()];
+}
+
+/**
+ * Complete a temporarily crossing aesthetic trial with only coordinated
+ * crossing-component moves. Individual one-edge moves and unrelated broad
+ * frontier moves are intentionally excluded from this bounded phase.
+ */
+export function generateCrossingCompletionStates(
+  state: LayoutSearchState,
+  evalResult: StateEvaluationResult,
+  config: CustomLayoutConfig,
+  limit = 2,
+): LayoutSearchState[] {
+  const crossings = evalResult.validation.crossings ?? [];
+  if (crossings.length === 0 || limit <= 0) return [];
+
+  const components = crossingComponents(crossings);
+  const classifiedById = new Map(evalResult.classifiedEdges.map((edge) => [edge.id, edge]));
+  const routesByEdgeId = new Map(evalResult.routes.map((route) => [route.edgeId, route]));
+  const completionSeed = cloneSearchState(state);
+  completionSeed.exactDemands = [...evalResult.exactDemands];
+  const completionCandidates: LayoutSearchState[] = [];
+
+  for (let variant = 0; variant < 2; variant++) {
+    const composite = cloneSearchState(completionSeed);
+    let changed = false;
+    for (const component of components) {
+      // A completion repairs the whole connected crossing component. Moving
+      // only the first pair can simply transfer the crossing to its third edge.
+      let partnerIndex = 0;
+      const bridgeOwners = new Set(
+        crossings
+          .filter(
+            (crossing) =>
+              component.includes(crossing.edgeIdA) || component.includes(crossing.edgeIdB),
+          )
+          .map((crossing) => crossing.bridgeOwnerEdgeId)
+          .filter((edgeId): edgeId is string => edgeId !== undefined),
+      );
+      for (const edgeId of [...component].sort()) {
+        const edge = classifiedById.get(edgeId);
+        if (!edge) continue;
+        const current = currentAssignment(state, edgeId, routesByEdgeId);
+        const alternatives = oneEndpointAestheticAlternatives(edge, current, evalResult, config);
+        const candidateCosts = new Map(
+          candidateAssignments(edge, current, evalResult, config).map((candidate) => [
+            assignmentKey(candidate.assignment),
+            candidate.baseCost,
+          ]),
+        );
+        const alternative = bridgeOwners.has(edgeId)
+          ? [...alternatives].sort(
+              (left, right) =>
+                (candidateCosts.get(assignmentKey(left)) ?? Number.POSITIVE_INFINITY) -
+                  (candidateCosts.get(assignmentKey(right)) ?? Number.POSITIVE_INFINITY) ||
+                assignmentKey(left).localeCompare(assignmentKey(right)),
+            )[0]
+          : (alternatives[(variant + partnerIndex++) % Math.max(1, alternatives.length)] ??
+            alternatives[0]);
+        if (!alternative || assignmentKey(alternative) === assignmentKey(current)) continue;
+        composite.sideAssignments.set(edgeId, alternative);
+        changed = true;
+      }
+    }
+    if (changed) completionCandidates.push(composite);
+  }
+
+  const seen = new Set<string>();
+  return completionCandidates
+    .filter((candidate) => {
+      const hash = computeStateHash(candidate);
+      if (seen.has(hash)) return false;
+      seen.add(hash);
+      return true;
+    })
+    .slice(0, limit);
 }
 
 export function generateNeighborhoodStates(

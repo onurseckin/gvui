@@ -226,6 +226,7 @@ export interface ExactSpacingDemand {
 
 export type SearchStopReason =
   | "objective-target"
+  | "bounded-local-optimum"
   | "frontier-exhausted"
   | "layout-state-budget"
   | "route-state-budget"
