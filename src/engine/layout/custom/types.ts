@@ -1,6 +1,7 @@
 export type Side = "top" | "right" | "bottom" | "left";
 export type AxisDirection = "horizontal" | "vertical";
 export type EdgeRole = "forward" | "cross" | "feedback" | "self";
+export type EdgeLayoutHint = "auto" | "forward" | "cross" | "feedback";
 export type SegmentDirection = "up" | "right" | "down" | "left";
 
 export interface Point {
@@ -57,6 +58,7 @@ export interface NormalizedEdge {
   target: string;
   label?: string;
   isCycle?: boolean;
+  layoutRole?: EdgeLayoutHint;
 }
 
 export interface NormalizedGraph {
@@ -114,10 +116,28 @@ export interface OccupancyRecord {
   segment: Segment;
 }
 
+export interface RouteReservation {
+  edgeId: string;
+  segment: Segment;
+  isEndpointLeg?: boolean;
+}
+
+export interface RouteConflict {
+  edgeIdA: string;
+  edgeIdB: string;
+  reason: "collinear_overlap" | "endpoint_stub_conflict" | "node_penetration";
+}
+
+export interface SpacingOverrides {
+  rankGaps?: Record<number, number>;
+  nodeGaps?: Record<string, number>;
+}
+
 export interface BadgeCandidate {
   point: Point;
   rect: Rect;
   score: number;
+  leaderPoints?: Point[];
 }
 
 export interface BadgePlacement {
@@ -125,12 +145,14 @@ export interface BadgePlacement {
   label: string;
   rect: Rect;
   anchorPoint: Point;
+  leaderPoints?: Point[];
 }
 
 export interface EdgeCrossing {
   edgeIdA: string;
   edgeIdB: string;
   point: Point;
+  bridgeOwnerEdgeId?: string;
 }
 
 export interface LayoutValidationResult {

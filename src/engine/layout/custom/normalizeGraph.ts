@@ -59,7 +59,16 @@ export function normalizeGraph(
     if (!nodeMap.has(edge.target)) {
       throw new LayoutInputError(`Edge '${edge.id}' references missing target node '${edge.target}'`);
     }
-    edgeMap.set(edge.id, { ...edge });
+    const layoutRole = edge.layoutRole ?? "auto";
+    if (
+      layoutRole !== "auto" &&
+      layoutRole !== "forward" &&
+      layoutRole !== "cross" &&
+      layoutRole !== "feedback"
+    ) {
+      throw new LayoutInputError(`Edge '${edge.id}' has invalid layoutRole '${edge.layoutRole}'`);
+    }
+    edgeMap.set(edge.id, { ...edge, layoutRole });
   }
 
   // Sort nodes and edges deterministically by ID

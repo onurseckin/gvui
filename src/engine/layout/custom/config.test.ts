@@ -37,6 +37,8 @@ describe("CustomLayoutConfig", () => {
     expect(() => resolveCustomLayoutConfig({ obstacleClearance: 0 })).toThrow(LayoutConfigurationError);
     expect(() => resolveCustomLayoutConfig({ laneSpacing: 0 })).toThrow(LayoutConfigurationError);
     expect(() => resolveCustomLayoutConfig({ badgeClearance: -1 })).toThrow(LayoutConfigurationError);
+    expect(() => resolveCustomLayoutConfig({ maxBadgeCandidatesPerEdge: 0 })).toThrow(LayoutConfigurationError);
+    expect(() => resolveCustomLayoutConfig({ maxBadgeBacktrackSteps: -5 })).toThrow(LayoutConfigurationError);
   });
 
   it("throws LayoutConfigurationError for negative cost penalties", () => {

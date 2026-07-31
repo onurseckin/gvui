@@ -22,6 +22,8 @@ export interface CustomLayoutConfig {
   sideReusePenalty: number;
   nearObstaclePenalty: number;
   badgeClearance: number;
+  maxBadgeCandidatesPerEdge: number;
+  maxBadgeBacktrackSteps: number;
   maxCrossingSweeps: number;
   maxPortImprovementPasses: number;
   maxRipUpPasses: number;
@@ -46,6 +48,8 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   sideReusePenalty: 32,
   nearObstaclePenalty: 8,
   badgeClearance: 10,
+  maxBadgeCandidatesPerEdge: 48,
+  maxBadgeBacktrackSteps: 1000,
   maxCrossingSweeps: 24,
   maxPortImprovementPasses: 12,
   maxRipUpPasses: 12,
@@ -70,6 +74,8 @@ export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>)
     "initialLaneRings",
     "maxLaneRings",
     "badgeClearance",
+    "maxBadgeCandidatesPerEdge",
+    "maxBadgeBacktrackSteps",
     "maxCrossingSweeps",
     "maxPortImprovementPasses",
     "maxRipUpPasses",

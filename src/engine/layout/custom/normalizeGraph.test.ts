@@ -76,4 +76,27 @@ describe("normalizeGraph", () => {
       ["Y", "Z"],
     ]);
   });
+
+  it("defaults edge layoutRole to auto and preserves explicit valid layoutRole", () => {
+    const nodes = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges = [
+      { id: "e1", source: "A", target: "B" },
+      { id: "e2", source: "A", target: "B", layoutRole: "cross" as const },
+    ];
+    const norm = normalizeGraph(nodes, edges);
+    expect(norm.edges[0].layoutRole).toBe("auto");
+    expect(norm.edges[1].layoutRole).toBe("cross");
+  });
+
+  it("throws LayoutInputError for invalid edge layoutRole", () => {
+    const nodes = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges = [{ id: "e1", source: "A", target: "B", layoutRole: "invalid_role" as any }];
+    expect(() => normalizeGraph(nodes, edges)).toThrow(LayoutInputError);
+  });
 });
