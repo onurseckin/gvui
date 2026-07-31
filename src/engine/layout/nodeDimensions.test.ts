@@ -8,7 +8,7 @@ import {
   snapPolyline8Dir,
 } from "./nodeDimensions";
 
-describe("dagreLayout multi-port equal spacing", () => {
+describe("nodeDimensions multi-port equal spacing", () => {
   it("determines correct side based on angle theta", () => {
     expect(getSideFromAngle(0)).toBe("Right");
     expect(getSideFromAngle(Math.PI / 4)).toBe("Bottom");
