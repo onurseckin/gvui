@@ -9,8 +9,9 @@ export function planLabelLaneDemands(
   const demands: ExactSpacingDemand[] = [];
 
   for (let i = 0; i < placements.length; i++) {
+    const p1 = placements[i];
+
     for (let j = i + 1; j < placements.length; j++) {
-      const p1 = placements[i];
       const p2 = placements[j];
 
       // Check if both badges lie on vertical tracks at close X coordinates
@@ -31,6 +32,26 @@ export function planLabelLaneDemands(
           });
         }
       }
+    }
+
+    const requiredRankGap = p1.rect.height + 2 * config.portStubLength + 2 * config.badgeClearance;
+    if (requiredRankGap > config.rankGap) {
+      demands.push({
+        kind: "rank-gap",
+        affectedEdgeIds: [p1.edgeId],
+        minimum: requiredRankGap,
+        reason: "same-rank-label",
+      });
+    }
+
+    const requiredNodeGap = p1.rect.width + 2 * config.badgeClearance;
+    if (requiredNodeGap > config.nodeGap) {
+      demands.push({
+        kind: "node-gap",
+        affectedEdgeIds: [p1.edgeId],
+        minimum: requiredNodeGap,
+        reason: "same-rank-label",
+      });
     }
   }
 

@@ -18,6 +18,8 @@ export type EffectiveSpacingOverrides = SpacingOverrides & {
   nodeGapByRank?: Map<number, number> | Record<number, number>;
   rankGapAfterRank?: Map<number, number> | Record<number, number>;
   nodeGapAfterNodeId?: Map<string, number> | Record<string, number>;
+  globalNodeGap?: number;
+  globalRankGap?: number;
 };
 
 function getEffectiveRankGap(
@@ -41,7 +43,7 @@ function getEffectiveRankGap(
     override2 = spacingOverrides.rankGaps[rank];
   }
 
-  return Math.max(config.rankGap, override1 ?? 0, override2 ?? 0);
+  return Math.max(config.rankGap, spacingOverrides.globalRankGap ?? 0, override1 ?? 0, override2 ?? 0);
 }
 
 function getEffectiveNodeGap(
@@ -98,6 +100,7 @@ function getEffectiveNodeGap(
 
   return Math.max(
     config.nodeGap,
+    spacingOverrides.globalNodeGap ?? 0,
     overrideNodeId ?? 0,
     overrideNodeGaps ?? 0,
     overrideRank ?? 0,

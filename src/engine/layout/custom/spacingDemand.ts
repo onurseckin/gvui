@@ -149,6 +149,14 @@ export function resolveEffectiveSpacingOverrides(
   };
 }
 
+export interface SpacingOverrides {
+  nodeGapByRank?: Map<number, number>;
+  rankGapAfterRank?: Map<number, number>;
+  nodeGapAfterNodeId?: Map<string, number>;
+  globalNodeGap?: number;
+  globalRankGap?: number;
+}
+
 export function resolveExactSpacingDemands(
   demands: ExactSpacingDemand[],
   defaultNodeGap: number,
@@ -157,6 +165,8 @@ export function resolveExactSpacingDemands(
   const nodeGapByRank = new Map<number, number>();
   const rankGapAfterRank = new Map<number, number>();
   const nodeGapAfterNodeId = new Map<string, number>();
+  let globalNodeGap = defaultNodeGap;
+  let globalRankGap = defaultRankGap;
 
   for (const d of demands) {
     if (d.kind === "node-gap") {
@@ -168,10 +178,15 @@ export function resolveExactSpacingDemands(
         const current = nodeGapAfterNodeId.get(d.afterNodeId) ?? defaultNodeGap;
         nodeGapAfterNodeId.set(d.afterNodeId, Math.max(current, d.minimum));
       }
+      if (d.rank === undefined && d.afterNodeId === undefined) {
+        globalNodeGap = Math.max(globalNodeGap, d.minimum);
+      }
     } else if (d.kind === "rank-gap") {
       if (d.rank !== undefined) {
         const current = rankGapAfterRank.get(d.rank) ?? defaultRankGap;
         rankGapAfterRank.set(d.rank, Math.max(current, d.minimum));
+      } else {
+        globalRankGap = Math.max(globalRankGap, d.minimum);
       }
     }
   }
@@ -180,6 +195,8 @@ export function resolveExactSpacingDemands(
     nodeGapByRank,
     rankGapAfterRank,
     nodeGapAfterNodeId,
+    globalNodeGap,
+    globalRankGap,
   };
 }
 

@@ -6,12 +6,14 @@ import { validateCustomLayout, validationResultToScore } from "./layoutValidator
 import { computeNodeLayout, type NodeLayoutResult } from "./nodeLayout";
 import { resolveExactSpacingDemands } from "./spacingDemand";
 import type {
+  BadgePlacement,
   ExactSpacingDemand,
   LayoutScore,
   LayoutSearchState,
   LayoutValidationResult,
   NormalizedEdge,
   NormalizedNode,
+  Point,
   PortRef,
   RoutedPath,
 } from "./types";
@@ -20,7 +22,9 @@ export interface StateEvaluationResult {
   score: LayoutScore;
   validation: LayoutValidationResult;
   nodeLayout: NodeLayoutResult;
+  nodes: (NormalizedNode & Point)[];
   routes: RoutedPath[];
+  badges: BadgePlacement[];
   allPortRefs: PortRef[];
   exactDemands: ExactSpacingDemand[];
 }
@@ -31,13 +35,15 @@ export function evaluateSearchState(
   state: LayoutSearchState,
   config: CustomLayoutConfig,
 ): StateEvaluationResult {
-  const spacingOverrides = resolveExactSpacingDemands(
-    state.exactDemands,
+  const currentDemands: ExactSpacingDemand[] = [...state.exactDemands];
+
+  let spacingOverrides = resolveExactSpacingDemands(
+    currentDemands,
     config.nodeGap,
     config.rankGap,
   );
 
-  const nodeLayout = computeNodeLayout(
+  let nodeLayout = computeNodeLayout(
     nodes,
     edges,
     config,
@@ -46,11 +52,58 @@ export function evaluateSearchState(
     state.layerShifts,
   );
 
-  const routerResult = routeAllEdges(nodeLayout, config, {
+  let routerResult = routeAllEdges(nodeLayout, config, {
     sideAssignments: state.sideAssignments,
   });
 
-  const badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+  let badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+
+  if (badgeResult.spacingRequests && badgeResult.spacingRequests.length > 0) {
+    let addedNew = false;
+    for (const req of badgeResult.spacingRequests) {
+      const demand: ExactSpacingDemand = {
+        kind: req.kind,
+        rank: req.rank,
+        afterNodeId: req.afterNodeId,
+        affectedEdgeIds: [req.edgeId],
+        minimum: req.minimum,
+        reason: req.reason,
+      };
+      if (
+        !currentDemands.some(
+          (d) => d.kind === demand.kind && d.minimum >= demand.minimum && d.rank === demand.rank,
+        )
+      ) {
+        currentDemands.push(demand);
+        addedNew = true;
+      }
+    }
+
+    if (addedNew) {
+      state.sideAssignments.clear();
+
+      spacingOverrides = resolveExactSpacingDemands(
+        currentDemands,
+        config.nodeGap,
+        config.rankGap,
+      );
+
+      nodeLayout = computeNodeLayout(
+        nodes,
+        edges,
+        config,
+        spacingOverrides,
+        state.layerOrders,
+        state.layerShifts,
+      );
+
+      routerResult = routeAllEdges(nodeLayout, config, {
+        sideAssignments: state.sideAssignments,
+      });
+
+      badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
+    }
+  }
 
   const validation = validateCustomLayout(
     {
@@ -68,24 +121,10 @@ export function evaluateSearchState(
   const score = validationResultToScore(validation);
 
   const labelDemands = planLabelLaneDemands(badgeResult.placements, routerResult.routes, config);
-  const exactDemands: ExactSpacingDemand[] = [...state.exactDemands];
 
   for (const ld of labelDemands) {
-    if (!exactDemands.some((e) => e.reason === ld.reason && e.minimum === ld.minimum)) {
-      exactDemands.push(ld);
-    }
-  }
-
-  if (badgeResult.spacingRequests) {
-    for (const req of badgeResult.spacingRequests) {
-      exactDemands.push({
-        kind: req.kind,
-        rank: req.rank,
-        afterNodeId: req.afterNodeId,
-        affectedEdgeIds: [req.edgeId],
-        minimum: req.minimum,
-        reason: req.reason,
-      });
+    if (!currentDemands.some((e) => e.reason === ld.reason && e.minimum === ld.minimum)) {
+      currentDemands.push(ld);
     }
   }
 
@@ -95,12 +134,19 @@ export function evaluateSearchState(
     allPortRefs.push(r.targetPort);
   }
 
+  const positionedNodes = nodeLayout.normalizedGraph.nodes.map((n) => ({
+    ...n,
+    ...(nodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 }),
+  }));
+
   return {
     score,
     validation,
     nodeLayout,
+    nodes: positionedNodes,
     routes: routerResult.routes,
+    badges: badgeResult.placements,
     allPortRefs,
-    exactDemands,
+    exactDemands: currentDemands,
   };
 }

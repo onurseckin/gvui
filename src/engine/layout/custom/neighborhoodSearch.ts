@@ -91,5 +91,12 @@ export function generateNeighborhoodStates(
     }
   }
 
+  // 4. Generate Spacing Demand Expansion Moves when unresolved badges or label overlaps exist
+  if (neighbors.length < maxNeighbors && evalResult.exactDemands.length > state.exactDemands.length) {
+    const nextState = cloneSearchState(state);
+    nextState.exactDemands = [...evalResult.exactDemands];
+    neighbors.push(nextState);
+  }
+
   return neighbors;
 }

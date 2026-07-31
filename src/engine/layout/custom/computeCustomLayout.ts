@@ -1,5 +1,6 @@
 import { measureBadgeRects } from "./badgeMeasurement";
 import { resolveCustomLayoutConfig, type CustomLayoutConfig } from "./config";
+import { computeCustomLayoutAsync } from "./customLayoutWorkerClient";
 import { optimizeLayout } from "./optimizeLayout";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
@@ -14,3 +15,5 @@ export function computeCustomLayout(
 
   return optimizeLayout(nodes, edges, config);
 }
+
+export { computeCustomLayoutAsync };

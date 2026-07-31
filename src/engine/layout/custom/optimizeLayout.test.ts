@@ -61,6 +61,10 @@ describe("optimizeLayout", () => {
 
     const result = optimizeLayout(nodes, edges, { nodeGap: 20, rankGap: 20 });
 
+    if (!result.validation.isValid) {
+      console.log("TEST 3 DIAGNOSTICS:", JSON.stringify(result.validation.diagnostics, null, 2));
+    }
+
     expect(result.validation.isValid).toBe(true);
     expect(result.badges.length).toBe(1);
     expect(result.nodes.length).toBe(2);

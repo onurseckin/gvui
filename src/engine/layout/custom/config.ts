@@ -73,7 +73,7 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   maxPortAlternativesPerEdge: 4,
   maxRouteOrderVariants: 4,
   coordinateSweepLimit: 16,
-  maxLayoutStates: 200,
+  maxLayoutStates: 50,
   maxFrontierSize: 50,
   maxNeighborsPerState: 16,
   maxAStarStatesPerRoute: 50000,

@@ -287,6 +287,20 @@ export function generateBadgeCandidates(
   }
 
   // Sort candidates deterministically
+  if (candidates.length === 0 && anchorSpecs.length > 0) {
+    const defaultAnchor = anchorSpecs[0].anchor;
+    candidates.push({
+      point: defaultAnchor,
+      rect: {
+        x: defaultAnchor.x - badgeDim.width / 2,
+        y: defaultAnchor.y - badgeDim.height / 2,
+        width: badgeDim.width,
+        height: badgeDim.height,
+      },
+      score: 1000,
+    });
+  }
+
   candidates.sort((a, b) => {
     if (Math.abs(a.score - b.score) > config.epsilon) {
       return a.score - b.score;
@@ -445,7 +459,7 @@ export function placeEdgeBadges(
     const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
     const role = edge.layoutRole ?? classifiedRole;
     const isFeedbackOrSelf = role === "feedback" || role === "self" || isCycle;
-    const allowLeaders = isFeedbackOrSelf;
+    const allowLeaders = true;
 
     const unrelatedSegments: Segment[] = [];
     for (const [eId, segs] of routeSegmentsMap.entries()) {
@@ -618,6 +632,10 @@ export function placeEdgeBadges(
             break;
           }
         }
+        if (!partialMap.has(bItem.edgeId) && bItem.candidates.length > 0) {
+          partialMap.set(bItem.edgeId, bItem.candidates[0]);
+        }
+
         if (partialMap.has(bItem.edgeId)) {
           const cand = partialMap.get(bItem.edgeId)!;
           finalPlacementsMap.set(bItem.edgeId, {
@@ -627,16 +645,15 @@ export function placeEdgeBadges(
             anchorPoint: cand.point,
             ...(cand.leaderPoints ? { leaderPoints: cand.leaderPoints } : {}),
           });
-        } else {
-          unresolvedEdgeIds.push(bItem.edgeId);
-          const edge = edgeMap.get(bItem.edgeId);
-          if (edge) {
-            const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
-            const role = edge.layoutRole ?? classifiedRole;
-            const isFeedbackOrSelf = role === "feedback" || role === "self" || Boolean(edge.isCycle);
-            if (!isFeedbackOrSelf) {
-              spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
-            }
+        }
+        unresolvedEdgeIds.push(bItem.edgeId);
+        const edge = edgeMap.get(bItem.edgeId);
+        if (edge) {
+          const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
+          const role = edge.layoutRole ?? classifiedRole;
+          const isFeedbackOrSelf = role === "feedback" || role === "self" || Boolean(edge.isCycle);
+          if (!isFeedbackOrSelf) {
+            spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
           }
         }
       }

@@ -333,5 +333,8 @@ export interface CustomLayoutResult {
   validation: LayoutValidationResult;
   status: "success" | "unresolved_soft_conflicts" | "invalid_hard_failure";
   optimizationStats?: OptimizationStats;
+  nodePositions?: Map<string, Point>;
+  rankBandMap?: Map<number, { topY: number; height: number; centerY: number }>;
+  boundingBox?: Rect;
 }
 

@@ -26,3 +26,5 @@ export * from "./crossingDetection";
 export * from "./routeOccupancy";
 export * from "./optimizeLayout";
 export * from "./computeCustomLayout";
+export * from "./customLayoutWorker";
+export * from "./customLayoutWorkerClient";
