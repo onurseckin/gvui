@@ -1,6 +1,6 @@
 import type { CustomLayoutConfig } from "./config";
 import type { ExpandedLayerGraph } from "./layerGraph";
-import type { LayerNode, NormalizedGraph, Point, Rect } from "./types";
+import type { LayerNode, NormalizedGraph, Point, Rect, SpacingOverrides } from "./types";
 
 export interface RankBand {
   topY: number;
@@ -18,7 +18,8 @@ export function assignCoordinates(
   _graph: NormalizedGraph,
   layerGraph: ExpandedLayerGraph,
   orderedLayers: LayerNode[][],
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  spacingOverrides?: SpacingOverrides
 ): CoordinateAssignmentResult {
   const nodePositions = new Map<string, Point>();
   const rankBandMap = new Map<number, RankBand>();
@@ -37,7 +38,8 @@ export function assignCoordinates(
     const centerY = currentY + rankHeight / 2;
     rankBandMap.set(r, { topY: currentY, height: rankHeight, centerY });
 
-    currentY += rankHeight + config.rankGap;
+    const effectiveRankGap = spacingOverrides?.rankGaps?.[r] ?? config.rankGap;
+    currentY += rankHeight + effectiveRankGap;
   }
 
   // 2. Initial X assignment per rank
@@ -52,7 +54,8 @@ export function assignCoordinates(
       const width = item.isVirtual ? 0 : item.width;
 
       centerXs.set(item.id, currentX + width / 2);
-      currentX += width + config.nodeGap;
+      const effectiveNodeGap = spacingOverrides?.nodeGaps?.[item.id] ?? config.nodeGap;
+      currentX += width + effectiveNodeGap;
     }
   }
 
@@ -97,7 +100,8 @@ export function assignCoordinates(
         const prevW = prev.isVirtual ? 0 : prev.width;
         const currW = curr.isVirtual ? 0 : curr.width;
 
-        const minCenterX = centerXs.get(prev.id)! + prevW / 2 + config.nodeGap + currW / 2;
+        const effectiveGap = spacingOverrides?.nodeGaps?.[prev.id] ?? config.nodeGap;
+        const minCenterX = centerXs.get(prev.id)! + prevW / 2 + effectiveGap + currW / 2;
         if (centerXs.get(curr.id)! < minCenterX) {
           centerXs.set(curr.id, minCenterX);
         }
@@ -111,7 +115,8 @@ export function assignCoordinates(
         const currW = curr.isVirtual ? 0 : curr.width;
         const nextW = next.isVirtual ? 0 : next.width;
 
-        const maxCenterX = centerXs.get(next.id)! - nextW / 2 - config.nodeGap - currW / 2;
+        const effectiveGap = spacingOverrides?.nodeGaps?.[curr.id] ?? config.nodeGap;
+        const maxCenterX = centerXs.get(next.id)! - nextW / 2 - effectiveGap - currW / 2;
         if (centerXs.get(curr.id)! > maxCenterX) {
           centerXs.set(curr.id, maxCenterX);
         }
@@ -136,7 +141,37 @@ export function assignCoordinates(
     }
   }
 
-  // 5. Calculate overall bounding box
+  // 5. Translate final coordinates so minimum real node X and Y equal graph padding
+  let minNodeX = Infinity;
+  let minNodeY = Infinity;
+
+  for (const [id, pos] of nodePositions.entries()) {
+    const item = layerGraph.itemMap.get(id);
+    if (item && !item.isVirtual) {
+      minNodeX = Math.min(minNodeX, pos.x);
+      minNodeY = Math.min(minNodeY, pos.y);
+    }
+  }
+
+  if (minNodeX !== Infinity && minNodeY !== Infinity) {
+    const shiftX = config.graphPadding - minNodeX;
+    const shiftY = config.graphPadding - minNodeY;
+
+    if (shiftX !== 0 || shiftY !== 0) {
+      for (const [id, pos] of nodePositions.entries()) {
+        nodePositions.set(id, { x: pos.x + shiftX, y: pos.y + shiftY });
+      }
+      for (const [r, band] of rankBandMap.entries()) {
+        rankBandMap.set(r, {
+          topY: band.topY + shiftY,
+          height: band.height,
+          centerY: band.centerY + shiftY,
+        });
+      }
+    }
+  }
+
+  // 6. Calculate overall bounding box
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;

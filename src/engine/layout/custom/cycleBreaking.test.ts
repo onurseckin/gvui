@@ -75,4 +75,73 @@ describe("cycleBreaking", () => {
     expect(forwardCount).toBe(2);
     expect(result.isDAG).toBe(true);
   });
+
+  it("classifies explicit layoutRole: 'cross' as 'cross'", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+      { id: "C", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "A", target: "B" },
+      { id: "e2", source: "A", target: "C" },
+      { id: "e3", source: "B", target: "C", layoutRole: "cross" },
+    ];
+
+    const graph = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(graph);
+    const result = classifyEdgeRoles(graph, scc);
+
+    expect(result.edgeRoleMap.get("e3")).toBe("cross");
+  });
+
+  it("auto-infers 'cross' edge when removing edge leaves endpoints at equal ranks sharing alt predecessor/successor", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "SRC", width: 100, height: 50 },
+      { id: "MID1", width: 100, height: 50 },
+      { id: "MID2", width: 100, height: 50 },
+      { id: "SINK", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "SRC", target: "MID1" },
+      { id: "e2", source: "SRC", target: "MID2" },
+      { id: "e3", source: "MID1", target: "MID2" }, // auto
+      { id: "e4", source: "MID1", target: "SINK" },
+      { id: "e5", source: "MID2", target: "SINK" },
+    ];
+
+    const graph = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(graph);
+    const result = classifyEdgeRoles(graph, scc);
+
+    expect(result.edgeRoleMap.get("e3")).toBe("cross");
+  });
+
+  it("maintains classification determinism regardless of input shuffle", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "SRC", width: 100, height: 50 },
+      { id: "MID1", width: 100, height: 50 },
+      { id: "MID2", width: 100, height: 50 },
+      { id: "SINK", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "SRC", target: "MID1" },
+      { id: "e2", source: "SRC", target: "MID2" },
+      { id: "e3", source: "MID1", target: "MID2" },
+      { id: "e4", source: "MID1", target: "SINK" },
+      { id: "e5", source: "MID2", target: "SINK" },
+    ];
+
+    const graph1 = normalizeGraph(nodes, edges);
+    const scc1 = detectStronglyConnectedComponents(graph1);
+    const result1 = classifyEdgeRoles(graph1, scc1);
+
+    const graph2 = normalizeGraph([...nodes].reverse(), [...edges].reverse());
+    const scc2 = detectStronglyConnectedComponents(graph2);
+    const result2 = classifyEdgeRoles(graph2, scc2);
+
+    expect(Array.from(result1.edgeRoleMap.entries())).toEqual(
+      Array.from(result2.edgeRoleMap.entries())
+    );
+  });
 });

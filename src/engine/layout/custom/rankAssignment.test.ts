@@ -95,4 +95,28 @@ describe("rankAssignment", () => {
     expect(ranks.nodeRankMap.get("A2")).toBe(1);
     expect(ranks.nodeRankMap.get("B2")).toBe(1);
   });
+
+  it("does not let explicit cross edges force downstream ranks", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "SRC", width: 100, height: 50 },
+      { id: "MID1", width: 100, height: 50 },
+      { id: "MID2", width: 100, height: 50 },
+      { id: "SINK", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "SRC", target: "MID1" },
+      { id: "e2", source: "SRC", target: "MID2" },
+      { id: "e3", source: "MID1", target: "MID2", layoutRole: "cross" },
+      { id: "e4", source: "MID1", target: "SINK" },
+      { id: "e5", source: "MID2", target: "SINK" },
+    ];
+
+    const norm = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(norm);
+    const roles = classifyEdgeRoles(norm, scc);
+    const ranks = assignRanks(norm, roles);
+
+    expect(ranks.nodeRankMap.get("MID1")).toBe(1);
+    expect(ranks.nodeRankMap.get("MID2")).toBe(1);
+  });
 });

@@ -73,4 +73,31 @@ describe("coordinateAssignment", () => {
     const gap = Math.abs(pos2.x - pos1.x) - 100;
     expect(gap).toBeGreaterThanOrEqual(59.9);
   });
+
+  it("applies spacing overrides and translates minimum node coordinates to graphPadding", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A1", width: 100, height: 50 },
+      { id: "A2", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [];
+
+    const config = resolveCustomLayoutConfig({ graphPadding: 40, nodeGap: 20 });
+    const norm = normalizeGraph(nodes, edges);
+    const scc = detectStronglyConnectedComponents(norm);
+    const roles = classifyEdgeRoles(norm, scc);
+    const ranks = assignRanks(norm, roles);
+    const layerGraph = buildLayerGraph(norm, roles, ranks);
+    const minimized = minimizeCrossings(layerGraph);
+
+    const result = assignCoordinates(norm, layerGraph, minimized.orderedLayers, config, {
+      nodeGaps: { A1: 80 },
+    });
+
+    const pos1 = result.nodePositions.get("A1")!;
+    const pos2 = result.nodePositions.get("A2")!;
+
+    expect(pos1.x).toBe(40);
+    expect(pos1.y).toBe(40);
+    expect(pos2.x - (pos1.x + 100)).toBe(80);
+  });
 });

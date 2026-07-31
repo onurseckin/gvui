@@ -14,18 +14,25 @@ export function classifyEdgeRoles(
   const edgeRoleMap = new Map<string, EdgeRole>();
   const reversedMap = new Map<string, boolean>();
 
-  // 1. Process explicit self loops & explicit isCycle flags
+  // 1. Process explicit roles according to role priority:
+  // self > explicit feedback > explicit cross > explicit forward
   for (const edge of graph.edges) {
     if (edge.source === edge.target) {
       edgeRoleMap.set(edge.id, "self");
       reversedMap.set(edge.id, false);
-    } else if (edge.isCycle) {
+    } else if (edge.isCycle || edge.layoutRole === "feedback") {
       edgeRoleMap.set(edge.id, "feedback");
       reversedMap.set(edge.id, true);
+    } else if (edge.layoutRole === "cross") {
+      edgeRoleMap.set(edge.id, "cross");
+      reversedMap.set(edge.id, false);
+    } else if (edge.layoutRole === "forward") {
+      edgeRoleMap.set(edge.id, "forward");
+      reversedMap.set(edge.id, false);
     }
   }
 
-  // 2. Break cycles in cyclic SCCs using Eades-style greedy heuristic
+  // 2. Break cycles in cyclic SCCs using Eades-style greedy heuristic for unclassified (auto) edges
   for (const compNodes of sccResult.components) {
     const compId = compNodes.join(",");
     if (!sccResult.cyclicComponentIds.has(compId) || compNodes.length <= 1) continue;
@@ -33,7 +40,11 @@ export function classifyEdgeRoles(
     // Build internal sub-graph adjacency for this SCC
     const nodesInSCC = new Set(compNodes);
     const sccEdges = graph.edges.filter(
-      (e) => nodesInSCC.has(e.source) && nodesInSCC.has(e.target) && e.source !== e.target && !e.isCycle
+      (e) =>
+        nodesInSCC.has(e.source) &&
+        nodesInSCC.has(e.target) &&
+        e.source !== e.target &&
+        !edgeRoleMap.has(e.id)
     );
 
     const inDegree = new Map<string, number>();
@@ -68,7 +79,6 @@ export function classifyEdgeRoles(
       if (sink) {
         activeNodes.delete(sink);
         rightList.unshift(sink);
-        // Remove sink from active nodes
         for (const u of inEdges.get(sink) ?? []) {
           if (activeNodes.has(u)) {
             outDegree.set(u, (outDegree.get(u) ?? 0) - 1);
@@ -85,7 +95,6 @@ export function classifyEdgeRoles(
       if (source) {
         activeNodes.delete(source);
         leftList.push(source);
-        // Remove source from active nodes
         for (const v of outEdges.get(source) ?? []) {
           if (activeNodes.has(v)) {
             inDegree.set(v, (inDegree.get(v) ?? 0) - 1);
@@ -137,7 +146,7 @@ export function classifyEdgeRoles(
     }
   }
 
-  // 3. Mark remaining unclassified edges as forward
+  // 3. Mark remaining unclassified edges as forward (initially)
   for (const edge of graph.edges) {
     if (!edgeRoleMap.has(edge.id)) {
       edgeRoleMap.set(edge.id, "forward");
@@ -145,7 +154,158 @@ export function classifyEdgeRoles(
     }
   }
 
-  // 4. Verify DAG condition using Kahn's algorithm on forward edges
+  // 4. Infer auto cross edges for auto DAG edges in edge-ID order
+  const autoCandidates = graph.edges
+    .filter(
+      (e) =>
+        (!e.layoutRole || e.layoutRole === "auto") &&
+        !e.isCycle &&
+        e.source !== e.target &&
+        edgeRoleMap.get(e.id) === "forward"
+    )
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const activeForwardSet = new Set<string>();
+  for (const edge of graph.edges) {
+    if (edgeRoleMap.get(edge.id) === "forward") {
+      activeForwardSet.add(edge.id);
+    }
+  }
+
+  function computeTempRanks(activeEdges: Set<string>): Map<string, number> {
+    const inDeg = new Map<string, number>();
+    const predsMap = new Map<string, string[]>();
+    const succsMap = new Map<string, string[]>();
+
+    for (const node of graph.nodes) {
+      inDeg.set(node.id, 0);
+      predsMap.set(node.id, []);
+      succsMap.set(node.id, []);
+    }
+
+    for (const edge of graph.edges) {
+      if (activeEdges.has(edge.id)) {
+        inDeg.set(edge.target, (inDeg.get(edge.target) ?? 0) + 1);
+        predsMap.get(edge.target)?.push(edge.source);
+        succsMap.get(edge.source)?.push(edge.target);
+      }
+    }
+
+    const q: string[] = graph.nodes
+      .map((n) => n.id)
+      .filter((id) => (inDeg.get(id) ?? 0) === 0)
+      .sort((a, b) => a.localeCompare(b));
+
+    const topo: string[] = [];
+    while (q.length > 0) {
+      const curr = q.shift()!;
+      topo.push(curr);
+
+      const succs = (succsMap.get(curr) ?? []).sort((a, b) => a.localeCompare(b));
+      for (const s of succs) {
+        const nextDeg = (inDeg.get(s) ?? 0) - 1;
+        inDeg.set(s, nextDeg);
+        if (nextDeg === 0) {
+          q.push(s);
+          q.sort((a, b) => a.localeCompare(b));
+        }
+      }
+    }
+
+    const nodeRank = new Map<string, number>();
+    for (const id of topo) {
+      const preds = predsMap.get(id) ?? [];
+      if (preds.length === 0) {
+        nodeRank.set(id, 0);
+      } else {
+        let maxPred = 0;
+        for (const p of preds) {
+          maxPred = Math.max(maxPred, nodeRank.get(p) ?? 0);
+        }
+        nodeRank.set(id, maxPred + 1);
+      }
+    }
+
+    return nodeRank;
+  }
+
+  function getAncestors(targetId: string, activeEdges: Set<string>): Set<string> {
+    const ancestors = new Set<string>();
+    const q = [targetId];
+    while (q.length > 0) {
+      const curr = q.shift()!;
+      for (const edge of graph.edges) {
+        if (activeEdges.has(edge.id) && edge.target === curr && !ancestors.has(edge.source)) {
+          ancestors.add(edge.source);
+          q.push(edge.source);
+        }
+      }
+    }
+    return ancestors;
+  }
+
+  function getDescendants(sourceId: string, activeEdges: Set<string>): Set<string> {
+    const descendants = new Set<string>();
+    const q = [sourceId];
+    while (q.length > 0) {
+      const curr = q.shift()!;
+      for (const edge of graph.edges) {
+        if (activeEdges.has(edge.id) && edge.source === curr && !descendants.has(edge.target)) {
+          descendants.add(edge.target);
+          q.push(edge.target);
+        }
+      }
+    }
+    return descendants;
+  }
+
+  for (const candidate of autoCandidates) {
+    const u = candidate.source;
+    const v = candidate.target;
+
+    activeForwardSet.delete(candidate.id);
+
+    const tempRanks = computeTempRanks(activeForwardSet);
+    const rankU = tempRanks.get(u);
+    const rankV = tempRanks.get(v);
+
+    const inDegV = graph.edges.filter(
+      (e) => activeForwardSet.has(e.id) && e.target === v
+    ).length;
+
+    if (inDegV > 0 && rankU !== undefined && rankV !== undefined && rankU === rankV) {
+      const ancestorsU = getAncestors(u, activeForwardSet);
+      const ancestorsV = getAncestors(v, activeForwardSet);
+      const descendantsU = getDescendants(u, activeForwardSet);
+      const descendantsV = getDescendants(v, activeForwardSet);
+
+      let shareAltPred = false;
+      for (const p of ancestorsU) {
+        if (p !== u && p !== v && ancestorsV.has(p)) {
+          shareAltPred = true;
+          break;
+        }
+      }
+
+      let shareAltSucc = false;
+      for (const s of descendantsU) {
+        if (s !== u && s !== v && descendantsV.has(s)) {
+          shareAltSucc = true;
+          break;
+        }
+      }
+
+      if (shareAltPred || shareAltSucc) {
+        edgeRoleMap.set(candidate.id, "cross");
+        reversedMap.set(candidate.id, false);
+        continue;
+      }
+    }
+
+    activeForwardSet.add(candidate.id);
+  }
+
+  // 5. Verify DAG condition using Kahn's algorithm on remaining forward edges
   const forwardInDegree = new Map<string, number>();
   const forwardAdj = new Map<string, string[]>();
 
