@@ -276,6 +276,8 @@ export const GraphCanvas: FC = () => {
                 className={`graph-node-wrapper ${isFiltered ? "is-dimmed" : ""}`}
                 style={{
                   transform: `translate(${node.x}px, ${node.y}px)`,
+                  width: `${node.width}px`,
+                  height: `${node.height}px`,
                 }}
               >
                 <NodeCard

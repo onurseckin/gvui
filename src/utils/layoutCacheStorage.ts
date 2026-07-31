@@ -1,7 +1,7 @@
 import type { LayoutMode } from "../state/useGraphStore";
 import type { PositionedEdge, PositionedNode } from "../types/graphData";
 
-const CACHE_PREFIX_V2 = "gvui_layout_cache_v2_";
+const CACHE_PREFIX_V2 = "gvui_layout_cache_v3_";
 
 export interface StoredLayoutPayload {
   mode: LayoutMode;
