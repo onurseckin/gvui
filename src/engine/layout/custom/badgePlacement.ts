@@ -257,9 +257,10 @@ export function generateBadgeCandidates(
           ];
 
     const halfPerpSize = orientation === "horizontal" ? badgeDim.height / 2 : badgeDim.width / 2;
-    const baseDist = halfPerpSize + config.badgeClearance;
+    const minClearance = orientation === "horizontal" ? 65 : 90;
+    const baseDist = Math.max(halfPerpSize + config.badgeClearance, minClearance);
 
-    for (let ring = 1; ring <= maxRings; ring++) {
+    for (let ring = 1; ring <= maxRings + 2; ring++) {
       const dist = baseDist + (ring - 1) * config.laneSpacing;
       for (const dir of perpDirs) {
         const center: Point = {
@@ -644,12 +645,7 @@ export function placeEdgeBadges(
           unresolvedEdgeIds.push(bItem.edgeId);
           const edge = edgeMap.get(bItem.edgeId);
           if (edge) {
-            const role = resolveBadgeEdgeRole(edge, nodeLayout);
-            const isFeedbackOrSelf =
-              role === "feedback" || role === "self" || Boolean(edge.isCycle);
-            if (!isFeedbackOrSelf) {
-              spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
-            }
+            spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
           }
         }
       }

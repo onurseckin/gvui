@@ -163,32 +163,24 @@ export function planLabelLaneDemands(
     }
   }
 
-  // 2. Badge vs Node Overlap Demands (Widen nodeGap for rank when badge overlaps a node)
+  // 2. Badge vs Node Overlap Demands (Widen nodeGap for same-rank horizontal badges)
   for (const meta of routeMetadata) {
     if (!meta) continue;
     const badge = meta.placement;
-    for (const rank of meta.endpointRanks) {
-      const nodesOnRank = context.layerNodeIds[rank];
-      if (!nodesOnRank || nodesOnRank.length < 2) continue;
+    const route = meta.route;
+    const srcRank = context.rankByNodeId.get(route.sourcePort.nodeId);
+    const tgtRank = context.rankByNodeId.get(route.targetPort.nodeId);
 
-      const minimum = badge.rect.width + 2 * config.badgeClearance + 20;
-      const current = context.nodeGapByRank?.get(rank) ?? config.nodeGap;
-      if (minimum > current + config.epsilon) {
-        // Verify badge rect actually intersects a node or narrow corridor
-        const hasNodeIntersection = (context.nodeLayout?.nodes ?? []).some((node) => {
-          const nodeRank = context.rankByNodeId.get(node.id);
-          if (nodeRank !== rank) return false;
-          return rectsOverlapStrict(
-            badge.rect,
-            { x: node.x, y: node.y, width: node.width, height: node.height },
-            config.epsilon,
-          );
-        });
-
-        if (hasNodeIntersection) {
+    // If badge is on a same-rank edge (or horizontal route segment between same-rank nodes)
+    if (srcRank !== undefined && srcRank === tgtRank) {
+      const nodesOnRank = context.layerNodeIds[srcRank];
+      if (nodesOnRank && nodesOnRank.length >= 2) {
+        const minimum = badge.rect.width + 2 * config.badgeClearance + 20;
+        const current = context.nodeGapByRank?.get(srcRank) ?? config.nodeGap;
+        if (minimum > current + config.epsilon) {
           demands.push({
             kind: "lane-x",
-            rank,
+            rank: srcRank,
             affectedEdgeIds: [badge.edgeId],
             minimum,
             reason: "node-overlap",

@@ -77,8 +77,8 @@ export function computeCustomEngineGraphLayout(dataset: GraphDataset): {
     return {
       ...edge,
       path,
-      labelX: badge?.anchorPoint.x,
-      labelY: badge?.anchorPoint.y,
+      labelX: badge ? badge.rect.x + badge.rect.width / 2 : undefined,
+      labelY: badge ? badge.rect.y + badge.rect.height / 2 : undefined,
     };
   });
 

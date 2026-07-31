@@ -68,6 +68,7 @@ export const NodeCard: FC<NodeCardProps> = ({
       className={cardClasses}
       style={{
         width: node.width ? `${node.width}px` : undefined,
+        height: node.height ? `${node.height}px` : undefined,
       }}
       onClick={handleClick}
       role="button"
