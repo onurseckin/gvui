@@ -79,21 +79,15 @@ $$\text{root}[B_1] = A_1, \quad \text{align}[B_1] = C_1$$
 $$\text{root}[C_1] = A_1, \quad \text{align}[C_1] = A_1 \quad \text{(Cyclic loop back to root)}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.1: Aligns node v with median predecessor u into block chain structure.
- */
-function alignBlockPointers(
-  uId: string,
-  vId: string,
-  rootMap: Map<string, string>,
-  alignMap: Map<string, string>
-): void {
-  const rootU = rootMap.get(uId)!;
-  alignMap.set(uId, vId);
-  rootMap.set(vId, rootU);
-  alignMap.set(vId, rootU); // Complete cyclic loop back to block root
-}
+```text
+ALGORITHM ALIGN_BLOCK_POINTERS(u_id, v_id, root_map, align_map)
+    INPUT: node u ID, node v ID, root map, align map
+    OUTPUT: updates block alignment pointers in-place
+
+    root_u <- root_map[u_id]
+    align_map[u_id] <- v_id
+    root_map[v_id] <- root_u
+    align_map[v_id] <- root_u // Complete cyclic loop back to block root
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -131,17 +125,12 @@ Consider Block $B_1 = \{A_1, B_1, C_1\}$ with root placed at initial $x(B_1) = 0
    $$x(B_2) = 130 + 50 = 180\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.2: Computes minimum coordinate for block B2 relative to block B1.
- */
-function compactBlockPair(
-  b1X: number,
-  b1Width: number,
-  nodeSep: number = 30
-): number {
-  return b1X + b1Width + nodeSep;
-}
+```text
+ALGORITHM COMPACT_BLOCK_PAIR(b1_x, b1_width, node_sep = 30)
+    INPUT: block B1 position b1_x, block B1 width b1_width, minimum separation node_sep
+    OUTPUT: minimum x coordinate for adjacent block B2
+
+    RETURN b1_x + b1_width + node_sep
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -186,19 +175,16 @@ Step-by-step resolution:
    $$x(v) = \frac{110 + 120}{2} = 115\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.3: Computes the final coordinate x(v) via median average of 4 passes.
- */
-function resolveNodeMedianCoordinate(
-  xUL: number,
-  xUR: number,
-  xLL: number,
-  xLR: number
-): number {
-  const sorted = [xUL, xUR, xLL, xLR].sort((a, b) => a - b);
-  return (sorted[1] + sorted[2]) / 2;
-}
+```text
+ALGORITHM RESOLVE_NODE_MEDIAN_COORDINATE(x_UL, x_UR, x_LL, x_LR)
+    INPUT: coordinate candidate from 4 extremal passes
+    OUTPUT: final resolved horizontal coordinate
+
+    candidates <- LIST(x_UL, x_UR, x_LL, x_LR)
+    SORT(candidates) IN ASCENDING ORDER
+
+    // Average of middle two candidate values
+    RETURN (candidates[1] + candidates[2]) / 2
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -219,159 +205,133 @@ Step 2.3: Median Coordinate Resolution Flow
 
 ## 3. Step-by-Step Computational Pseudocode
 
-```typescript
-type AlignmentDir = "UL" | "UR" | "LL" | "LR";
+```text
+ALGORITHM VERTICAL_ALIGNMENT(layers, direction, conflicts)
+    INPUT: matrix of rank layers, alignment direction ("UL", "UR", "LL", "LR"), set of conflicting inner edges
+    OUTPUT: block root map, block align map
 
-interface BlockStructure {
-  root: Map<NodeId, NodeId>;
-  align: Map<NodeId, NodeId>;
-}
+    root <- empty map
+    align <- empty map
 
-/**
- * Step 1: Vertical Alignment Pass (Constructs root and align pointers)
- */
-function verticalAlignment(
-  layers: NodeId[][],
-  dir: AlignmentDir,
-  conflicts: Set<EdgeId>
-): BlockStructure {
-  const root = new Map<NodeId, NodeId>();
-  const align = new Map<NodeId, NodeId>();
+    FOR EACH layer IN layers:
+        FOR EACH v IN layer:
+            root[v] <- v
+            align[v] <- v
+        END FOR
+    END FOR
 
-  // Initialize self-loops: root[v] = v, align[v] = v
-  for (const layer of layers) {
-    for (const v of layer) {
-      root.set(v, v);
-      align.set(v, v);
-    }
-  }
+    is_down <- (direction = "UL" OR direction = "UR")
+    is_left <- (direction = "UL" OR direction = "LL")
 
-  const isDown = dir === "UL" || dir === "UR";
-  const isLeft = dir === "UL" || dir === "LL";
+    layer_start <- IF is_down THEN 0 ELSE LENGTH(layers) - 1
+    layer_end   <- IF is_down THEN LENGTH(layers) ELSE -1
+    layer_step  <- IF is_down THEN 1 ELSE -1
 
-  const layerStart = isDown ? 0 : layers.length - 1;
-  const layerEnd = isDown ? layers.length : -1;
-  const layerStep = isDown ? 1 : -1;
+    FOR l FROM layer_start TO layer_end - layer_step STEP layer_step:
+        current_layer <- layers[l]
+        r <- IF is_left THEN -1 ELSE INFINITY
 
-  for (let l = layerStart; l !== layerEnd; l += layerStep) {
-    const currentLayer = layers[l];
-    let r = isLeft ? -1 : Infinity;
+        FOR EACH v IN current_layer:
+            neighbors <- GET_ORDERED_NEIGHBORS(v, direction)
+            IF neighbors IS EMPTY THEN CONTINUE
 
-    for (const v of currentLayer) {
-      const neighbors = getOrderedNeighbors(v, dir);
-      if (neighbors.length === 0) continue;
+            m_idx <- IF is_left THEN FLOOR((LENGTH(neighbors) - 1) / 2) ELSE CEIL((LENGTH(neighbors) - 1) / 2)
+            m <- neighbors[m_idx]
 
-      // Select median neighbor m
-      const mIdx = isLeft ? Math.floor((neighbors.length - 1) / 2) : Math.ceil((neighbors.length - 1) / 2);
-      const m = neighbors[mIdx];
+            IF align[v] = v THEN // Node v not yet aligned
+                edge_id <- GET_EDGE_ID(m, v)
+                pos_m <- GET_LAYER_POSITION(m)
 
-      if (align.get(v) === v) { // Node v not yet aligned
-        const edgeId = getEdgeId(m, v);
-        const posM = getLayerPosition(m);
+                is_unconflicted <- NOT (edge_id IN conflicts) AND (IF is_left THEN pos_m > r ELSE pos_m < r)
+                IF is_unconflicted THEN
+                    align[m] <- v
+                    root[v] <- root[m]
+                    align[v] <- root[v] // Complete cyclic loop
+                    r <- pos_m
+                END IF
+            END IF
+        END FOR
+    END FOR
 
-        const isUnconflicted = !conflicts.has(edgeId) && (isLeft ? posM > r : posM < r);
-        if (isUnconflicted) {
-          align.set(m, v);
-          root.set(v, root.get(m)!);
-          align.set(v, root.get(v)!); // Complete cyclic loop
-          r = posM;
-        }
-      }
-    }
-  }
+    RETURN root, align
 
-  return { root, align };
-}
 
-/**
- * Step 2: Block Graph Compaction (Computes X coordinates for aligned blocks)
- */
-function horizontalCompaction(
-  layers: NodeId[][],
-  blocks: BlockStructure,
-  dir: AlignmentDir,
-  nodeWidths: Map<NodeId, number>,
-  nodeSep: number
-): Map<NodeId, number> {
-  const { root, align } = blocks;
-  const x = new Map<NodeId, number>();
-  const sink = new Map<NodeId, NodeId>();
-  const shift = new Map<NodeId, number>();
+ALGORITHM HORIZONTAL_COMPACTION(layers, blocks, direction, node_widths, node_sep)
+    INPUT: rank layers, block structure (root, align maps), direction, node width map, minimum node separation
+    OUTPUT: map of horizontal X-coordinates per node
 
-  // Initialize block distances
-  for (const layer of layers) {
-    for (const v of layer) {
-      if (root.get(v) === v) {
-        x.set(v, 0);
-        sink.set(v, v);
-        shift.set(v, Infinity);
-      }
-    }
-  }
+    root <- blocks.root
+    align <- blocks.align
+    x <- empty map
+    sink <- empty map
+    shift <- empty map
 
-  // Calculate relative block positions via longest path in Block Graph DAG
-  for (const layer of layers) {
-    for (const v of layer) {
-      if (root.get(v) === v) {
-        placeBlock(v, layers, root, align, x, sink, shift, nodeWidths, nodeSep);
-      }
-    }
-  }
+    // Initialize block root positions
+    FOR EACH layer IN layers:
+        FOR EACH v IN layer:
+            IF root[v] = v THEN
+                x[v] <- 0
+                sink[v] <- v
+                shift[v] <- INFINITY
+            END IF
+        END FOR
+    END FOR
 
-  // Assign final node coordinates relative to block root
-  const coords = new Map<NodeId, number>();
-  for (const layer of layers) {
-    for (const v of layer) {
-      const r = root.get(v)!;
-      coords.set(v, x.get(r)!);
-    }
-  }
+    // Calculate relative block positions via longest path in Block Graph
+    FOR EACH layer IN layers:
+        FOR EACH v IN layer:
+            IF root[v] = v THEN
+                PLACE_BLOCK(v, layers, root, align, x, sink, shift, node_widths, node_sep)
+            END IF
+        END FOR
+    END FOR
 
-  return coords;
-}
+    // Assign node coordinates relative to block root
+    coords <- empty map
+    FOR EACH layer IN layers:
+        FOR EACH v IN layer:
+            r <- root[v]
+            coords[v] <- x[r]
+        END FOR
+    END FOR
 
-/**
- * Step 3: Brandes-Köpf Master Function (Executes 4 passes & resolves medians)
- */
-function brandesKopfLayout(
-  layers: NodeId[][],
-  nodeWidths: Map<NodeId, number>,
-  nodeSep: number = 150
-): Map<NodeId, number> {
-  const conflicts = markInnerSegmentConflicts(layers);
+    RETURN coords
 
-  const passes: AlignmentDir[] = ["UL", "UR", "LL", "LR"];
-  const passCoords: Map<AlignmentDir, Map<NodeId, number>> = new Map();
 
-  // Run 4 extremal alignment passes
-  for (const dir of passes) {
-    const blocks = verticalAlignment(layers, dir, conflicts);
-    const coords = horizontalCompaction(layers, blocks, dir, nodeWidths, nodeSep);
-    passCoords.set(dir, coords);
-  }
+ALGORITHM BRANDES_KOPF_LAYOUT(layers, node_widths, node_sep = 150)
+    INPUT: matrix of rank layers, node width map, minimum node separation (default 150)
+    OUTPUT: map of final horizontal X-coordinates per node
 
-  // Align all candidate coordinates to common origin
-  normalizeCandidateOrigins(passCoords);
+    conflicts <- MARK_INNER_SEGMENT_CONFLICTS(layers)
+    passes <- ["UL", "UR", "LL", "LR"]
+    pass_coords <- empty map
 
-  // Resolve final coordinates via median formula
-  const finalX = new Map<NodeId, number>();
-  const allNodes = layers.flat();
+    // Run 4 extremal alignment passes
+    FOR EACH dir IN passes:
+        root, align <- VERTICAL_ALIGNMENT(layers, dir, conflicts)
+        coords <- HORIZONTAL_COMPACTION(layers, { root, align }, dir, node_widths, node_sep)
+        pass_coords[dir] <- coords
+    END FOR
 
-  for (const v of allNodes) {
-    const candidates = [
-      passCoords.get("UL")!.get(v)!,
-      passCoords.get("UR")!.get(v)!,
-      passCoords.get("LL")!.get(v)!,
-      passCoords.get("LR")!.get(v)!
-    ].sort((a, b) => a - b);
+    NORMALIZE_CANDIDATE_ORIGINS(pass_coords)
 
-    // Median of 4 elements: Average of middle two candidates
-    const medianX = (candidates[1] + candidates[2]) / 2;
-    finalX.set(v, medianX);
-  }
+    final_x <- empty map
+    all_nodes <- FLAT_LIST(layers)
 
-  return finalX;
-}
+    FOR EACH v IN all_nodes:
+        candidates <- [
+            pass_coords["UL"][v],
+            pass_coords["UR"][v],
+            pass_coords["LL"][v],
+            pass_coords["LR"][v]
+        ]
+        SORT(candidates) IN ASCENDING ORDER
+
+        // Average of middle two candidates
+        final_x[v] <- (candidates[1] + candidates[2]) / 2
+    END FOR
+
+    RETURN final_x
 ```
 
 ---

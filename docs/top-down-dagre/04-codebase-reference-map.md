@@ -176,26 +176,17 @@ For a typical graph with $|V| = 20$ nodes, $|E| = 30$ edges, and $K = 24$ crossi
 | **Total Engine Execution** | **$O(V \cdot E + K \cdot E \log E)$** | **$O(V^2 \cdot E)$** | **$O(V + E)$** | **Guaranteed polynomial execution time.** |
 
 ### 4.3 Sub-Step Pseudocode: Complexity Estimator
-```typescript
-/**
- * Computes estimated total operation count for Top-Down Dagre engine phases.
- */
-function estimateDagreOperations(V: number, E: number, K: number = 24): {
-  simplexOps: number;
-  barycenterOps: number;
-  brandesKopfOps: number;
-  totalOps: number;
-} {
-  const simplexOps = V * E;
-  const barycenterOps = K * (V + E * Math.log2(E));
-  const brandesKopfOps = V + E;
-  return {
-    simplexOps,
-    barycenterOps,
-    brandesKopfOps,
-    totalOps: simplexOps + barycenterOps + brandesKopfOps,
-  };
-}
+```text
+ALGORITHM ESTIMATE_DAGRE_OPERATIONS(V, E, K = 24)
+    INPUT: number of nodes V, number of edges E, number of sweep passes K (default 24)
+    OUTPUT: estimated operation counts for each phase and total
+
+    simplex_ops <- V * E
+    barycenter_ops <- K * (V + E * LOG2(E))
+    brandes_kopf_ops <- V + E
+    total_ops <- simplex_ops + barycenter_ops + brandes_kopf_ops
+
+    RETURN simplex_ops, barycenter_ops, brandes_kopf_ops, total_ops
 ```
 
 ### 4.4 Visual ASCII Complexity Pipeline Breakdown

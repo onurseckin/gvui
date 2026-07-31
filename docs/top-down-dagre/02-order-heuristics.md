@@ -72,27 +72,30 @@ Consider reference layer $L_0$ with node positions $\text{pos}(A)=0, \text{pos}(
      $$\text{median}(w) = \frac{P[0] + P[1]}{2} = \frac{1 + 3}{2} = 2.0$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.1: Calculates the median position of a node's upper neighbors.
- */
-function calculateNodeMedian(
-  nodeId: string,
-  refPosMap: Map<string, number>,
-  inEdges: Array<{ source: string }>
-): number {
-  const positions = inEdges
-    .map(e => refPosMap.get(e.source))
-    .filter((pos): pos is number => pos !== undefined)
-    .sort((a, b) => a - b);
+```text
+ALGORITHM CALCULATE_NODE_MEDIAN(node_id, ref_pos_map, in_edges)
+    INPUT: target node ID, map of reference positions, list of incoming edges
+    OUTPUT: numerical median position
 
-  const m = positions.length;
-  if (m === 0) return 0;
-  if (m % 2 === 1) {
-    return positions[Math.floor(m / 2)];
-  }
-  return (positions[m / 2 - 1] + positions[m / 2]) / 2;
-}
+    positions <- empty list
+    FOR EACH edge IN in_edges:
+        IF edge.source IN ref_pos_map THEN
+            APPEND ref_pos_map[edge.source] TO positions
+        END IF
+    END FOR
+
+    SORT(positions) IN ASCENDING ORDER
+    m <- LENGTH(positions)
+
+    IF m = 0 THEN
+        RETURN 0
+    END IF
+
+    IF m IS ODD THEN
+        RETURN positions[FLOOR(m / 2)]
+    ELSE
+        RETURN (positions[m / 2 - 1] + positions[m / 2]) / 2
+    END IF
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -142,28 +145,24 @@ Evaluating all 4 edge pairs for swapped order $c(v, u)$ (where $v$ precedes $u$)
 $$c(v, u) = 0 + 0 + 1 + 0 = 1 \quad \text{(1 Crossing when } v \text{ precedes } u \text{)}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.2: Computes crossings c(u, v) between edges of node u and node v.
- */
-function countPairCrossings(
-  uId: string,
-  vId: string,
-  refPosMap: Map<string, number>,
-  graph: { outEdges: (node: string) => Array<{ target: string }> }
-): number {
-  const uTargets = graph.outEdges(uId).map(e => refPosMap.get(e.target)!);
-  const vTargets = graph.outEdges(vId).map(e => refPosMap.get(e.target)!);
-  let crossings = 0;
+```text
+ALGORITHM COUNT_PAIR_CROSSINGS(u_id, v_id, ref_pos_map, graph)
+    INPUT: node u ID, node v ID, map of reference positions, graph structure
+    OUTPUT: integer count of edge crossings between u and v
 
-  for (const uPos of uTargets) {
-    for (const vPos of vTargets) {
-      if (uPos > vPos) crossings++;
-    }
-  }
+    u_targets <- list of ref_pos_map[target] for all outgoing edges from u
+    v_targets <- list of ref_pos_map[target] for all outgoing edges from v
+    crossings <- 0
 
-  return crossings;
-}
+    FOR EACH u_pos IN u_targets:
+        FOR EACH v_pos IN v_targets:
+            IF u_pos > v_pos THEN
+                crossings <- crossings + 1
+            END IF
+        END FOR
+    END FOR
+
+    RETURN crossings
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -204,25 +203,20 @@ $$\Delta \text{cross}(u, v) = c(v, u) - c(u, v) = 1 - 3 = -2$$
 Since $\Delta \text{cross} = -2 < 0$, swapping $u$ and $v$ strictly reduces layer crossings by 2. The swap is executed immediately.
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.3: Evaluates and executes an adjacent transposition swap if delta < 0.
- */
-function tryAdjacentSwap(
-  uId: string,
-  vId: string,
-  refPosMap: Map<string, number>,
-  graph: { outEdges: (node: string) => Array<{ target: string }> }
-): { swapped: boolean; delta: number } {
-  const cUV = countPairCrossings(uId, vId, refPosMap, graph);
-  const cVU = countPairCrossings(vId, uId, refPosMap, graph);
-  const delta = cVU - cUV;
+```text
+ALGORITHM TRY_ADJACENT_SWAP(u_id, v_id, ref_pos_map, graph)
+    INPUT: adjacent node u ID, adjacent node v ID, map of reference positions, graph
+    OUTPUT: boolean swapped status, integer delta crossing change
 
-  if (delta < 0) {
-    return { swapped: true, delta };
-  }
-  return { swapped: false, delta };
-}
+    c_uv <- COUNT_PAIR_CROSSINGS(u_id, v_id, ref_pos_map, graph)
+    c_vu <- COUNT_PAIR_CROSSINGS(v_id, u_id, ref_pos_map, graph)
+    delta <- c_vu - c_uv
+
+    IF delta < 0 THEN
+        RETURN true, delta // Swap recommended
+    END IF
+
+    RETURN false, delta
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -244,113 +238,100 @@ Step 2.3: Adjacent Transposition Swap Transformation
 
 The multi-pass crossing minimization algorithm alternates top-down and bottom-up sweeps for a fixed iteration limit (default = 24 passes), retaining the best layer permutation found.
 
-```typescript
-interface LayerNode {
-  id: string;
-  pos: number;
-  barycenter: number;
-}
+```text
+ALGORITHM COMPUTE_LAYER_BARYCENTERS(active_layer, ref_layer, graph, direction)
+    INPUT: active layer nodes, reference layer nodes, graph, direction ("down" or "up")
+    OUTPUT: updates barycenter attribute on active layer nodes
 
-/**
- * Step 1: Compute barycenters for an active layer against a fixed reference layer.
- */
-function computeLayerBarycenters(
-  activeLayer: LayerNode[],
-  refLayer: LayerNode[],
-  graph: Graph,
-  direction: "down" | "up"
-): void {
-  const refPosMap = new Map<string, number>(refLayer.map(n => [n.id, n.pos]));
+    ref_pos_map <- map from node ID to position for all nodes in ref_layer
 
-  for (const node of activeLayer) {
-    const neighbors = direction === "down"
-      ? graph.inEdges(node.id).map(e => e.source)
-      : graph.outEdges(node.id).map(e => e.target);
+    FOR EACH node IN active_layer:
+        IF direction = "down" THEN
+            neighbors <- source nodes of incoming edges to node.id
+        ELSE
+            neighbors <- target nodes of outgoing edges from node.id
+        END IF
 
-    if (neighbors.length === 0) {
-      node.barycenter = node.pos; // Default to current position if unattached
-      continue;
-    }
+        IF neighbors IS EMPTY THEN
+            node.barycenter <- node.pos
+            CONTINUE
+        END IF
 
-    let sum = 0;
-    for (const neighborId of neighbors) {
-      sum += refPosMap.get(neighborId) ?? 0;
-    }
-    node.barycenter = sum / neighbors.length;
-  }
-}
+        sum <- 0
+        FOR EACH neighbor_id IN neighbors:
+            sum <- sum + ref_pos_map[neighbor_id]
+        END FOR
 
-/**
- * Step 2: Adjacent Transposition Pass (Greedy Local Pair Swapping)
- */
-function adjacentTranspositionPass(
-  layer: LayerNode[],
-  refLayer: LayerNode[],
-  graph: Graph,
-  direction: "down" | "up"
-): boolean {
-  let improved = false;
+        node.barycenter <- sum / LENGTH(neighbors)
+    END FOR
 
-  for (let i = 0; i < layer.length - 1; i++) {
-    const vA = layer[i];
-    const vB = layer[i + 1];
 
-    const currentCrossings = countPairCrossings(vA, vB, refLayer, graph, direction);
-    const swappedCrossings = countPairCrossings(vB, vA, refLayer, graph, direction);
+ALGORITHM ADJACENT_TRANSPOSITION_PASS(layer, ref_layer, graph, direction)
+    INPUT: active layer nodes, reference layer nodes, graph, direction
+    OUTPUT: boolean indicating if any adjacent swap occurred
 
-    if (swappedCrossings < currentCrossings) {
-      // Swap adjacent nodes
-      layer[i] = vB;
-      layer[i + 1] = vA;
-      vB.pos = i;
-      vA.pos = i + 1;
-      improved = true;
-    }
-  }
+    improved <- false
 
-  return improved;
-}
+    FOR i FROM 0 TO LENGTH(layer) - 2:
+        v_a <- layer[i]
+        v_b <- layer[i + 1]
 
-/**
- * Step 3: Multi-Pass Layer Ordering Sweep
- */
-function minimizeCrossings(layers: LayerNode[][], graph: Graph, maxSweeps: number = 24): LayerNode[][] {
-  let bestLayers = cloneLayers(layers);
-  let minCrossings = countTotalGraphCrossings(bestLayers, graph);
+        current_crossings <- COUNT_PAIR_CROSSINGS(v_a.id, v_b.id, ref_layer, graph)
+        swapped_crossings <- COUNT_PAIR_CROSSINGS(v_b.id, v_a.id, ref_layer, graph)
 
-  for (let sweep = 0; sweep < maxSweeps; sweep++) {
-    const isDownward = (sweep % 2 === 0);
+        IF swapped_crossings < current_crossings THEN
+            // Swap adjacent nodes in layer array
+            layer[i] <- v_b
+            layer[i + 1] <- v_a
+            v_b.pos <- i
+            v_a.pos <- i + 1
+            improved <- true
+        END IF
+    END FOR
 
-    if (isDownward) {
-      // Sweep Top -> Bottom (Layer 1 down to Layer K)
-      for (let l = 1; l < layers.length; l++) {
-        computeLayerBarycenters(layers[l], layers[l - 1], graph, "down");
-        layers[l].sort((a, b) => a.barycenter - b.barycenter);
-        updateLayerPositions(layers[l]);
-        adjacentTranspositionPass(layers[l], layers[l - 1], graph, "down");
-      }
-    } else {
-      // Sweep Bottom -> Top (Layer K-1 up to Layer 0)
-      for (let l = layers.length - 2; l >= 0; l--) {
-        computeLayerBarycenters(layers[l], layers[l + 1], graph, "up");
-        layers[l].sort((a, b) => a.barycenter - b.barycenter);
-        updateLayerPositions(layers[l]);
-        adjacentTranspositionPass(layers[l], layers[l + 1], graph, "up");
-      }
-    }
+    RETURN improved
 
-    const currentCrossings = countTotalGraphCrossings(layers, graph);
-    if (currentCrossings < minCrossings) {
-      minCrossings = currentCrossings;
-      bestLayers = cloneLayers(layers);
-    }
 
-    // Early termination if zero crossings achieved
-    if (minCrossings === 0) break;
-  }
+ALGORITHM MINIMIZE_CROSSINGS(layers, graph, max_sweeps = 24)
+    INPUT: list of rank layers, graph, maximum sweep iterations (default 24)
+    OUTPUT: best ordering of nodes per layer
 
-  return bestLayers;
-}
+    best_layers <- CLONE(layers)
+    min_crossings <- COUNT_TOTAL_GRAPH_CROSSINGS(best_layers, graph)
+
+    FOR sweep FROM 0 TO max_sweeps - 1:
+        is_downward <- (sweep MOD 2 = 0)
+
+        IF is_downward THEN
+            // Top to Bottom sweep
+            FOR l FROM 1 TO LENGTH(layers) - 1:
+                COMPUTE_LAYER_BARYCENTERS(layers[l], layers[l - 1], graph, "down")
+                SORT layers[l] BY barycenter ASCENDING
+                UPDATE_POSITIONS(layers[l])
+                ADJACENT_TRANSPOSITION_PASS(layers[l], layers[l - 1], graph, "down")
+            END FOR
+        ELSE
+            // Bottom to Top sweep
+            FOR l FROM LENGTH(layers) - 2 DOWN TO 0:
+                COMPUTE_LAYER_BARYCENTERS(layers[l], layers[l + 1], graph, "up")
+                SORT layers[l] BY barycenter ASCENDING
+                UPDATE_POSITIONS(layers[l])
+                ADJACENT_TRANSPOSITION_PASS(layers[l], layers[l + 1], graph, "up")
+            END FOR
+        END IF
+
+        current_crossings <- COUNT_TOTAL_GRAPH_CROSSINGS(layers, graph)
+        IF current_crossings < min_crossings THEN
+            min_crossings <- current_crossings
+            best_layers <- CLONE(layers)
+        END IF
+
+        IF min_crossings = 0 THEN
+            BREAK
+        END IF
+    END FOR
+
+    RETURN best_layers
 ```
 
 ---

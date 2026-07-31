@@ -75,20 +75,14 @@ Consider three nodes $u, v, w \in V$ with current rank assignments $r(u) = 0$, $
    $$g(e_2) = r(v) - r(u) - \delta(u, v) = 2 - 0 - 1 = 1 \quad \text{(Slack Edge, } g(e_2) = 1 \text{)}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.1: Computes the slack g(e) for a directed edge.
- */
-function calculateEdgeSlack(
-  source: string,
-  target: string,
-  ranks: Map<string, number>,
-  minLen: number = 1
-): number {
-  const rSource = ranks.get(source) ?? 0;
-  const rTarget = ranks.get(target) ?? 0;
-  return rTarget - rSource - minLen;
-}
+```text
+ALGORITHM CALCULATE_EDGE_SLACK(source, target, ranks, min_len = 1)
+    INPUT: source node ID, target node ID, map of node ranks, minimum length min_len
+    OUTPUT: integer edge slack value
+
+    r_source <- ranks[source]
+    r_target <- ranks[target]
+    RETURN r_target - r_source - min_len
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -138,31 +132,29 @@ $$\text{cutval}(e) = \sum_{\text{InCut}} w - \sum_{\text{OutCut}} w = 1 - 2 = -1
 Because $\text{cutval}(e) = -1 < 0$, shifting head component $T_{\text{head}}(e) = \{C, D\}$ down by $+1$ will strictly decrease the overall objective function!
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.2: Computes cutval(e) for a tree edge disconnecting T into tail/head sets.
- */
-function computeCutValue(
-  leavingEdge: { source: string; target: string },
-  tailComponent: Set<string>,
-  headComponent: Set<string>,
-  allEdges: Array<{ source: string; target: string; weight: number }>
-): number {
-  let inCutWeight = 0;
-  let outCutWeight = 0;
+```text
+ALGORITHM COMPUTE_CUT_VALUE(leaving_edge, tail_component, head_component, all_edges)
+    INPUT: leaving edge (u, v), set of tail nodes, set of head nodes, list of all edges
+    OUTPUT: integer cut value
 
-  for (const edge of allEdges) {
-    const srcInTail = tailComponent.has(edge.source);
-    const tgtInHead = headComponent.has(edge.target);
-    const srcInHead = headComponent.has(edge.source);
-    const tgtInTail = tailComponent.has(edge.target);
+    in_cut_weight <- 0
+    out_cut_weight <- 0
 
-    if (srcInTail && tgtInHead) outCutWeight += edge.weight;
-    if (srcInHead && tgtInTail) inCutWeight += edge.weight;
-  }
+    FOR EACH edge IN all_edges:
+        src_in_tail <- edge.source IN tail_component
+        tgt_in_head <- edge.target IN head_component
+        src_in_head <- edge.source IN head_component
+        tgt_in_tail <- edge.target IN tail_component
 
-  return inCutWeight - outCutWeight;
-}
+        IF src_in_tail AND tgt_in_head THEN
+            out_cut_weight <- out_cut_weight + edge.weight
+        END IF
+        IF src_in_head AND tgt_in_tail THEN
+            in_cut_weight <- in_cut_weight + edge.weight
+        END IF
+    END FOR
+
+    RETURN in_cut_weight - out_cut_weight
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -211,33 +203,27 @@ From Step 2.2, tree edge $e = (A, C)$ has $\text{cutval}(e) = -1$.
   $$\Delta f = \text{cutval}(e) \cdot \gamma = (-1) \cdot 1 = -1 \quad \text{(Objective reduced by 1)}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```typescript
-/**
- * Sub-step 2.3: Executes simplex pivot rank shift on head component nodes.
- */
-function executeSimplexPivot(
-  headComponent: Set<string>,
-  inCutEdges: Array<{ source: string; target: string; minLen: number }>,
-  ranks: Map<string, number>
-): { minSlack: number; enteringEdge: { source: string; target: string } } {
-  let minSlack = Infinity;
-  let enteringEdge = inCutEdges[0];
+```text
+ALGORITHM EXECUTE_SIMPLEX_PIVOT(head_component, in_cut_edges, ranks)
+    INPUT: set of head component nodes, list of in-cut edges, map of node ranks
+    OUTPUT: minimum slack value, entering edge chosen
 
-  for (const edge of inCutEdges) {
-    const slack = calculateEdgeSlack(edge.source, edge.target, ranks, edge.minLen);
-    if (slack < minSlack) {
-      minSlack = slack;
-      enteringEdge = edge;
-    }
-  }
+    min_slack <- INFINITY
+    entering_edge <- null
 
-  // Shift ranks of all nodes in head component by minSlack gamma
-  for (const nodeId of headComponent) {
-    ranks.set(nodeId, (ranks.get(nodeId) ?? 0) + minSlack);
-  }
+    FOR EACH edge IN in_cut_edges:
+        slack <- CALCULATE_EDGE_SLACK(edge.source, edge.target, ranks, edge.min_len)
+        IF slack < min_slack THEN
+            min_slack <- slack
+            entering_edge <- edge
+        END IF
+    END FOR
 
-  return { minSlack, enteringEdge };
-}
+    FOR EACH node IN head_component:
+        ranks[node] <- ranks[node] + min_slack
+    END FOR
+
+    RETURN min_slack, entering_edge
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -267,126 +253,114 @@ Step 2.3: Pivot Rank Shift & Tree Reconstruction
 
 The full Network Simplex algorithm consists of initial tight tree construction, cut value evaluation, and pivot iterations.
 
-```typescript
-/**
- * Step 1: Constructs an initial feasible tree T and valid rank assignment r(v).
- */
-function initializeFeasibleTree(graph: Graph): { tree: Graph; ranks: Map<NodeId, number> } {
-  const ranks = new Map<NodeId, number>();
+```text
+ALGORITHM INITIALIZE_FEASIBLE_TREE(graph)
+    INPUT: directed acyclic graph
+    OUTPUT: spanning tree, map of initial node ranks
 
-  // 1. Longest-path initial rank assignment
-  const topologicalOrder = graph.topologicalSort();
-  for (const node of topologicalOrder) {
-    let maxRank = 0;
-    for (const inEdge of graph.inEdges(node)) {
-      const predRank = ranks.get(inEdge.source)!;
-      maxRank = Math.max(maxRank, predRank + inEdge.minLen);
-    }
-    ranks.set(node, maxRank);
-  }
+    ranks <- empty map
+    topological_order <- TOPOLOGICAL_SORT(graph)
 
-  // 2. Build initial tight spanning tree
-  const tree = new Graph({ undirected: true });
-  for (const node of graph.nodes()) {
-    tree.addNode(node);
-  }
+    FOR EACH node IN topological_order:
+        max_rank <- 0
+        FOR EACH in_edge IN IN_EDGES(graph, node):
+            pred_rank <- ranks[in_edge.source]
+            max_rank <- MAX(max_rank, pred_rank + in_edge.min_len)
+        END FOR
+        ranks[node] <- max_rank
+    END FOR
 
-  while (tree.edges().length < graph.nodes().length - 1) {
-    const nonTreeEdges = graph.edges().filter(e => !tree.hasEdge(e.source, e.target));
-    // Find non-tree edge connecting tree to non-tree with minimum slack
-    let minSlackEdge = null;
-    let minSlack = Infinity;
+    tree <- empty undirected graph
+    FOR EACH node IN NODES(graph):
+        ADD_NODE(tree, node)
+    END FOR
 
-    for (const e of nonTreeEdges) {
-      const slack = ranks.get(e.target)! - ranks.get(e.source)! - e.minLen;
-      if (tree.isIncident(e.source) !== tree.isIncident(e.target)) {
-        if (slack < minSlack) {
-          minSlack = slack;
-          minSlackEdge = e;
-        }
-      }
-    }
+    WHILE COUNT_EDGES(tree) < COUNT_NODES(graph) - 1 DO
+        non_tree_edges <- edges in graph not in tree
+        min_slack_edge <- null
+        min_slack <- INFINITY
 
-    if (!minSlackEdge) break;
+        FOR EACH edge IN non_tree_edges:
+            slack <- ranks[edge.target] - ranks[edge.source] - edge.min_len
+            IF IS_INCIDENT(tree, edge.source) != IS_INCIDENT(tree, edge.target) THEN
+                IF slack < min_slack THEN
+                    min_slack <- slack
+                    min_slack_edge <- edge
+                END IF
+            END IF
+        END FOR
 
-    // Adjust ranks to make minSlackEdge tight (slack = 0)
-    if (minSlack > 0) {
-      const delta = minSlack;
-      const unvisitedComponent = tree.getUnvisitedComponent(minSlackEdge);
-      for (const node of unvisitedComponent) {
-        ranks.set(node, ranks.get(node)! + delta);
-      }
-    }
+        IF min_slack_edge IS null THEN
+            BREAK
+        END IF
 
-    tree.addEdge(minSlackEdge.source, minSlackEdge.target, minSlackEdge);
-  }
+        IF min_slack > 0 THEN
+            unvisited_component <- GET_UNVISITED_COMPONENT(tree, min_slack_edge)
+            FOR EACH node IN unvisited_component:
+                ranks[node] <- ranks[node] + min_slack
+            END FOR
+        END IF
 
-  return { tree, ranks };
-}
+        ADD_EDGE(tree, min_slack_edge)
+    END WHILE
 
-/**
- * Step 2: Main Network Simplex Execution Loop
- */
-function networkSimplex(graph: Graph): Map<NodeId, number> {
-  const { tree, ranks } = initializeFeasibleTree(graph);
+    RETURN tree, ranks
 
-  while (true) {
-    // Compute cut values for all tree edges
-    const cutValues = computeCutValues(tree, graph);
-    
-    // Find leaving edge with negative cut value
-    let leavingEdge = null;
-    for (const [edge, cutVal] of cutValues.entries()) {
-      if (cutVal < 0) {
-        leavingEdge = edge;
-        break;
-      }
-    }
 
-    // Termination: All cut values non-negative => Globally optimal
-    if (!leavingEdge) {
-      break;
-    }
+ALGORITHM NETWORK_SIMPLEX(graph)
+    INPUT: directed graph
+    OUTPUT: map of final node ranks
 
-    // Identify cut components
-    const { tailComponent, headComponent } = tree.splitByEdge(leavingEdge);
+    tree, ranks <- INITIALIZE_FEASIBLE_TREE(graph)
 
-    // Find entering edge in InCut(leavingEdge) with minimum slack
-    let enteringEdge = null;
-    let minSlack = Infinity;
+    WHILE TRUE DO
+        cut_values <- COMPUTE_CUT_VALUES(tree, graph)
+        leaving_edge <- null
 
-    for (const e of graph.edges()) {
-      if (headComponent.has(e.source) && tailComponent.has(e.target)) {
-        const slack = ranks.get(e.target)! - ranks.get(e.source)! - e.minLen;
-        if (slack < minSlack) {
-          minSlack = slack;
-          enteringEdge = e;
-        }
-      }
-    }
+        FOR EACH (edge, cut_val) IN cut_values:
+            IF cut_val < 0 THEN
+                leaving_edge <- edge
+                BREAK
+            END IF
+        END FOR
 
-    if (!enteringEdge) {
-      throw new Error("Graph contains unresolvable cycle or invalid cut");
-    }
+        IF leaving_edge IS null THEN
+            BREAK // All cut values non-negative: globally optimal
+        END IF
 
-    // Pivot: Shift head component ranks by minSlack
-    for (const node of headComponent) {
-      ranks.set(node, ranks.get(node)! + minSlack);
-    }
+        tail_component, head_component <- SPLIT_TREE_BY_EDGE(tree, leaving_edge)
 
-    // Update spanning tree
-    tree.removeEdge(leavingEdge);
-    tree.addEdge(enteringEdge);
-  }
+        entering_edge <- null
+        min_slack <- INFINITY
 
-  // Normalize ranks so minimum rank is 0
-  const minRank = Math.min(...Array.from(ranks.values()));
-  for (const [node, r] of ranks.entries()) {
-    ranks.set(node, r - minRank);
-  }
+        FOR EACH edge IN EDGES(graph):
+            IF edge.source IN head_component AND edge.target IN tail_component THEN
+                slack <- ranks[edge.target] - ranks[edge.source] - edge.min_len
+                IF slack < min_slack THEN
+                    min_slack <- slack
+                    entering_edge <- edge
+                END IF
+            END IF
+        END FOR
 
-  return ranks;
-}
+        IF entering_edge IS null THEN
+            ERROR "Graph contains unresolvable cycle or invalid cut"
+        END IF
+
+        FOR EACH node IN head_component:
+            ranks[node] <- ranks[node] + min_slack
+        END FOR
+
+        REMOVE_EDGE(tree, leaving_edge)
+        ADD_EDGE(tree, entering_edge)
+    END WHILE
+
+    min_rank <- MINIMUM(ranks)
+    FOR EACH node IN ranks:
+        ranks[node] <- ranks[node] - min_rank
+    END FOR
+
+    RETURN ranks
 ```
 
 ---
