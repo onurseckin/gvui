@@ -36,6 +36,14 @@ export interface RoutedPath {
   points: Point[];
   sourcePort: PortRef;
   targetPort: PortRef;
+  stats?: RouteSearchStats;
+}
+
+export interface RouteSearchStats {
+  expandedStates: number;
+  pushedStates: number;
+  occupancyQueries: number;
+  stopReason: "target_reached" | "queue_exhausted" | "max_iterations";
 }
 
 export interface LayoutDiagnostic {
@@ -109,7 +117,9 @@ export interface GridEdge {
   v: string;
   segment: Segment;
   weight: number;
+  nearObstacle?: boolean;
 }
+
 
 export interface OccupancyRecord {
   edgeId: string;

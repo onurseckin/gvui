@@ -1,5 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
-import { expandRect, pointInRectInterior, segmentIntersectsRectInterior } from "./geometry";
+import { expandRect, pointInRectInterior, pointOnRectBoundary, segmentIntersectsRectInterior } from "./geometry";
 import type { GridEdge, NormalizedNode, Point, PortRef, Rect, Segment } from "./types";
 
 export interface RoutingGrid {
@@ -122,7 +122,12 @@ export function buildRoutingGrid(
   function addGridEdge(uId: string, vId: string, segment: Segment) {
     const weight = Math.abs(segment.b.x - segment.a.x) + Math.abs(segment.b.y - segment.a.y);
     const edgeId = `ge__${uId}__${vId}`;
-    const gridEdge: GridEdge = { id: edgeId, u: uId, v: vId, segment, weight };
+    const nearObstacle = obstacles.some(
+      (obs) =>
+        pointOnRectBoundary(segment.a, obs, config.epsilon) ||
+        pointOnRectBoundary(segment.b, obs, config.epsilon),
+    );
+    const gridEdge: GridEdge = { id: edgeId, u: uId, v: vId, segment, weight, nearObstacle };
 
     edges.push(gridEdge);
     adj.get(uId)?.push({ targetId: vId, edge: gridEdge });

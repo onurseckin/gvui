@@ -2,12 +2,20 @@ import type { CustomLayoutConfig } from "./config";
 import {
   collinearOverlapLength,
   isOrthogonalSegment,
-  pointOnRectBoundary,
   segmentIntersectsRectInterior,
   segmentsCross,
 } from "./geometry";
 import { type RoutingGrid, vertexKey } from "./routingGrid";
-import type { OccupancyRecord, Point, PortRef, Rect, RoutedPath, Segment, SegmentDirection } from "./types";
+import type {
+  OccupancyRecord,
+  Point,
+  PortRef,
+  Rect,
+  RoutedPath,
+  RouteSearchStats,
+  Segment,
+  SegmentDirection,
+} from "./types";
 
 export interface RouteCost {
   crossings: number;
@@ -116,18 +124,210 @@ function compareNodes(a: AStarNode, b: AStarNode, epsilon: number, stateKeyFn: (
   return a.vId.localeCompare(b.vId);
 }
 
-function insertSortedNode(list: AStarNode[], node: AStarNode, epsilon: number, stateKeyFn: (n: AStarNode) => string) {
-  let low = 0;
-  let high = list.length;
-  while (low < high) {
-    const mid = (low + high) >>> 1;
-    if (compareNodes(list[mid], node, epsilon, stateKeyFn) <= 0) {
-      low = mid + 1;
-    } else {
-      high = mid;
+class AStarMinHeap {
+  private heap: AStarNode[] = [];
+  private epsilon: number;
+  private stateKeyFn: (n: AStarNode) => string;
+
+  constructor(epsilon: number, stateKeyFn: (n: AStarNode) => string) {
+    this.epsilon = epsilon;
+    this.stateKeyFn = stateKeyFn;
+  }
+
+  public get size(): number {
+    return this.heap.length;
+  }
+
+  public push(node: AStarNode): void {
+    this.heap.push(node);
+    this.bubbleUp(this.heap.length - 1);
+  }
+
+  public pop(): AStarNode | undefined {
+    if (this.heap.length === 0) return undefined;
+    const top = this.heap[0];
+    const bottom = this.heap.pop()!;
+    if (this.heap.length > 0) {
+      this.heap[0] = bottom;
+      this.bubbleDown(0);
+    }
+    return top;
+  }
+
+  private bubbleUp(idx: number): void {
+    while (idx > 0) {
+      const parentIdx = (idx - 1) >>> 1;
+      if (compareNodes(this.heap[idx], this.heap[parentIdx], this.epsilon, this.stateKeyFn) < 0) {
+        const tmp = this.heap[idx];
+        this.heap[idx] = this.heap[parentIdx];
+        this.heap[parentIdx] = tmp;
+        idx = parentIdx;
+      } else {
+        break;
+      }
     }
   }
-  list.splice(low, 0, node);
+
+  private bubbleDown(idx: number): void {
+    const length = this.heap.length;
+    while (true) {
+      const leftIdx = (idx << 1) + 1;
+      const rightIdx = leftIdx + 1;
+      let smallest = idx;
+
+      if (leftIdx < length && compareNodes(this.heap[leftIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0) {
+        smallest = leftIdx;
+      }
+      if (rightIdx < length && compareNodes(this.heap[rightIdx], this.heap[smallest], this.epsilon, this.stateKeyFn) < 0) {
+        smallest = rightIdx;
+      }
+      if (smallest !== idx) {
+        const tmp = this.heap[idx];
+        this.heap[idx] = this.heap[smallest];
+        this.heap[smallest] = tmp;
+        idx = smallest;
+      } else {
+        break;
+      }
+    }
+  }
+}
+
+export class IndexedOccupancy {
+  private horizMap = new Map<number, OccupancyRecord[]>();
+  private vertMap = new Map<number, OccupancyRecord[]>();
+  private horizYKeys: number[] = [];
+  private vertXKeys: number[] = [];
+  private otherRecords: OccupancyRecord[] = [];
+  private epsilon: number;
+
+  constructor(occupancy: OccupancyRecord[], epsilon = 0.001) {
+    this.epsilon = epsilon;
+    const precision = 1000;
+    const roundCoord = (val: number) => Math.round(val * precision) / precision;
+
+    for (const occ of occupancy) {
+      const isHoriz = Math.abs(occ.segment.a.y - occ.segment.b.y) <= epsilon;
+      const isVert = Math.abs(occ.segment.a.x - occ.segment.b.x) <= epsilon;
+
+      if (isHoriz) {
+        const yKey = roundCoord(occ.segment.a.y);
+        let list = this.horizMap.get(yKey);
+        if (!list) {
+          list = [];
+          this.horizMap.set(yKey, list);
+        }
+        list.push(occ);
+      } else if (isVert) {
+        const xKey = roundCoord(occ.segment.a.x);
+        let list = this.vertMap.get(xKey);
+        if (!list) {
+          list = [];
+          this.vertMap.set(xKey, list);
+        }
+        list.push(occ);
+      } else {
+        this.otherRecords.push(occ);
+      }
+    }
+
+    this.horizYKeys = Array.from(this.horizMap.keys()).sort((a, b) => a - b);
+    this.vertXKeys = Array.from(this.vertMap.keys()).sort((a, b) => a - b);
+  }
+
+  public checkSegmentConflict(
+    seg: Segment,
+    edgeId: string,
+  ): { isCollinearOccupied: boolean; stepCrossings: number; queriesCount: number } {
+    let queriesCount = 0;
+    let isCollinearOccupied = false;
+    let stepCrossings = 0;
+    const precision = 1000;
+    const roundCoord = (val: number) => Math.round(val * precision) / precision;
+
+    const isHoriz = Math.abs(seg.a.y - seg.b.y) <= this.epsilon;
+    const isVert = Math.abs(seg.a.x - seg.b.x) <= this.epsilon;
+
+    if (isHoriz) {
+      const yKey = roundCoord(seg.a.y);
+      const minX = Math.min(seg.a.x, seg.b.x);
+      const maxX = Math.max(seg.a.x, seg.b.x);
+
+      const colList = this.horizMap.get(yKey);
+      if (colList) {
+        queriesCount++;
+        for (const occ of colList) {
+          if (occ.edgeId === edgeId) continue;
+          if (collinearOverlapLength(seg, occ.segment, this.epsilon) > this.epsilon) {
+            isCollinearOccupied = true;
+            break;
+          }
+        }
+      }
+
+      if (!isCollinearOccupied) {
+        for (const xKey of this.vertXKeys) {
+          if (xKey < minX - this.epsilon) continue;
+          if (xKey > maxX + this.epsilon) break;
+          const vertList = this.vertMap.get(xKey)!;
+          queriesCount++;
+          for (const occ of vertList) {
+            if (occ.edgeId === edgeId) continue;
+            if (segmentsCross(seg, occ.segment, this.epsilon)) {
+              stepCrossings++;
+            }
+          }
+        }
+      }
+    } else if (isVert) {
+      const xKey = roundCoord(seg.a.x);
+      const minY = Math.min(seg.a.y, seg.b.y);
+      const maxY = Math.max(seg.a.y, seg.b.y);
+
+      const colList = this.vertMap.get(xKey);
+      if (colList) {
+        queriesCount++;
+        for (const occ of colList) {
+          if (occ.edgeId === edgeId) continue;
+          if (collinearOverlapLength(seg, occ.segment, this.epsilon) > this.epsilon) {
+            isCollinearOccupied = true;
+            break;
+          }
+        }
+      }
+
+      if (!isCollinearOccupied) {
+        for (const yKey of this.horizYKeys) {
+          if (yKey < minY - this.epsilon) continue;
+          if (yKey > maxY + this.epsilon) break;
+          const horizList = this.horizMap.get(yKey)!;
+          queriesCount++;
+          for (const occ of horizList) {
+            if (occ.edgeId === edgeId) continue;
+            if (segmentsCross(seg, occ.segment, this.epsilon)) {
+              stepCrossings++;
+            }
+          }
+        }
+      }
+    }
+
+    if (!isCollinearOccupied && this.otherRecords.length > 0) {
+      queriesCount++;
+      for (const occ of this.otherRecords) {
+        if (occ.edgeId === edgeId) continue;
+        if (collinearOverlapLength(seg, occ.segment, this.epsilon) > this.epsilon) {
+          isCollinearOccupied = true;
+          break;
+        }
+        if (segmentsCross(seg, occ.segment, this.epsilon)) {
+          stepCrossings++;
+        }
+      }
+    }
+
+    return { isCollinearOccupied, stepCrossings, queriesCount };
+  }
 }
 
 export function searchOrthogonalRoute(
@@ -208,24 +408,42 @@ export function searchOrthogonalRoute(
 
   gCosts.set(getNodeStateKey(startNode), initialGCost);
 
-  const openList: AStarNode[] = [];
-  insertSortedNode(openList, startNode, config.epsilon, getNodeStateKey);
+  const openHeap = new AStarMinHeap(config.epsilon, getNodeStateKey);
+  openHeap.push(startNode);
 
   let bestGoalNode: AStarNode | null = null;
-  const maxIterations = options?.maxIterations ?? 50000;
-  let iterations = 0;
+  const maxIterations = options?.maxIterations ?? config.maxAStarStatesPerRoute;
+  let expandedStates = 0;
+  let pushedStates = 1;
+  let occupancyQueries = 0;
+  let stopReason: "target_reached" | "queue_exhausted" | "max_iterations" = "queue_exhausted";
 
   const combinedOccupancy = options?.reservations
     ? [...occupancy, ...options.reservations]
     : occupancy;
-
+  const indexedOcc = new IndexedOccupancy(combinedOccupancy, config.epsilon);
   const forbiddenRects = options?.forbiddenRects ?? [];
 
-  while (openList.length > 0 && iterations++ < maxIterations) {
-    const current = openList.shift()!;
+  while (openHeap.size > 0) {
+    if (expandedStates >= maxIterations) {
+      stopReason = "max_iterations";
+      break;
+    }
+
+    const current = openHeap.pop()!;
+    const currentKey = getNodeStateKey(current);
+    const bestG = gCosts.get(currentKey);
+
+    // Skip stale queue entries
+    if (bestG && compareRouteCost(current.gCost, bestG, config.epsilon) > 0) {
+      continue;
+    }
+
+    expandedStates++;
 
     if (current.vId === tgtStubId && current.visitedRequiredCorridor) {
       bestGoalNode = current;
+      stopReason = "target_reached";
       break;
     }
 
@@ -247,38 +465,19 @@ export function searchOrthogonalRoute(
       }
       if (isForbidden) continue;
 
-      // Check collinear occupancy conflict & perpendicular crossings
-      let isCollinearOccupied = false;
-      let stepCrossings = 0;
+      // Check indexed occupancy conflict & perpendicular crossings
+      const occResult = indexedOcc.checkSegmentConflict(seg, edgeId);
+      occupancyQueries += occResult.queriesCount;
+      if (occResult.isCollinearOccupied) continue;
 
-      for (const occ of combinedOccupancy) {
-        if (occ.edgeId === edgeId) continue;
-        if (collinearOverlapLength(seg, occ.segment, config.epsilon) > config.epsilon) {
-          isCollinearOccupied = true;
-          break;
-        }
-        if (segmentsCross(seg, occ.segment, config.epsilon)) {
-          stepCrossings += 1;
-        }
-      }
-
-      if (isCollinearOccupied) continue;
-
+      const stepCrossings = occResult.stepCrossings;
       const isBend = moveDir !== current.dir;
       const isHairpin =
         (current.previousDir !== null && OPPOSITE_DIR[current.previousDir] === moveDir) ||
         OPPOSITE_DIR[current.dir] === moveDir;
 
-      // Near obstacle penalty
-      let stepNearObsPen = 0;
-      for (const obs of grid.obstacles) {
-        if (
-          pointOnRectBoundary(currentPt, obs, config.epsilon) ||
-          pointOnRectBoundary(nextPt, obs, config.epsilon)
-        ) {
-          stepNearObsPen += config.nearObstaclePenalty;
-        }
-      }
+      // Precomputed near-obstacle penalty
+      const stepNearObsPen = neighbor.edge.nearObstacle ? config.nearObstaclePenalty : 0;
 
       // Direction penalties
       let stepDirDev = 0;
@@ -322,16 +521,24 @@ export function searchOrthogonalRoute(
           fCost: newFCost,
           parent: current,
         };
-        insertSortedNode(openList, nextNode, config.epsilon, getNodeStateKey);
+        openHeap.push(nextNode);
+        pushedStates++;
       }
     }
   }
+
+  const stats: RouteSearchStats = {
+    expandedStates,
+    pushedStates,
+    occupancyQueries,
+    stopReason,
+  };
 
   if (!bestGoalNode) {
     return null;
   }
 
-  // Reconstruct path: sourcePort.point -> sourcePort.stub -> A* path -> targetPort.stub -> targetPort.point
+  // Reconstruct path
   const gridPoints: Point[] = [];
   let curr: AStarNode | null = bestGoalNode;
 
@@ -369,7 +576,7 @@ export function searchOrthogonalRoute(
       const dir1 = getSegmentDirection(prev, currPt);
       const dir2 = getSegmentDirection(currPt, next);
       if (dir1 === dir2) {
-        continue; // Skip collinear point
+        continue;
       }
     }
 
@@ -381,5 +588,7 @@ export function searchOrthogonalRoute(
     points: simplifiedPoints,
     sourcePort,
     targetPort,
+    stats,
   };
 }
+

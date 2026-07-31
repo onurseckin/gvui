@@ -330,6 +330,46 @@ describe("routeSearch", () => {
       };
       expect(compareRouteCost(noHairpin, withHairpin)).toBeLessThan(0);
     });
+
+    it("tracks search statistics and stays below expanded-state ceiling", () => {
+      const nodes: (NormalizedNode & Point)[] = [
+        { id: "A", width: 100, height: 50, x: 0, y: 0 },
+        { id: "B", width: 100, height: 50, x: 200, y: 100 },
+        { id: "C", width: 100, height: 50, x: 100, y: 300 },
+      ];
+
+      const sourcePort: PortRef = {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 100, y: 25 },
+        stub: { x: 120, y: 25 },
+      };
+
+      const targetPort: PortRef = {
+        nodeId: "C",
+        side: "left",
+        index: 0,
+        point: { x: 100, y: 325 },
+        stub: { x: 80, y: 325 },
+      };
+
+      const boundingBox: Rect = { x: 0, y: 0, width: 400, height: 400 };
+      const config = resolveCustomLayoutConfig();
+      const grid = buildRoutingGrid(nodes, [sourcePort, targetPort], boundingBox, config);
+      const occupancy: OccupancyRecord[] = [
+        { edgeId: "e_obs", segment: { a: { x: 120, y: 25 }, b: { x: 120, y: 325 } } },
+      ];
+
+      const route = searchOrthogonalRoute("e1", sourcePort, targetPort, grid, occupancy, config);
+
+      expect(route).toBeDefined();
+      expect(route?.stats).toBeDefined();
+      expect(route!.stats!.expandedStates).toBeGreaterThan(0);
+      expect(route!.stats!.expandedStates).toBeLessThan(1500);
+      expect(route!.stats!.stopReason).toBe("target_reached");
+    });
   });
 });
+
 
