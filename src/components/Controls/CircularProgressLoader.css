@@ -1,0 +1,37 @@
+.circular-loader-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circular-loader-svg {
+  transform: rotate(-90deg);
+}
+
+.circular-loader-bg {
+  fill: none;
+  stroke: #21262d;
+}
+
+.circular-loader-fg {
+  fill: none;
+  stroke: url(#loaderGradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.15s ease-out;
+}
+
+.circular-loader-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.circular-loader-percent {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: #3fb950;
+}
