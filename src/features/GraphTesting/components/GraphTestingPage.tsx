@@ -63,10 +63,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
   return (
     <div className="graph-testing-page-container">
-      {/* Top Navbar */}
+      {/* Page Header */}
       <header className="graph-testing-page-header">
         <div className="graph-testing-header-left">
-          <Button variant="outline" size="sm" onClick={onBackToApp}>
+          <Button variant="outline" onClick={onBackToApp} className="back-to-app-btn">
             ← Back to Graph App
           </Button>
           <h1 className="graph-testing-title">🧪 Graph Layout Playground</h1>
@@ -79,8 +79,26 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
         </div>
       </header>
 
-      {/* Toolbar: Scenario Tabs */}
+      {/* Toolbar: Scenario Dropdown & Scrollable Tabs */}
       <div className="graph-testing-toolbar">
+        <div className="graph-testing-toolbar-left">
+          <label className="scenario-select-label" htmlFor="scenario-dropdown">
+            Scenario ({selectedScenarioId}/20):
+          </label>
+          <select
+            id="scenario-dropdown"
+            className="scenario-select-dropdown"
+            value={selectedScenarioId}
+            onChange={(e) => setSelectedScenarioId(Number(e.target.value))}
+          >
+            {Object.values(CUSTOM_LAYOUT_SCENARIOS).map((scenario) => (
+              <option key={scenario.id} value={scenario.id}>
+                {scenario.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="graph-testing-tabs">
           {Object.values(CUSTOM_LAYOUT_SCENARIOS).map((scenario) => (
             <button
@@ -88,7 +106,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               className={`graph-testing-tab-btn ${selectedScenarioId === scenario.id ? "active" : ""}`}
               onClick={() => setSelectedScenarioId(scenario.id)}
             >
-              {scenario.title}
+              #{scenario.id}
             </button>
           ))}
         </div>
@@ -278,7 +296,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
       {/* Footer */}
       <footer className="graph-testing-page-footer">
-        📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>. Scenarios #1 through #5 powered by custom top-to-bottom layout & orthogonal edge router.
+        📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>. Scenarios #1 through #20 powered by custom top-to-bottom layout & orthogonal edge router.
       </footer>
     </div>
   );

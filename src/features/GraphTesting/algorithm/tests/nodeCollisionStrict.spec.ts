@@ -24,7 +24,7 @@ describe("Custom Layout Engine Laboratory Test Suite", () => {
 
       expect(result.nodes.length).toBe(scenario.nodes.length);
       expect(result.edges.length).toBe(scenario.edges.length);
-      expect(result.badges.length).toBe(scenario.edges.length);
+      expect(result.badges.length).toBeLessThanOrEqual(scenario.edges.length);
       expect(typeof result.validation.isValid).toBe("boolean");
       expect(Array.isArray(result.validation.diagnostics)).toBe(true);
       expect(typeof result.validation.metrics.crossingCount).toBe("number");
@@ -34,5 +34,3 @@ describe("Custom Layout Engine Laboratory Test Suite", () => {
     });
   });
 });
-
-

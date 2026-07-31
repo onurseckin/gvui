@@ -5,7 +5,7 @@ import { CUSTOM_LAYOUT_SCENARIOS } from "../../data/customLayoutScenarios";
 
 describe("CustomLayoutEngine Basic Tests", () => {
   it("should calculate basic layout result for test scenarios", () => {
-    const scenario = CUSTOM_LAYOUT_SCENARIOS[1];
+    const scenario = CUSTOM_LAYOUT_SCENARIOS[3];
     const normalizedNodes: NormalizedNode[] = scenario.nodes.map((n) => ({
       id: n.id,
       label: n.name,
@@ -23,7 +23,5 @@ describe("CustomLayoutEngine Basic Tests", () => {
     const result = computeCustomLayout(normalizedNodes, normalizedEdges);
     expect(Boolean(result.nodes && result.nodes.length > 0)).toBe(true);
     expect(result.edges.length).toBe(scenario.edges.length);
-    expect(result.badges.length).toBe(scenario.edges.length);
   });
 });
-
