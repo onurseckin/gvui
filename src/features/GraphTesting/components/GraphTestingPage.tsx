@@ -1,8 +1,6 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
 import {
-  computeCustomLayout,
-  type CustomLayoutResult,
   type ExtendedLayoutDiagnostic,
   type NormalizedEdge,
   type NormalizedNode,
@@ -17,6 +15,8 @@ import "../GraphTesting.css";
 import type { TestScenario } from "../types";
 import { CustomLayoutDebugOverlay, type DebugOptions } from "./CustomLayoutDebugOverlay";
 import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
+import { LayoutErrorBoundary } from "./LayoutErrorBoundary";
+import { useCustomLayoutWorker } from "../hooks/useCustomLayoutWorker";
 
 interface GraphTestingPageProps {
   onBackToApp: () => void;
@@ -57,44 +57,11 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
 
-  const layoutResult = useMemo<CustomLayoutResult>(() => {
-    try {
-      return computeCustomLayout(normalizedNodes, normalizedEdges);
-    } catch (err) {
-      console.error("Layout computation error:", err);
-      return {
-        nodes: [],
-        edges: [],
-        badges: [],
-        crossings: [],
-        status: "invalid_hard_failure" as const,
-        validation: {
-          isValid: false,
-          diagnostics: [
-            { code: "RENDER_ERROR", severity: "error" as const, message: String(err), ids: [] },
-          ],
-          metrics: {
-            unresolvedRouteCount: normalizedEdges.length,
-            unresolvedBadgeCount: normalizedEdges.filter(
-              (edge) => edge.isCycle || (edge.label?.trim().length ?? 0) > 0,
-            ).length,
-            nodeNodeOverlaps: 0,
-            edgeNodePenetrations: 0,
-            sharedEdgeSegmentLength: 0,
-            badgeNodeOverlaps: 0,
-            badgeBadgeOverlaps: 0,
-            badgeUnrelatedEdgeOverlaps: 0,
-            crossingCount: 0,
-            bendCount: 0,
-            totalLength: 0,
-            directionDeviationPenalty: 0,
-            portSideReusePenalty: 0,
-            totalArea: 0,
-          },
-        },
-      };
-    }
-  }, [normalizedNodes, normalizedEdges]);
+  const { result: layoutResult, isCalculating, error, recalculate } = useCustomLayoutWorker({
+    nodes: normalizedNodes,
+    edges: normalizedEdges,
+    timeoutMs: 30_000,
+  });
 
   // Build lookup maps for rendering details
   const originalNodeMap = useMemo(() => {
@@ -105,13 +72,20 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     return new Map(normalizedEdges.map((e) => [e.id, e]));
   }, [normalizedEdges]);
 
-  const renderedNodes = layoutResult.nodes || [];
-  const renderedEdges = layoutResult.edges || [];
-  const renderedBadges = layoutResult.badges || [];
-  const renderedCrossings = layoutResult.crossings || [];
+  const renderedNodes = layoutResult?.nodes || [];
+  const renderedEdges = layoutResult?.edges || [];
+  const renderedBadges = layoutResult?.badges || [];
+  const renderedCrossings = layoutResult?.crossings || [];
 
   return (
-    <div className="graph-testing-page-container">
+    <LayoutErrorBoundary onRetry={recalculate}>
+      <div className="graph-testing-page-container">
+      {error && (
+        <div className="graph-layout-worker-warning" role="alert">
+          <span>Layout worker failed: {error.message}</span>
+          <button type="button" onClick={recalculate}>Retry layout</button>
+        </div>
+      )}
       {/* Page Header */}
       <header className="graph-testing-page-header">
         <div className="graph-testing-header-left">
@@ -161,6 +135,19 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
         </div>
       </div>
 
+      {!layoutResult ? (
+        <div className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"} role="status">
+          <span>
+            {error
+              ? `Layout worker failed: ${error.message}`
+              : isCalculating
+                ? "Calculating graph layout…"
+                : "Layout is unavailable."}
+          </span>
+          {(error || !isCalculating) && <button type="button" onClick={recalculate}>Retry layout</button>}
+        </div>
+      ) : (
+        <>
       {/* Metrics Summary Panel */}
       <div className="graph-testing-metrics-wrapper">
         <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />
@@ -408,12 +395,15 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Footer */}
       <footer className="graph-testing-page-footer">
         📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>.
         Scenarios #1 through #20 powered by custom top-to-bottom layout & orthogonal edge router.
       </footer>
-    </div>
+      </div>
+    </LayoutErrorBoundary>
   );
 };

@@ -477,3 +477,36 @@
   accent-color: #0284c7;
   cursor: pointer;
 }
+
+.graph-layout-worker-loading,
+.graph-layout-worker-warning {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.graph-layout-worker-loading {
+  border: 1px solid #38bdf8;
+  background: #082f49;
+  color: #e0f2fe;
+}
+
+.graph-layout-worker-warning {
+  border: 1px solid #f59e0b;
+  background: #451a03;
+  color: #fef3c7;
+}
+
+.graph-layout-worker-loading button,
+.graph-layout-worker-warning button {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 5px 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}

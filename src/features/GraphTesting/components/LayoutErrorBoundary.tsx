@@ -4,6 +4,7 @@ import { Component } from "react";
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -27,6 +28,7 @@ export class LayoutErrorBoundary extends Component<Props, State> {
 
   private handleRetry = () => {
     this.setState({ hasError: false, error: null });
+    this.props.onRetry?.();
   };
 
   public render(): ReactNode {

@@ -61,15 +61,16 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
     (e) => e.points && e.points.length >= 2,
   ).length;
   const missingRouteDiagnosticsCount = diagnostics.filter((d) => d.code === "MISSING_ROUTE").length;
-  const unresolvedRoutes = Math.max(
-    missingRouteDiagnosticsCount,
-    totalEdgesCount - validRoutedEdgesCount,
-  );
+  const unresolvedRoutes =
+    metrics.unresolvedRouteCount ??
+    Math.max(missingRouteDiagnosticsCount, totalEdgesCount - validRoutedEdgesCount);
 
   const expectedBadgesCount = normalizedEdges
     ? normalizedEdges.filter((e) => hasBadge(e.label, e.isCycle)).length
     : (layoutResult?.badges || []).length;
-  const unresolvedBadges = Math.max(0, expectedBadgesCount - (layoutResult?.badges || []).length);
+  const unresolvedBadges =
+    metrics.unresolvedBadgeCount ??
+    Math.max(0, expectedBadgesCount - (layoutResult?.badges || []).length);
 
   const ordinaryLeaderCount = metrics.ordinaryLeaderCount ?? score?.ordinaryLeaderCount;
   const feedbackLeaderCount = metrics.feedbackLeaderCount ?? score?.feedbackLeaderCount;
@@ -177,7 +178,9 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
             </div>
             <div className="metric-card">
               <span className="metric-label">Edge Penetrations</span>
-              <span className={`metric-value ${score.edgeNodePenetrations > 0 ? "has-conflicts" : ""}`}>
+              <span
+                className={`metric-value ${score.edgeNodePenetrations > 0 ? "has-conflicts" : ""}`}
+              >
                 {score.edgeNodePenetrations}
               </span>
             </div>
@@ -185,12 +188,17 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
               <span className="metric-label">Badge Overlaps</span>
               <span
                 className={`metric-value ${
-                  score.badgeNodeOverlaps + score.badgeBadgeOverlaps + score.badgeUnrelatedEdgeOverlaps > 0
+                  score.badgeNodeOverlaps +
+                    score.badgeBadgeOverlaps +
+                    score.badgeUnrelatedEdgeOverlaps >
+                  0
                     ? "has-conflicts"
                     : ""
                 }`}
               >
-                {score.badgeNodeOverlaps + score.badgeBadgeOverlaps + score.badgeUnrelatedEdgeOverlaps}
+                {score.badgeNodeOverlaps +
+                  score.badgeBadgeOverlaps +
+                  score.badgeUnrelatedEdgeOverlaps}
               </span>
             </div>
           </div>
@@ -218,7 +226,8 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
             <div className="metric-card">
               <span className="metric-label">Stop Reason</span>
               <span className="metric-value" style={{ fontSize: "0.85rem" }}>
-                {stats.repeatedStateStop ? "Repeated State" : "Pass Limit"}
+                {stats.stopReason ??
+                  (stats.repeatedStateStop ? "repeated-logical-state" : "pass-limit")}
               </span>
             </div>
           </div>

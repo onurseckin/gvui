@@ -1,6 +1,5 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
-import { computeCustomLayout } from "../../../engine/layout/custom";
 import {
   pointsToSvgPath,
   renderPathWithCrossingBridges,
@@ -10,6 +9,8 @@ import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
 import type { TestScenario } from "../types";
 import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
+import { LayoutErrorBoundary } from "./LayoutErrorBoundary";
+import { useCustomLayoutWorker } from "../hooks/useCustomLayoutWorker";
 
 interface GraphTestingModalProps {
   isOpen: boolean;
@@ -41,9 +42,12 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
 
-  const layoutResult = useMemo(() => {
-    return computeCustomLayout(normalizedNodes, normalizedEdges);
-  }, [normalizedNodes, normalizedEdges]);
+  const { result: layoutResult, isCalculating, error, recalculate } = useCustomLayoutWorker({
+    nodes: normalizedNodes,
+    edges: normalizedEdges,
+    timeoutMs: 30_000,
+    enabled: isOpen,
+  });
 
   const originalNodeMap = useMemo(() => {
     return new Map(activeScenario.nodes.map((n) => [n.id, n]));
@@ -55,8 +59,30 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
 
   if (!isOpen) return null;
 
+  if (!layoutResult) {
+    return (
+      <div className="graph-testing-backdrop" onClick={onClose}>
+        <div
+          className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"}
+          role="status"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span>
+            {error
+              ? `Layout worker failed: ${error.message}`
+              : isCalculating
+                ? "Calculating graph layout…"
+                : "Layout is unavailable."}
+          </span>
+          {(error || !isCalculating) && <button type="button" onClick={recalculate}>Retry layout</button>}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="graph-testing-backdrop" onClick={onClose}>
+    <LayoutErrorBoundary onRetry={recalculate}>
+      <div className="graph-testing-backdrop" onClick={onClose}>
       <div className="graph-testing-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="graph-testing-header">
@@ -70,6 +96,13 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
             ✕
           </button>
         </div>
+
+        {error && (
+          <div className="graph-layout-worker-warning" role="alert">
+            <span>Layout worker failed: {error.message}</span>
+            <button type="button" onClick={recalculate}>Retry layout</button>
+          </div>
+        )}
 
         {/* Toolbar: Scenario Tabs */}
         <div className="graph-testing-toolbar">
@@ -242,6 +275,7 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </LayoutErrorBoundary>
   );
 };

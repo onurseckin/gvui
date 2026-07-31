@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CustomLayoutConfig } from "../../../engine/layout/custom/config";
 import { computeCustomLayoutAsync } from "../../../engine/layout/custom/customLayoutWorkerClient";
 import type {
@@ -26,7 +26,7 @@ export function useCustomLayoutWorker({
   nodes,
   edges,
   configPartial,
-  timeoutMs = 5000,
+  timeoutMs = 30_000,
   enabled = true,
 }: UseCustomLayoutWorkerOptions): UseCustomLayoutWorkerState {
   const [result, setResult] = useState<CustomLayoutResult | null>(null);
@@ -36,9 +36,9 @@ export function useCustomLayoutWorker({
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const recalculate = () => {
+  const recalculate = useCallback(() => {
     setTriggerCount((c) => c + 1);
-  };
+  }, []);
 
   useEffect(() => {
     if (!enabled || nodes.length === 0) {
