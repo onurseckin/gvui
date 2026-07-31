@@ -26,6 +26,10 @@ export interface UseCustomLayoutWorkerState {
   resultGeneration: string | null;
 }
 
+export interface UseCustomLayoutWorkerDependencies {
+  computeLayout?: typeof computeCustomLayoutAsync;
+}
+
 export interface LayoutResultSnapshot {
   inputKey: string;
   result: CustomLayoutResult;
@@ -52,14 +56,17 @@ export function getCurrentLayoutError(
   return snapshot?.inputKey === inputKey ? snapshot.error : null;
 }
 
-export function useCustomLayoutWorker({
-  nodes,
-  edges,
-  inputKey,
-  configPartial,
-  timeoutMs = 30_000,
-  enabled = true,
-}: UseCustomLayoutWorkerOptions): UseCustomLayoutWorkerState {
+export function useCustomLayoutWorker(
+  {
+    nodes,
+    edges,
+    inputKey,
+    configPartial,
+    timeoutMs = 30_000,
+    enabled = true,
+  }: UseCustomLayoutWorkerOptions,
+  dependencies: UseCustomLayoutWorkerDependencies = {},
+): UseCustomLayoutWorkerState {
   const [snapshot, setSnapshot] = useState<LayoutResultSnapshot | null>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [errorSnapshot, setErrorSnapshot] = useState<LayoutErrorSnapshot | null>(null);
@@ -72,6 +79,7 @@ export function useCustomLayoutWorker({
   }, []);
 
   const requestGeneration = `${inputKey}:${retryGeneration}`;
+  const computeLayout = dependencies.computeLayout ?? computeCustomLayoutAsync;
 
   useEffect(() => {
     if (!enabled || nodes.length === 0) {
@@ -91,7 +99,7 @@ export function useCustomLayoutWorker({
     setIsCalculating(true);
     setErrorSnapshot(null);
 
-    computeCustomLayoutAsync({
+    computeLayout({
       nodes,
       edges,
       configPartial,
@@ -117,7 +125,7 @@ export function useCustomLayoutWorker({
     return () => {
       controller.abort();
     };
-  }, [nodes, edges, configPartial, timeoutMs, enabled, inputKey, requestGeneration]);
+  }, [nodes, edges, configPartial, timeoutMs, enabled, inputKey, requestGeneration, computeLayout]);
 
   return {
     result: getCurrentLayoutResult(snapshot, inputKey),

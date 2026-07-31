@@ -2,7 +2,7 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
   fallback?: ReactNode;
   onRetry?: () => void;
   /** A newly delivered layout result starts a fresh rendering subtree. */
