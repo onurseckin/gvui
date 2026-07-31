@@ -134,7 +134,7 @@ export function generateBadgeCandidates(
       if (rectsOverlapStrict(bRect, pRect, config.epsilon)) return;
     }
 
-    let score = ring * 100 + ratioPenalty * 50;
+    let score = ring * 1000 + ratioPenalty * 50;
 
     // Soft penalty for intersecting unrelated edge segments
     for (const uSeg of unrelatedSegments) {

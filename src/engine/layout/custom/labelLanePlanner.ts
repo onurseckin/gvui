@@ -27,7 +27,7 @@ export function planLabelLaneDemands(
           demands.push({
             kind: "lane-x",
             affectedEdgeIds: [p1.edgeId, p2.edgeId].sort(),
-            minimum: (p1.rect.width + p2.rect.width) / 2 + 2 * config.badgeClearance,
+            minimum: p1.rect.width + p2.rect.width + 2 * config.badgeClearance,
             reason: "parallel-labels",
           });
         }
@@ -44,7 +44,7 @@ export function planLabelLaneDemands(
       });
     }
 
-    const requiredNodeGap = p1.rect.width + 2 * config.badgeClearance;
+    const requiredNodeGap = p1.rect.width + 2 * config.portStubLength + 2 * config.badgeClearance;
     if (requiredNodeGap > config.nodeGap) {
       demands.push({
         kind: "node-gap",

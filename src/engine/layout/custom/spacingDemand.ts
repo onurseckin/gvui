@@ -169,7 +169,7 @@ export function resolveExactSpacingDemands(
   let globalRankGap = defaultRankGap;
 
   for (const d of demands) {
-    if (d.kind === "node-gap") {
+    if (d.kind === "node-gap" || d.kind === "lane-x") {
       if (d.rank !== undefined) {
         const current = nodeGapByRank.get(d.rank) ?? defaultNodeGap;
         nodeGapByRank.set(d.rank, Math.max(current, d.minimum));
@@ -181,7 +181,7 @@ export function resolveExactSpacingDemands(
       if (d.rank === undefined && d.afterNodeId === undefined) {
         globalNodeGap = Math.max(globalNodeGap, d.minimum);
       }
-    } else if (d.kind === "rank-gap") {
+    } else if (d.kind === "rank-gap" || d.kind === "lane-y") {
       if (d.rank !== undefined) {
         const current = rankGapAfterRank.get(d.rank) ?? defaultRankGap;
         rankGapAfterRank.set(d.rank, Math.max(current, d.minimum));

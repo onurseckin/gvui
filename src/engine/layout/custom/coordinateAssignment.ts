@@ -130,8 +130,8 @@ function projectLayerCenters(
   for (let i = 0; i < k - 1; i++) {
     const curr = layer[i];
     const next = layer[i + 1];
-    const currW = curr.isVirtual ? 0 : curr.width;
-    const nextW = next.isVirtual ? 0 : next.width;
+    const currW = curr.width;
+    const nextW = next.width;
     const gap = getEffectiveNodeGap(rank, curr, spacingOverrides, config);
     const d = (currW + nextW) / 2 + gap;
     s[i + 1] = s[i] + d;

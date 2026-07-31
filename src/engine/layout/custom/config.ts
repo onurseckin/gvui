@@ -76,7 +76,7 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   maxLayoutStates: 50,
   maxFrontierSize: 50,
   maxNeighborsPerState: 16,
-  maxAStarStatesPerRoute: 50000,
+  maxAStarStatesPerRoute: 2000,
   maxConflictPermutationSize: 6,
   maxConflictPermutations: 32,
   maxRouteCandidatesPerEdge: 4,
