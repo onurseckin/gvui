@@ -2,6 +2,7 @@ import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/g
 import { computeCustomLayout } from "./custom";
 import type { CustomLayoutConfig, CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./custom";
 import { computeCustomLayoutAsync } from "./custom/customLayoutWorkerClient";
+import type { LayoutProgressInfo } from "./custom/customLayoutWorkerPool";
 import { renderPathWithCrossingBridges } from "./custom/svgPath";
 import { calculateNodeDimensions } from "./nodeDimensions";
 
@@ -100,6 +101,7 @@ export interface ComputeEngineLayoutOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   configPartial?: Partial<CustomLayoutConfig>;
+  onProgress?: (progress: LayoutProgressInfo) => void;
 }
 
 export async function computeCustomEngineGraphLayoutAsync(
@@ -134,6 +136,7 @@ export async function computeCustomEngineGraphLayoutAsync(
     configPartial: options?.configPartial,
     timeoutMs: options?.timeoutMs,
     signal: options?.signal,
+    onProgress: options?.onProgress,
   });
   return mapLayoutResultToPositioned(dataset, layoutResult);
 }

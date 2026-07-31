@@ -4,6 +4,7 @@ import { generateDatasetSignature } from "../../utils/fileStorage";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
 
 if (typeof window === "undefined") {
+  (globalThis as unknown as { window: unknown }).window = globalThis;
   const store = new Map<string, string>();
   const mockLocalStorage = {
     getItem: (key: string) => store.get(key) ?? null,

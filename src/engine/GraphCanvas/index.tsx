@@ -73,7 +73,10 @@ export const GraphCanvas: FC = () => {
     if (layoutMode === "top-down") {
       setProgressState(deriveProgressState(2, 5, "Building hierarchy tree..."));
 
-      computeCustomEngineGraphLayoutAsync(dataset, { signal: controller.signal })
+      computeCustomEngineGraphLayoutAsync(dataset, {
+        signal: controller.signal,
+        onProgress: (p) => isSubscribed && setProgressState(p),
+      })
         .then(({ nodes, edges }) => {
           if (!isSubscribed) return;
           setProgressState(deriveProgressState(4, 5, "Computing A* routes..."));
