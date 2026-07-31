@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { compareLayoutScore, countPathHairpins } from "./layoutObjective";
+import {
+  calculateExcessBends,
+  calculateHairpinCount,
+  compareLayoutScore,
+  countPathHairpins,
+} from "./layoutObjective";
 import type { LayoutScore } from "./types";
 
 function score(overrides: Partial<LayoutScore> = {}): LayoutScore {
@@ -102,5 +107,38 @@ describe("layoutObjective", () => {
         { x: 40, y: 20 },
       ]),
     ).toBe(0);
+  });
+
+  test("permits one structural hairpin for a routed feedback edge identified by edgeId", () => {
+    const routedFeedbackEdge = {
+      edgeId: "feedback-edge",
+      points: [
+        { x: 0, y: 0 },
+        { x: 40, y: 0 },
+        { x: 40, y: 20 },
+        { x: 10, y: 20 },
+      ],
+    };
+
+    expect(calculateHairpinCount([routedFeedbackEdge], { "feedback-edge": "feedback" })).toEqual({
+      totalHairpins: 1,
+      avoidableHairpins: 0,
+    });
+  });
+
+  test("uses edgeId to grant routed feedback edges the structural bend allowance", () => {
+    const routedFeedbackEdge = {
+      edgeId: "feedback-edge",
+      points: [
+        { x: 0, y: 0 },
+        { x: 20, y: 0 },
+        { x: 20, y: 20 },
+        { x: 40, y: 20 },
+        { x: 40, y: 40 },
+        { x: 60, y: 40 },
+      ],
+    };
+
+    expect(calculateExcessBends([routedFeedbackEdge], { "feedback-edge": "feedback" })).toBe(0);
   });
 });

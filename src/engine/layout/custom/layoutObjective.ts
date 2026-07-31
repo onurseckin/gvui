@@ -126,7 +126,7 @@ export function calculateLeaderMetrics(
 }
 
 export function calculateHairpinCount(
-  edges: { id?: string; points?: Point[] }[],
+  edges: { id?: string; edgeId?: string; points?: Point[] }[],
   edgeRoles?: Map<string, EdgeRole> | Record<string, EdgeRole> | ClassifiedEdge[],
   epsilon = 0.001,
 ): { totalHairpins: number; avoidableHairpins: number } {
@@ -136,7 +136,8 @@ export function calculateHairpinCount(
     if (edge.points && edge.points.length >= 2) {
       const count = countPathHairpins(edge.points, epsilon);
       totalHairpins += count;
-      const role = edge.id ? getEdgeRole(edge.id, edgeRoles) : undefined;
+      const edgeId = edge.id ?? edge.edgeId;
+      const role = edgeId ? getEdgeRole(edgeId, edgeRoles) : undefined;
       const isStructurallyNecessary = role === "feedback" || role === "self";
       if (!isStructurallyNecessary) {
         avoidableHairpins += count;
@@ -149,7 +150,7 @@ export function calculateHairpinCount(
 }
 
 export function calculateExcessBends(
-  edges: { id?: string; points?: Point[] }[],
+  edges: { id?: string; edgeId?: string; points?: Point[] }[],
   edgeRoles?: Map<string, EdgeRole> | Record<string, EdgeRole> | ClassifiedEdge[],
 ): number {
   let excess = 0;
@@ -157,7 +158,8 @@ export function calculateExcessBends(
     if (edge.points && edge.points.length >= 2) {
       const simplified = simplifyOrthogonalPath(edge.points);
       const bendCount = Math.max(0, simplified.length - 2);
-      const role = edge.id ? getEdgeRole(edge.id, edgeRoles) : undefined;
+      const edgeId = edge.id ?? edge.edgeId;
+      const role = edgeId ? getEdgeRole(edgeId, edgeRoles) : undefined;
       const maxAllowed = role === "feedback" || role === "self" ? 4 : 3;
       if (bendCount > maxAllowed) {
         excess += bendCount - maxAllowed;
