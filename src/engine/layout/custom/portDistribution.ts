@@ -24,6 +24,7 @@ export function distributePorts(
   sideAssignments: Map<string, { srcSide: Side; tgtSide: Side }>,
   nodeMap: Map<string, NormalizedNode & Point>,
   config: CustomLayoutConfig,
+  explicitPortOrders?: Record<string, string[]>,
 ): PortDistributionResult {
   const sideAttachmentsMap = new Map<string, SideAttachment[]>();
 
@@ -84,23 +85,42 @@ export function distributePorts(
     if (!node) continue;
 
     const isHorizontalSide = side === "top" || side === "bottom";
+    const explicitOrder = explicitPortOrders?.[sKey];
 
-    // Sort attachments by projected offset, tie-break by remoteNodeId, edgeId, and isSource
-    attachments.sort((a, b) => {
-      if (Math.abs(a.projectedOffset - b.projectedOffset) > config.epsilon) {
-        return a.projectedOffset - b.projectedOffset;
-      }
-      const remoteComp = a.remoteNodeId.localeCompare(b.remoteNodeId);
-      if (remoteComp !== 0) return remoteComp;
+    if (explicitOrder && explicitOrder.length > 0) {
+      const orderMap = new Map<string, number>();
+      explicitOrder.forEach((k, idx) => orderMap.set(k, idx));
+      attachments.sort((a, b) => {
+        const keyA = `${a.edgeId}:${a.isSource ? "src" : "tgt"}`;
+        const keyB = `${b.edgeId}:${b.isSource ? "src" : "tgt"}`;
+        const idxA = orderMap.has(keyA) ? orderMap.get(keyA)! : 999999;
+        const idxB = orderMap.has(keyB) ? orderMap.get(keyB)! : 999999;
+        if (idxA !== idxB) return idxA - idxB;
 
-      const edgeComp = a.edgeId.localeCompare(b.edgeId);
-      if (edgeComp !== 0) return edgeComp;
+        if (Math.abs(a.projectedOffset - b.projectedOffset) > config.epsilon) {
+          return a.projectedOffset - b.projectedOffset;
+        }
+        return keyA.localeCompare(keyB);
+      });
+    } else {
+      // Sort attachments by projected offset, tie-break by remoteNodeId, edgeId, and isSource
+      attachments.sort((a, b) => {
+        if (Math.abs(a.projectedOffset - b.projectedOffset) > config.epsilon) {
+          return a.projectedOffset - b.projectedOffset;
+        }
+        const remoteComp = a.remoteNodeId.localeCompare(b.remoteNodeId);
+        if (remoteComp !== 0) return remoteComp;
 
-      if (a.isSource !== b.isSource) {
-        return a.isSource ? -1 : 1;
-      }
-      return 0;
-    });
+        const edgeComp = a.edgeId.localeCompare(b.edgeId);
+        if (edgeComp !== 0) return edgeComp;
+
+        if (a.isSource !== b.isSource) {
+          return a.isSource ? -1 : 1;
+        }
+        return 0;
+      });
+    }
+
 
     const m = attachments.length;
     const sideLength = isHorizontalSide ? node.width : node.height;
