@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { CircularProgressLoader } from "./CircularProgressLoader";
+import { useSmoothProgress } from "./useSmoothProgress";
 import "./LoadingOverlay.css";
 
 export interface LoadingOverlayProps {
@@ -25,7 +26,8 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
   nodeCount,
   edgeCount,
 }) => {
-  const safePercent = Math.min(100, Math.max(0, percent));
+  const smoothPercent = useSmoothProgress(percent, true);
+  const safePercent = Math.min(100, Math.max(0, smoothPercent));
 
   return (
     <div className="loading-overlay-backdrop">

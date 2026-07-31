@@ -20,6 +20,24 @@ describe("LoadingOverlay Component", () => {
     expect(html).toContain("Crossings");
     expect(html).toContain("Render");
     expect(html).toContain("65%");
+    expect(html).toContain("is-done");
+    expect(html).toContain("is-active");
+    expect(html).toContain("✓");
+  });
+
+  it("renders checkmarks for all completed stages when progress is 100%", () => {
+    const html = renderToString(
+      <LoadingOverlay
+        percent={100}
+        stageText="Complete"
+        detail="Render complete"
+      />
+    );
+
+    expect(html).toContain("100%");
+    const checkmarkMatches = html.match(/✓/g);
+    expect(checkmarkMatches).not.toBeNull();
+    expect(checkmarkMatches?.length).toBe(5);
   });
 });
 

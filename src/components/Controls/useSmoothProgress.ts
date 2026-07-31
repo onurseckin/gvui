@@ -12,7 +12,7 @@ export function interpolateProgress(
 }
 
 export function useSmoothProgress(targetPercent: number, isCalculating: boolean): number {
-  const [displayPercent, setDisplayPercent] = useState(0);
+  const [displayPercent, setDisplayPercent] = useState(isCalculating ? targetPercent : 0);
 
   useEffect(() => {
     if (!isCalculating) {
@@ -24,24 +24,24 @@ export function useSmoothProgress(targetPercent: number, isCalculating: boolean)
     let lastTime = performance.now();
 
     const animate = (currentTime: number) => {
-      const delta = (currentTime - lastTime) / 1000;
+      // Cap maximum delta time to prevent large leaps during background tab switching
+      const delta = Math.min(0.1, (currentTime - lastTime) / 1000);
       lastTime = currentTime;
 
       setDisplayPercent((prev) => {
         if (prev >= targetPercent) return targetPercent;
-        const speed = Math.max(10, (targetPercent - prev) * 5);
+        // Move at steady speed proportional to remaining delta with a minimum floor of 20%/sec
+        const speed = Math.max(20, (targetPercent - prev) * 8);
         const next = Math.min(targetPercent, prev + speed * delta);
         return Math.round(next * 10) / 10;
       });
 
-      if (displayPercent < targetPercent) {
-        animationFrameId = requestAnimationFrame(animate);
-      }
+      animationFrameId = requestAnimationFrame(animate);
     };
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [targetPercent, isCalculating, displayPercent]);
+  }, [targetPercent, isCalculating]);
 
   return displayPercent;
 }
