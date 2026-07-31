@@ -8,6 +8,137 @@ import type { NormalizedEdge, NormalizedNode, Point, Rect, RoutedPath } from "./
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 
 describe("badgePlacement", () => {
+  it("rejects a badge candidate that intersects a non-owner route segment", () => {
+    const config = resolveCustomLayoutConfig();
+    const route: RoutedPath = {
+      edgeId: "e-owner",
+      points: [
+        { x: 0, y: 100 },
+        { x: 300, y: 100 },
+      ],
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 0, y: 100 },
+        stub: { x: 20, y: 100 },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 300, y: 100 },
+        stub: { x: 280, y: 100 },
+      },
+    };
+
+    const candidates = generateBadgeCandidates(
+      route,
+      "label",
+      false,
+      [],
+      [],
+      [{ a: { x: 150, y: 0 }, b: { x: 150, y: 200 } }],
+      { x: -100, y: -100, width: 500, height: 400 },
+      config,
+      false,
+    );
+
+    expect(
+      candidates.some((candidate) => candidate.point.x === 150 && candidate.point.y === 100),
+    ).toBe(false);
+  });
+
+  it("keeps ordinary badge candidates directly associated with their route", () => {
+    const config = resolveCustomLayoutConfig();
+    const route: RoutedPath = {
+      edgeId: "e-owner",
+      points: [
+        { x: 0, y: 100 },
+        { x: 300, y: 100 },
+      ],
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 0, y: 100 },
+        stub: { x: 20, y: 100 },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 300, y: 100 },
+        stub: { x: 280, y: 100 },
+      },
+    };
+
+    const candidates = generateBadgeCandidates(
+      route,
+      "label",
+      false,
+      [],
+      [],
+      [],
+      { x: -100, y: -100, width: 500, height: 400 },
+      config,
+      false,
+    );
+
+    for (const candidate of candidates) {
+      expect(candidate.rect.y + candidate.rect.height / 2).toBe(candidate.point.y);
+    }
+  });
+
+  it("returns an explicit spacing request instead of an overlapping fallback badge", () => {
+    const config = resolveCustomLayoutConfig();
+    const route: RoutedPath = {
+      edgeId: "e1",
+      points: [
+        { x: 0, y: 100 },
+        { x: 10, y: 100 },
+      ],
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 0, y: 100 },
+        stub: { x: 1, y: 100 },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 10, y: 100 },
+        stub: { x: 9, y: 100 },
+      },
+    };
+    const edge: NormalizedEdge = { id: "e1", source: "A", target: "B", label: "blocked" };
+    const nodeLayout = {
+      normalizedGraph: {
+        nodes: [
+          { id: "A", width: 20, height: 20 },
+          { id: "B", width: 20, height: 20 },
+        ],
+        edges: [edge],
+        nodeMap: new Map(),
+        edgeMap: new Map(),
+        outgoingMap: new Map(),
+        incomingMap: new Map(),
+      },
+      nodePositions: new Map<string, Point>([
+        ["A", { x: -20, y: 90 }],
+        ["B", { x: 10, y: 90 }],
+      ]),
+    } as unknown as NodeLayoutResult;
+
+    const result = placeEdgeBadges([route], nodeLayout, config);
+
+    expect(result.placements).toEqual([]);
+    expect(result.spacingRequests).toHaveLength(1);
+    expect(result.spacingRequests?.[0]?.edgeId).toBe("e1");
+  });
+
   it("places edge badges without overlapping node cards or other badges", () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 120, height: 50 },
@@ -250,8 +381,20 @@ describe("badgePlacement", () => {
         { x: 120, y: 25 },
         { x: 300, y: 25 },
       ],
-      sourcePort: { nodeId: "A", side: "right", index: 0, point: { x: 120, y: 25 }, stub: { x: 140, y: 25 } },
-      targetPort: { nodeId: "B", side: "left", index: 0, point: { x: 300, y: 25 }, stub: { x: 280, y: 25 } },
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 120, y: 25 },
+        stub: { x: 140, y: 25 },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 300, y: 25 },
+        stub: { x: 280, y: 25 },
+      },
     };
 
     const mockNodeLayout = {
@@ -293,8 +436,20 @@ describe("badgePlacement", () => {
         { x: 120, y: 25 },
         { x: 125, y: 25 },
       ],
-      sourcePort: { nodeId: "A", side: "right", index: 0, point: { x: 120, y: 25 }, stub: { x: 121, y: 25 } },
-      targetPort: { nodeId: "B", side: "left", index: 0, point: { x: 125, y: 25 }, stub: { x: 124, y: 25 } },
+      sourcePort: {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 120, y: 25 },
+        stub: { x: 121, y: 25 },
+      },
+      targetPort: {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 125, y: 25 },
+        stub: { x: 124, y: 25 },
+      },
     };
 
     const mockNodeLayout = {
@@ -325,7 +480,14 @@ describe("badgePlacement", () => {
       { id: "B", width: 120, height: 50 },
     ];
     const edges: NormalizedEdge[] = [
-      { id: "e_fb", source: "B", target: "A", label: "feedback label", layoutRole: "feedback", isCycle: true },
+      {
+        id: "e_fb",
+        source: "B",
+        target: "A",
+        label: "feedback label",
+        layoutRole: "feedback",
+        isCycle: true,
+      },
     ];
 
     const config = resolveCustomLayoutConfig();
@@ -338,8 +500,20 @@ describe("badgePlacement", () => {
         { x: 50, y: 400 },
         { x: 50, y: 0 },
       ],
-      sourcePort: { nodeId: "B", side: "top", index: 0, point: { x: 50, y: 400 }, stub: { x: 50, y: 380 } },
-      targetPort: { nodeId: "A", side: "bottom", index: 0, point: { x: 50, y: 0 }, stub: { x: 50, y: 20 } },
+      sourcePort: {
+        nodeId: "B",
+        side: "top",
+        index: 0,
+        point: { x: 50, y: 400 },
+        stub: { x: 50, y: 380 },
+      },
+      targetPort: {
+        nodeId: "A",
+        side: "bottom",
+        index: 0,
+        point: { x: 50, y: 0 },
+        stub: { x: 50, y: 20 },
+      },
     };
 
     const mockNodeLayout = {

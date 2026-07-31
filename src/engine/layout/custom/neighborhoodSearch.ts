@@ -1,7 +1,36 @@
 import type { CustomLayoutConfig } from "./config";
 import { cloneSearchState } from "./searchState";
 import type { StateEvaluationResult } from "./stateEvaluator";
-import type { LayoutSearchState, Side } from "./types";
+import type { EdgeRole, LayoutSearchState, Side } from "./types";
+
+const feedbackSidePairs: ReadonlyArray<{ srcSide: Side; tgtSide: Side }> = [
+  { srcSide: "left", tgtSide: "left" },
+  { srcSide: "right", tgtSide: "right" },
+  { srcSide: "left", tgtSide: "top" },
+  { srcSide: "right", tgtSide: "top" },
+];
+
+function sideAlternatives(
+  current: { srcSide: Side; tgtSide: Side },
+  role: EdgeRole | undefined,
+  isCycle: boolean,
+): { srcSide: Side; tgtSide: Side }[] {
+  if (role === "feedback" || isCycle) {
+    return feedbackSidePairs.filter(
+      (pair) => pair.srcSide !== current.srcSide || pair.tgtSide !== current.tgtSide,
+    );
+  }
+
+  const alternatives: { srcSide: Side; tgtSide: Side }[] = [];
+  for (const srcSide of ["top", "right", "bottom", "left"] as const) {
+    for (const tgtSide of ["top", "right", "bottom", "left"] as const) {
+      if (srcSide !== current.srcSide || tgtSide !== current.tgtSide) {
+        alternatives.push({ srcSide, tgtSide });
+      }
+    }
+  }
+  return alternatives;
+}
 
 export function generateNeighborhoodStates(
   state: LayoutSearchState,
@@ -11,48 +40,64 @@ export function generateNeighborhoodStates(
   const neighbors: LayoutSearchState[] = [];
   const maxNeighbors = config.maxNeighborsPerState;
 
-  const validSides: Side[] = ["top", "right", "bottom", "left"];
-
   // 1. Generate Port Side Swap Moves for edges with crossings, hairpins, or excess bends
   const problemEdgeIds = new Set<string>();
   const crossings = evalResult.validation.crossings ?? [];
+  const classifiedById = new Map(evalResult.classifiedEdges.map((edge) => [edge.id, edge]));
+  const routesByEdgeId = new Map(evalResult.routes.map((route) => [route.edgeId, route]));
   for (const cross of crossings) {
     problemEdgeIds.add(cross.edgeIdA);
     problemEdgeIds.add(cross.edgeIdB);
   }
 
-  // Include edges with hairpins or invalid departure/entry directions
+  // Include every affected edge from diagnostics. A badge/edge collision names
+  // both participants and either route may be the movable one.
   for (const diag of evalResult.validation.diagnostics) {
-    if (diag.ids && diag.ids.length > 0) {
-      problemEdgeIds.add(diag.ids[0]);
-    }
-  }
-
-  // Include cycle / feedback edges
-  for (const route of evalResult.routes) {
-    if (route.edgeId.toLowerCase().includes("cycle") || route.edgeId.toLowerCase().includes("loop")) {
-      problemEdgeIds.add(route.edgeId);
-    }
-  }
-
-  for (const edgeId of problemEdgeIds) {
-    if (neighbors.length >= maxNeighbors) break;
-
-    const currentSide = state.sideAssignments.get(edgeId);
-    const srcSide = currentSide?.srcSide ?? "bottom";
-    const tgtSide = currentSide?.tgtSide ?? "top";
-
-    // Combined (altSrc, altTgt) pairs first
-    for (const altSrc of validSides) {
-      if (neighbors.length >= maxNeighbors) break;
-      for (const altTgt of validSides) {
-        if (neighbors.length >= maxNeighbors) break;
-        if (altSrc === srcSide && altTgt === tgtSide) continue;
-        const nextState = cloneSearchState(state);
-        nextState.sideAssignments.set(edgeId, { srcSide: altSrc, tgtSide: altTgt });
-        neighbors.push(nextState);
+    for (const edgeId of diag.ids ?? []) {
+      if (classifiedById.has(edgeId)) {
+        problemEdgeIds.add(edgeId);
       }
     }
+  }
+
+  // Feedback is graph semantics, not a naming convention for generated IDs.
+  for (const edge of evalResult.classifiedEdges) {
+    if (edge.role === "feedback" || edge.isCycle) {
+      problemEdgeIds.add(edge.id);
+    }
+  }
+
+  const candidateQueues = Array.from(problemEdgeIds)
+    .sort()
+    .map((edgeId) => {
+      const routed = routesByEdgeId.get(edgeId);
+      const currentSide =
+        state.sideAssignments.get(edgeId) ??
+        (routed
+          ? { srcSide: routed.sourcePort.side, tgtSide: routed.targetPort.side }
+          : { srcSide: "bottom" as Side, tgtSide: "top" as Side });
+      const classified = classifiedById.get(edgeId);
+      return {
+        edgeId,
+        alternatives: sideAlternatives(currentSide, classified?.role, Boolean(classified?.isCycle)),
+      };
+    });
+
+  // Round-robin candidates so a diagnostic affecting multiple edges gives each
+  // edge one deterministic opportunity before either receives a second move.
+  for (let alternativeIndex = 0; neighbors.length < maxNeighbors; alternativeIndex++) {
+    let addedInRound = false;
+    for (const queue of candidateQueues) {
+      if (neighbors.length >= maxNeighbors) break;
+      const alternative = queue.alternatives[alternativeIndex];
+      if (!alternative) continue;
+
+      const nextState = cloneSearchState(state);
+      nextState.sideAssignments.set(queue.edgeId, alternative);
+      neighbors.push(nextState);
+      addedInRound = true;
+    }
+    if (!addedInRound) break;
   }
 
   // 2. Generate Port Order Moves for node sides with 2+ attachments

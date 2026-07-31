@@ -16,6 +16,7 @@ import type {
   Point,
   PortRef,
   RoutedPath,
+  ClassifiedEdge,
 } from "./types";
 
 export interface StateEvaluationResult {
@@ -27,6 +28,7 @@ export interface StateEvaluationResult {
   badges: BadgePlacement[];
   allPortRefs: PortRef[];
   exactDemands: ExactSpacingDemand[];
+  classifiedEdges: ClassifiedEdge[];
 }
 
 export function evaluateSearchState(
@@ -50,6 +52,7 @@ export function evaluateSearchState(
 
   let routerResult = routeAllEdges(nodeLayout, config, {
     sideAssignments: state.sideAssignments,
+    portOrders: state.portOrders,
   });
 
   let badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
@@ -91,6 +94,7 @@ export function evaluateSearchState(
 
       routerResult = routeAllEdges(nodeLayout, config, {
         sideAssignments: state.sideAssignments,
+        portOrders: state.portOrders,
       });
 
       badgeResult = placeEdgeBadges(routerResult.routes, nodeLayout, config);
@@ -141,5 +145,6 @@ export function evaluateSearchState(
     badges: badgeResult.placements,
     allPortRefs,
     exactDemands: currentDemands,
+    classifiedEdges: nodeLayout.classifiedEdges,
   };
 }

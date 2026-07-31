@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../../../features/GraphTesting/data/customLayoutScenarios";
 import { computeCustomLayout } from "./computeCustomLayout";
 import { DEFAULT_CUSTOM_LAYOUT_CONFIG, type CustomLayoutConfig } from "./config";
-import { simplifyOrthogonalPath } from "./geometry";
-import { buildLayoutScore, compareLayoutScore } from "./layoutObjective";
+import { expandRect, segmentIntersectsRectInterior, simplifyOrthogonalPath } from "./geometry";
+import { buildLayoutScore, compareLayoutScore, countPathHairpins } from "./layoutObjective";
 import type { BadgePlacement, NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
 
 function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig>) {
@@ -87,7 +87,59 @@ function isDirectlyAssociatedBadge(badge: BadgePlacement, route: RoutedPath): bo
   return false;
 }
 
+function badgeOtherRouteIntersections(badges: BadgePlacement[], routes: RoutedPath[]): string[] {
+  const intersections: string[] = [];
+  for (const badge of badges) {
+    for (const route of routes) {
+      if (route.edgeId === badge.edgeId) continue;
+      for (let index = 0; index < route.points.length - 1; index++) {
+        if (
+          segmentIntersectsRectInterior(
+            { a: route.points[index], b: route.points[index + 1] },
+            badge.rect,
+          )
+        ) {
+          intersections.push(`${badge.edgeId}:${route.edgeId}:${index}`);
+        }
+      }
+    }
+  }
+  return intersections.sort();
+}
+
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
+  it("keeps badges out of every non-owner route in collision scenarios", () => {
+    for (const scenarioId of [8, 9, 12, 14, 19, 20]) {
+      const { result } = computeScenario(scenarioId);
+      expect(badgeOtherRouteIntersections(result.badges, result.edges)).toEqual([]);
+    }
+  }, 60000);
+
+  it("routes Scenario #11 feedback through an outer corridor without entering Node B", () => {
+    const { edges, result } = computeScenario(11);
+    const feedbackEdge = edges.find((edge) => edge.layoutRole === "feedback" || edge.isCycle);
+    expect(feedbackEdge).toBeDefined();
+    const route = result.edges.find((candidate) => candidate.edgeId === feedbackEdge?.id);
+    const nodeB = result.nodes.find((node) => node.id === "B");
+    expect(route).toBeDefined();
+    expect(nodeB).toBeDefined();
+    expect(["left", "right"]).toContain(route?.targetPort.side);
+
+    if (route && nodeB) {
+      const expandedNodeB = expandRect(nodeB, DEFAULT_CUSTOM_LAYOUT_CONFIG.obstacleClearance);
+      for (let index = 0; index < route.points.length - 1; index++) {
+        expect(
+          segmentIntersectsRectInterior(
+            { a: route.points[index], b: route.points[index + 1] },
+            expandedNodeB,
+          ),
+        ).toBe(false);
+      }
+
+      expect(countPathHairpins(route.points)).toBeLessThanOrEqual(1);
+    }
+  }, 60000);
+
   it("returns complete routes and required badges for every testing scenario", () => {
     for (const scenario of Object.values(CUSTOM_LAYOUT_SCENARIOS)) {
       const { edges, result } = computeScenario(scenario.id);

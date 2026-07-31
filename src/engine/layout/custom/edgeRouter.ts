@@ -32,6 +32,7 @@ export interface EdgeRouterResult {
 
 export interface EdgeRouterOptions {
   sideAssignments?: Map<string, PortSideAssignment>;
+  portOrders?: Record<string, string[]>;
 }
 
 interface EdgeSortMeta {
@@ -200,7 +201,13 @@ export function routeAllEdges(
     }
   }
 
-  const portDistributionResult = distributePorts(nonSelfEdges, sideAssignmentsMap, nodeMap, config);
+  const portDistributionResult = distributePorts(
+    nonSelfEdges,
+    sideAssignmentsMap,
+    nodeMap,
+    config,
+    options?.portOrders,
+  );
 
   // Collect all ports for grid construction
   const allPortRefs: PortRef[] = [];

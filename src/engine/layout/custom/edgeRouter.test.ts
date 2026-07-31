@@ -7,6 +7,34 @@ import { computeNodeLayout } from "./nodeLayout";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("edgeRouter", () => {
+  it("uses explicit port orders when distributing edge endpoints", () => {
+    const config = resolveCustomLayoutConfig({ portEndpointPadding: 0 });
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 300, height: 60 },
+      { id: "B", width: 100, height: 60 },
+      { id: "C", width: 100, height: 60 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e-A-B", source: "A", target: "B" },
+      { id: "e-A-C", source: "A", target: "C" },
+    ];
+    const nodeLayout = computeNodeLayout(nodes, edges, config);
+
+    const result = routeAllEdges(nodeLayout, config, {
+      sideAssignments: new Map([
+        ["e-A-B", { srcSide: "bottom", tgtSide: "top" }],
+        ["e-A-C", { srcSide: "bottom", tgtSide: "top" }],
+      ]),
+      portOrders: { "A:bottom": ["e-A-C:src", "e-A-B:src"] },
+    });
+
+    const aToB = result.routes.find((route) => route.edgeId === "e-A-B");
+    const aToC = result.routes.find((route) => route.edgeId === "e-A-C");
+    expect(aToB).toBeDefined();
+    expect(aToC).toBeDefined();
+    expect(aToC!.sourcePort.index).toBe(0);
+    expect(aToB!.sourcePort.index).toBe(1);
+  });
   it("generates permutations deterministically up to limit", () => {
     const items = ["e1", "e2", "e3"];
     const perms = generatePermutations(items, 10);

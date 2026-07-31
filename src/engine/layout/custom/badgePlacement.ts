@@ -134,23 +134,24 @@ export function generateBadgeCandidates(
       if (rectsOverlapStrict(bRect, pRect, config.epsilon)) return;
     }
 
-    let score = ring * 1000 + ratioPenalty * 50;
-
-    // Soft penalty for intersecting unrelated edge segments
+    // A label may touch only its own route. An unrelated edge crossing the
+    // rectangle is not an aesthetic preference: it makes the candidate illegal.
     for (const uSeg of unrelatedSegments) {
       if (segmentIntersectsRectInterior(uSeg, bRect, config.epsilon)) {
-        score += 500;
+        return;
       }
     }
+
+    let score = ring * 1000 + ratioPenalty * 50;
 
     let leaderPoints: Point[] | undefined = undefined;
     const isOffset =
       Math.abs(anchor.x - center.x) > config.epsilon ||
       Math.abs(anchor.y - center.y) > config.epsilon;
 
-    if (!allowLeaders) {
-      if (ring > 3 || isExterior) return;
-    } else if (isOffset) {
+    if (!allowLeaders && isOffset) return;
+
+    if (allowLeaders && isOffset) {
       const shape1 = simplifyOrthogonalPath(
         [anchor, { x: center.x, y: anchor.y }, center],
         config.epsilon,
@@ -286,21 +287,8 @@ export function generateBadgeCandidates(
     }
   }
 
-  // Sort candidates deterministically
-  if (candidates.length === 0 && anchorSpecs.length > 0) {
-    const defaultAnchor = anchorSpecs[0].anchor;
-    candidates.push({
-      point: defaultAnchor,
-      rect: {
-        x: defaultAnchor.x - badgeDim.width / 2,
-        y: defaultAnchor.y - badgeDim.height / 2,
-        width: badgeDim.width,
-        height: badgeDim.height,
-      },
-      score: 1000,
-    });
-  }
-
+  // Sort candidates deterministically. Returning no candidate lets the caller
+  // request space instead of manufacturing an unchecked overlapping label.
   candidates.sort((a, b) => {
     if (Math.abs(a.score - b.score) > config.epsilon) {
       return a.score - b.score;
@@ -367,7 +355,7 @@ function createBadgeSpacingRequest(
   const rankVal =
     srcRank !== undefined && tgtRank !== undefined
       ? Math.min(srcRank, tgtRank)
-      : srcRank ?? tgtRank;
+      : (srcRank ?? tgtRank);
 
   return {
     edgeId: edge.id,
@@ -459,7 +447,7 @@ export function placeEdgeBadges(
     const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
     const role = edge.layoutRole ?? classifiedRole;
     const isFeedbackOrSelf = role === "feedback" || role === "self" || isCycle;
-    const allowLeaders = true;
+    const allowLeaders = isFeedbackOrSelf;
 
     const unrelatedSegments: Segment[] = [];
     for (const [eId, segs] of routeSegmentsMap.entries()) {
