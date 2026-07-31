@@ -25,7 +25,7 @@ if (typeof window === "undefined") {
 }
 
 describe("GraphCanvas Storage Integration", () => {
-  it("loads layout from storage instantly on signature hit", () => {
+  it("loads layout from storage instantly on mode and signature hit", () => {
     const dataset: GraphDataset = {
       id: "test-ds",
       title: "Test Dataset",
@@ -39,10 +39,13 @@ describe("GraphCanvas Storage Integration", () => {
       edges: [],
     };
 
-    saveStoredLayout(sig, layout);
-    const cached = loadStoredLayout(sig);
+    saveStoredLayout("top-down", sig, layout);
+    const cachedTopDown = loadStoredLayout("top-down", sig);
+    const cachedLeftRight = loadStoredLayout("left-right", sig);
 
-    expect(cached).not.toBeNull();
-    expect(cached?.nodes[0].x).toBe(50);
+    expect(cachedTopDown).not.toBeNull();
+    expect(cachedTopDown?.nodes[0].x).toBe(50);
+    expect(cachedLeftRight).toBeNull();
   });
 });
+

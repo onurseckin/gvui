@@ -48,7 +48,7 @@ export const GraphCanvas: FC = () => {
     }
 
     const signature = generateDatasetSignature(dataset);
-    const stored = loadStoredLayout(signature);
+    const stored = loadStoredLayout(layoutMode, signature);
 
     if (stored) {
       setPositionedGraph(stored.nodes, stored.edges);
@@ -77,7 +77,7 @@ export const GraphCanvas: FC = () => {
         .then(({ nodes, edges }) => {
           if (!isSubscribed) return;
           setProgressState(deriveProgressState(4, 5, "Computing A* routes..."));
-          saveStoredLayout(signature, { nodes, edges });
+          saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
           if (shouldAutoFit) {
             const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
@@ -92,7 +92,7 @@ export const GraphCanvas: FC = () => {
           if (err.name !== "AbortError") {
             const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
             if (isSubscribed) {
-              saveStoredLayout(signature, { nodes, edges });
+              saveStoredLayout(layoutMode, signature, { nodes, edges });
               setPositionedGraph(nodes, edges);
               if (shouldAutoFit) {
                 const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
@@ -108,7 +108,7 @@ export const GraphCanvas: FC = () => {
       setProgressState(deriveProgressState(3, 5, "Computing layout..."));
       const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
       if (isSubscribed) {
-        saveStoredLayout(signature, { nodes, edges });
+        saveStoredLayout(layoutMode, signature, { nodes, edges });
         setPositionedGraph(nodes, edges);
         if (shouldAutoFit) {
           const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);

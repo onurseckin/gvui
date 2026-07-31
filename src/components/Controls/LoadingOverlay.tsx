@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { CircularProgressLoader } from "./CircularProgressLoader";
 import "./LoadingOverlay.css";
 
 export interface LoadingOverlayProps {
@@ -29,16 +30,12 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
   return (
     <div className="loading-overlay-backdrop">
       <div className="loading-overlay-card">
-        <div className="loading-overlay-header">
-          <span className="loading-overlay-title">{stageText}</span>
-          <span className="loading-overlay-percent">{Math.round(safePercent)}%</span>
+        <div className="loading-overlay-top-ring" style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+          <CircularProgressLoader percent={safePercent} size={110} strokeWidth={8} />
         </div>
 
-        <div className="loading-progress-track">
-          <div
-            className="loading-progress-fill"
-            style={{ width: `${safePercent}%` }}
-          />
+        <div className="loading-overlay-header">
+          <span className="loading-overlay-title">{stageText}</span>
         </div>
 
         <div className="loading-stepper-container">
@@ -72,3 +69,4 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
     </div>
   );
 };
+
