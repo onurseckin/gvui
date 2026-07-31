@@ -5,7 +5,7 @@ import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)", () => {
   Object.values(CUSTOM_LAYOUT_SCENARIOS).forEach((scenario) => {
-    it(`Scenario #${scenario.id} ("${scenario.title}"): asserts 100% valid layout with zero hard failures`, () => {
+    it(`Scenario #${scenario.id} ("${scenario.title}"): asserts 100% valid layout with zero hard failures`, async () => {
       const normalizedNodes: NormalizedNode[] = scenario.nodes.map((n) => ({
         id: n.id,
         label: n.name,
@@ -21,7 +21,7 @@ describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)",
         layoutRole: e.layoutRole,
       }));
 
-      const result = computeCustomLayout(normalizedNodes, normalizedEdges);
+      const result = await computeCustomLayout(normalizedNodes, normalizedEdges);
 
       // Node, Edge, and Badge Count Assertions
       expect(result.nodes.length).toBe(scenario.nodes.length);
@@ -65,7 +65,7 @@ describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)",
       // Determinism Assertion: Shuffled input order produces deeply equal results
       const shuffledNodes = [...normalizedNodes].reverse();
       const shuffledEdges = [...normalizedEdges].reverse();
-      const shuffledResult = computeCustomLayout(shuffledNodes, shuffledEdges);
+      const shuffledResult = await computeCustomLayout(shuffledNodes, shuffledEdges);
 
       expect(shuffledResult.nodes).toEqual(result.nodes);
       expect(shuffledResult.edges).toEqual(result.edges);

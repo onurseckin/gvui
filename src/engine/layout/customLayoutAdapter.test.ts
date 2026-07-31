@@ -3,7 +3,7 @@ import { computeCustomEngineGraphLayout, computeCustomEngineGraphLayoutAsync } f
 import type { GraphDataset } from "../../types/graphData";
 
 describe("computeCustomEngineGraphLayout", () => {
-  it("computes positioned nodes and edges for a standard application GraphDataset", () => {
+  it("computes positioned nodes and edges for a standard application GraphDataset", async () => {
     const dataset: GraphDataset = {
       id: "test-ds-1",
       title: "Test AI Agent Pipeline",
@@ -18,7 +18,7 @@ describe("computeCustomEngineGraphLayout", () => {
       ],
     };
 
-    const result = computeCustomEngineGraphLayout(dataset);
+    const result = await computeCustomEngineGraphLayout(dataset);
 
     expect(result.nodes).toHaveLength(3);
     expect(result.edges).toHaveLength(2);
@@ -37,7 +37,7 @@ describe("computeCustomEngineGraphLayout", () => {
     }
   });
 
-  it("handles empty dataset gracefully", () => {
+  it("handles empty dataset gracefully", async () => {
     const dataset: GraphDataset = {
       id: "empty",
       title: "Empty Graph",
@@ -45,7 +45,7 @@ describe("computeCustomEngineGraphLayout", () => {
       edges: [],
     };
 
-    const result = computeCustomEngineGraphLayout(dataset);
+    const result = await computeCustomEngineGraphLayout(dataset);
     expect(result.nodes).toEqual([]);
     expect(result.edges).toEqual([]);
   });

@@ -7,7 +7,7 @@ import { buildLayoutScore, compareLayoutScore, countPathHairpins } from "./layou
 import { requiredSameRankBadgeGap } from "./spacingDemand";
 import type { BadgePlacement, NormalizedEdge, NormalizedNode, RoutedPath } from "./types";
 
-function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig>) {
+async function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig>) {
   const scenario = Object.values(CUSTOM_LAYOUT_SCENARIOS).find((s) => s.id === id);
   if (!scenario) throw new Error(`Missing scenario ${id}`);
   const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({
@@ -24,7 +24,7 @@ function computeScenario(id: number, configOverride?: Partial<CustomLayoutConfig
     isCycle: e.isCycle,
     layoutRole: e.layoutRole,
   }));
-  return { scenario, nodes, edges, result: computeCustomLayout(nodes, edges, configOverride) };
+  return { scenario, nodes, edges, result: await computeCustomLayout(nodes, edges, configOverride) };
 }
 
 function findRouteByLabel(
@@ -160,9 +160,9 @@ function isSameRankK2x2OuterDetour(
 }
 
 describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
-  it("keeps badges out of every non-owner route in collision scenarios", () => {
+  it("keeps badges out of every non-owner route in collision scenarios", async () => {
     for (const scenarioId of [8, 9, 12, 14, 19, 20]) {
-      const { edges, result } = computeScenario(scenarioId);
+      const { edges, result } = await computeScenario(scenarioId);
       const requiredBadgeCount = edges.filter(
         (edge) => edge.isCycle || (edge.label?.trim().length ?? 0) > 0,
       ).length;
@@ -175,8 +175,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
     }
   }, 60000);
 
-  it("routes Scenario #11 feedback through an outer corridor without entering Node B", () => {
-    const { edges, result } = computeScenario(11);
+  it("routes Scenario #11 feedback through an outer corridor without entering Node B", async () => {
+    const { edges, result } = await computeScenario(11);
     const feedbackEdge = edges.find((edge) => edge.layoutRole === "feedback" || edge.isCycle);
     expect(feedbackEdge).toBeDefined();
     const route = result.edges.find((candidate) => candidate.edgeId === feedbackEdge?.id);
@@ -200,9 +200,9 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
     }
   }, 60000);
 
-  it("bounds deterministic expansion work for cyclic scenarios #11 and #13", () => {
-    const scenario11 = computeScenario(11);
-    const scenario13 = computeScenario(13);
+  it("bounds deterministic expansion work for cyclic scenarios #11 and #13", async () => {
+    const scenario11 = await computeScenario(11);
+    const scenario13 = await computeScenario(13);
 
     expect(scenario11.result.edges).toHaveLength(scenario11.edges.length);
     expect(scenario13.result.edges).toHaveLength(scenario13.edges.length);
@@ -212,9 +212,9 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
     expect(sumExpandedStates(scenario13.result.edges)).toBeLessThanOrEqual(10_000);
   }, 60000);
 
-  it("returns complete routes and required badges for every testing scenario", () => {
+  it("returns complete routes and required badges for every testing scenario", async () => {
     for (const scenario of Object.values(CUSTOM_LAYOUT_SCENARIOS)) {
-      const { edges, result } = computeScenario(scenario.id);
+      const { edges, result } = await computeScenario(scenario.id);
       expect(result.edges).toHaveLength(edges.length);
       expect(result.validation.metrics.unresolvedRouteCount).toBe(0);
       expect(result.validation.metrics.unresolvedBadgeCount).toBe(0);
@@ -222,8 +222,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   }, 120000);
 
   describe("Scenario #5 (Fan-Out 8-Node Broadcaster)", () => {
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { edges, result } = computeScenario(5);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { edges, result } = await computeScenario(5);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -238,8 +238,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #6 (Fan-In 8-Node Collector)", () => {
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { result } = computeScenario(6);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { result } = await computeScenario(6);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -264,8 +264,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #8 (Same-Rank Cross-Link)", () => {
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { result } = computeScenario(8);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { result } = await computeScenario(8);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBeLessThanOrEqual(1);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -305,8 +305,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #14 (Parallel Multi-Edges)", () => {
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { result } = computeScenario(14);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { result } = await computeScenario(14);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -323,8 +323,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #16 (Dense Edge Badges)", () => {
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { result } = computeScenario(16);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { result } = await computeScenario(16);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBeLessThanOrEqual(1);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -347,12 +347,12 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
   });
 
   describe("Scenario #20 (Full DevOps Microservice Mesh)", () => {
-    it("bounds the aesthetic portfolio without reopening the broad frontier", () => {
+    it("bounds the aesthetic portfolio without reopening the broad frontier", async () => {
       const startedAt = performance.now();
-      const { nodes, edges, result } = computeScenario(20);
+      const { nodes, edges, result } = await computeScenario(20);
       const forwardDuration = performance.now() - startedAt;
       const reversedStartedAt = performance.now();
-      const reversed = computeCustomLayout([...nodes].reverse(), [...edges].reverse());
+      const reversed = await computeCustomLayout([...nodes].reverse(), [...edges].reverse());
       const reversedDuration = performance.now() - reversedStartedAt;
 
       for (const candidate of [result, reversed]) {
@@ -377,10 +377,10 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       expect(reversed.validation.metrics).toEqual(result.validation.metrics);
     }, 45000);
 
-    it("reaches the bounded crossing-free repair deterministically", () => {
+    it("reaches the bounded crossing-free repair deterministically", async () => {
       const config = { maxLayoutStates: 8, maxFrontierSize: 8 };
-      const { nodes, edges, result } = computeScenario(20, config);
-      const reversed = computeCustomLayout([...nodes].reverse(), [...edges].reverse(), config);
+      const { nodes, edges, result } = await computeScenario(20, config);
+      const reversed = await computeCustomLayout([...nodes].reverse(), [...edges].reverse(), config);
 
       expect(result.edges).toHaveLength(12);
       expect(result.badges).toHaveLength(12);
@@ -403,8 +403,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
       expect(reversed.validation.metrics).toEqual(result.validation.metrics);
     }, 45000);
 
-    it("meets V3 aesthetic acceptance criteria", () => {
-      const { edges, result } = computeScenario(20);
+    it("meets V3 aesthetic acceptance criteria", async () => {
+      const { edges, result } = await computeScenario(20);
       expect(result.validation.isValid).toBe(true);
       expect(result.validation.metrics.ordinaryLeaderCount).toBe(0);
       expect(result.validation.metrics.crossingCount).toBe(0);
@@ -448,8 +448,8 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
 
   describe("All 20 CUSTOM_LAYOUT_SCENARIOS Acceptance & Non-Regression Gate", () => {
     for (let id = 1; id <= 20; id++) {
-      it(`scenario #${id} satisfies V3 acceptance, zero ordinary leaders, score non-regression, and port uniqueness`, () => {
-        const { nodes, edges, result } = computeScenario(id);
+      it(`scenario #${id} satisfies V3 acceptance, zero ordinary leaders, score non-regression, and port uniqueness`, async () => {
+        const { nodes, edges, result } = await computeScenario(id);
         expect(result.status).not.toBe("invalid_hard_failure");
         expect(result.validation.metrics.ordinaryLeaderCount ?? 0).toBeLessThanOrEqual(1);
         assertUniquePortsPerNode(result.edges);
@@ -463,7 +463,7 @@ describe("Custom Layout V3 Aesthetic Acceptance Suite", () => {
           }
         }
 
-        const initialResult = computeCustomLayout(nodes, edges, { maxGlobalPasses: 1 });
+        const initialResult = await computeCustomLayout(nodes, edges, { maxGlobalPasses: 1 });
         const edgeRoles = new Map<string, "feedback" | "forward" | "self" | "cross">(
           edges.map((e) => [
             e.id,

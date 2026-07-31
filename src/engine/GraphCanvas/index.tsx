@@ -93,35 +93,37 @@ export const GraphCanvas: FC = () => {
         })
         .catch((err) => {
           if (err.name !== "AbortError") {
-            const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
-            if (isSubscribed) {
-              saveStoredLayout(layoutMode, signature, { nodes, edges });
-              setPositionedGraph(nodes, edges);
-              if (shouldAutoFit) {
-                const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
-                setZoomLevel(fitResult.zoomLevel);
-                setPanOffset(fitResult.panOffset);
-                setShouldAutoFit(false);
+            void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
+              if (isSubscribed) {
+                saveStoredLayout(layoutMode, signature, { nodes, edges });
+                setPositionedGraph(nodes, edges);
+                if (shouldAutoFit) {
+                  const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+                  setZoomLevel(fitResult.zoomLevel);
+                  setPanOffset(fitResult.panOffset);
+                  setShouldAutoFit(false);
+                }
+                setIsCalculating(false);
               }
-              setIsCalculating(false);
-            }
+            });
           }
         });
     } else {
       setProgressState(deriveProgressState(3, 5, "Computing layout..."));
-      const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
-      if (isSubscribed) {
-        saveStoredLayout(layoutMode, signature, { nodes, edges });
-        setPositionedGraph(nodes, edges);
-        if (shouldAutoFit) {
-          const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
-          setZoomLevel(fitResult.zoomLevel);
-          setPanOffset(fitResult.panOffset);
-          setShouldAutoFit(false);
+      void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
+        if (isSubscribed) {
+          saveStoredLayout(layoutMode, signature, { nodes, edges });
+          setPositionedGraph(nodes, edges);
+          if (shouldAutoFit) {
+            const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+            setZoomLevel(fitResult.zoomLevel);
+            setPanOffset(fitResult.panOffset);
+            setShouldAutoFit(false);
+          }
+          setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
+          setIsCalculating(false);
         }
-        setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
-        setIsCalculating(false);
-      }
+      });
     }
 
     return () => {

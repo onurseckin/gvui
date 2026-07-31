@@ -3,14 +3,14 @@ import { computeCustomLayout } from "./computeCustomLayout";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("computeCustomLayout", () => {
-  it("computes complete layout result with node positions, edge routes, and validation metrics", () => {
+  it("computes complete layout result with node positions, edge routes, and validation metrics", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
 
-    const result = computeCustomLayout(nodes, edges);
+    const result = await computeCustomLayout(nodes, edges);
 
     expect(result.nodes.length).toBe(2);
     expect(result.edges.length).toBe(1);
@@ -18,7 +18,7 @@ describe("computeCustomLayout", () => {
     expect(result.status).toBe("success");
   });
 
-  it("routes public engine through optimizer to resolve route and badge conflicts in multi-pass pipeline", () => {
+  it("routes public engine through optimizer to resolve route and badge conflicts in multi-pass pipeline", async () => {
     const nodes: NormalizedNode[] = [
       { id: "N1", width: 100, height: 50 },
       { id: "N2", width: 100, height: 50 },
@@ -32,7 +32,7 @@ describe("computeCustomLayout", () => {
       { id: "e4", source: "N2", target: "N3", label: "Route4" },
     ];
 
-    const result = computeCustomLayout(nodes, edges, { maxGlobalPasses: 5 });
+    const result = await computeCustomLayout(nodes, edges, { maxGlobalPasses: 5 });
 
     expect(result.nodes).toHaveLength(4);
     expect(result.edges).toHaveLength(4);
@@ -42,7 +42,7 @@ describe("computeCustomLayout", () => {
     expect(Array.isArray(result.crossings)).toBe(true);
   });
 
-  it("exercises maxGlobalPasses bound and returns best historical layout on failure", () => {
+  it("exercises maxGlobalPasses bound and returns best historical layout on failure", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 400, height: 400 },
       { id: "B", width: 400, height: 400 },
@@ -53,7 +53,7 @@ describe("computeCustomLayout", () => {
       { id: "e3", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE_3" },
     ];
 
-    const result = computeCustomLayout(nodes, edges, {
+    const result = await computeCustomLayout(nodes, edges, {
       nodeGap: 2,
       rankGap: 2,
       badgeClearance: 100,
@@ -68,14 +68,14 @@ describe("computeCustomLayout", () => {
     expect(result.validation.isValid).toBe(true);
   });
 
-  it("forwards optimizationStats on CustomLayoutResult", () => {
+  it("forwards optimizationStats on CustomLayoutResult", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
 
-    const result = computeCustomLayout(nodes, edges);
+    const result = await computeCustomLayout(nodes, edges);
 
     expect(result.optimizationStats).toBeDefined();
     expect(result.optimizationStats?.globalPasses).toBeGreaterThanOrEqual(1);

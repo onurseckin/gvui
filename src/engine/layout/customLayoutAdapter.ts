@@ -63,10 +63,10 @@ function mapLayoutResultToPositioned(
  * and maps the resulting node positions, orthogonal edge SVG paths, crossing bridges, and badge locations
  * back to standard PositionedNode and PositionedEdge outputs for rendering on GraphCanvas.
  */
-export function computeCustomEngineGraphLayout(dataset: GraphDataset): {
+export async function computeCustomEngineGraphLayout(dataset: GraphDataset): Promise<{
   nodes: PositionedNode[];
   edges: PositionedEdge[];
-} {
+}> {
   if (!dataset || dataset.nodes.length === 0) {
     return { nodes: [], edges: [] };
   }
@@ -89,7 +89,7 @@ export function computeCustomEngineGraphLayout(dataset: GraphDataset): {
     isCycle: edge.isCycle,
   }));
 
-  const layoutResult = computeCustomLayout(normalizedNodes, normalizedEdges);
+  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges);
   return mapLayoutResultToPositioned(dataset, layoutResult);
 }
 

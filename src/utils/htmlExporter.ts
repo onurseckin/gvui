@@ -153,10 +153,10 @@ function generateNodeHtml(node: GraphNodeData, x: number, y: number, width: numb
   `;
 }
 
-export function exportGraphAsHTML(dataset: GraphDataset): void {
+export async function exportGraphAsHTML(dataset: GraphDataset): Promise<void> {
   if (!dataset) return;
 
-  const { nodes, edges } = computeGraphLayout(dataset, "top-down");
+  const { nodes, edges } = await computeGraphLayout(dataset, "top-down");
 
   let minX = Infinity;
   let maxX = -Infinity;

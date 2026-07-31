@@ -42,12 +42,12 @@ function assertFiniteCoordinates(result: CustomLayoutResult): void {
   }
 }
 
-function assertLayoutProperties(
+async function assertLayoutProperties(
   result: CustomLayoutResult,
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   initialResult?: CustomLayoutResult,
-): void {
+): Promise<void> {
   // 100% finite coordinates
   assertFiniteCoordinates(result);
 
@@ -103,7 +103,7 @@ function assertLayoutProperties(
   // Input reversal determinism
   const reversedNodes = [...nodes].reverse();
   const reversedEdges = [...edges].reverse();
-  const resultReversed = computeCustomLayout(reversedNodes, reversedEdges, CONFIG_OVERRIDE);
+  const resultReversed = await computeCustomLayout(reversedNodes, reversedEdges, CONFIG_OVERRIDE);
   expect(resultReversed.nodes).toEqual(result.nodes);
   expect(resultReversed.edges).toEqual(result.edges);
   expect(resultReversed.badges).toEqual(result.badges);
@@ -381,18 +381,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles random DAG generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateRandomDAG(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateRandomDAG(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,
@@ -406,18 +406,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles random cyclic graph generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateRandomCyclicGraph(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateRandomCyclicGraph(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,
@@ -431,18 +431,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles graph with variable node dimensions generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateVariableSizeNodesGraph(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateVariableSizeNodesGraph(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,
@@ -456,18 +456,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles dense multi-edge graph generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateDenseMultiEdgeGraph(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateDenseMultiEdgeGraph(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,
@@ -481,18 +481,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles high-degree hub graph generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateHubGraph(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateHubGraph(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,
@@ -506,18 +506,18 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     for (const seed of seeds) {
       it(
         `handles disconnected component graph generated with seed ${seed}`,
-        () => {
+        async () => {
           const { nodes, edges } = generateDisconnectedComponentsGraph(seed);
-          const initialResult = computeCustomLayout(nodes, edges, {
+          const initialResult = await computeCustomLayout(nodes, edges, {
             ...CONFIG_OVERRIDE,
             maxGlobalPasses: 1,
           });
-          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
+          const result1 = await computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-          assertLayoutProperties(result1, nodes, edges, initialResult);
+          await assertLayoutProperties(result1, nodes, edges, initialResult);
 
           const { nodes: nodes2, edges: edges2 } = generateDisconnectedComponentsGraph(seed);
-          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          const result2 = await computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
           expect(result1).toEqual(result2);
         },
         TEST_TIMEOUT_MS,

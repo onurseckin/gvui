@@ -3,8 +3,8 @@ import { hasAestheticDefect, optimizeLayout } from "./optimizeLayout";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("optimizeLayout", () => {
-  it("treats excess bends as an unresolved aesthetic defect", () => {
-    const result = optimizeLayout(
+  it("treats excess bends as an unresolved aesthetic defect", async () => {
+    const result = await optimizeLayout(
       [
         { id: "A", width: 100, height: 50 },
         { id: "B", width: 100, height: 50 },
@@ -23,7 +23,7 @@ describe("optimizeLayout", () => {
     ).toBe(true);
   });
 
-  it("handles local badge retry for edge badges in tight layouts", () => {
+  it("handles local badge retry for edge badges in tight layouts", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 120, height: 60 },
       { id: "B", width: 120, height: 60 },
@@ -35,7 +35,7 @@ describe("optimizeLayout", () => {
       { id: "e3", source: "B", target: "C", label: "Very Long Badge Label Gamma" },
     ];
 
-    const result = optimizeLayout(nodes, edges);
+    const result = await optimizeLayout(nodes, edges);
 
     expect(result.nodes).toHaveLength(3);
     expect(result.edges).toHaveLength(3);
@@ -44,7 +44,7 @@ describe("optimizeLayout", () => {
     expect(result.status).toBe("success");
   });
 
-  it("performs route retry by rotating port candidates on conflicts", () => {
+  it("performs route retry by rotating port candidates on conflicts", async () => {
     const nodes: NormalizedNode[] = [
       { id: "N1", width: 100, height: 50 },
       { id: "N2", width: 100, height: 50 },
@@ -58,14 +58,14 @@ describe("optimizeLayout", () => {
       { id: "e4", source: "N2", target: "N3", label: "Route4" },
     ];
 
-    const result = optimizeLayout(nodes, edges, { maxGlobalPasses: 5 });
+    const result = await optimizeLayout(nodes, edges, { maxGlobalPasses: 5 });
 
     expect(result.edges.length).toBeGreaterThanOrEqual(3);
     expect(result.validation.diagnostics.filter((d) => d.severity === "error").length).toBe(0);
     expect(result.validation.isValid).toBe(true);
   });
 
-  it("expands spacing via SpacingOverrides when badges cannot fit initially", () => {
+  it("expands spacing via SpacingOverrides when badges cannot fit initially", async () => {
     const nodes: NormalizedNode[] = [
       { id: "R1", width: 140, height: 60 },
       { id: "R2", width: 140, height: 60 },
@@ -79,7 +79,7 @@ describe("optimizeLayout", () => {
       },
     ];
 
-    const result = optimizeLayout(nodes, edges, { nodeGap: 20, rankGap: 20 });
+    const result = await optimizeLayout(nodes, edges, { nodeGap: 20, rankGap: 20 });
 
     if (!result.validation.isValid) {
       console.log("TEST 3 DIAGNOSTICS:", JSON.stringify(result.validation.diagnostics, null, 2));
@@ -90,21 +90,21 @@ describe("optimizeLayout", () => {
     expect(result.nodes.length).toBe(2);
   });
 
-  it("preserves the lexicographically best result across multiple passes", () => {
+  it("preserves the lexicographically best result across multiple passes", async () => {
     const nodes: NormalizedNode[] = [
       { id: "X", width: 100, height: 50 },
       { id: "Y", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "X", target: "Y", label: "Simple" }];
 
-    const result = optimizeLayout(nodes, edges, { maxGlobalPasses: 4 });
+    const result = await optimizeLayout(nodes, edges, { maxGlobalPasses: 4 });
 
     expect(result.validation.isValid).toBe(true);
     expect(result.status).toBe("success");
     expect(result.validation.metrics).toBeDefined();
   });
 
-  it("terminates optimization on repeated state hash without infinite looping", () => {
+  it("terminates optimization on repeated state hash without infinite looping", async () => {
     const nodes: NormalizedNode[] = [
       { id: "S1", width: 80, height: 40 },
       { id: "S2", width: 80, height: 40 },
@@ -113,13 +113,13 @@ describe("optimizeLayout", () => {
       { id: "e1", source: "S1", target: "S2", label: "StateHashTest" },
     ];
 
-    const result = optimizeLayout(nodes, edges, { maxGlobalPasses: 20 });
+    const result = await optimizeLayout(nodes, edges, { maxGlobalPasses: 20 });
 
     expect(result.validation.isValid).toBe(true);
     expect(result.status).toBe("success");
   });
 
-  it("continues search after initial hard-valid result to improve aesthetic score in multi-pass optimization", () => {
+  it("continues search after initial hard-valid result to improve aesthetic score in multi-pass optimization", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
@@ -131,35 +131,35 @@ describe("optimizeLayout", () => {
       { id: "e3", source: "B", target: "C", label: "Label 3" },
     ];
 
-    const result = optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
+    const result = await optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
 
     expect(result.validation.isValid).toBe(true);
     expect(result.optimizationStats).toBeDefined();
     expect(result.optimizationStats?.globalPasses).toBeGreaterThanOrEqual(1);
   });
 
-  it("ensures final layout score is never worse than initial layout score (non-regression)", () => {
+  it("ensures final layout score is never worse than initial layout score (non-regression)", async () => {
     const nodes: NormalizedNode[] = [
       { id: "N1", width: 100, height: 50 },
       { id: "N2", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "N1", target: "N2", label: "Check" }];
 
-    const initialResult = optimizeLayout(nodes, edges, { maxAestheticPasses: 1 });
+    const initialResult = await optimizeLayout(nodes, edges, { maxAestheticPasses: 1 });
     expect(initialResult.optimizationStats).toBeDefined();
 
-    const finalResult = optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
+    const finalResult = await optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
     expect(finalResult.optimizationStats).toBeDefined();
   });
 
-  it("populates optimizationStats on CustomLayoutResult with required properties", () => {
+  it("populates optimizationStats on CustomLayoutResult with required properties", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
 
-    const result = optimizeLayout(nodes, edges);
+    const result = await optimizeLayout(nodes, edges);
 
     expect(result.optimizationStats).toBeDefined();
     expect(typeof result.optimizationStats?.globalPasses).toBe("number");

@@ -131,13 +131,13 @@ function computeForceLayout(dataset: GraphDataset): {
 /**
  * Main layout dispatcher exporting layout calculations for all LayoutModes.
  */
-export function computeGraphLayout(
+export async function computeGraphLayout(
   dataset: GraphDataset,
   mode: LayoutMode = "top-down",
-): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
+): Promise<{ nodes: PositionedNode[]; edges: PositionedEdge[] }> {
   switch (mode) {
     case "top-down":
-      return computeCustomEngineGraphLayout(dataset);
+      return await computeCustomEngineGraphLayout(dataset);
     case "left-right":
       return computeDagreLayout(dataset, "LR");
     case "force":
@@ -145,6 +145,6 @@ export function computeGraphLayout(
     case "radial":
       return computeRadialLayout(dataset);
     default:
-      return computeCustomEngineGraphLayout(dataset);
+      return await computeCustomEngineGraphLayout(dataset);
   }
 }
