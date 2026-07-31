@@ -1,6 +1,6 @@
 # 06. Codebase Reference Map & Asymptotic Bounds
 
-[← Previous: Dynamic Spacing Demands](./05-dynamic-spacing-demands.md) | [← Back to Custom State-Space Engine Overview](./README.md)
+[← Previous: Dynamic Spacing Demands](./05-dynamic-spacing-demands.md) | [← Back to Master Index](../README.md)
 
 This document provides complete asymptotic complexity derivations with concrete numerical calculations, source file line-anchor mappings, and executable test suite verification commands for the **Custom State-Space Layout Engine**.
 

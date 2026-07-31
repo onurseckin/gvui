@@ -1,6 +1,6 @@
 # 05. Dynamic Spacing Demands & Feedback Loops
 
-[← Previous: A* Orthogonal Edge Routing](./04-astar-orthogonal-routing.md) | [← Back to Custom State-Space Engine Overview](./README.md) | [Next: Codebase Reference Map & Line Anchors →](./06-codebase-reference-map.md)
+[← Previous: A* Orthogonal Edge Routing](./04-astar-orthogonal-routing.md) | [← Back to Master Index](../README.md) | [Next: Codebase Reference Map & Line Anchors →](./06-codebase-reference-map.md)
 
 This document presents a detailed pedagogical guide to the dynamic spacing demand feedback system and isotonic coordinate projection in the **Custom State-Space Layout Engine**.
 

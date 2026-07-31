@@ -1,6 +1,6 @@
 # 03. Barycentric Crossing Minimization
 
-[← Previous: Sugiyama Layering & Cycle Breaking](./02-sugiyama-layering-cycle-breaking.md) | [← Back to Custom State-Space Engine Overview](./README.md) | [Next: A* Orthogonal Edge Routing →](./04-astar-orthogonal-routing.md)
+[← Previous: Sugiyama Layering & Cycle Breaking](./02-sugiyama-layering-cycle-breaking.md) | [← Back to Master Index](../README.md) | [Next: A* Orthogonal Edge Routing →](./04-astar-orthogonal-routing.md)
 
 This document presents a rigorous mathematical and algorithmic breakdown of crossing minimization in the **Custom State-Space Layout Engine**.
 

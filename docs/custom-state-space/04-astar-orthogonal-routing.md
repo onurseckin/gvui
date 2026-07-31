@@ -1,6 +1,6 @@
 # 04. A* Orthogonal Edge Routing
 
-[← Previous: Barycentric Crossing Minimization](./03-barycentric-crossing-minimization.md) | [← Back to Custom State-Space Engine Overview](./README.md) | [Next: Dynamic Spacing Demands →](./05-dynamic-spacing-demands.md)
+[← Previous: Barycentric Crossing Minimization](./03-barycentric-crossing-minimization.md) | [← Back to Master Index](../README.md) | [Next: Dynamic Spacing Demands →](./05-dynamic-spacing-demands.md)
 
 This document provides a complete technical and mathematical breakdown of the 3D A* orthogonal edge routing engine in the **Custom State-Space Layout Engine**.
 
