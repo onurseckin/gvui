@@ -13,7 +13,7 @@ export interface TestNode {
 export interface TestEdge {
   source: string;
   target: string;
-  label: string;
+  label?: string;
   isCycle?: boolean;
 }
 
