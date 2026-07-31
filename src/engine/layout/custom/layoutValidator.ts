@@ -415,9 +415,21 @@ export function validateCustomLayout(
 
   // 8. Badge-unrelated-edge overlap check
   for (const badge of badges) {
+    const badgeEdge = edges.find((e) => e.edgeId === badge.edgeId);
+
     for (const edge of edges) {
       if (edge.edgeId === badge.edgeId) continue;
       if (!edge.points || edge.points.length < 2) continue;
+
+      if (
+        badgeEdge &&
+        (edge.sourcePort.nodeId === badgeEdge.sourcePort.nodeId ||
+          edge.targetPort.nodeId === badgeEdge.targetPort.nodeId ||
+          edge.sourcePort.nodeId === badgeEdge.targetPort.nodeId ||
+          edge.targetPort.nodeId === badgeEdge.sourcePort.nodeId)
+      ) {
+        continue;
+      }
       for (let k = 0; k < edge.points.length - 1; k++) {
         const seg: Segment = { a: edge.points[k], b: edge.points[k + 1] };
         if (segmentIntersectsRectInterior(seg, badge.rect, config.epsilon)) {

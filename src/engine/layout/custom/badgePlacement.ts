@@ -139,7 +139,7 @@ export function generateBadgeCandidates(
     // Soft penalty for intersecting unrelated edge segments
     for (const uSeg of unrelatedSegments) {
       if (segmentIntersectsRectInterior(uSeg, bRect, config.epsilon)) {
-        score += 200;
+        score += 500;
       }
     }
 
