@@ -5,6 +5,7 @@ import type { GraphDataset } from "../../types/graphData";
 describe("layoutDispatcher all 4 modes", () => {
   const sampleDataset: GraphDataset = {
     id: "sample-test-graph",
+    title: "Sample Test Graph",
     nodes: [
       { id: "A", name: "Node A" },
       { id: "B", name: "Node B" },
@@ -44,14 +45,14 @@ describe("layoutDispatcher all 4 modes", () => {
   });
 
   it("handles zero-node dataset safely without crashing", () => {
-    const emptyDataset: GraphDataset = { id: "empty", nodes: [], edges: [] };
+    const emptyDataset: GraphDataset = { id: "empty", title: "Empty", nodes: [], edges: [] };
     const res = computeGraphLayout(emptyDataset, "top-down");
     expect(res.nodes).toHaveLength(0);
     expect(res.edges).toHaveLength(0);
   });
 
   it("handles single-node dataset safely", () => {
-    const singleDataset: GraphDataset = { id: "single", nodes: [{ id: "n1", name: "Single" }], edges: [] };
+    const singleDataset: GraphDataset = { id: "single", title: "Single", nodes: [{ id: "n1", name: "Single" }], edges: [] };
     const res = computeGraphLayout(singleDataset, "top-down");
     expect(res.nodes).toHaveLength(1);
     expect(res.edges).toHaveLength(0);
