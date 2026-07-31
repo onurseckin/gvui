@@ -24,7 +24,6 @@ export const GraphCanvas: FC = () => {
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const activeFilter = useGraphStore((state) => state.activeFilter);
   const collapsedNodeIds = useGraphStore((state) => state.collapsedNodeIds);
-  const shouldAutoFit = useGraphStore((state) => state.shouldAutoFit);
 
   const setPositionedGraph = useGraphStore((state) => state.setPositionedGraph);
   const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
@@ -52,7 +51,7 @@ export const GraphCanvas: FC = () => {
 
     if (stored) {
       setPositionedGraph(stored.nodes, stored.edges);
-      if (shouldAutoFit) {
+      if (useGraphStore.getState().shouldAutoFit) {
         const fitResult = calculateFitView(stored.nodes, containerRef.current?.parentElement);
         setZoomLevel(fitResult.zoomLevel);
         setPanOffset(fitResult.panOffset);
@@ -82,7 +81,7 @@ export const GraphCanvas: FC = () => {
           setProgressState(deriveProgressState(4, 5, "Computing A* routes..."));
           saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
-          if (shouldAutoFit) {
+          if (useGraphStore.getState().shouldAutoFit) {
             const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
             setZoomLevel(fitResult.zoomLevel);
             setPanOffset(fitResult.panOffset);
@@ -92,12 +91,12 @@ export const GraphCanvas: FC = () => {
           setIsCalculating(false);
         })
         .catch((err) => {
-          if (err.name !== "AbortError") {
+          if (err.name !== "AbortError" && err.name !== "LayoutCancelledError") {
             void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
               if (isSubscribed) {
                 saveStoredLayout(layoutMode, signature, { nodes, edges });
                 setPositionedGraph(nodes, edges);
-                if (shouldAutoFit) {
+                if (useGraphStore.getState().shouldAutoFit) {
                   const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
                   setZoomLevel(fitResult.zoomLevel);
                   setPanOffset(fitResult.panOffset);
@@ -114,7 +113,7 @@ export const GraphCanvas: FC = () => {
         if (isSubscribed) {
           saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
-          if (shouldAutoFit) {
+          if (useGraphStore.getState().shouldAutoFit) {
             const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
             setZoomLevel(fitResult.zoomLevel);
             setPanOffset(fitResult.panOffset);
@@ -133,7 +132,6 @@ export const GraphCanvas: FC = () => {
   }, [
     dataset,
     layoutMode,
-    shouldAutoFit,
     containerRef,
     setPositionedGraph,
     setZoomLevel,
