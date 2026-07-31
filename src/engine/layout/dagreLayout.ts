@@ -452,7 +452,6 @@ export function computeDagreLayout(
   dataset: GraphDataset,
   direction: "TB" | "LR" = "TB",
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
-  const layoutMode = direction === "TB" ? "top-down" : "left-right";
   const g = new dagre.graphlib.Graph({ multigraph: true });
   g.setGraph({
     rankdir: direction,
@@ -495,215 +494,17 @@ export function computeDagreLayout(
 
   const positionedNodesMap = new Map<string, PositionedNode>(positionedNodes.map((n) => [n.id, n]));
 
-  // Group edges by undirected node pair key (source/target pair) for multi-edge parallel offsetting
-  const edgePairGroups = new Map<string, number[]>();
-  dataset.edges.forEach((edge, index) => {
-    const pairKey =
-      edge.source < edge.target
-        ? `${edge.source}---${edge.target}`
-        : `${edge.target}---${edge.source}`;
-    const group = edgePairGroups.get(pairKey) ?? [];
-    group.push(index);
-    edgePairGroups.set(pairKey, group);
-  });
-
-  const edgePairInfo = new Map<number, { groupIndex: number; groupTotal: number }>();
-  edgePairGroups.forEach((indices) => {
-    indices.forEach((edgeIdx, groupIndex) => {
-      edgePairInfo.set(edgeIdx, { groupIndex, groupTotal: indices.length });
-    });
-  });
-
-  const edgeNormals: Array<Point2D | undefined> = [];
-
-  // Mathematical Multi-Port Equal Spacing Pass
-  const sourcePorts = new Map<number, Point2D>();
-  const targetPorts = new Map<number, Point2D>();
-  const edgeSideInfo = new Map<number, { srcSide: NodeSide; tgtSide: NodeSide }>();
-
-  interface SideAttachment {
-    edgeIndex: number;
-    isSource: boolean;
-    otherNodeCenter: Point2D;
-  }
-
-  const nodeSideAttachments = new Map<string, SideAttachment[]>();
-
-  dataset.edges.forEach((edge, edgeIdx) => {
-    const srcNode = positionedNodesMap.get(edge.source);
-    const tgtNode = positionedNodesMap.get(edge.target);
-
-    if (srcNode && tgtNode) {
-      const srcCx = srcNode.x + srcNode.width / 2;
-      const srcCy = srcNode.y + srcNode.height / 2;
-      const tgtCx = tgtNode.x + tgtNode.width / 2;
-      const tgtCy = tgtNode.y + tgtNode.height / 2;
-
-      let srcSide: NodeSide;
-      let tgtSide: NodeSide;
-
-      if (edge.source === edge.target) {
-        srcSide = "Right";
-        tgtSide = "Top";
-      } else if (edge.isCycle) {
-        if (tgtCx <= srcCx) {
-          srcSide = "Left";
-          tgtSide = "Left";
-        } else {
-          srcSide = "Right";
-          tgtSide = "Right";
-        }
-      } else if (layoutMode === "top-down") {
-        const dy = tgtCy - srcCy;
-        const dx = tgtCx - srcCx;
-
-        if (dy > 30) {
-          srcSide = "Bottom";
-          tgtSide = "Top";
-        } else if (dy < -30) {
-          srcSide = "Top";
-          tgtSide = "Bottom";
-        } else if (dx >= 0) {
-          srcSide = "Right";
-          tgtSide = "Left";
-        } else {
-          srcSide = "Left";
-          tgtSide = "Right";
-        }
-      } else {
-        const dx = tgtCx - srcCx;
-        const dy = tgtCy - srcCy;
-
-        if (dx > 30) {
-          srcSide = "Right";
-          tgtSide = "Left";
-        } else if (dx < -30) {
-          srcSide = "Left";
-          tgtSide = "Right";
-        } else if (dy >= 0) {
-          srcSide = "Bottom";
-          tgtSide = "Top";
-        } else {
-          srcSide = "Top";
-          tgtSide = "Bottom";
-        }
-      }
-
-      edgeSideInfo.set(edgeIdx, { srcSide, tgtSide });
-
-      const srcKey = `${srcNode.id}:::${srcSide}`;
-      const tgtKey = `${tgtNode.id}:::${tgtSide}`;
-
-      const srcGroup = nodeSideAttachments.get(srcKey) ?? [];
-      srcGroup.push({
-        edgeIndex: edgeIdx,
-        isSource: true,
-        otherNodeCenter: { x: tgtCx, y: tgtCy },
-      });
-      nodeSideAttachments.set(srcKey, srcGroup);
-
-      const tgtGroup = nodeSideAttachments.get(tgtKey) ?? [];
-      tgtGroup.push({
-        edgeIndex: edgeIdx,
-        isSource: false,
-        otherNodeCenter: { x: srcCx, y: srcCy },
-      });
-      nodeSideAttachments.set(tgtKey, tgtGroup);
-    }
-  });
-
-  nodeSideAttachments.forEach((attachments, key) => {
-    const [nodeId, sideStr] = key.split(":::");
-    const side = sideStr as NodeSide;
-    const node = positionedNodesMap.get(nodeId);
-    if (!node) return;
-
-    attachments.sort((a, b) => {
-      if (side === "Top" || side === "Bottom") {
-        const diffX = a.otherNodeCenter.x - b.otherNodeCenter.x;
-        if (Math.abs(diffX) > 0.001) return diffX;
-        return a.edgeIndex - b.edgeIndex;
-      } else {
-        const diffY = a.otherNodeCenter.y - b.otherNodeCenter.y;
-        if (Math.abs(diffY) > 0.001) return diffY;
-        return a.edgeIndex - b.edgeIndex;
-      }
-    });
-
-    const m = attachments.length;
-    attachments.forEach((att, k) => {
-      const i = k + 1;
-      const alpha = i / (m + 1);
-      const portPos = calculatePortPosition(node, side, alpha);
-
-      if (att.isSource) {
-        sourcePorts.set(att.edgeIndex, portPos);
-      } else {
-        targetPorts.set(att.edgeIndex, portPos);
-      }
-    });
-  });
-
-  const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, edgeIdx) => {
+  const positionedEdges: PositionedEdge[] = dataset.edges.map((edge) => {
     const dagreEdge = g.edge(edge.source, edge.target, edge.id) as
       | { points?: Array<{ x: number; y: number }> }
       | undefined;
     const rawPoints = dagreEdge?.points ?? [];
     let points: Point2D[] = rawPoints.map((p) => ({ x: p.x, y: p.y }));
 
-    let path = "";
-    let labelX: number | undefined;
-    let labelY: number | undefined;
-    let normal: Point2D | undefined;
-
     const srcNode = positionedNodesMap.get(edge.source);
     const tgtNode = positionedNodesMap.get(edge.target);
 
-    const startPort = sourcePorts.get(edgeIdx);
-    const endPort = targetPorts.get(edgeIdx);
-    const sideInfo = edgeSideInfo.get(edgeIdx);
-    const srcSide = sideInfo?.srcSide ?? "Bottom";
-    const tgtSide = sideInfo?.tgtSide ?? "Top";
-
-    if (startPort && endPort) {
-      const startStub = createPortStub(startPort, srcSide, 16);
-      const endStub = createPortStub(endPort, tgtSide, 16);
-
-      // If loopback/cycle edge, sweep cleanly around the outer left or right flank
-      if (edge.isCycle || edge.source === edge.target) {
-        const isLeftFlank =
-          srcNode && tgtNode
-            ? startPort.x <= srcNode.x + srcNode.width / 2
-            : startPort.x <= endPort.x;
-        const sweepX = isLeftFlank
-          ? Math.min(srcNode?.x ?? startPort.x, tgtNode?.x ?? endPort.x) - 60
-          : Math.max(
-              (srcNode?.x ?? startPort.x) + (srcNode?.width ?? 0),
-              (tgtNode?.x ?? endPort.x) + (tgtNode?.width ?? 0),
-            ) + 60;
-
-        const sweepStubStart: Point2D = { x: sweepX, y: startStub.y };
-        const sweepStubEnd: Point2D = { x: sweepX, y: endStub.y };
-        points = [
-          { ...startPort },
-          startStub,
-          sweepStubStart,
-          sweepStubEnd,
-          endStub,
-          { ...endPort },
-        ];
-      } else {
-        // Direct connection with intermediate node obstacle avoidance
-        const middleWaypoints = avoidNodeObstacles(
-          startStub,
-          endStub,
-          positionedNodes,
-          edge.source,
-          edge.target,
-        );
-        points = [{ ...startPort }, ...middleWaypoints, { ...endPort }];
-      }
-    } else if (points.length < 2 && srcNode && tgtNode) {
+    if (points.length < 2 && srcNode && tgtNode) {
       const srcCx = srcNode.x + srcNode.width / 2;
       const srcCy = srcNode.y + srcNode.height / 2;
       const tgtCx = tgtNode.x + tgtNode.width / 2;
@@ -714,40 +515,8 @@ export function computeDagreLayout(
       ];
     }
 
-    // Offset path control points / bend coordinates for parallel multi-edges perpendicular to direction vector by ±35px
-    const pairInfo = edgePairInfo.get(edgeIdx);
-    const groupTotal = pairInfo?.groupTotal ?? 1;
-    const groupIndex = pairInfo?.groupIndex ?? 0;
-    const offset = groupTotal > 1 ? (groupIndex - (groupTotal - 1) / 2) * 70 : 0;
-
-    if (offset !== 0 && points.length >= 2) {
-      const pStart = points[0];
-      const pEnd = points[points.length - 1];
-      const dx = pEnd.x - pStart.x;
-      const dy = pEnd.y - pStart.y;
-      const len = Math.hypot(dx, dy);
-      if (len > 0) {
-        const nx = -dy / len;
-        const ny = dx / len;
-
-        if (points.length === 2) {
-          const midX = (pStart.x + pEnd.x) / 2 + offset * nx;
-          const midY = (pStart.y + pEnd.y) / 2 + offset * ny;
-          points = [pStart, { x: midX, y: midY }, pEnd];
-        } else {
-          for (let k = 1; k < points.length - 1; k++) {
-            points[k].x += offset * nx;
-            points[k].y += offset * ny;
-          }
-        }
-      }
-    }
-
-    // Snap vector segments to 8 cardinal/intercardinal 45° angles
-    points = snapPolyline8Dir(points);
-
     if (points.length >= 2) {
-      if (!startPort && srcNode) {
+      if (srcNode) {
         let targetForSrc: Point2D | undefined;
         for (let i = 1; i < points.length; i++) {
           const p = points[i];
@@ -769,7 +538,7 @@ export function computeDagreLayout(
         }
       }
 
-      if (!endPort && tgtNode) {
+      if (tgtNode) {
         let sourceForTgt: Point2D | undefined;
         for (let i = points.length - 2; i >= 0; i--) {
           const p = points[i];
@@ -790,102 +559,18 @@ export function computeDagreLayout(
           points[points.length - 1] = clipPointToNodeRect(tgtNode, sourceForTgt);
         }
       }
-
-      // Re-snap polyline so start/end segments connected to clipped border points maintain 8-direction routing
-      points = snapPolyline8Dir(points);
-
-      path = buildSvgPath(points);
-      const midResult = findTotalPathMidpoint(points);
-      labelX = midResult.x;
-      labelY = midResult.y;
-      normal = midResult.normal;
     }
 
-    edgeNormals.push(normal);
+    const path = points.length >= 2 ? buildSvgPath(points) : "";
+    const midResult = points.length >= 2 ? findTotalPathMidpoint(points) : { x: 0, y: 0 };
 
     return {
       ...edge,
       path,
-      ...(labelX !== undefined ? { labelX } : {}),
-      ...(labelY !== undefined ? { labelY } : {}),
+      ...(midResult.x !== undefined ? { labelX: midResult.x } : {}),
+      ...(midResult.y !== undefined ? { labelY: midResult.y } : {}),
     };
   });
-
-  // 2D edge badge & path midpoint repulsion and collision avoidance pass
-  const MAX_COLLISION_PASSES = 15;
-  for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
-    let hasCollision = false;
-
-    for (let i = 0; i < positionedEdges.length; i++) {
-      const e1 = positionedEdges[i];
-      if (e1.labelX === undefined || e1.labelY === undefined) continue;
-
-      for (let j = i + 1; j < positionedEdges.length; j++) {
-        const e2 = positionedEdges[j];
-        if (e2.labelX === undefined || e2.labelY === undefined) continue;
-
-        let dx = Math.abs(e2.labelX - e1.labelX);
-        let dy = Math.abs(e2.labelY - e1.labelY);
-
-        if (dx < 84 && dy < 34) {
-          hasCollision = true;
-          let norm = edgeNormals[j] ?? { x: 0, y: 1 };
-          if (norm.x === 0 && norm.y === 0) {
-            norm = { x: 0, y: 1 };
-          }
-
-          let steps = 0;
-          while (dx < 84 && dy < 34 && steps < 10) {
-            const relX = e2.labelX - e1.labelX;
-            const relY = e2.labelY - e1.labelY;
-            const dot = relX * norm.x + relY * norm.y;
-            const dir = dot >= 0 ? 1 : -1;
-            const step = 36;
-
-            e2.labelX += dir * norm.x * step;
-            e2.labelY += dir * norm.y * step;
-
-            dx = Math.abs(e2.labelX - e1.labelX);
-            dy = Math.abs(e2.labelY - e1.labelY);
-            steps++;
-          }
-        }
-      }
-
-      // Repel edge badge from node bounding boxes if overlapping
-      for (const node of positionedNodes) {
-        const badgeLeft = e1.labelX - 50;
-        const badgeRight = e1.labelX + 50;
-        const badgeTop = e1.labelY - 20;
-        const badgeBottom = e1.labelY + 20;
-
-        const nodeLeft = node.x - 12;
-        const nodeRight = node.x + node.width + 12;
-        const nodeTop = node.y - 12;
-        const nodeBottom = node.y + node.height + 12;
-
-        if (
-          badgeRight > nodeLeft &&
-          badgeLeft < nodeRight &&
-          badgeBottom > nodeTop &&
-          badgeTop < nodeBottom
-        ) {
-          hasCollision = true;
-          const nodeCy = node.y + node.height / 2;
-
-          if (e1.labelY <= nodeCy) {
-            e1.labelY = node.y - 24;
-          } else {
-            e1.labelY = node.y + node.height + 24;
-          }
-        }
-      }
-    }
-
-    if (!hasCollision) {
-      break;
-    }
-  }
 
   return { nodes: positionedNodes, edges: positionedEdges };
 }

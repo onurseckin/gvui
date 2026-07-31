@@ -14,6 +14,7 @@ interface SidebarProps {
   onSelectSample: (fileId: string) => void;
   onCustomUpload: (dataset: GraphDataset) => void;
   onOpenDeveloperSettings?: () => void;
+  onOpenGraphTesting?: () => void;
 }
 
 export const Sidebar: FC<SidebarProps> = ({
@@ -21,6 +22,7 @@ export const Sidebar: FC<SidebarProps> = ({
   onSelectSample,
   onCustomUpload,
   onOpenDeveloperSettings,
+  onOpenGraphTesting,
 }) => {
   return (
     <aside className="sidebar-container">
@@ -52,6 +54,14 @@ export const Sidebar: FC<SidebarProps> = ({
       <div className="sidebar-footer">
         <Button variant="ghost" className="sidebar-settings-btn" onClick={onOpenDeveloperSettings}>
           ⚙️ Developer Settings
+        </Button>
+        <Button
+          variant="ghost"
+          className="sidebar-settings-btn"
+          onClick={onOpenGraphTesting}
+          style={{ marginTop: "6px" }}
+        >
+          🧪 Graph Testing
         </Button>
       </div>
     </aside>

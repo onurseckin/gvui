@@ -6,6 +6,7 @@ import { SearchHeader } from "./components/Controls/SearchHeader";
 import { DeveloperSettings } from "./components/DeveloperSettings";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
+import { GraphTestingPage } from "./features/GraphTesting/components/GraphTestingPage";
 import { useGraphStore } from "./state/useGraphStore";
 import type { GraphDataset } from "./types/graphData";
 import { Button } from "./ui";
@@ -20,6 +21,11 @@ export const App: FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isDeveloperSettingsOpen, setIsDeveloperSettingsOpen] = useState<boolean>(false);
+  const [isGraphTestingPage, setIsGraphTestingPage] = useState<boolean>(() => {
+    return (
+      window.location.search.includes("page=testing") || window.location.pathname === "/testing"
+    );
+  });
 
   const loadGraphFile = useCallback(async (fileId: string, initialNodeId?: string | null) => {
     try {
@@ -143,6 +149,17 @@ export const App: FC = () => {
     }
   };
 
+  if (isGraphTestingPage) {
+    return (
+      <GraphTestingPage
+        onBackToApp={() => {
+          window.history.pushState({}, "", "/");
+          setIsGraphTestingPage(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="app-container">
       <header className="top-navbar-full">
@@ -171,6 +188,10 @@ export const App: FC = () => {
             onSelectSample={handleSelectSample}
             onCustomUpload={handleCustomUpload}
             onOpenDeveloperSettings={() => setIsDeveloperSettingsOpen(true)}
+            onOpenGraphTesting={() => {
+              window.history.pushState({}, "", "?page=testing");
+              setIsGraphTestingPage(true);
+            }}
           />
         )}
         <main className="app-main">

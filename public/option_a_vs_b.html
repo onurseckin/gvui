@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Option A vs Option B Edge Routing Visual Comparison</title>
+    <style>
+      :root {
+        --bg: #09090b;
+        --card-bg: #18181b;
+        --card-border: #27272a;
+        --text: #ffffff;
+        --muted: #a1a1aa;
+        --accent-a: #38bdf8;
+        --accent-b: #a855f7;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        padding: 24px;
+        min-height: 100vh;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #ffffff;
+      }
+      p.subtitle {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      .scenario-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .tab-btn {
+        background: #18181b;
+        border: 1px solid #27272a;
+        color: #ffffff;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .tab-btn.active {
+        background: #27272a;
+        border-color: #52525b;
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+      }
+      .tab-btn:hover {
+        border-color: #3f3f46;
+      }
+
+      .comparison-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .panel {
+        background: #121318;
+        border: 1px solid #27272a;
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+      }
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        border-bottom: 1px solid #27272a;
+        padding-bottom: 10px;
+      }
+      .panel-title {
+        font-size: 15px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tag {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tag-a {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+      }
+      .tag-b {
+        background: rgba(168, 85, 247, 0.15);
+        color: #a855f7;
+        border: 1px solid rgba(168, 85, 247, 0.3);
+      }
+      .stat-badge {
+        font-size: 13px;
+        color: #a1a1aa;
+        background: #18181b;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #27272a;
+      }
+
+      .canvas-container {
+        position: relative;
+        width: 100%;
+        height: 380px;
+        background: #09090b;
+        border: 1px solid #27272a;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      svg.edge-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .node-card {
+        position: absolute;
+        width: 170px;
+        height: 70px;
+        background: #18181b;
+        border: 1.5px solid #3f3f46;
+        border-radius: 8px;
+        padding: 10px;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+      .node-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+      .node-desc {
+        font-size: 11px;
+        color: #a1a1aa;
+        margin-top: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Option A vs Option B Routing Comparison</h1>
+    <p class="subtitle">
+      Side-by-side visual comparison of Option A (Pure 16-Pair Shortest Geometric Path) vs Option B
+      (Dagre Rank-Biased Flow)
+    </p>
+
+    <div class="scenario-tabs">
+      <button class="tab-btn active" data-num="1">1. Diagonal Child Node</button>
+      <button class="tab-btn" data-num="2">2. Multi-Child Cluster</button>
+      <button class="tab-btn" data-num="3">3. Cycle Loopback</button>
+      <button class="tab-btn" data-num="4">4. Obstacle Avoidance</button>
+      <button class="tab-btn" data-num="5">5. Complex Cyclic Mesh</button>
+    </div>
+
+    <div class="comparison-grid">
+      <!-- PANEL A -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="tag tag-a">Option A</span> Pure 16-Pair Shortest Path
+          </div>
+          <div class="stat-badge" id="dist-a">Total Length: 0px</div>
+        </div>
+        <div class="canvas-container" id="canvas-a">
+          <svg class="edge-layer" id="svg-a">
+            <defs>
+              <marker
+                id="arrow-a"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- PANEL B -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="tag tag-b">Option B</span> Dagre Rank-Biased Flow
+          </div>
+          <div class="stat-badge" id="dist-b">Total Length: 0px</div>
+        </div>
+        <div class="canvas-container" id="canvas-b">
+          <svg class="edge-layer" id="svg-b">
+            <defs>
+              <marker
+                id="arrow-b"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#a855f7" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.loadScenario = function(num) {
+        document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
+          btn.classList.toggle("active", idx === num - 1);
+        });
+        const sc = scenarios[num];
+        if (sc) {
+          renderPanel("a", sc, "A");
+          renderPanel("b", sc, "B");
+        }
+      };
+
+      const scenarios = {
+        1: {
+          title: "Diagonal Child Node",
+          nodes: [
+            { id: "A", name: "Parent Node A", desc: "Top-Left", x: 40, y: 40, w: 160, h: 65 },
+            { id: "B", name: "Child Node B", desc: "Down-Right", x: 300, y: 240, w: 160, h: 65 }
+          ],
+          edges: [{ source: "A", target: "B", label: "connects to" }]
+        },
+        2: {
+          title: "Multi-Child Cluster",
+          nodes: [
+            { id: "A", name: "Parent Node A", desc: "Center", x: 180, y: 30, w: 150, h: 60 },
+            { id: "B1", name: "Child B1", desc: "Left", x: 30, y: 240, w: 130, h: 60 },
+            { id: "B2", name: "Child B2", desc: "Center", x: 190, y: 240, w: 130, h: 60 },
+            { id: "B3", name: "Child B3", desc: "Right", x: 350, y: 240, w: 130, h: 60 }
+          ],
+          edges: [
+            { source: "A", target: "B1", label: "left branch" },
+            { source: "A", target: "B2", label: "center branch" },
+            { source: "A", target: "B3", label: "right branch" }
+          ]
+        },
+        3: {
+          title: "Cycle Loopback",
+          nodes: [
+            { id: "A", name: "Service A", desc: "Top", x: 170, y: 40, w: 150, h: 65 },
+            { id: "B", name: "Service B", desc: "Bottom", x: 170, y: 240, w: 150, h: 65 }
+          ],
+          edges: [
+            { source: "A", target: "B", label: "request" },
+            { source: "B", target: "A", label: "↺ callback loop", isCycle: true }
+          ]
+        },
+        4: {
+          title: "Obstacle Avoidance",
+          nodes: [
+            { id: "A", name: "Source A", desc: "Top-Left", x: 50, y: 40, w: 140, h: 60 },
+            { id: "C", name: "Obstacle Node C", desc: "Blocking Middle", x: 180, y: 150, w: 150, h: 65 },
+            { id: "B", name: "Target B", desc: "Bottom-Right", x: 320, y: 260, w: 140, h: 60 }
+          ],
+          edges: [{ source: "A", target: "B", label: "bypass route" }]
+        },
+        5: {
+          title: "Complex Cyclic Mesh",
+          nodes: [
+            { id: "A", name: "API Gateway", desc: "Ingress Router", x: 180, y: 25, w: 140, h: 55 },
+            { id: "B", name: "Auth Service", desc: "JWT Verification", x: 30, y: 140, w: 130, h: 55 },
+            { id: "C", name: "User Service", desc: "User Profile", x: 185, y: 140, w: 130, h: 55 },
+            { id: "D", name: "Order Service", desc: "Order Processor", x: 340, y: 140, w: 130, h: 55 },
+            { id: "E", name: "Payment Gateway", desc: "Stripe & Paypal", x: 70, y: 275, w: 140, h: 55 },
+            { id: "F", name: "Redis Cluster", desc: "Cache Datastore", x: 290, y: 275, w: 140, h: 55 }
+          ],
+          edges: [
+            { source: "A", target: "B", label: "auth check" },
+            { source: "A", target: "C", label: "user route" },
+            { source: "A", target: "D", label: "order route" },
+            { source: "B", target: "C", label: "token verify" },
+            { source: "C", target: "E", label: "checkout" },
+            { source: "E", target: "C", label: "↺ status callback", isCycle: true },
+            { source: "D", target: "F", label: "cache write" },
+            { source: "F", target: "B", label: "↺ session sync", isCycle: true }
+          ]
+        }
+      };
+
+      function getPortPosition(node, side, alpha = 0.5) {
+        if (!node) return { x: 0, y: 0 };
+        if (side === "Top") return { x: node.x + node.w * alpha, y: node.y };
+        if (side === "Bottom") return { x: node.x + node.w * alpha, y: node.y + node.h };
+        if (side === "Left") return { x: node.x, y: node.y + node.h * alpha };
+        if (side === "Right") return { x: node.x + node.w, y: node.y + node.h * alpha };
+        return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
+      }
+
+      function getPortStub(port, side, stubLen = 16) {
+        if (!port) return { x: 0, y: 0 };
+        if (side === "Top") return { x: port.x, y: port.y - stubLen };
+        if (side === "Bottom") return { x: port.x, y: port.y + stubLen };
+        if (side === "Left") return { x: port.x - stubLen, y: port.y };
+        if (side === "Right") return { x: port.x + stubLen, y: port.y };
+        return { ...port };
+      }
+
+      function computeDistance(p1, p2) {
+        if (!p1 || !p2) return 0;
+        return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      }
+
+      function renderPanel(panelId, scenario, mode) {
+        try {
+          const canvas = document.getElementById(`canvas-${panelId}`);
+          const svg = document.getElementById(`svg-${panelId}`);
+
+          canvas.querySelectorAll(".node-card").forEach(el => el.remove());
+          svg.querySelectorAll("path, text, rect, g").forEach(el => el.remove());
+
+          scenario.nodes.forEach(node => {
+            const div = document.createElement("div");
+            div.className = "node-card";
+            div.style.left = node.x + "px";
+            div.style.top = node.y + "px";
+            div.style.width = node.w + "px";
+            div.style.height = node.h + "px";
+            div.innerHTML = `<div class="node-title">${node.name}</div><div class="node-desc">${node.desc}</div>`;
+            canvas.appendChild(div);
+          });
+
+        let totalDist = 0;
+        let badgesToRender = [];
+        let finalEdgeResults = [];
+
+        if (mode === "A") {
+          const sides = ["Top", "Right", "Bottom", "Left"];
+
+          const edgeCandidateRanks = scenario.edges.map(edge => {
+            const srcNode = scenario.nodes.find(n => n.id === edge.source);
+            const tgtNode = scenario.nodes.find(n => n.id === edge.target);
+            if (!srcNode || !tgtNode) return [];
+
+            const srcCx = srcNode.x + srcNode.w / 2;
+            const tgtCx = tgtNode.x + tgtNode.w / 2;
+            const dx = tgtCx - srcCx;
+            const alphaHint = dx < -30 ? 0.25 : dx > 30 ? 0.75 : 0.5;
+
+            const srcCy = srcNode.y + srcNode.h / 2;
+            const tgtCy = tgtNode.y + tgtNode.h / 2;
+            const dy = tgtCy - srcCy;
+
+            const candidates = [];
+            sides.forEach(sSide => {
+              if (dy > 20 && sSide === "Top") return;
+              if (dy < -20 && sSide === "Bottom") return;
+
+              sides.forEach(tSide => {
+                if (dy > 20 && tSide === "Bottom") return;
+                if (dy < -20 && tSide === "Top") return;
+
+                const alphaS = (sSide === "Top" || sSide === "Bottom") ? alphaHint : 0.5;
+                const pS = getPortPosition(srcNode, sSide, alphaS);
+                const pT = getPortPosition(tgtNode, tSide, 0.5);
+                const d = computeDistance(pS, pT);
+                candidates.push({ srcSide: sSide, tgtSide: tSide, dist: d });
+              });
+            });
+
+            candidates.sort((a, b) => a.dist - b.dist);
+            return candidates;
+          });
+
+          const selectedChoiceIndices = new Array(scenario.edges.length).fill(0);
+
+          const evalLayout = (choices) => {
+            const edgeSideAssignments = scenario.edges.map((edge, idx) => {
+              const srcNode = scenario.nodes.find(n => n.id === edge.source);
+              const tgtNode = scenario.nodes.find(n => n.id === edge.target);
+              const ranks = edgeCandidateRanks[idx];
+              const choiceIdx = Math.min(choices[idx], ranks.length - 1);
+              const choice = ranks[choiceIdx] || { srcSide: "Bottom", tgtSide: "Top" };
+              return { edge, srcNode, tgtNode, srcSide: choice.srcSide, tgtSide: choice.tgtSide };
+            });
+
+            const sideGroups = new Map();
+            edgeSideAssignments.forEach((assign, idx) => {
+              if (!assign.srcNode || !assign.tgtNode) return;
+              const srcKey = `${assign.srcNode.id}---${assign.srcSide}`;
+              const tgtKey = `${assign.tgtNode.id}---${assign.tgtSide}`;
+
+              const srcGroup = sideGroups.get(srcKey) || [];
+              srcGroup.push({ edgeIdx: idx, isSource: true });
+              sideGroups.set(srcKey, srcGroup);
+
+              const tgtGroup = sideGroups.get(tgtKey) || [];
+              tgtGroup.push({ edgeIdx: idx, isSource: false });
+              sideGroups.set(tgtKey, tgtGroup);
+            });
+
+            let sumDist = 0;
+            const edgesRes = [];
+            const badgesRes = [];
+
+            scenario.edges.forEach((edge, idx) => {
+              const assign = edgeSideAssignments[idx];
+              if (!assign.srcNode || !assign.tgtNode) return;
+
+              const srcKey = `${assign.srcNode.id}---${assign.srcSide}`;
+              const tgtKey = `${assign.tgtNode.id}---${assign.tgtSide}`;
+
+              const srcGroup = sideGroups.get(srcKey) || [];
+              const tgtGroup = sideGroups.get(tgtKey) || [];
+
+              const srcPos = Math.max(1, srcGroup.findIndex(item => item.edgeIdx === idx) + 1);
+              const tgtPos = Math.max(1, tgtGroup.findIndex(item => item.edgeIdx === idx) + 1);
+
+              const alphaS = srcPos / ((srcGroup.length || 1) + 1);
+              const alphaT = tgtPos / ((tgtGroup.length || 1) + 1);
+
+              const pS = getPortPosition(assign.srcNode, assign.srcSide, alphaS);
+              const pT = getPortPosition(assign.tgtNode, assign.tgtSide, alphaT);
+
+              const dPath = `M ${pS.x} ${pS.y} L ${pT.x} ${pT.y}`;
+              const lineDist = computeDistance(pS, pT);
+              sumDist += lineDist;
+
+              const labelStr = edge.label || "";
+              const badgeW = Math.max(80, labelStr.length * 7 + 20);
+              const badgeH = 24;
+              const midX = (pS.x + pT.x) / 2;
+              const midY = (pS.y + pT.y) / 2;
+
+              const badge = { idx, label: labelStr, isCycle: edge.isCycle, x: midX, y: midY, w: badgeW, h: badgeH };
+              badgesRes.push(badge);
+              edgesRes.push({ dPath, lineDist, badge, srcSide: assign.srcSide, tgtSide: assign.tgtSide });
+            });
+
+            return { edgeSideAssignments, edgesRes, badgesRes, sumDist };
+          };
+
+          const evalCollisions = (badges) => {
+            let count = 0;
+            for (let i = 0; i < badges.length; i++) {
+              const b1 = badges[i];
+              for (let j = i + 1; j < badges.length; j++) {
+                const b2 = badges[j];
+                const minGapX = (b1.w + b2.w) / 2 + 12;
+                const minGapY = (b1.h + b2.h) / 2 + 12;
+                if (Math.abs(b1.x - b2.x) < minGapX && Math.abs(b1.y - b2.y) < minGapY) {
+                  count++;
+                }
+              }
+              scenario.nodes.forEach(node => {
+                if (b1.x + b1.w / 2 > node.x - 8 && b1.x - b1.w / 2 < node.x + node.w + 8 &&
+                    b1.y + b1.h / 2 > node.y - 8 && b1.y - b1.h / 2 < node.y + node.h + 8) {
+                  count++;
+                }
+              });
+            }
+            return count;
+          };
+
+          const numEdges = scenario.edges.length;
+          const maxDepth = scenario.edges.map((_, idx) => Math.min(4, edgeCandidateRanks[idx].length));
+          let bestVec = new Array(numEdges).fill(0);
+          let minScore = Infinity;
+
+          const genCombo = (edgeIdx, curVec) => {
+            if (edgeIdx === numEdges) {
+              const layout = evalLayout(curVec);
+              const cols = evalCollisions(layout.badgesRes);
+              const dist = layout.sumDist;
+              const penalty = curVec.reduce((s, c) => s + c * 5, 0);
+              const score = cols * 10000 + dist + penalty;
+              if (score < minScore) {
+                minScore = score;
+                bestVec = [...curVec];
+              }
+              return;
+            }
+            const depth = maxDepth[edgeIdx] || 1;
+            for (let c = 0; c < depth; c++) {
+              curVec[edgeIdx] = c;
+              genCombo(edgeIdx + 1, curVec);
+            }
+          };
+
+          genCombo(0, new Array(numEdges).fill(0));
+
+          const finalLayout = evalLayout(bestVec);
+          totalDist = finalLayout.sumDist;
+          badgesToRender = finalLayout.badgesRes;
+          finalEdgeResults = finalLayout.edgesRes;
+        }
+          const srcKey = `${assign.srcNode.id}---${assign.srcSide}`;
+          const tgtKey = `${assign.tgtNode.id}---${assign.tgtSide}`;
+
+          const srcGroup = sideGroups.get(srcKey) ?? [];
+          srcGroup.push({ edgeIdx: idx, isSource: true });
+          sideGroups.set(srcKey, srcGroup);
+
+          const tgtGroup = sideGroups.get(tgtKey) ?? [];
+          tgtGroup.push({ edgeIdx: idx, isSource: false });
+          sideGroups.set(tgtKey, tgtGroup);
+        });
+
+        // Pass 2: Calculate exact per-side alpha = i / (m + 1)
+        scenario.edges.forEach((edge, idx) => {
+          const assign = edgeSideAssignments[idx];
+          if (!assign || !assign.srcNode || !assign.tgtNode) return;
+          const srcNode = assign.srcNode;
+          const tgtNode = assign.tgtNode;
+
+          const srcKey = `${srcNode.id}---${assign.srcSide}`;
+          const tgtKey = `${tgtNode.id}---${assign.tgtSide}`;
+
+          const srcGroup = sideGroups.get(srcKey) || [];
+          const tgtGroup = sideGroups.get(tgtKey) || [];
+
+          const srcPosInGroup = Math.max(1, srcGroup.findIndex(item => item.edgeIdx === idx) + 1);
+          const tgtPosInGroup = Math.max(1, tgtGroup.findIndex(item => item.edgeIdx === idx) + 1);
+
+          const alphaS = srcPosInGroup / ((srcGroup.length || 1) + 1);
+          const alphaT = tgtPosInGroup / ((tgtGroup.length || 1) + 1);
+
+          const pS = getPortPosition(srcNode, assign.srcSide, alphaS);
+          const pT = getPortPosition(tgtNode, assign.tgtSide, alphaT);
+          const stS = getPortStub(pS, assign.srcSide);
+          const stT = getPortStub(pT, assign.tgtSide);
+
+          let dPath = "";
+          let lineDist = 0;
+          let midX = (pS.x + pT.x) / 2;
+          let midY = (pS.y + pT.y) / 2;
+
+          if (mode === "A") {
+            // Pure 100% direct straight line from port to port
+            dPath = `M ${pS.x} ${pS.y} L ${pT.x} ${pT.y}`;
+            lineDist = computeDistance(pS, pT);
+          } else if (edge.isCycle && mode === "B") {
+            const sweepX = Math.max(srcNode.x + srcNode.w, tgtNode.x + tgtNode.w) + 40;
+            dPath = `M ${pS.x} ${pS.y} L ${stS.x} ${stS.y} L ${sweepX} ${stS.y} L ${sweepX} ${stT.y} L ${stT.x} ${stT.y} L ${pT.x} ${pT.y}`;
+            lineDist = computeDistance(pS, stS) + Math.abs(sweepX - stS.x) + Math.abs(stT.y - stS.y) + Math.abs(stT.x - sweepX) + computeDistance(stT, pT);
+            midX = sweepX;
+            midY = (stS.y + stT.y) / 2;
+          } else {
+            dPath = `M ${pS.x} ${pS.y} L ${stS.x} ${stS.y} L ${stT.x} ${stT.y} L ${pT.x} ${pT.y}`;
+            lineDist = computeDistance(pS, stS) + computeDistance(stS, stT) + computeDistance(stT, pT);
+            midX = (stS.x + stT.x) / 2;
+            midY = (stS.y + stT.y) / 2;
+          }
+
+          totalDist += lineDist;
+
+          const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          pathEl.setAttribute("d", dPath);
+          pathEl.setAttribute("stroke", mode === "A" ? "#38bdf8" : "#a855f7");
+          pathEl.setAttribute("stroke-width", "2.5");
+          pathEl.setAttribute("fill", "none");
+          if (edge.isCycle) pathEl.setAttribute("stroke-dasharray", "5,5");
+          pathEl.setAttribute("marker-end", `url(#arrow-${panelId})`);
+          svg.appendChild(pathEl);
+
+          const labelStr = edge.label || "";
+          const badgeW = Math.max(80, labelStr.length * 7 + 20);
+          const badgeH = 24;
+          badgesToRender.push({ idx, label: labelStr, isCycle: edge.isCycle, x: midX || 0, y: midY || 0, w: badgeW, h: badgeH });
+        });
+
+        // 2D Badge Repulsion Pass & Badge-Node Collision Avoidance
+        badgesToRender.forEach((b1, i) => {
+          // Node collision avoidance
+          scenario.nodes.forEach((node) => {
+            const margin = 16;
+            const minX = node.x - b1.w / 2 - margin;
+            const maxX = node.x + node.w + b1.w / 2 + margin;
+            const minY = node.y - b1.h / 2 - margin;
+            const maxY = node.y + node.h + b1.h / 2 + margin;
+
+            if (b1.x >= minX && b1.x <= maxX && b1.y >= minY && b1.y <= maxY) {
+              // Push badge out of node bounding box
+              if (b1.y < node.y + node.h / 2) {
+                b1.y = node.y - b1.h / 2 - margin;
+              } else {
+                b1.y = node.y + node.h + b1.h / 2 + margin;
+              }
+            }
+          });
+
+          // Badge-Badge Repulsion pass (16px minimum gap)
+          for (let j = i + 1; j < badgesToRender.length; j++) {
+            const b2 = badgesToRender[j];
+            const minGapX = (b1.w + b2.w) / 2 + 16;
+            const minGapY = (b1.h + b2.h) / 2 + 16;
+
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+
+            if (Math.abs(dx) < minGapX && Math.abs(dy) < minGapY) {
+              // Repel badge b2 vertically
+              if (dy >= 0) {
+                b2.y += minGapY - Math.abs(dy);
+              } else {
+                b2.y -= minGapY - Math.abs(dy);
+              }
+            }
+          }
+        });
+
+        // Render Badges
+        badgesToRender.forEach((b) => {
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", b.x - b.w / 2);
+          rect.setAttribute("y", b.y - b.h / 2);
+          rect.setAttribute("width", b.w);
+          rect.setAttribute("height", b.h);
+          rect.setAttribute("rx", "6");
+          rect.setAttribute("fill", "#09090b");
+          rect.setAttribute("stroke", mode === "A" ? "#38bdf8" : "#a855f7");
+          rect.setAttribute("stroke-width", "1.5");
+
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", b.x);
+          text.setAttribute("y", b.y + 4);
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("fill", "#ffffff");
+          text.setAttribute("font-size", "11");
+          text.setAttribute("font-weight", "600");
+          text.textContent = b.label;
+
+          g.appendChild(rect);
+          g.appendChild(text);
+          svg.appendChild(g);
+        });
+
+          document.getElementById(`dist-${panelId}`).textContent = `Total Length: ${Math.round(totalDist)}px`;
+        } catch (err) {
+          console.error("renderPanel error:", err);
+        }
+      }
+
+      function loadScenario(num) {
+        document.querySelectorAll(".tab-btn").forEach((btn) => {
+          const btnNum = parseInt(btn.getAttribute("data-num") || "1", 10);
+          btn.classList.toggle("active", btnNum === num);
+        });
+        const sc = scenarios[num];
+        if (sc) {
+          renderPanel("a", sc, "A");
+          renderPanel("b", sc, "B");
+        }
+      }
+
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const num = parseInt(btn.getAttribute("data-num") || "1", 10);
+          loadScenario(num);
+        });
+      });
+
+      loadScenario(1);
+    </script>
+  </body>
+</html>
