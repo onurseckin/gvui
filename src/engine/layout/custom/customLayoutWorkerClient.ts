@@ -27,8 +27,18 @@ export interface LayoutWorkerRuntime {
   clearTimer(id: unknown): void;
 }
 
+/**
+ * Separates a server-side fallback from a browser that is unable to create Workers.
+ * Tests inject this seam instead of mutating browser globals.
+ */
+export interface LayoutWorkerEnvironment {
+  isBrowser: boolean;
+  runtime: LayoutWorkerRuntime | null;
+}
+
 export interface ComputeLayoutWorkerDependencies {
   runtime?: LayoutWorkerRuntime;
+  environment?: LayoutWorkerEnvironment;
   /** Test-only seam for proving a browser worker failure never falls back to the main thread. */
   computeSynchronously?: (
     nodes: NormalizedNode[],
@@ -60,16 +70,23 @@ export class LayoutCancelledError extends Error {
 
 let requestIdCounter = 0;
 
-function getBrowserWorkerRuntime(): LayoutWorkerRuntime | null {
-  if (typeof window === "undefined" || typeof window.Worker === "undefined") {
-    return null;
+function getLayoutWorkerEnvironment(): LayoutWorkerEnvironment {
+  if (typeof window === "undefined") {
+    return { isBrowser: false, runtime: null };
+  }
+
+  if (typeof window.Worker === "undefined") {
+    return { isBrowser: true, runtime: null };
   }
 
   return {
-    createWorker: () =>
-      new Worker(new URL("./customLayoutWorker.ts", import.meta.url), { type: "module" }),
-    setTimer: (callback, ms) => setTimeout(callback, ms),
-    clearTimer: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+    isBrowser: true,
+    runtime: {
+      createWorker: () =>
+        new Worker(new URL("./customLayoutWorker.ts", import.meta.url), { type: "module" }),
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+    },
   };
 }
 
@@ -88,12 +105,16 @@ export async function computeCustomLayoutAsync(
     throw new LayoutCancelledError();
   }
 
-  const runtime = dependencies.runtime ?? getBrowserWorkerRuntime();
+  const environment = dependencies.environment ?? getLayoutWorkerEnvironment();
+  const runtime = dependencies.runtime ?? environment.runtime;
   const computeSynchronously = dependencies.computeSynchronously ?? optimizeLayout;
 
-  // Server-side/tests without Worker support retain the direct engine path. This branch is never
-  // reached after a browser worker has been selected.
   if (!runtime) {
+    if (environment.isBrowser) {
+      throw new LayoutWorkerError("Web Workers are unavailable in this browser");
+    }
+
+    // A true SSR/Node environment has no interactive main thread to freeze.
     return computeSynchronously(nodes, edges, config);
   }
 

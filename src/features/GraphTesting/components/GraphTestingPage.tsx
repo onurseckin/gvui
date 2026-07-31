@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   type ExtendedLayoutDiagnostic,
@@ -57,33 +57,27 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
 
-  const { result: layoutResult, isCalculating, error, recalculate } = useCustomLayoutWorker({
+  const {
+    result: layoutResult,
+    isCalculating,
+    error,
+    recalculate,
+    resultGeneration,
+  } = useCustomLayoutWorker({
     nodes: normalizedNodes,
     edges: normalizedEdges,
+    inputKey: `scenario-${activeScenario.id}`,
     timeoutMs: 30_000,
   });
 
-  // Build lookup maps for rendering details
-  const originalNodeMap = useMemo(() => {
-    return new Map((activeScenario.nodes || []).map((n) => [n.id, n]));
-  }, [activeScenario]);
-
-  const originalEdgeMap = useMemo(() => {
-    return new Map(normalizedEdges.map((e) => [e.id, e]));
-  }, [normalizedEdges]);
-
-  const renderedNodes = layoutResult?.nodes || [];
-  const renderedEdges = layoutResult?.edges || [];
-  const renderedBadges = layoutResult?.badges || [];
-  const renderedCrossings = layoutResult?.crossings || [];
-
   return (
-    <LayoutErrorBoundary onRetry={recalculate}>
-      <div className="graph-testing-page-container">
-      {error && (
+    <div className="graph-testing-page-container">
+      {error && layoutResult && (
         <div className="graph-layout-worker-warning" role="alert">
           <span>Layout worker failed: {error.message}</span>
-          <button type="button" onClick={recalculate}>Retry layout</button>
+          <button type="button" onClick={recalculate}>
+            Retry layout
+          </button>
         </div>
       )}
       {/* Page Header */}
@@ -136,7 +130,11 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
       </div>
 
       {!layoutResult ? (
-        <div className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"} role="status">
+        <div
+          className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"}
+          role={error ? "alert" : "status"}
+          aria-busy={isCalculating}
+        >
           <span>
             {error
               ? `Layout worker failed: ${error.message}`
@@ -144,257 +142,295 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                 ? "Calculating graph layout…"
                 : "Layout is unavailable."}
           </span>
-          {(error || !isCalculating) && <button type="button" onClick={recalculate}>Retry layout</button>}
+          {(error || !isCalculating) && (
+            <button type="button" onClick={recalculate}>
+              Retry layout
+            </button>
+          )}
         </div>
       ) : (
         <>
-      {/* Metrics Summary Panel */}
-      <div className="graph-testing-metrics-wrapper">
-        <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />
-        <CustomLayoutDebugOverlay
-          layoutResult={layoutResult}
-          options={debugOptions}
-          onOptionsChange={setDebugOptions}
-        />
-      </div>
-
-      {/* Content Canvas */}
-      <div className="graph-testing-content single-panel">
-        <div className="testing-panel">
-          <div className="testing-panel-header">
-            <div className="testing-panel-title">
-              <span className="mode-tag mode-tag-a">Custom Layout Engine</span>
-              <span>{activeScenario.title}</span>
+          {isCalculating && (
+            <div className="graph-layout-worker-loading" role="status" aria-busy="true">
+              <span>Recalculating graph layout…</span>
             </div>
-            <div className="testing-stat-badge">
-              Nodes: {renderedNodes.length} | Edges: {renderedEdges.length} | Crossings:{" "}
-              {layoutResult.validation?.metrics?.crossingCount ?? 0} | Hairpins:{" "}
-              {layoutResult.validation?.metrics?.hairpinCount ?? 0} | Leaders:{" "}
-              {(layoutResult.validation?.metrics?.ordinaryLeaderCount ?? 0) +
-                (layoutResult.validation?.metrics?.feedbackLeaderCount ?? 0)}{" "}
-              | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
-              <strong>{layoutResult.status}</strong>
-            </div>
-          </div>
-          <div className="testing-canvas-container">
-            {/* Node Cards */}
-            {renderedNodes.map((node) => {
-              const origNode = originalNodeMap.get(node.id);
-              return (
-                <div
-                  key={node.id}
-                  className="testing-node-card"
-                  style={{
-                    left: `${node.x}px`,
-                    top: `${node.y}px`,
-                    width: `${node.width}px`,
-                    height: `${node.height}px`,
-                  }}
-                >
-                  <div className="testing-node-title">
-                    {origNode?.name ?? node.label ?? node.id}
-                  </div>
-                  {origNode?.desc && <div className="testing-node-desc">{origNode.desc}</div>}
-                </div>
-              );
-            })}
-
-            {/* SVG Layer */}
-            <svg className="testing-svg-layer">
-              <defs>
-                <marker
-                  id="arrow-custom"
-                  viewBox="0 0 10 10"
-                  refX="8"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
-                </marker>
-              </defs>
-
-              {/* Edge Routes */}
-              {renderedEdges.map((routedPath) => {
-                const origEdge = originalEdgeMap.get(routedPath.edgeId);
-                const ownedCrossings = renderedCrossings
-                  .filter((c) => (c.bridgeOwnerEdgeId ?? c.edgeIdB) === routedPath.edgeId)
-                  .map((c) => c.point);
-                const dPath = renderPathWithCrossingBridges(
-                  routedPath.points || [],
-                  ownedCrossings,
-                );
+          )}
+          <LayoutErrorBoundary onRetry={recalculate} resultGeneration={resultGeneration}>
+            <GraphTestingPageVisualization
+              render={() => {
+                const originalNodeMap = new Map((activeScenario.nodes || []).map((n) => [n.id, n]));
+                const originalEdgeMap = new Map(normalizedEdges.map((e) => [e.id, e]));
+                const renderedNodes = layoutResult.nodes || [];
+                const renderedEdges = layoutResult.edges || [];
+                const renderedBadges = layoutResult.badges || [];
+                const renderedCrossings = layoutResult.crossings || [];
 
                 return (
-                  <g key={`edge-group-${routedPath.edgeId}`}>
-                    <path
-                      key={`edge-path-${routedPath.edgeId}`}
-                      d={dPath}
-                      stroke="#38bdf8"
-                      strokeWidth="2.5"
-                      fill="none"
-                      strokeDasharray={origEdge?.isCycle ? "5,5" : undefined}
-                      markerEnd="url(#arrow-custom)"
-                    />
+                  <>
+                    {/* Metrics Summary Panel */}
+                    <div className="graph-testing-metrics-wrapper">
+                      <CustomLayoutMetrics
+                        layoutResult={layoutResult}
+                        normalizedEdges={normalizedEdges}
+                      />
+                      <CustomLayoutDebugOverlay
+                        layoutResult={layoutResult}
+                        options={debugOptions}
+                        onOptionsChange={setDebugOptions}
+                      />
+                    </div>
 
-                    {/* Port Indicators */}
-                    {debugOptions.showPorts && routedPath.sourcePort && routedPath.targetPort && (
-                      <>
-                        <circle
-                          cx={routedPath.sourcePort.point.x}
-                          cy={routedPath.sourcePort.point.y}
-                          r="3.5"
-                          fill="#10b981"
-                        />
-                        <line
-                          x1={routedPath.sourcePort.point.x}
-                          y1={routedPath.sourcePort.point.y}
-                          x2={routedPath.sourcePort.stub.x}
-                          y2={routedPath.sourcePort.stub.y}
-                          stroke="#10b981"
-                          strokeWidth="1.5"
-                          strokeDasharray="2,2"
-                        />
-                        <circle
-                          cx={routedPath.targetPort.point.x}
-                          cy={routedPath.targetPort.point.y}
-                          r="3.5"
-                          fill="#f43f5e"
-                        />
-                        <line
-                          x1={routedPath.targetPort.point.x}
-                          y1={routedPath.targetPort.point.y}
-                          x2={routedPath.targetPort.stub.x}
-                          y2={routedPath.targetPort.stub.y}
-                          stroke="#f43f5e"
-                          strokeWidth="1.5"
-                          strokeDasharray="2,2"
-                        />
-                      </>
-                    )}
-                  </g>
+                    {/* Content Canvas */}
+                    <div className="graph-testing-content single-panel">
+                      <div className="testing-panel">
+                        <div className="testing-panel-header">
+                          <div className="testing-panel-title">
+                            <span className="mode-tag mode-tag-a">Custom Layout Engine</span>
+                            <span>{activeScenario.title}</span>
+                          </div>
+                          <div className="testing-stat-badge">
+                            Nodes: {renderedNodes.length} | Edges: {renderedEdges.length} |
+                            Crossings: {layoutResult.validation?.metrics?.crossingCount ?? 0} |
+                            Hairpins: {layoutResult.validation?.metrics?.hairpinCount ?? 0} |
+                            Leaders:{" "}
+                            {(layoutResult.validation?.metrics?.ordinaryLeaderCount ?? 0) +
+                              (layoutResult.validation?.metrics?.feedbackLeaderCount ?? 0)}{" "}
+                            | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
+                            <strong>{layoutResult.status}</strong>
+                          </div>
+                        </div>
+                        <div className="testing-canvas-container">
+                          {/* Node Cards */}
+                          {renderedNodes.map((node) => {
+                            const origNode = originalNodeMap.get(node.id);
+                            return (
+                              <div
+                                key={node.id}
+                                className="testing-node-card"
+                                style={{
+                                  left: `${node.x}px`,
+                                  top: `${node.y}px`,
+                                  width: `${node.width}px`,
+                                  height: `${node.height}px`,
+                                }}
+                              >
+                                <div className="testing-node-title">
+                                  {origNode?.name ?? node.label ?? node.id}
+                                </div>
+                                {origNode?.desc && (
+                                  <div className="testing-node-desc">{origNode.desc}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* SVG Layer */}
+                          <svg className="testing-svg-layer">
+                            <defs>
+                              <marker
+                                id="arrow-custom"
+                                viewBox="0 0 10 10"
+                                refX="8"
+                                refY="5"
+                                markerWidth="6"
+                                markerHeight="6"
+                                orient="auto-start-reverse"
+                              >
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+                              </marker>
+                            </defs>
+
+                            {/* Edge Routes */}
+                            {renderedEdges.map((routedPath) => {
+                              const origEdge = originalEdgeMap.get(routedPath.edgeId);
+                              const ownedCrossings = renderedCrossings
+                                .filter(
+                                  (c) => (c.bridgeOwnerEdgeId ?? c.edgeIdB) === routedPath.edgeId,
+                                )
+                                .map((c) => c.point);
+                              const dPath = renderPathWithCrossingBridges(
+                                routedPath.points || [],
+                                ownedCrossings,
+                              );
+
+                              return (
+                                <g key={`edge-group-${routedPath.edgeId}`}>
+                                  <path
+                                    key={`edge-path-${routedPath.edgeId}`}
+                                    d={dPath}
+                                    stroke="#38bdf8"
+                                    strokeWidth="2.5"
+                                    fill="none"
+                                    strokeDasharray={origEdge?.isCycle ? "5,5" : undefined}
+                                    markerEnd="url(#arrow-custom)"
+                                  />
+
+                                  {/* Port Indicators */}
+                                  {debugOptions.showPorts &&
+                                    routedPath.sourcePort &&
+                                    routedPath.targetPort && (
+                                      <>
+                                        <circle
+                                          cx={routedPath.sourcePort.point.x}
+                                          cy={routedPath.sourcePort.point.y}
+                                          r="3.5"
+                                          fill="#10b981"
+                                        />
+                                        <line
+                                          x1={routedPath.sourcePort.point.x}
+                                          y1={routedPath.sourcePort.point.y}
+                                          x2={routedPath.sourcePort.stub.x}
+                                          y2={routedPath.sourcePort.stub.y}
+                                          stroke="#10b981"
+                                          strokeWidth="1.5"
+                                          strokeDasharray="2,2"
+                                        />
+                                        <circle
+                                          cx={routedPath.targetPort.point.x}
+                                          cy={routedPath.targetPort.point.y}
+                                          r="3.5"
+                                          fill="#f43f5e"
+                                        />
+                                        <line
+                                          x1={routedPath.targetPort.point.x}
+                                          y1={routedPath.targetPort.point.y}
+                                          x2={routedPath.targetPort.stub.x}
+                                          y2={routedPath.targetPort.stub.y}
+                                          stroke="#f43f5e"
+                                          strokeWidth="1.5"
+                                          strokeDasharray="2,2"
+                                        />
+                                      </>
+                                    )}
+                                </g>
+                              );
+                            })}
+
+                            {/* Crossings */}
+                            {debugOptions.showCrossings &&
+                              renderedCrossings.map((c, i) => (
+                                <circle
+                                  key={`crossing-${c.edgeIdA}-${c.edgeIdB}-${i}`}
+                                  cx={c.point.x}
+                                  cy={c.point.y}
+                                  r="5"
+                                  fill="#f59e0b"
+                                  stroke="#ffffff"
+                                  strokeWidth="1.5"
+                                />
+                              ))}
+
+                            {/* Diagnostic Geometry Highlights */}
+                            {debugOptions.showDiagnostics &&
+                              (
+                                layoutResult.validation?.diagnostics as
+                                  | ExtendedLayoutDiagnostic[]
+                                  | undefined
+                              )?.map((diag, i) => (
+                                <g key={`diag-geom-${diag.code}-${i}`}>
+                                  {diag.rect && (
+                                    <rect
+                                      x={diag.rect.x}
+                                      y={diag.rect.y}
+                                      width={diag.rect.width}
+                                      height={diag.rect.height}
+                                      fill="rgba(239, 68, 68, 0.15)"
+                                      stroke="#ef4444"
+                                      strokeWidth="2"
+                                      strokeDasharray="4,4"
+                                    />
+                                  )}
+                                  {diag.segment && (
+                                    <line
+                                      x1={diag.segment.a.x}
+                                      y1={diag.segment.a.y}
+                                      x2={diag.segment.b.x}
+                                      y2={diag.segment.b.y}
+                                      stroke="#ef4444"
+                                      strokeWidth="3"
+                                      strokeDasharray="4,2"
+                                    />
+                                  )}
+                                  {diag.point && (
+                                    <circle
+                                      cx={diag.point.x}
+                                      cy={diag.point.y}
+                                      r="6"
+                                      fill="#ef4444"
+                                      stroke="#ffffff"
+                                      strokeWidth="2"
+                                    />
+                                  )}
+                                </g>
+                              ))}
+
+                            {/* Badges */}
+                            {debugOptions.showBadges &&
+                              renderedBadges.map((badge) => {
+                                const badgeCenterX = badge.rect.x + badge.rect.width / 2;
+                                const badgeCenterY = badge.rect.y + badge.rect.height / 2;
+                                const hasLeader =
+                                  badge.anchorPoint &&
+                                  Math.hypot(
+                                    badge.anchorPoint.x - badgeCenterX,
+                                    badge.anchorPoint.y - badgeCenterY,
+                                  ) > 4;
+
+                                return (
+                                  <g key={`badge-${badge.edgeId}-${badge.label}`}>
+                                    {badge.leaderPoints && badge.leaderPoints.length >= 2 ? (
+                                      <path
+                                        d={pointsToSvgPath(badge.leaderPoints)}
+                                        stroke="#38bdf8"
+                                        strokeWidth="1"
+                                        strokeDasharray="3,3"
+                                        fill="none"
+                                      />
+                                    ) : (
+                                      hasLeader && (
+                                        <line
+                                          x1={badge.anchorPoint.x}
+                                          y1={badge.anchorPoint.y}
+                                          x2={badgeCenterX}
+                                          y2={badgeCenterY}
+                                          stroke="#38bdf8"
+                                          strokeWidth="1"
+                                          strokeDasharray="3,3"
+                                        />
+                                      )
+                                    )}
+                                    <rect
+                                      x={badge.rect.x}
+                                      y={badge.rect.y}
+                                      width={badge.rect.width}
+                                      height={badge.rect.height}
+                                      rx={6}
+                                      fill="#09090b"
+                                      stroke="#38bdf8"
+                                      strokeWidth="1.5"
+                                    />
+                                    <text
+                                      x={badgeCenterX}
+                                      y={badgeCenterY + 4}
+                                      textAnchor="middle"
+                                      fill="#ffffff"
+                                      fontSize="11"
+                                      fontWeight="600"
+                                    >
+                                      {badge.label}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 );
-              })}
-
-              {/* Crossings */}
-              {debugOptions.showCrossings &&
-                renderedCrossings.map((c, i) => (
-                  <circle
-                    key={`crossing-${c.edgeIdA}-${c.edgeIdB}-${i}`}
-                    cx={c.point.x}
-                    cy={c.point.y}
-                    r="5"
-                    fill="#f59e0b"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                  />
-                ))}
-
-              {/* Diagnostic Geometry Highlights */}
-              {debugOptions.showDiagnostics &&
-                (
-                  layoutResult.validation?.diagnostics as ExtendedLayoutDiagnostic[] | undefined
-                )?.map((diag, i) => (
-                  <g key={`diag-geom-${diag.code}-${i}`}>
-                    {diag.rect && (
-                      <rect
-                        x={diag.rect.x}
-                        y={diag.rect.y}
-                        width={diag.rect.width}
-                        height={diag.rect.height}
-                        fill="rgba(239, 68, 68, 0.15)"
-                        stroke="#ef4444"
-                        strokeWidth="2"
-                        strokeDasharray="4,4"
-                      />
-                    )}
-                    {diag.segment && (
-                      <line
-                        x1={diag.segment.a.x}
-                        y1={diag.segment.a.y}
-                        x2={diag.segment.b.x}
-                        y2={diag.segment.b.y}
-                        stroke="#ef4444"
-                        strokeWidth="3"
-                        strokeDasharray="4,2"
-                      />
-                    )}
-                    {diag.point && (
-                      <circle
-                        cx={diag.point.x}
-                        cy={diag.point.y}
-                        r="6"
-                        fill="#ef4444"
-                        stroke="#ffffff"
-                        strokeWidth="2"
-                      />
-                    )}
-                  </g>
-                ))}
-
-              {/* Badges */}
-              {debugOptions.showBadges &&
-                renderedBadges.map((badge) => {
-                  const badgeCenterX = badge.rect.x + badge.rect.width / 2;
-                  const badgeCenterY = badge.rect.y + badge.rect.height / 2;
-                  const hasLeader =
-                    badge.anchorPoint &&
-                    Math.hypot(
-                      badge.anchorPoint.x - badgeCenterX,
-                      badge.anchorPoint.y - badgeCenterY,
-                    ) > 4;
-
-                  return (
-                    <g key={`badge-${badge.edgeId}-${badge.label}`}>
-                      {badge.leaderPoints && badge.leaderPoints.length >= 2 ? (
-                        <path
-                          d={pointsToSvgPath(badge.leaderPoints)}
-                          stroke="#38bdf8"
-                          strokeWidth="1"
-                          strokeDasharray="3,3"
-                          fill="none"
-                        />
-                      ) : (
-                        hasLeader && (
-                          <line
-                            x1={badge.anchorPoint.x}
-                            y1={badge.anchorPoint.y}
-                            x2={badgeCenterX}
-                            y2={badgeCenterY}
-                            stroke="#38bdf8"
-                            strokeWidth="1"
-                            strokeDasharray="3,3"
-                          />
-                        )
-                      )}
-                      <rect
-                        x={badge.rect.x}
-                        y={badge.rect.y}
-                        width={badge.rect.width}
-                        height={badge.rect.height}
-                        rx={6}
-                        fill="#09090b"
-                        stroke="#38bdf8"
-                        strokeWidth="1.5"
-                      />
-                      <text
-                        x={badgeCenterX}
-                        y={badgeCenterY + 4}
-                        textAnchor="middle"
-                        fill="#ffffff"
-                        fontSize="11"
-                        fontWeight="600"
-                      >
-                        {badge.label}
-                      </text>
-                    </g>
-                  );
-                })}
-            </svg>
-          </div>
-        </div>
-      </div>
+              }}
+            />
+          </LayoutErrorBoundary>
         </>
       )}
 
@@ -403,7 +439,8 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
         📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>.
         Scenarios #1 through #20 powered by custom top-to-bottom layout & orthogonal edge router.
       </footer>
-      </div>
-    </LayoutErrorBoundary>
+    </div>
   );
 };
+
+const GraphTestingPageVisualization: FC<{ render: () => ReactNode }> = ({ render }) => render();

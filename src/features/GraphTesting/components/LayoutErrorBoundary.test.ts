@@ -14,4 +14,26 @@ describe("LayoutErrorBoundary", () => {
     expect(derived.hasError).toBe(true);
     expect(derived.error).toBe(err);
   });
+
+  it("keeps its fallback latched while retry starts and resets only after a new result arrives", () => {
+    const error = new Error("Simulated Layout Error");
+    const failedState = {
+      hasError: true,
+      error,
+      failedResultGeneration: 4,
+    };
+
+    expect(
+      LayoutErrorBoundary.getDerivedStateFromProps(
+        { children: null, resultGeneration: 4 },
+        failedState,
+      ),
+    ).toBe(null);
+    expect(
+      LayoutErrorBoundary.getDerivedStateFromProps(
+        { children: null, resultGeneration: 5 },
+        failedState,
+      ),
+    ).toEqual({ hasError: false, error: null, failedResultGeneration: null });
+  });
 });

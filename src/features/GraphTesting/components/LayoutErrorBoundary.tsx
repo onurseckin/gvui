@@ -5,29 +5,46 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onRetry?: () => void;
+  /** A newly delivered layout result starts a fresh rendering subtree. */
+  resultGeneration?: string | number | null;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  failedResultGeneration: string | number | null;
 }
 
 export class LayoutErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    failedResultGeneration: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, failedResultGeneration: null };
+  }
+
+  public static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    if (
+      state.hasError &&
+      state.failedResultGeneration !== null &&
+      props.resultGeneration !== null &&
+      props.resultGeneration !== state.failedResultGeneration
+    ) {
+      return { hasError: false, error: null, failedResultGeneration: null };
+    }
+
+    return null;
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("LayoutErrorBoundary caught an error:", error, errorInfo);
+    this.setState({ failedResultGeneration: this.props.resultGeneration ?? null });
   }
 
   private handleRetry = () => {
-    this.setState({ hasError: false, error: null });
     this.props.onRetry?.();
   };
 

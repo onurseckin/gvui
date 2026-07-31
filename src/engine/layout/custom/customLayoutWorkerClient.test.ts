@@ -1,8 +1,135 @@
 import { describe, expect, it } from "bun:test";
-import { computeCustomLayoutAsync, type LayoutWorkerRuntime } from "./customLayoutWorkerClient";
+import {
+  computeCustomLayoutAsync,
+  LayoutWorkerError,
+  type LayoutWorkerRuntime,
+  type WorkerLike,
+} from "./customLayoutWorkerClient";
 import type { NormalizedEdge, NormalizedNode } from "./types";
 
 describe("customLayoutWorkerClient", () => {
+  it("rejects a browser without Worker support instead of using the main thread", async () => {
+    let syncOptimizeCalls = 0;
+
+    let receivedError: unknown;
+    try {
+      await computeCustomLayoutAsync(
+        { nodes: [{ id: "A", width: 100, height: 50 }], edges: [] },
+        {
+          environment: { isBrowser: true, runtime: null },
+          computeSynchronously: () => {
+            syncOptimizeCalls += 1;
+            throw new Error("must not run");
+          },
+        },
+      );
+    } catch (error) {
+      receivedError = error;
+    }
+
+    expect(receivedError instanceof LayoutWorkerError).toBe(true);
+    expect(syncOptimizeCalls).toBe(0);
+  });
+
+  it("uses the synchronous engine only for an explicit server environment", async () => {
+    const expected = { nodes: [], edges: [], badges: [], crossings: [], validation: {} } as never;
+    let syncOptimizeCalls = 0;
+
+    const result = await computeCustomLayoutAsync(
+      { nodes: [{ id: "A", width: 100, height: 50 }], edges: [] },
+      {
+        environment: { isBrowser: false, runtime: null },
+        computeSynchronously: () => {
+          syncOptimizeCalls += 1;
+          return expected;
+        },
+      },
+    );
+
+    expect(result).toBe(expected);
+    expect(syncOptimizeCalls).toBe(1);
+  });
+
+  it("resolves only a matching successful worker response", async () => {
+    let requestId: string | undefined;
+    let clearTimerCalls = 0;
+    const expected = { nodes: [], edges: [], badges: [], crossings: [], validation: {} } as never;
+    const worker: WorkerLike & {
+      terminateCalls: number;
+    } = {
+      terminateCalls: 0,
+      postMessage: (request) => {
+        requestId = request.id;
+      },
+      terminate() {
+        this.terminateCalls += 1;
+      },
+    };
+
+    const promise = computeCustomLayoutAsync(
+      { nodes: [{ id: "A", width: 100, height: 50 }], edges: [] },
+      {
+        runtime: {
+          createWorker: () => worker,
+          setTimer: () => "watchdog",
+          clearTimer: () => {
+            clearTimerCalls += 1;
+          },
+        },
+      },
+    );
+    let settled = false;
+    void promise.then(() => {
+      settled = true;
+    });
+
+    worker.onmessage?.({
+      data: { id: "other-request", type: "success", result: expected },
+    } as never);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    worker.onmessage?.({ data: { id: requestId!, type: "success", result: expected } } as never);
+    expect(await promise).toBe(expected);
+    expect(clearTimerCalls).toBe(1);
+    expect(worker.terminateCalls).toBe(1);
+  });
+
+  it("turns a postMessage failure into a typed worker error and cleans up once", async () => {
+    let clearTimerCalls = 0;
+    const worker = {
+      terminateCalls: 0,
+      postMessage: () => {
+        throw new Error("clone failed");
+      },
+      terminate() {
+        this.terminateCalls += 1;
+      },
+    };
+
+    let receivedError: unknown;
+    try {
+      await computeCustomLayoutAsync(
+        { nodes: [{ id: "A", width: 100, height: 50 }], edges: [] },
+        {
+          runtime: {
+            createWorker: () => worker,
+            setTimer: () => "watchdog",
+            clearTimer: () => {
+              clearTimerCalls += 1;
+            },
+          },
+        },
+      );
+    } catch (error) {
+      receivedError = error;
+    }
+
+    expect(receivedError instanceof LayoutWorkerError).toBe(true);
+    expect(clearTimerCalls).toBe(1);
+    expect(worker.terminateCalls).toBe(1);
+  });
+
   it("terminates a nonresponsive browser worker once without running synchronously", async () => {
     let timeoutCallback: (() => void) | undefined;
     let syncOptimizeCalls = 0;
@@ -52,6 +179,7 @@ describe("customLayoutWorkerClient", () => {
 
   it("settles a browser worker request once when abort races a later response", async () => {
     let timeoutCallback: (() => void) | undefined;
+    let clearTimerCalls = 0;
     const worker: {
       terminateCalls: number;
       onmessage?: (event: { data: unknown }) => void;
@@ -70,7 +198,9 @@ describe("customLayoutWorkerClient", () => {
         timeoutCallback = callback;
         return "watchdog";
       },
-      clearTimer: () => {},
+      clearTimer: () => {
+        clearTimerCalls += 1;
+      },
     };
     const controller = new AbortController();
     const promise = computeCustomLayoutAsync(
@@ -90,6 +220,7 @@ describe("customLayoutWorkerClient", () => {
     }
     expect((cancelError as Error).message).toContain("cancelled");
     expect(worker.terminateCalls).toBe(1);
+    expect(clearTimerCalls).toBe(1);
   });
 
   it("rejects browser worker error events without falling back to synchronous layout", async () => {
