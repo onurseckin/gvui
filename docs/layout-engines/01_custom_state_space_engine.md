@@ -17,9 +17,13 @@ Where:
 - $\mathcal{L}_{\text{orders}}$: Permutation order of nodes within each topological rank layer.
 - $\Delta_{\text{shifts}}$: Sub-rank horizontal and vertical spatial shifts.
 
-### Objective Fitness Function $f(\sigma)$
+### Objective Fitness Vector $\mathbf{C}(\sigma)$
 
-The quality of layout state $\sigma$ is evaluated by a multi-component lexicographic cost function:
+The quality of layout state $\sigma$ is evaluated by a lexicographic cost tuple where higher-priority components strictly dominate lower-priority ones:
+
+$$\mathbf{C}(\sigma) = \left\langle C_{\text{hard}}(\sigma), C_{\text{cross}}(\sigma), C_{\text{bends}}(\sigma), C_{\text{length}}(\sigma), C_{\text{badges}}(\sigma) \right\rangle$$
+
+Or scalarized via hierarchical weights ($w_{\text{hard}} \gg w_{\text{cross}} \gg w_{\text{bends}} \gg w_{\text{length}} \gg w_{\text{badges}}$):
 
 $$f(\sigma) = w_{\text{hard}} \cdot C_{\text{hard}}(\sigma) + w_{\text{cross}} \cdot C_{\text{cross}}(\sigma) + w_{\text{bends}} \cdot C_{\text{bends}}(\sigma) + w_{\text{length}} \cdot C_{\text{length}}(\sigma) + w_{\text{badges}} \cdot C_{\text{badges}}(\sigma)$$
 
@@ -37,17 +41,15 @@ Where:
 The optimization pipeline runs asynchronously in a dedicated Web Worker time-sliced across 32 micro-stages:
 
 ```
-[Input Graph] -> [1. Normalization] -> [2. SCC Cycle Detection] -> [3. Cycle Breaking]
-               -> [4. Rank Assignment] -> [5. Layer Graph Construction]
-               -> [6-15. Barycentric Sweeps] -> [16-27. A* Corridor Routing]
+[Input Graph] -> [1. Normalization] -> [2. SCC Cycle Detection] -> [3-5. Cycle Breaking & Rank Assignment]
+               -> [6-18. Barycentric Crossing Minimization] -> [19-27. A* Corridor Routing]
                -> [28-31. Badge Spacing Demands] -> [32. Geometry Finalization]
 ```
 
 ### Stage 1–5: Topological Layering & Cycle Breaking
 
 1. **Cycle Breaking via Strongly Connected Components (SCC)**:
-   Cycles are identified using Tarjan's SCC algorithm. Edges forming feedback loops are reclassified to ensure the reduced layer graph $\mathcal{G}_{\text{DAG}}$ is acyclic:
-   $$\text{scc}(v) = \text{lowlink}(v)$$
+   Cycles are identified using Tarjan's SCC algorithm. Edges forming feedback loops where $v$ is an active ancestor on the DFS recursion stack are reclassified to ensure the reduced layer graph $\mathcal{G}_{\text{DAG}}$ is acyclic.
 
 2. **Longest Path Rank Assignment**:
    Each node $v$ is assigned a topological rank $r(v)$:
@@ -60,11 +62,17 @@ The optimization pipeline runs asynchronously in a dedicated Web Worker time-sli
 
 ### Stage 6–18: Barycentric Crossing Minimization Sweeps
 
-To minimize edge crossings, the engine performs alternating top-down and bottom-up sweeps over adjacent rank layers $(L_r, L_{r+1})$. The position of node $v \in L_{r+1}$ is updated based on the average position (barycenter) of its connected neighbors in $L_r$:
+To minimize edge crossings, the engine performs alternating top-down and bottom-up sweeps over adjacent rank layers $(L_r, L_{r+1})$.
 
-$$\text{barycenter}(v) = \frac{1}{\text{deg}^{-}(v)} \sum_{(u, v) \in E} \text{position}(u)$$
+#### Top-Down Barycenter
+For node $v \in L_{r+1}$ with predecessors in $L_r$:
+$$\text{barycenter}_{\text{top-down}}(v) = \frac{1}{\text{deg}^{-}(v)} \sum_{(u, v) \in E} \text{position}(u)$$
 
-Nodes in $L_{r+1}$ are sorted deterministically by their barycenter values. Tied barycenters are resolved using median heuristics to prevent oscillation loops.
+#### Bottom-Up Barycenter
+For node $v \in L_r$ with successors in $L_{r+1}$:
+$$\text{barycenter}_{\text{bottom-up}}(v) = \frac{1}{\text{deg}^{+}(v)} \sum_{(v, w) \in E} \text{position}(w)$$
+
+Nodes are sorted deterministically by their barycenter values. Tied barycenters are resolved using median heuristics to prevent oscillation loops.
 
 ---
 
@@ -72,11 +80,15 @@ Nodes in $L_{r+1}$ are sorted deterministically by their barycenter values. Tied
 
 Edge routes are calculated using a grid-based A* pathfinder operating on an orthogonal grid.
 
-#### Cost Heuristic for A* Search
+#### Cost Functions for A* Search
 
-Given current grid point $p = (x_1, y_1)$ and target port $q = (x_2, y_2)$:
+Evaluation function $f(p) = g(p) + h(p, q)$:
 
-$$h(p, q) = |x_1 - x_2| + |y_1 - y_2| + P_{\text{bend}} \cdot \text{IsBend}(p, \text{prev}) + P_{\text{obstacle}} \cdot \text{ObstacleDist}(p)$$
+- **Accumulated Path Cost $g(p)$**:
+  $$g(p) = g(\text{prev}) + \text{Dist}(p, \text{prev}) + P_{\text{bend}} \cdot \text{IsBend}(p, \text{prev}) + P_{\text{obstacle}} \cdot \text{ObstacleDist}(p)$$
+
+- **Heuristic Estimate $h(p, q)$** (Manhattan Distance to target $q = (x_2, y_2)$):
+  $$h(p, q) = |x_1 - x_2| + |y_1 - y_2|$$
 
 Where:
 - $P_{\text{bend}} = 40$: Penalty applied whenever the search direction turns $90^\circ$.
