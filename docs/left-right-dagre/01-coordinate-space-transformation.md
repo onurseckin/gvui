@@ -79,17 +79,16 @@ $$\begin{pmatrix} X_{\text{screen}} \\ Y_{\text{screen}} \end{pmatrix} = \begin{
 - **Output Screen Vector**: $(X_{\text{screen}} = 450\text{px}, Y_{\text{screen}} = 120\text{px})^T$
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def apply_matrix_rotation(x_sugi: float, y_sugi: float) -> tuple[float, float]:
-    # 2x2 Rotation Matrix M_rot = [[0, 1], [1, 0]]
-    # Multiplies [[0, 1], [1, 0]] * [x_sugi, y_sugi]^T
-    x_screen = 0.0 * x_sugi + 1.0 * y_sugi
-    y_screen = 1.0 * x_sugi + 0.0 * y_sugi
-    return (x_screen, y_screen)
+```
+ALGORITHM ApplyMatrixRotation(x_sugi, y_sugi):
+    INPUT: x_sugi, y_sugi (canonical vertical coordinates)
+    OUTPUT: x_screen, y_screen (rotated screen coordinates)
 
-# Worked numerical test call
-x_out, y_out = apply_matrix_rotation(120.0, 450.0)
-# Output: (450.0, 120.0)
+    // Multiply by 2x2 rotation matrix [[0, 1], [1, 0]]
+    x_screen <- 0.0 * x_sugi + 1.0 * y_sugi
+    y_screen <- 1.0 * x_sugi + 0.0 * y_sugi
+
+    RETURN (x_screen, y_screen)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -128,16 +127,16 @@ $$\begin{pmatrix} X_{\text{sugi}} \\ Y_{\text{sugi}} \end{pmatrix} = \begin{pmat
 - **Recovered Canonical Rank Coordinate**: $(X_{\text{sugi}} = 120\text{px}, Y_{\text{sugi}} = 450\text{px})$
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def invert_matrix_rotation(x_screen: float, y_screen: float) -> tuple[float, float]:
-    # Involutive matrix M_rot^-1 == M_rot = [[0, 1], [1, 0]]
-    x_sugi = 0.0 * x_screen + 1.0 * y_screen
-    y_sugi = 1.0 * x_screen + 0.0 * y_screen
-    return (x_sugi, y_sugi)
+```
+ALGORITHM InvertMatrixRotation(x_screen, y_screen):
+    INPUT: x_screen, y_screen (rotated screen coordinates)
+    OUTPUT: x_sugi, y_sugi (canonical vertical coordinates)
 
-# Worked numerical inverse mapping check
-x_sugi, y_sugi = invert_matrix_rotation(450.0, 120.0)
-# Output: (120.0, 450.0) - exact identity recovery!
+    // Involutive matrix inverse M_rot^-1 is identical to M_rot
+    x_sugi <- 0.0 * x_screen + 1.0 * y_screen
+    y_sugi <- 1.0 * x_screen + 0.0 * y_screen
+
+    RETURN (x_sugi, y_sugi)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -175,16 +174,15 @@ Consider node `UserCard` with rendered screen dimensions: $\text{Width} = 180\te
    `g.setNode("UserCard", { width: 60, height: 180 })`
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def swap_node_dimensions(width: float, height: float) -> tuple[float, float]:
-    # Transpose width and height for Dagre LR solver input
-    dagre_width = height
-    dagre_height = width
-    return (dagre_width, dagre_height)
+```
+ALGORITHM SwapNodeDimensions(width, height):
+    INPUT: width, height (physical screen dimensions)
+    OUTPUT: dagre_width, dagre_height (transposed solver input dimensions)
 
-# Worked numerical test: 180x60 card
-d_w, d_h = swap_node_dimensions(180.0, 60.0)
-# Output: dagre_width = 60.0, dagre_height = 180.0
+    dagre_width <- height
+    dagre_height <- width
+
+    RETURN (dagre_width, dagre_height)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -223,17 +221,18 @@ Dagre returns center $(X_{\text{center}} = 450\text{px}, Y_{\text{center}} = 120
   $$Y_{\text{top-left}} = 120 - 30 = 90\text{px}$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def compute_top_left_origin(center_x: float, center_y: float, width: float, height: float) -> tuple[float, float]:
-    half_w = width / 2.0
-    half_h = height / 2.0
-    top_left_x = center_x - half_w
-    top_left_y = center_y - half_h
-    return (top_left_x, top_left_y)
+```
+ALGORITHM ComputeTopLeftOrigin(center_x, center_y, width, height):
+    INPUT: center_x, center_y (center coordinates), width, height (dimensions)
+    OUTPUT: top_left_x, top_left_y (top-left rendering origin)
 
-# Worked numerical recovery
-tl_x, tl_y = compute_top_left_origin(450.0, 120.0, 180.0, 60.0)
-# Output: (360.0, 90.0)
+    half_w <- width / 2.0
+    half_h <- height / 2.0
+
+    top_left_x <- center_x - half_w
+    top_left_y <- center_y - half_h
+
+    RETURN (top_left_x, top_left_y)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -257,55 +256,54 @@ tl_x, tl_y = compute_top_left_origin(450.0, 120.0, 180.0, 60.0)
 
 Now we combine sub-steps 2.1 (Matrix Rotation), 2.2 (Inverse Mapping), 2.3 (Dimension Swapping), and 2.4 (Top-Left Recovery) into the unified Left-to-Right layout master algorithm.
 
-```python
-algorithm ExecuteLeftRightDagreLayoutMaster(graph_dataset):
-    input:  graph_dataset with nodes V (having content dimensions) and edges E
-    output: positioned_nodes with screen (x, y, width, height), positioned_edges with paths
+```
+ALGORITHM ExecuteLeftRightDagreLayoutMaster(graph_dataset):
+    INPUT: graph_dataset (nodes V with content dimensions, edges E)
+    OUTPUT: positioned_nodes (with x, y, width, height), positioned_edges (with SVG paths)
 
-    // 1. Sub-step 2.3: Register nodes with Dagre, applying dimension swapping
-    g = new DagreGraph(multigraph = true)
-    g.setGraph({ rankdir: "LR", nodesep: 150, ranksep: 120, marginx: 80, marginy: 80 })
-    
-    dimensions_map = new Map()
-    for each node v in graph_dataset.nodes:
-        dims = calculateNodeDimensions(v) # e.g. width=180, height=60
-        dimensions_map.set(v.id, dims)
-        
-        // Register original dimensions (Dagre LR rankdir handles internal rotation)
-        g.setNode(v.id, { width: dims.width, height: dims.height })
+    // 1. Initialize Dagre layout graph configured for Left-to-Right orientation
+    graph <- CREATE_GRAPH(orientation = "LR", node_spacing = 150, rank_spacing = 120)
 
-    for each edge e in graph_dataset.edges:
-        g.setEdge(e.source, e.target, label = {}, id = e.id)
+    dimensions_map <- EMPTY_MAP()
+    FOR EACH node IN graph_dataset.nodes DO
+        dims <- CALCULATE_NODE_DIMENSIONS(node)
+        dimensions_map[node.id] <- dims
+        ADD_NODE_TO_GRAPH(graph, node.id, dims.width, dims.height)
+    END FOR
+
+    FOR EACH edge IN graph_dataset.edges DO
+        ADD_EDGE_TO_GRAPH(graph, edge.source, edge.target, edge.id)
+    END FOR
 
     // 2. Execute Sugiyama Dagre layout solver
-    dagre.layout(g)
+    RUN_DAGRE_LAYOUT(graph)
 
-    // 3. Sub-steps 2.1 & 2.4: Recover top-left origins from screen center
-    positioned_nodes = []
-    for each node v in graph_dataset.nodes:
-        dagre_node = g.node(v.id) # x=450, y=120
-        dims = dimensions_map.get(v.id) # width=180, height=60
+    // 3. Recover top-left rendering origins from screen center coordinates
+    positioned_nodes <- EMPTY_LIST()
+    FOR EACH node IN graph_dataset.nodes DO
+        layout_node <- GET_NODE_FROM_GRAPH(graph, node.id)
+        dims <- dimensions_map[node.id]
 
-        // Center coordinates returned by Dagre in screen space
-        center_x = dagre_node.x # 450
-        center_y = dagre_node.y # 120
+        center_x <- layout_node.x
+        center_y <- layout_node.y
 
-        // Sub-step 2.4: Recover top-left rendering origin
-        top_left_x = center_x - (dims.width / 2.0)   // 450 - 90 = 360
-        top_left_y = center_y - (dims.height / 2.0)  // 120 - 30 = 90
+        top_left_x <- center_x - (dims.width / 2.0)
+        top_left_y <- center_y - (dims.height / 2.0)
 
-        positioned_nodes.append({
-            id: v.id,
-            x: top_left_x,
-            y: top_left_y,
-            width: dims.width,
-            height: dims.height
-        })
+        positioned_node <- CREATE_POSITIONED_NODE(
+            id = node.id,
+            x = top_left_x,
+            y = top_left_y,
+            width = dims.width,
+            height = dims.height
+        )
+        APPEND(positioned_nodes, positioned_node)
+    END FOR
 
     // 4. Process edge paths and routing
-    positioned_edges = processEdgePaths(g, graph_dataset.edges, positioned_nodes)
+    positioned_edges <- PROCESS_EDGE_PATHS(graph, graph_dataset.edges, positioned_nodes)
 
-    return { nodes: positioned_nodes, edges: positioned_edges }
+    RETURN { nodes: positioned_nodes, edges: positioned_edges }
 ```
 
 ---

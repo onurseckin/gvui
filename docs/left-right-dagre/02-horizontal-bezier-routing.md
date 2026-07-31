@@ -68,25 +68,25 @@ Let source anchor $\mathbf{P}_0 = (100\text{px}, 50\text{px})$ and target anchor
 - **Evaluated Curve Point $\mathbf{B}(0.5)$**: $(200\text{px}, 100\text{px})$
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def compute_cubic_bezier_midpoint(p0: tuple[float, float], p3: tuple[float, float]) -> tuple[float, float]:
-    delta_x = p3[0] - p0[0]
-    c1 = (p0[0] + delta_x / 2.0, p0[1])
-    c2 = (p3[0] - delta_x / 2.0, p3[1])
-    
-    t = 0.5
-    w0 = (1 - t) ** 3          # 0.125
-    w1 = 3 * ((1 - t) ** 2) * t # 0.375
-    w2 = 3 * (1 - t) * (t ** 2) # 0.375
-    w3 = t ** 3                # 0.125
-    
-    x_mid = w0 * p0[0] + w1 * c1[0] + w2 * c2[0] + w3 * p3[0]
-    y_mid = w0 * p0[1] + w1 * c1[1] + w2 * c2[1] + w3 * p3[1]
-    return (x_mid, y_mid)
+```
+ALGORITHM ComputeCubicBezierMidpoint(p0, p3):
+    INPUT: p0 (source anchor x, y), p3 (target anchor x, y)
+    OUTPUT: x_mid, y_mid (evaluated midpoint coordinates at t = 0.5)
 
-# Worked numerical test call
-mid_pt = compute_cubic_bezier_midpoint((100.0, 50.0), (300.0, 150.0))
-# Output: (200.0, 100.0)
+    delta_x <- p3.x - p0.x
+    c1 <- (p0.x + delta_x / 2.0, p0.y)
+    c2 <- (p3.x - delta_x / 2.0, p3.y)
+
+    t <- 0.5
+    w0 <- (1 - t)^3          // 0.125
+    w1 <- 3 * (1 - t)^2 * t  // 0.375
+    w2 <- 3 * (1 - t) * t^2  // 0.375
+    w3 <- t^3                // 0.125
+
+    x_mid <- w0 * p0.x + w1 * c1.x + w2 * c2.x + w3 * p3.x
+    y_mid <- w0 * p0.y + w1 * c1.y + w2 * c2.y + w3 * p3.y
+
+    RETURN (x_mid, y_mid)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -122,18 +122,20 @@ Using $\mathbf{P}_0 = (100, 50)$, $\mathbf{C}_1 = (200, 50)$, $\mathbf{C}_2 = (2
    - $Y$-velocity is $0\text{px/unit}$, proving strict $90^\circ$ horizontal entry into target node left border!
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def compute_bezier_boundary_tangents(p0: tuple[float, float], c1: tuple[float, float],
-                                     c2: tuple[float, float], p3: tuple[float, float]):
-    # Tangent at t=0: 3 * (C1 - P0)
-    v_exit = (3.0 * (c1[0] - p0[0]), 3.0 * (c1[1] - p0[1]))
-    # Tangent at t=1: 3 * (P3 - C2)
-    v_entry = (3.0 * (p3[0] - c2[0]), 3.0 * (p3[1] - c2[1]))
-    return (v_exit, v_entry)
+```
+ALGORITHM ComputeBezierBoundaryTangents(p0, c1, c2, p3):
+    INPUT: p0 (start anchor), c1 (control point 1), c2 (control point 2), p3 (end anchor)
+    OUTPUT: v_exit (exit tangent vector at t=0), v_entry (entry tangent vector at t=1)
 
-# Worked numerical test
-v_out, v_in = compute_bezier_boundary_tangents((100.0, 50.0), (200.0, 50.0), (200.0, 150.0), (300.0, 150.0))
-# Output: v_exit = (300.0, 0.0), v_entry = (300.0, 0.0)
+    // Tangent vector at t=0: 3 * (c1 - p0)
+    v_exit_x <- 3.0 * (c1.x - p0.x)
+    v_exit_y <- 3.0 * (c1.y - p0.y)
+
+    // Tangent vector at t=1: 3 * (p3 - c2)
+    v_entry_x <- 3.0 * (p3.x - c2.x)
+    v_entry_y <- 3.0 * (p3.y - c2.y)
+
+    RETURN ((v_exit_x, v_exit_y), (v_entry_x, v_entry_y))
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -179,27 +181,26 @@ Consider 3 polyline points: $p_0 = (100\text{px}, 50\text{px})$, $p_1 = (200\tex
    $$\hat{\mathbf{n}} = \left( -\frac{100}{141.42}, \, \frac{100}{141.42} \right) = (-0.7071, 0.7071)$$
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-import math
+```
+ALGORITHM ComputePolylineArcMidpoint(p0, p1, p2):
+    INPUT: p0, p1, p2 (polyline control vertices)
+    OUTPUT: mid_x, mid_y (50% arc-length midpoint), normal (unit normal vector)
 
-def compute_polyline_arc_midpoint(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float]):
-    l0 = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) # 100.0
-    l1 = math.hypot(p2[0] - p1[0], p2[1] - p1[1]) # 141.421
-    total_l = l0 + l1                           # 241.421
-    target = total_l / 2.0                      # 120.711
-    
-    rem = target - l0                           # 20.711
-    t_seg = rem / l1                            # 0.1464
-    
-    mid_x = p1[0] + t_seg * (p2[0] - p1[0])
-    mid_y = p1[1] + t_seg * (p2[1] - p1[1])
-    
-    normal = (-(p2[1] - p1[1]) / l1, (p2[0] - p1[0]) / l1)
-    return (mid_x, mid_y, normal)
+    l0 <- DISTANCE(p0, p1)
+    l1 <- DISTANCE(p1, p2)
+    total_length <- l0 + l1
+    target_distance <- total_length / 2.0
 
-# Worked numerical check
-mx, my, norm = compute_polyline_arc_midpoint((100, 50), (200, 50), (300, 150))
-# Output: mx=214.64, my=64.64, norm=(-0.7071, 0.7071)
+    remaining_distance <- target_distance - l0
+    t_seg <- remaining_distance / l1
+
+    mid_x <- p1.x + t_seg * (p2.x - p1.x)
+    mid_y <- p1.y + t_seg * (p2.y - p1.y)
+
+    normal_x <- -(p2.y - p1.y) / l1
+    normal_y <- (p2.x - p1.x) / l1
+
+    RETURN (mid_x, mid_y, (normal_x, normal_y))
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -245,27 +246,32 @@ Badge 1 centered at $(200\text{px}, 100\text{px})$, Badge 2 centered at $(204\te
 5. **Verification**: New $\Delta x = |246 - 158| = 88\text{px} > 84\text{px}$ (Collision fully resolved!).
 
 #### 3. Targeted Sub-Step Pseudocode
-```python
-def apply_pairwise_badge_repulsion(b1: tuple[float, float], b2: tuple[float, float],
-                                   w: float = 84.0, h: float = 34.0):
-    dx = abs(b2[0] - b1[0])
-    dy = abs(b2[1] - b1[1])
-    
-    if dx < w and dy < h:
-        shift_x = (w - dx + 4.0) / 2.0
-        shift_y = (h - dy + 4.0) / 2.0
-        
-        if dx <= dy:
-            # Horizontal shift
-            return ((b1[0] - shift_x, b1[1]), (b2[0] + shift_x, b2[1]))
-        else:
-            # Vertical shift
-            return ((b1[0], b1[1] - shift_y), (b2[0], b2[1] + shift_y))
-    return (b1, b2)
+```
+ALGORITHM ApplyPairwiseBadgeRepulsion(badge1, badge2, badge_width, badge_height):
+    INPUT: badge1 (x, y), badge2 (x, y), badge_width, badge_height
+    OUTPUT: updated_badge1, updated_badge2
 
-# Worked numerical test
-new_b1, new_b2 = apply_pairwise_badge_repulsion((200.0, 100.0), (204.0, 110.0))
-# Output: new_b1 = (158.0, 100.0), new_b2 = (246.0, 110.0)
+    dx <- ABSOLUTE(badge2.x - badge1.x)
+    dy <- ABSOLUTE(badge2.y - badge1.y)
+
+    IF dx < badge_width AND dy < badge_height THEN
+        shift_x <- (badge_width - dx + 4.0) / 2.0
+        shift_y <- (badge_height - dy + 4.0) / 2.0
+
+        IF dx <= dy THEN
+            // Horizontal shift
+            updated_b1 <- (badge1.x - shift_x, badge1.y)
+            updated_b2 <- (badge2.x + shift_x, badge2.y)
+            RETURN (updated_b1, updated_b2)
+        ELSE
+            // Vertical shift
+            updated_b1 <- (badge1.x, badge1.y - shift_y)
+            updated_b2 <- (badge2.x, badge2.y + shift_y)
+            RETURN (updated_b1, updated_b2)
+        END IF
+    END IF
+
+    RETURN (badge1, badge2)
 ```
 
 #### 4. Sub-Step ASCII Infographic
@@ -290,57 +296,66 @@ new_b1, new_b2 = apply_pairwise_badge_repulsion((200.0, 100.0), (204.0, 110.0))
 
 Combining sub-steps 2.1 (Cubic Bezier Routing), 2.2 (Boundary Tangents), 2.3 (Arc-Length Midpoint), and 2.4 (Badge Repulsion Pass) into the master edge routing algorithm:
 
-```python
-algorithm ExecuteLeftRightEdgeRoutingMaster(positioned_nodes, edges):
-    input:  positioned_nodes with (x, y, width, height), edge list E
-    output: positioned_edges with cubic Bezier paths, arc midpoints, and non-overlapping label badges
+```
+ALGORITHM ExecuteLeftRightEdgeRoutingMaster(positioned_nodes, edges):
+    INPUT: positioned_nodes (with x, y, width, height), edges (edge list E)
+    OUTPUT: positioned_edges (with Bezier paths, arc midpoints, resolved label badges)
 
-    BADGE_W = 84.0
-    BADGE_H = 34.0
-    positioned_edges = []
+    BADGE_WIDTH <- 84.0
+    BADGE_HEIGHT <- 34.0
+    positioned_edges <- EMPTY_LIST()
 
-    // Phase 1: Sub-steps 2.1, 2.2 & 2.3 - Compute Bezier paths & initial label midpoints
-    for each edge e in edges:
-        source = findNode(positioned_nodes, e.source)
-        target = findNode(positioned_nodes, e.target)
+    // Phase 1: Compute Bezier paths and initial label midpoints
+    FOR EACH edge IN edges DO
+        source <- FIND_NODE(positioned_nodes, edge.source)
+        target <- FIND_NODE(positioned_nodes, edge.target)
 
-        // Sub-step 2.1: Anchor point coordinates
-        p0 = (source.x + source.width, source.y + source.height / 2.0)
-        p3 = (target.x, target.y + target.height / 2.0)
-        delta_x = p3[0] - p0[0]
+        // Source right-center anchor p0 and target left-center anchor p3
+        p0 <- (source.x + source.width, source.y + source.height / 2.0)
+        p3 <- (target.x, target.y + target.height / 2.0)
+        delta_x <- p3.x - p0.x
 
         // Control points
-        c1 = (p0[0] + delta_x / 2.0, p0[1])
-        c2 = (p3[0] - delta_x / 2.0, p3[1])
+        c1 <- (p0.x + delta_x / 2.0, p0.y)
+        c2 <- (p3.x - delta_x / 2.0, p3.y)
 
-        path_svg = sprintf("M %f %f C %f %f, %f %f, %f %f",
-                           p0[0], p0[1], c1[0], c1[1], c2[0], c2[1], p3[0], p3[1])
+        path_svg <- FORMAT_SVG_CUBIC_BEZIER(p0, c1, c2, p3)
 
-        // Sub-step 2.3: Compute 50% arc-length midpoint for label placement
-        points = discretizeBezierPath(p0, c1, c2, p3, steps = 10)
-        (mid_x, mid_y, normal) = compute_polyline_arc_midpoint(points)
+        // Discretize path and compute 50% arc-length midpoint for label
+        points <- DISCRETIZE_BEZIER_PATH(p0, c1, c2, p3, steps = 10)
+        (mid_x, mid_y, normal) <- COMPUTE_POLYLINE_ARC_MIDPOINT(points)
 
-        positioned_edges.append({
-            id: e.id,
-            path: path_svg,
-            labelX: mid_x,
-            labelY: mid_y,
-            normal: normal
-        })
+        positioned_edge <- CREATE_POSITIONED_EDGE(
+            id = edge.id,
+            path = path_svg,
+            label_x = mid_x,
+            label_y = mid_y,
+            normal = normal
+        )
+        APPEND(positioned_edges, positioned_edge)
+    END FOR
 
-    // Phase 2: Sub-step 2.4 - Pairwise Badge Repulsion Post-Processing Pass
-    for i from 0 to length(positioned_edges) - 1:
-        e1 = positioned_edges[i]
-        for j from i + 1 to length(positioned_edges) - 1:
-            e2 = positioned_edges[j]
+    // Phase 2: Pairwise Badge Repulsion Post-Processing Pass
+    num_edges <- LENGTH(positioned_edges)
+    FOR i FROM 0 TO num_edges - 1 DO
+        e1 <- positioned_edges[i]
+        FOR j FROM i + 1 TO num_edges - 1 DO
+            e2 <- positioned_edges[j]
 
-            (b1_new, b2_new) = apply_pairwise_badge_repulsion(
-                (e1.labelX, e1.labelY), (e2.labelX, e2.labelY), BADGE_W, BADGE_H
+            (b1_new, b2_new) <- APPLY_PAIRWISE_BADGE_REPULSION(
+                (e1.label_x, e1.label_y),
+                (e2.label_x, e2.label_y),
+                BADGE_WIDTH,
+                BADGE_HEIGHT
             )
-            e1.labelX, e1.labelY = b1_new
-            e2.labelX, e2.labelY = b2_new
+            e1.label_x <- b1_new.x
+            e1.label_y <- b1_new.y
+            e2.label_x <- b2_new.x
+            e2.label_y <- b2_new.y
+        END FOR
+    END FOR
 
-    return positioned_edges
+    RETURN positioned_edges
 ```
 
 ---
