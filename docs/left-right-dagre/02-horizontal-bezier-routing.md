@@ -39,198 +39,308 @@ When multiple parallel edges span between nodes in adjacent ranks, their midpoin
 
 ## 2. Bottom-Up Mathematical Deconstruction
 
-### 2.1 Parametric Cubic Bezier Curve Math
+### 2.1 Parametric Cubic Bezier S-Curve & Control Points
 
+#### 1. Mathematical Sub-Component Formula
 An edge connecting source anchor $\mathbf{P}_0$ to target anchor $\mathbf{P}_3$ is governed by a 2D parametric cubic Bezier curve $\mathbf{B}(t)$ for $t \in [0, 1]$:
 
 $$\mathbf{B}(t) = (1-t)^3 \mathbf{P}_0 + 3(1-t)^2 t \mathbf{C}_1 + 3(1-t) t^2 \mathbf{C}_2 + t^3 \mathbf{P}_3$$
 
-Separating into $X$ and $Y$ Cartesian components:
+With source right center $\mathbf{P}_0 = (X_s + W_s, Y_s + H_s/2)$, target left center $\mathbf{P}_3 = (X_t, Y_t + H_t/2)$, and rank span $\Delta X = X_t - (X_s + W_s)$, control points are:
 
-$$X(t) = (1-t)^3 X_0 + 3(1-t)^2 t X_{C1} + 3(1-t) t^2 X_{C2} + t^3 X_3$$
+$$\mathbf{C}_1 = \mathbf{P}_0 + \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix}, \quad \mathbf{C}_2 = \mathbf{P}_3 - \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix}$$
 
-$$Y(t) = (1-t)^3 Y_0 + 3(1-t)^2 t Y_{C1} + 3(1-t) t^2 Y_{C2} + t^3 Y_3$$
+#### 2. Concrete Numerical Graph Example
+Let source anchor $\mathbf{P}_0 = (100\text{px}, 50\text{px})$ and target anchor $\mathbf{P}_3 = (300\text{px}, 150\text{px})$.
 
-### 2.2 Anchor Points & Control Point Vector Derivations
+1. **Rank Span Calculation**:
+   $$\Delta X = 300 - 100 = 200\text{px} \implies \frac{\Delta X}{2} = 100\text{px}$$
+2. **Control Point Coordinates**:
+   $$\mathbf{C}_1 = (100 + 100, 50) = (200\text{px}, 50\text{px})$$
+   $$\mathbf{C}_2 = (300 - 100, 150) = (200\text{px}, 150\text{px})$$
+3. **Evaluating Curve Midpoint at $t = 0.5$**:
+   - Bernstein Polynomial Weights for $t=0.5$:
+     $$(1-t)^3 = 0.125, \quad 3(1-t)^2 t = 0.375, \quad 3(1-t) t^2 = 0.375, \quad t^3 = 0.125$$
+   - Component $X(0.5)$:
+     $$X(0.5) = 0.125(100) + 0.375(200) + 0.375(200) + 0.125(300) = 12.5 + 75 + 75 + 37.5 = 200\text{px}$$
+   - Component $Y(0.5)$:
+     $$Y(0.5) = 0.125(50) + 0.375(50) + 0.375(150) + 0.125(150) = 6.25 + 18.75 + 56.25 + 18.75 = 100\text{px}$$
+- **Evaluated Curve Point $\mathbf{B}(0.5)$**: $(200\text{px}, 100\text{px})$
 
-1. **Source Anchor Point ($\mathbf{P}_0$)**: Located at the center of the right border of source node $v_s$:
-   $$\mathbf{P}_0 = \left( X_s + W_s, \, Y_s + \frac{H_s}{2} \right)$$
+#### 3. Targeted Sub-Step Pseudocode
+```python
+def compute_cubic_bezier_midpoint(p0: tuple[float, float], p3: tuple[float, float]) -> tuple[float, float]:
+    delta_x = p3[0] - p0[0]
+    c1 = (p0[0] + delta_x / 2.0, p0[1])
+    c2 = (p3[0] - delta_x / 2.0, p3[1])
+    
+    t = 0.5
+    w0 = (1 - t) ** 3          # 0.125
+    w1 = 3 * ((1 - t) ** 2) * t # 0.375
+    w2 = 3 * (1 - t) * (t ** 2) # 0.375
+    w3 = t ** 3                # 0.125
+    
+    x_mid = w0 * p0[0] + w1 * c1[0] + w2 * c2[0] + w3 * p3[0]
+    y_mid = w0 * p0[1] + w1 * c1[1] + w2 * c2[1] + w3 * p3[1]
+    return (x_mid, y_mid)
 
-2. **Target Anchor Point ($\mathbf{P}_3$)**: Located at the center of the left border of target node $v_t$:
-   $$\mathbf{P}_3 = \left( X_t, \, Y_t + \frac{H_t}{2} \right)$$
+# Worked numerical test call
+mid_pt = compute_cubic_bezier_midpoint((100.0, 50.0), (300.0, 150.0))
+# Output: (200.0, 100.0)
+```
 
-3. **Horizontal Rank Span ($\Delta X$)**:
-   $$\Delta X = X_t - (X_s + W_s)$$
-
-4. **Control Points ($\mathbf{C}_1, \mathbf{C}_2$)**:
-   To enforce horizontal tangency at both boundaries, control points are offset horizontally by half the rank distance $\frac{\Delta X}{2}$:
-   $$\mathbf{C}_1 = \mathbf{P}_0 + \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix} = \left( X_s + W_s + \frac{\Delta X}{2}, \, Y_s + \frac{H_s}{2} \right)$$
-
-   $$\mathbf{C}_2 = \mathbf{P}_3 - \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix} = \left( X_t - \frac{\Delta X}{2}, \, Y_t + \frac{H_t}{2} \right)$$
-
-### 2.3 Tangent Velocity Vector & Boundary Orthogonality
-
-Taking the first derivative of $\mathbf{B}(t)$ with respect to parameter $t$ yields the velocity vector $\mathbf{B}'(t)$:
-
-$$\mathbf{B}'(t) = \frac{d\mathbf{B}}{dt} = 3(1-t)^2 (\mathbf{C}_1 - \mathbf{P}_0) + 6(1-t)t (\mathbf{C}_2 - \mathbf{C}_1) + 3t^2 (\mathbf{P}_3 - \mathbf{C}_2)$$
-
-Evaluating at the boundary endpoints $t=0$ and $t=1$:
-
-- **Source Exit Velocity ($t=0$)**:
-  $$\mathbf{B}'(0) = 3(\mathbf{C}_1 - \mathbf{P}_0) = 3 \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix} = \begin{pmatrix} \frac{3 \Delta X}{2} \\ 0 \end{pmatrix}$$
-  The $Y$-component is zero, proving that the curve exits the source node's right border at a strict $90^\circ$ orthogonal horizontal tangent.
-
-- **Target Entry Velocity ($t=1$)**:
-  $$\mathbf{B}'(1) = 3(\mathbf{P}_3 - \mathbf{C}_2) = 3 \begin{pmatrix} \frac{\Delta X}{2} \\ 0 \end{pmatrix} = \begin{pmatrix} \frac{3 \Delta X}{2} \\ 0 \end{pmatrix}$$
-  The $Y$-component is zero, proving that the curve enters the target node's left border at a strict $90^\circ$ orthogonal horizontal tangent.
-
-### 2.4 Discrete Polyline Arc-Length Midpoint Calculus
-
-When Dagre emits edge paths as discretized polylines $P = [p_0, p_1, \dots, p_n]$, edge label badges must be placed at the exact 50% arc-length midpoint rather than the parametric mid-point.
-
-1. **Segment Lengths ($\ell_i$)**:
-   $$\ell_i = \text{hypot}(x_{i+1} - x_i, \, y_{i+1} - y_i) = \sqrt{(x_{i+1} - x_i)^2 + (y_{i+1} - y_i)^2}$$
-
-2. **Total Arc Length ($L$)**:
-   $$L = \sum_{i=0}^{n-1} \ell_i$$
-
-3. **Target Midpoint Distance ($s$)**:
-   $$s = \frac{L}{2}$$
-
-4. **Segment Interpolation**:
-   Iterating through segments, find index $k$ where accumulated length $\sum_{i=0}^{k-1} \ell_i \le s \le \sum_{i=0}^{k} \ell_i$. The remaining distance is $r = s - \sum_{i=0}^{k-1} \ell_i$. Interpolation factor $t_{\text{seg}}$ is:
-   $$t_{\text{seg}} = \frac{r}{\ell_k}$$
-
-   $$\mathbf{P}_{\text{mid}} = (1 - t_{\text{seg}}) \, p_k + t_{\text{seg}} \, p_{k+1}$$
-
-5. **Perpendicular Unit Normal Vector ($\hat{\mathbf{n}}$)**:
-   For segment vector $\Delta p = (\Delta x, \Delta y) = p_{k+1} - p_k$:
-   $$\hat{\mathbf{n}} = \left( -\frac{\Delta y}{\ell_k}, \, \frac{\Delta x}{\ell_k} \right)$$
-
-### 2.5 Badge Overlap Repulsion Displacement Calculus
-
-For two edge label badges with bounding box dimensions $W_{\text{badge}} = 84\text{px}$ and $H_{\text{badge}} = 34\text{px}$ centered at $(x_1, y_1)$ and $(x_2, y_2)$:
-
-1. **Distance Deltas**:
-   $$\Delta x = |x_2 - x_1|, \quad \Delta y = |y_2 - y_1|$$
-
-2. **Collision Threshold**:
-   An overlap occurs if and only if $\Delta x < 84$ and $\Delta y < 34$.
-
-3. **Repulsion Shift Calculation**:
-   To eliminate overlap with a $4\text{px}$ safety margin:
-   $$\delta_x = \frac{84 - \Delta x + 4}{2}, \quad \delta_y = \frac{34 - \Delta y + 4}{2}$$
-
-4. **Directional Resolution Logic**:
-   - If $\Delta x \le \Delta y$: apply horizontal displacement ($\text{shiftX} = \delta_x$):
-     $$x_1 \leftarrow x_1 - \delta_x, \quad x_2 \leftarrow x_2 + \delta_x$$
-   - Else: apply vertical displacement ($\text{shiftY} = \delta_y$):
-     $$y_1 \leftarrow y_1 - \delta_y, \quad y_2 \leftarrow y_2 + \delta_y$$
+#### 4. Sub-Step ASCII Infographic
+```
+                SUB-STEP 2.1: CUBIC BEZIER S-CURVE & B(0.5) EVALUATION
+                
+    P0(100,50) ─────── C1(200,50)
+        ●─────────────────●
+                           \
+                            \   ● B(0.5) = (200, 100)
+                             \
+                              ●─────────────────●
+                          C2(200,150)        P3(300,150)
+```
 
 ---
 
-## 3. Step-by-Step Computational Pseudocode
+### 2.2 Tangent Velocity Vector & Boundary Orthogonality
 
+#### 1. Mathematical Sub-Component Formula
+Taking the derivative of $\mathbf{B}(t)$ with respect to parameter $t$ gives the tangent velocity vector $\mathbf{B}'(t)$:
+
+$$\mathbf{B}'(t) = \frac{d\mathbf{B}}{dt} = 3(1-t)^2 (\mathbf{C}_1 - \mathbf{P}_0) + 6(1-t)t (\mathbf{C}_2 - \mathbf{C}_1) + 3t^2 (\mathbf{P}_3 - \mathbf{C}_2)$$
+
+#### 2. Concrete Numerical Graph Example
+Using $\mathbf{P}_0 = (100, 50)$, $\mathbf{C}_1 = (200, 50)$, $\mathbf{C}_2 = (200, 150)$, $\mathbf{P}_3 = (300, 150)$:
+
+1. **Source Exit Velocity ($t = 0$)**:
+   $$\mathbf{B}'(0) = 3(1)^2 (\mathbf{C}_1 - \mathbf{P}_0) = 3 \begin{pmatrix} 200 - 100 \\ 50 - 50 \end{pmatrix} = \begin{pmatrix} 300 \\ 0 \end{pmatrix}$$
+   - $Y$-velocity is $0\text{px/unit}$, proving strict $90^\circ$ horizontal exit from source node right border!
+2. **Target Entry Velocity ($t = 1$)**:
+   $$\mathbf{B}'(1) = 3(1)^2 (\mathbf{P}_3 - \mathbf{C}_2) = 3 \begin{pmatrix} 300 - 200 \\ 150 - 150 \end{pmatrix} = \begin{pmatrix} 300 \\ 0 \end{pmatrix}$$
+   - $Y$-velocity is $0\text{px/unit}$, proving strict $90^\circ$ horizontal entry into target node left border!
+
+#### 3. Targeted Sub-Step Pseudocode
 ```python
-algorithm ComputeHorizontalBezierPath(sourceNode, targetNode):
-    input:  sourceNode (x, y, w, h), targetNode (x, y, w, h)
-    output: SVG cubic Bezier path string
+def compute_bezier_boundary_tangents(p0: tuple[float, float], c1: tuple[float, float],
+                                     c2: tuple[float, float], p3: tuple[float, float]):
+    # Tangent at t=0: 3 * (C1 - P0)
+    v_exit = (3.0 * (c1[0] - p0[0]), 3.0 * (c1[1] - p0[1]))
+    # Tangent at t=1: 3 * (P3 - C2)
+    v_entry = (3.0 * (p3[0] - c2[0]), 3.0 * (p3[1] - c2[1]))
+    return (v_exit, v_entry)
 
-    // 1. Calculate border anchor coordinates
-    P0_x = sourceNode.x + sourceNode.width
-    P0_y = sourceNode.y + (sourceNode.height / 2)
-
-    P3_x = targetNode.x
-    P3_y = targetNode.y + (targetNode.height / 2)
-
-    // 2. Compute horizontal rank span DeltaX
-    deltaX = P3_x - P0_x
-
-    // 3. Compute control points C1 and C2
-    C1_x = P0_x + (deltaX / 2)
-    C1_y = P0_y
-
-    C2_x = P3_x - (deltaX / 2)
-    C2_y = P3_y
-
-    // 4. Construct SVG Cubic Bezier command string
-    path_string = sprintf("M %f %f C %f %f, %f %f, %f %f",
-                          P0_x, P0_y, C1_x, C1_y, C2_x, C2_y, P3_x, P3_y)
-
-    return path_string
+# Worked numerical test
+v_out, v_in = compute_bezier_boundary_tangents((100.0, 50.0), (200.0, 50.0), (200.0, 150.0), (300.0, 150.0))
+# Output: v_exit = (300.0, 0.0), v_entry = (300.0, 0.0)
 ```
 
-```python
-algorithm FindTotalPathMidpoint(points):
-    input:  list of 2D points [p0, p1, ..., pn]
-    output: midpoint (x, y) and unit normal vector
-
-    if points is empty: return (0, 0, normal=(0, 1))
-    if length(points) == 1: return (points[0].x, points[0].y, normal=(0, 1))
-
-    segment_lengths = []
-    total_length = 0
-    for i from 0 to length(points) - 2:
-        dx = points[i+1].x - points[i].x
-        dy = points[i+1].y - points[i].y
-        len = hypot(dx, dy)
-        segment_lengths.append(len)
-        total_length += len
-
-    target_dist = total_length / 2
-    accumulated = 0
-
-    for i from 0 to length(points) - 2:
-        len = segment_lengths[i]
-        if accumulated + len >= target_dist or i == length(points) - 2:
-            remaining = target_dist - accumulated
-            t = remaining / len if len > 0 else 0
-            t = clamp(t, 0.0, 1.0)
-
-            p1 = points[i]
-            p2 = points[i+1]
-            mid_x = p1.x + t * (p2.x - p1.x)
-            mid_y = p1.y + t * (p2.y - p1.y)
-
-            dx = p2.x - p1.x
-            dy = p2.y - p1.y
-            normal = (-dy / len, dx / len) if len > 0 else (0, 1)
-
-            return (mid_x, mid_y, normal)
-
-        accumulated += len
+#### 4. Sub-Step ASCII Infographic
+```
+             SUB-STEP 2.2: BOUNDARY TANGENT VELOCITY VECTORS
+             
+   Source Right Border                           Target Left Border
+   ┌──────────┐                                  ┌──────────┐
+   │  Node v1 ├───────► B'(0) = (300, 0)         │  Node v2 │
+   │          │ (Horizontal Exit)   B'(1) = (300, 0) ───►│          │
+   └──────────┘                     (Horizontal Entry)└──────────┘
 ```
 
+---
+
+### 2.3 Discrete Polyline Arc-Length 50% Midpoint & Normal
+
+#### 1. Mathematical Sub-Component Formula
+For discretized polyline points $P = [p_0, p_1, \dots, p_n]$, the accumulated arc-length $L = \sum \ell_i$. Target midpoint distance is $s = L / 2$.
+
+Interpolation factor $t_{\text{seg}}$ on target segment $k$ with remaining distance $r$:
+
+$$t_{\text{seg}} = \frac{r}{\ell_k}, \quad \mathbf{P}_{\text{mid}} = (1 - t_{\text{seg}}) p_k + t_{\text{seg}} p_{k+1}$$
+
+Unit normal vector $\hat{\mathbf{n}}$ for segment vector $(\Delta x, \Delta y)$:
+
+$$\hat{\mathbf{n}} = \left( -\frac{\Delta y}{\ell_k}, \, \frac{\Delta x}{\ell_k} \right)$$
+
+#### 2. Concrete Numerical Graph Example
+Consider 3 polyline points: $p_0 = (100\text{px}, 50\text{px})$, $p_1 = (200\text{px}, 50\text{px})$, $p_2 = (300\text{px}, 150\text{px})$.
+
+1. **Segment Lengths**:
+   $$\ell_0 = \sqrt{(200-100)^2 + (50-50)^2} = \sqrt{100^2 + 0} = 100\text{px}$$
+   $$\ell_1 = \sqrt{(300-200)^2 + (150-50)^2} = \sqrt{100^2 + 100^2} = \sqrt{20000} \approx 141.42\text{px}$$
+2. **Total Arc-Length & Target Distance**:
+   $$L = 100 + 141.42 = 241.42\text{px} \implies s = \frac{241.42}{2} = 120.71\text{px}$$
+3. **Segment Interpolation**:
+   - Segment 0 covers $0 \to 100\text{px}$.
+   - Segment 1 starts at $100\text{px}$. Remaining distance: $r = 120.71 - 100 = 20.71\text{px}$.
+   - $t_{\text{seg}} = \frac{20.71}{141.42} \approx 0.1464$.
+4. **Calculated Midpoint & Unit Normal**:
+   $$\mathbf{P}_{\text{mid}} = (200, 50) + 0.1464 \cdot (100, 100) = (214.64\text{px}, 64.64\text{px})$$
+   $$\hat{\mathbf{n}} = \left( -\frac{100}{141.42}, \, \frac{100}{141.42} \right) = (-0.7071, 0.7071)$$
+
+#### 3. Targeted Sub-Step Pseudocode
 ```python
-algorithm ApplyBadgeRepulsionPass(positioned_edges):
-    input:  list of positioned_edges with (labelX, labelY)
-    output: modified positioned_edges with non-overlapping label coordinates
+import math
 
-    BADGE_WIDTH = 84
-    BADGE_HEIGHT = 34
+def compute_polyline_arc_midpoint(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float]):
+    l0 = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) # 100.0
+    l1 = math.hypot(p2[0] - p1[0], p2[1] - p1[1]) # 141.421
+    total_l = l0 + l1                           # 241.421
+    target = total_l / 2.0                      # 120.711
+    
+    rem = target - l0                           # 20.711
+    t_seg = rem / l1                            # 0.1464
+    
+    mid_x = p1[0] + t_seg * (p2[0] - p1[0])
+    mid_y = p1[1] + t_seg * (p2[1] - p1[1])
+    
+    normal = (-(p2[1] - p1[1]) / l1, (p2[0] - p1[0]) / l1)
+    return (mid_x, mid_y, normal)
 
+# Worked numerical check
+mx, my, norm = compute_polyline_arc_midpoint((100, 50), (200, 50), (300, 150))
+# Output: mx=214.64, my=64.64, norm=(-0.7071, 0.7071)
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                SUB-STEP 2.3: ARC-LENGTH POLYLINE MIDPOINT EXTRACTION
+                
+   p0 (100,50) ── Seg 0 (100px) ──► p1 (200,50)
+                                        \
+                                         \ Seg 1 (20.71px into 141.42px)
+                                          ● P_mid (214.64, 64.64)
+                                           \  ^ Unit Normal (-0.7071, 0.7071)
+                                            ▼ p2 (300,150)
+```
+
+---
+
+### 2.4 Badge Overlap Repulsion Displacement Calculus
+
+#### 1. Mathematical Sub-Component Formula
+For two badge labels centered at $(x_1, y_1)$ and $(x_2, y_2)$ with bounding box dimensions $W_{\text{badge}} = 84\text{px}$ and $H_{\text{badge}} = 34\text{px}$:
+
+$$\Delta x = |x_2 - x_1|, \quad \Delta y = |y_2 - y_1|$$
+
+Overlap occurs if $\Delta x < 84$ and $\Delta y < 34$. Shift amounts with a $4\text{px}$ gap:
+
+$$\delta_x = \frac{84 - \Delta x + 4}{2}, \quad \delta_y = \frac{34 - \Delta y + 4}{2}$$
+
+If $\Delta x \le \Delta y$, displace along $X$-axis by $\delta_x$; else displace along $Y$-axis by $\delta_y$.
+
+#### 2. Concrete Numerical Graph Example
+Badge 1 centered at $(200\text{px}, 100\text{px})$, Badge 2 centered at $(204\text{px}, 110\text{px})$.
+
+1. **Distance Deltas**:
+   $$\Delta x = |204 - 200| = 4\text{px} < 84\text{px}$$
+   $$\Delta y = |110 - 100| = 10\text{px} < 34\text{px} \implies \text{Overlap Detected!}$$
+2. **Axis Selection**:
+   $$\Delta x = 4 \le \Delta y = 10 \implies \text{Select Horizontal (X) Repulsion}$$
+3. **Shift Calculation**:
+   $$\delta_x = \frac{84 - 4 + 4}{2} = \frac{84}{2} = 42\text{px}$$
+4. **Updated Positions**:
+   - Badge 1: $x_1 = 200 - 42 = 158\text{px}, y_1 = 100\text{px}$
+   - Badge 2: $x_2 = 204 + 42 = 246\text{px}, y_2 = 110\text{px}$
+5. **Verification**: New $\Delta x = |246 - 158| = 88\text{px} > 84\text{px}$ (Collision fully resolved!).
+
+#### 3. Targeted Sub-Step Pseudocode
+```python
+def apply_pairwise_badge_repulsion(b1: tuple[float, float], b2: tuple[float, float],
+                                   w: float = 84.0, h: float = 34.0):
+    dx = abs(b2[0] - b1[0])
+    dy = abs(b2[1] - b1[1])
+    
+    if dx < w and dy < h:
+        shift_x = (w - dx + 4.0) / 2.0
+        shift_y = (h - dy + 4.0) / 2.0
+        
+        if dx <= dy:
+            # Horizontal shift
+            return ((b1[0] - shift_x, b1[1]), (b2[0] + shift_x, b2[1]))
+        else:
+            # Vertical shift
+            return ((b1[0], b1[1] - shift_y), (b2[0], b2[1] + shift_y))
+    return (b1, b2)
+
+# Worked numerical test
+new_b1, new_b2 = apply_pairwise_badge_repulsion((200.0, 100.0), (204.0, 110.0))
+# Output: new_b1 = (158.0, 100.0), new_b2 = (246.0, 110.0)
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                SUB-STEP 2.4: PAIRWISE BADGE REPULSION SHIFT
+                
+    BEFORE REPULSION (Overlap: dx=4, dy=10)
+    Badge 1 (200, 100) ───┐
+    Badge 2 (204, 110) ───┴───► Overlapping 84x34 Badges!
+    
+    AFTER HORIZONTAL SHIFT (delta_x = 42px)
+    ┌───────────────┐                  ┌───────────────┐
+    │ Badge 1       │                  │ Badge 2       │
+    │ (158, 100)    │                  │ (246, 110)    │
+    └───────────────┘                  └───────────────┘
+    ◄─────────────── New dx = 88px (> 84px) ───────────►
+```
+
+---
+
+## 3. Gradual Bottom-Up Assembly & Master Algorithm
+
+Combining sub-steps 2.1 (Cubic Bezier Routing), 2.2 (Boundary Tangents), 2.3 (Arc-Length Midpoint), and 2.4 (Badge Repulsion Pass) into the master edge routing algorithm:
+
+```python
+algorithm ExecuteLeftRightEdgeRoutingMaster(positioned_nodes, edges):
+    input:  positioned_nodes with (x, y, width, height), edge list E
+    output: positioned_edges with cubic Bezier paths, arc midpoints, and non-overlapping label badges
+
+    BADGE_W = 84.0
+    BADGE_H = 34.0
+    positioned_edges = []
+
+    // Phase 1: Sub-steps 2.1, 2.2 & 2.3 - Compute Bezier paths & initial label midpoints
+    for each edge e in edges:
+        source = findNode(positioned_nodes, e.source)
+        target = findNode(positioned_nodes, e.target)
+
+        // Sub-step 2.1: Anchor point coordinates
+        p0 = (source.x + source.width, source.y + source.height / 2.0)
+        p3 = (target.x, target.y + target.height / 2.0)
+        delta_x = p3[0] - p0[0]
+
+        // Control points
+        c1 = (p0[0] + delta_x / 2.0, p0[1])
+        c2 = (p3[0] - delta_x / 2.0, p3[1])
+
+        path_svg = sprintf("M %f %f C %f %f, %f %f, %f %f",
+                           p0[0], p0[1], c1[0], c1[1], c2[0], c2[1], p3[0], p3[1])
+
+        // Sub-step 2.3: Compute 50% arc-length midpoint for label placement
+        points = discretizeBezierPath(p0, c1, c2, p3, steps = 10)
+        (mid_x, mid_y, normal) = compute_polyline_arc_midpoint(points)
+
+        positioned_edges.append({
+            id: e.id,
+            path: path_svg,
+            labelX: mid_x,
+            labelY: mid_y,
+            normal: normal
+        })
+
+    // Phase 2: Sub-step 2.4 - Pairwise Badge Repulsion Post-Processing Pass
     for i from 0 to length(positioned_edges) - 1:
         e1 = positioned_edges[i]
-        if e1.labelX is None or e1.labelY is None: continue
-
         for j from i + 1 to length(positioned_edges) - 1:
             e2 = positioned_edges[j]
-            if e2.labelX is None or e2.labelY is None: continue
 
-            dx = abs(e2.labelX - e1.labelX)
-            dy = abs(e2.labelY - e1.labelY)
+            (b1_new, b2_new) = apply_pairwise_badge_repulsion(
+                (e1.labelX, e1.labelY), (e2.labelX, e2.labelY), BADGE_W, BADGE_H
+            )
+            e1.labelX, e1.labelY = b1_new
+            e2.labelX, e2.labelY = b2_new
 
-            // Check bounding box overlap
-            if dx < BADGE_WIDTH and dy < BADGE_HEIGHT:
-                shiftX = (BADGE_WIDTH - dx + 4) / 2
-                shiftY = (BADGE_HEIGHT - dy + 4) / 2
-
-                if dx <= dy:
-                    e1.labelX -= shiftX
-                    e2.labelX += shiftX
-                else:
-                    e1.labelY -= shiftY
-                    e2.labelY += shiftY
+    return positioned_edges
 ```
 
 ---
@@ -255,22 +365,6 @@ algorithm ApplyBadgeRepulsionPass(positioned_edges):
                                                         │                │   P_3            │
                                                         ▼                └──────────────────┘
                                                        C_2 (Control 2)
-```
-
-### 4.2 Edge Badge Repulsion Shift Dynamics
-
-```
-                           BADGE REPULSION DISPLACEMENT
-                         
-          Before Repulsion                             After Repulsion
-          ┌─────────────┐                              ┌─────────────┐
-          │  Badge 1    │                              │  Badge 1    │
-          │  ┌──────────┼──┐                           └─────────────┘
-          └──┼──────────┘  │                                 ▲ shiftY
-             │   Badge 2   │                                 ▼ shiftY
-             └─────────────┘                           ┌─────────────┐
-                                                       │  Badge 2    │
-                                                       └─────────────┘
 ```
 
 ---
