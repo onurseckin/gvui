@@ -109,13 +109,23 @@ export const App: FC = () => {
   }, [loadGraphFile]);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (currentFile) params.set("graph", currentFile);
-    if (selectedNodeId) params.set("node", selectedNodeId);
+    const params = new URLSearchParams(window.location.search);
+    if (isGraphTestingPage) {
+      params.set("page", "testing");
+      params.delete("graph");
+      params.delete("node");
+    } else {
+      if (currentFile) params.set("graph", currentFile);
+      if (selectedNodeId) params.set("node", selectedNodeId);
+      params.delete("page");
+    }
 
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    const searchStr = params.toString();
+    const newUrl = searchStr
+      ? `${window.location.pathname}?${searchStr}`
+      : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [currentFile, selectedNodeId]);
+  }, [currentFile, selectedNodeId, isGraphTestingPage]);
 
   const handleSelectSample = (fileId: string) => {
     void loadGraphFile(fileId);
