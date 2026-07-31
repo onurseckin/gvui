@@ -98,7 +98,32 @@
   font-family: inherit;
 }
 
-/* Tab & Control Bar */
+.graph-testing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background-color: #121318;
+  border-bottom: 1px solid #27272a;
+}
+
+.graph-testing-close-btn {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.graph-testing-close-btn:hover {
+  color: #ffffff;
+  background-color: #27272a;
+}
+
+/* Tab Bar */
 .graph-testing-toolbar {
   display: flex;
   align-items: center;
@@ -139,64 +164,16 @@
   color: #ffffff;
 }
 
-/* Algorithm Aperture View Toggles */
-.algorithm-toggles-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #18181b;
-  padding: 4px;
-  border-radius: 8px;
-  border: 1px solid #27272a;
-}
-
-.algorithm-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: #a1a1aa;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.algorithm-toggle-btn:hover {
-  color: #ffffff;
-  background-color: #27272a;
-}
-
-.algorithm-toggle-btn.active-a {
-  background-color: #0369a1;
-  border-color: #38bdf8;
-  color: #ffffff;
-}
-
-.algorithm-toggle-btn.active-b {
-  background-color: #7e22ce;
-  border-color: #c084fc;
-  color: #ffffff;
-}
-
-/* Comparison Grid Layout */
+/* Playground Canvas Grid */
 .graph-testing-content {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
   padding: 16px 24px;
   overflow-y: auto;
   background-color: #09090b;
-}
-
-.graph-testing-content.single-panel {
-  grid-template-columns: 1fr;
 }
 
 /* Panel Card */
@@ -240,11 +217,6 @@
   color: #ffffff;
 }
 
-.mode-tag-b {
-  background-color: #7e22ce;
-  color: #ffffff;
-}
-
 .testing-stat-badge {
   background-color: #27272a;
   color: #ffffff;
@@ -257,7 +229,7 @@
 /* Canvas Area */
 .testing-canvas-container {
   flex: 1;
-  min-height: 380px;
+  min-height: 480px;
   position: relative;
   background-color: #09090b;
   overflow: auto;
