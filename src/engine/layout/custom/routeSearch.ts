@@ -738,3 +738,36 @@ export function searchOrthogonalRoute(
     stats,
   };
 }
+
+const routeCache = new Map<string, RoutedPath | null>();
+
+export function clearRouteCache(): void {
+  routeCache.clear();
+}
+
+export function searchOrthogonalRouteCached(
+  edgeId: string,
+  sourcePort: PortRef,
+  targetPort: PortRef,
+  grid: RoutingGrid,
+  occupancy: OccupancyRecord[],
+  config: CustomLayoutConfig,
+  options?: RouteSearchOptions,
+): RoutedPath | null {
+  const key = `${edgeId}:${sourcePort.stub.x},${sourcePort.stub.y}:${targetPort.stub.x},${targetPort.stub.y}:${occupancy.length}`;
+  if (routeCache.has(key)) {
+    return routeCache.get(key)!;
+  }
+
+  const result = searchOrthogonalRoute(
+    edgeId,
+    sourcePort,
+    targetPort,
+    grid,
+    occupancy,
+    config,
+    options,
+  );
+  routeCache.set(key, result);
+  return result;
+}

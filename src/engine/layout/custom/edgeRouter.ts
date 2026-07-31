@@ -10,7 +10,7 @@ import { assignPortSidesGlobally } from "./portAssignment";
 import { generatePortCandidates, type PortCandidate } from "./portCandidates";
 import { distributePorts } from "./portDistribution";
 import { RouteOccupancyLedger } from "./routeOccupancy";
-import { searchOrthogonalRoute } from "./routeSearch";
+import { searchOrthogonalRouteCached } from "./routeSearch";
 import { buildRoutingGrid } from "./routingGrid";
 import { routeSelfLoop } from "./specialRoutes";
 import type {
@@ -358,7 +358,7 @@ export function routeAllEdges(
       const meta = edgeMetaMap.get(edge.id);
       const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
 
-      const route = searchOrthogonalRoute(
+      const route = searchOrthogonalRouteCached(
         edge.id,
         ports.sourcePort,
         ports.targetPort,
@@ -486,7 +486,7 @@ export function routeAllEdges(
             const meta = edgeMetaMap.get(edge.id);
             const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
 
-            const route = searchOrthogonalRoute(
+            const route = searchOrthogonalRouteCached(
               edge.id,
               ports.sourcePort,
               ports.targetPort,
@@ -568,7 +568,7 @@ export function routeAllEdges(
           const meta = edgeMetaMap.get(edge.id);
           const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
 
-          const route = searchOrthogonalRoute(
+          const route = searchOrthogonalRouteCached(
             edge.id,
             ports.sourcePort,
             ports.targetPort,

@@ -68,9 +68,22 @@ export function deriveSearchStateBudgets(
   const isFeedbackRich = feedbackEdgeCount >= 3 && edges.length >= nodes.length + 2;
   const requiresConflictPruning = isParallelRich || isFeedbackRich;
 
+  const nodeCount = nodes.length;
+  const edgeCount = edges.length;
+
+  const userMax = config.maxLayoutStates;
+  let maxLayoutStates = userMax ?? 60;
+  if (userMax === undefined) {
+    if (nodeCount >= 10) {
+      maxLayoutStates = 8;
+    } else if (nodeCount >= 6 || edgeCount >= 8) {
+      maxLayoutStates = 15;
+    }
+  }
+
   return {
-    maxLayoutStates: config.maxLayoutStates,
-    maxAestheticEvaluations: config.maxAestheticPasses,
+    maxLayoutStates,
+    maxAestheticEvaluations: config.maxAestheticPasses ?? maxLayoutStates,
     maxAStarStatesPerRoute: config.maxAStarStatesPerRoute,
     maxConflictPermutations: requiresConflictPruning
       ? Math.min(config.maxConflictPermutations, 1)
