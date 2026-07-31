@@ -1,5 +1,6 @@
 import type { LayoutMode } from "../../state/useGraphStore";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
+import { computeCustomEngineGraphLayout } from "./customLayoutAdapter";
 import { calculateNodeDimensions, computeDagreLayout } from "./dagreLayout";
 
 /**
@@ -136,7 +137,7 @@ export function computeGraphLayout(
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
   switch (mode) {
     case "top-down":
-      return computeDagreLayout(dataset, "TB");
+      return computeCustomEngineGraphLayout(dataset);
     case "left-right":
       return computeDagreLayout(dataset, "LR");
     case "force":
@@ -144,6 +145,6 @@ export function computeGraphLayout(
     case "radial":
       return computeRadialLayout(dataset);
     default:
-      return computeDagreLayout(dataset, "TB");
+      return computeCustomEngineGraphLayout(dataset);
   }
 }
