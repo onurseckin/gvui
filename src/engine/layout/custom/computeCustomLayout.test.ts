@@ -19,4 +19,54 @@ describe("computeCustomLayout", () => {
     expect(result.validation.isValid).toBe(true);
     expect(result.status).toBe("success");
   });
+
+  it("routes public engine through optimizer to resolve route and badge conflicts in multi-pass pipeline", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "N1", width: 100, height: 50 },
+      { id: "N2", width: 100, height: 50 },
+      { id: "N3", width: 100, height: 50 },
+      { id: "N4", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "N1", target: "N3", label: "Route1" },
+      { id: "e2", source: "N2", target: "N4", label: "Route2" },
+      { id: "e3", source: "N1", target: "N4", label: "Route3" },
+      { id: "e4", source: "N2", target: "N3", label: "Route4" },
+    ];
+
+    const result = computeCustomLayout(nodes, edges, { maxGlobalPasses: 5 });
+
+    expect(result.nodes).toHaveLength(4);
+    expect(result.edges).toHaveLength(4);
+    expect(result.badges).toHaveLength(4);
+    expect(result.validation.isValid).toBe(true);
+    expect(result.status).toBe("success");
+    expect(Array.isArray(result.crossings)).toBe(true);
+  });
+
+  it("exercises maxGlobalPasses bound and returns best historical layout on failure", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 400, height: 400 },
+      { id: "B", width: 400, height: 400 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE" },
+    ];
+
+    const result = computeCustomLayout(nodes, edges, {
+      nodeGap: 2,
+      rankGap: 2,
+      badgeClearance: 100,
+      maxGlobalPasses: 1,
+      maxBadgeCandidatesPerEdge: 1,
+    });
+
+    expect(result).toBeDefined();
+    expect(result.nodes).toHaveLength(2);
+    expect(result.status).toBe("invalid_hard_failure");
+    expect(result.validation.isValid).toBe(false);
+  });
+
 });
+
+

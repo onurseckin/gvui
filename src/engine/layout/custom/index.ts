@@ -20,4 +20,8 @@ export * from "./badgeMeasurement";
 export * from "./badgePlacement";
 export * from "./layoutValidator";
 export * from "./svgPath";
+export * from "./crossingDetection";
+export * from "./routeOccupancy";
+export * from "./optimizeLayout";
 export * from "./computeCustomLayout";
+
