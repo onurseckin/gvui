@@ -1,11 +1,15 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
 import { computeCustomLayout } from "../../../engine/layout/custom";
-import { pointsToSvgPath, renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
+import {
+  pointsToSvgPath,
+  renderPathWithCrossingBridges,
+} from "../../../engine/layout/custom/svgPath";
 import type { NormalizedEdge, NormalizedNode } from "../../../engine/layout/custom/types";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
 import type { TestScenario } from "../types";
+import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
 
 interface GraphTestingModalProps {
   isOpen: boolean;
@@ -82,6 +86,11 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
           </div>
         </div>
 
+        {/* Metrics Summary Panel */}
+        <div className="graph-testing-metrics-wrapper" style={{ padding: "0 24px", marginTop: "12px" }}>
+          <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />
+        </div>
+
         {/* Main Content */}
         <div className="graph-testing-content single-panel">
           <div className="testing-panel">
@@ -92,8 +101,12 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
               </div>
               <div className="testing-stat-badge">
                 Nodes: {layoutResult.nodes.length} | Edges: {layoutResult.edges.length} | Crossings:{" "}
-                {layoutResult.validation.metrics.crossingCount} | Total Length:{" "}
-                {Math.round(layoutResult.validation.metrics.totalLength)}px
+                {layoutResult.validation.metrics.crossingCount} | Hairpins:{" "}
+                {layoutResult.validation.metrics.hairpinCount ?? 0} | Leaders:{" "}
+                {(layoutResult.validation.metrics.ordinaryLeaderCount ?? 0) +
+                  (layoutResult.validation.metrics.feedbackLeaderCount ?? 0)}{" "}
+                | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
+                <strong>{layoutResult.status}</strong>
               </div>
             </div>
             <div className="testing-canvas-container">
@@ -110,7 +123,9 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                       height: `${node.height}px`,
                     }}
                   >
-                    <div className="testing-node-title">{origNode?.name ?? node.label ?? node.id}</div>
+                    <div className="testing-node-title">
+                      {origNode?.name ?? node.label ?? node.id}
+                    </div>
                     {origNode?.desc && <div className="testing-node-desc">{origNode.desc}</div>}
                   </div>
                 );
@@ -173,7 +188,7 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                     badge.anchorPoint &&
                     Math.hypot(
                       badge.anchorPoint.x - badgeCenterX,
-                      badge.anchorPoint.y - badgeCenterY
+                      badge.anchorPoint.y - badgeCenterY,
                     ) > 4;
 
                   return (
@@ -230,4 +245,3 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
     </div>
   );
 };
-

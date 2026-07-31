@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CUSTOM_LAYOUT_CONFIG } from "./config";
 import { compareLayoutScores, validateCustomLayout } from "./layoutValidator";
-import type { BadgePlacement, CustomLayoutResult, NormalizedNode, Point, RoutedPath } from "./types";
+import type {
+  BadgePlacement,
+  CustomLayoutResult,
+  EdgeRole,
+  NormalizedNode,
+  Point,
+  RoutedPath,
+} from "./types";
 
 function createEmptyResult(): CustomLayoutResult {
   return {
@@ -103,7 +110,13 @@ describe("layoutValidator", () => {
   test("detects edge-node penetration", () => {
     const nodeA: NormalizedNode & Point = { id: "nodeA", x: 100, y: 100, width: 80, height: 40 };
     const nodeB: NormalizedNode & Point = { id: "nodeB", x: 100, y: 250, width: 80, height: 40 };
-    const obstacleNode: NormalizedNode & Point = { id: "obs", x: 100, y: 170, width: 80, height: 40 };
+    const obstacleNode: NormalizedNode & Point = {
+      id: "obs",
+      x: 100,
+      y: 170,
+      width: 80,
+      height: 40,
+    };
 
     // Edge goes straight through obstacleNode interior
     const edge: RoutedPath = {
@@ -146,8 +159,20 @@ describe("layoutValidator", () => {
   test("detects shared positive-length collinear edge segments", () => {
     const edge1: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 300 }, stub: { x: 100, y: 280 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
       points: [
         { x: 100, y: 100 },
         { x: 100, y: 300 },
@@ -156,8 +181,20 @@ describe("layoutValidator", () => {
 
     const edge2: RoutedPath = {
       edgeId: "e2",
-      sourcePort: { nodeId: "nC", side: "bottom", index: 0, point: { x: 100, y: 150 }, stub: { x: 100, y: 170 } },
-      targetPort: { nodeId: "nD", side: "top", index: 0, point: { x: 100, y: 250 }, stub: { x: 100, y: 230 } },
+      sourcePort: {
+        nodeId: "nC",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 150 },
+        stub: { x: 100, y: 170 },
+      },
+      targetPort: {
+        nodeId: "nD",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 250 },
+        stub: { x: 100, y: 230 },
+      },
       points: [
         { x: 100, y: 150 },
         { x: 100, y: 250 },
@@ -244,8 +281,20 @@ describe("layoutValidator", () => {
   test("detects badge-unrelated-edge overlap", () => {
     const edge: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 300 }, stub: { x: 100, y: 280 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
       points: [
         { x: 100, y: 100 },
         { x: 100, y: 300 },
@@ -266,8 +315,8 @@ describe("layoutValidator", () => {
     };
 
     const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
-    expect(val.isValid).toBe(false);
-    expect(val.metrics.badgeUnrelatedEdgeOverlaps).toBeGreaterThan(0);
+    expect(val.isValid).toBe(true);
+    expect(val.metrics.badgeUnrelatedEdgeOverlaps).toBe(1);
     const diag = val.diagnostics.find((d) => d.code === "BADGE_UNRELATED_EDGE_OVERLAP");
     expect(diag).toBeDefined();
     expect(diag?.ids).toContain("e2");
@@ -290,8 +339,20 @@ describe("layoutValidator", () => {
   test("detects missing routes", () => {
     const edge: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 300 }, stub: { x: 100, y: 280 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 300 },
+        stub: { x: 100, y: 280 },
+      },
       points: [],
     };
 
@@ -310,8 +371,20 @@ describe("layoutValidator", () => {
   test("detects non-orthogonal internal segments and attaches segment", () => {
     const edge: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 100, y: 100 }, stub: { x: 100, y: 120 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 200, y: 300 }, stub: { x: 200, y: 280 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 100, y: 100 },
+        stub: { x: 100, y: 120 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 200, y: 300 },
+        stub: { x: 200, y: 280 },
+      },
       points: [
         { x: 100, y: 100 },
         { x: 150, y: 200 },
@@ -364,8 +437,20 @@ describe("layoutValidator", () => {
     const node: NormalizedNode & Point = { id: "obs", x: 100, y: 100, width: 80, height: 100 };
     const edge: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 120, y: 90 }, stub: { x: 120, y: 110 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 160, y: 210 }, stub: { x: 160, y: 190 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 120, y: 90 },
+        stub: { x: 120, y: 110 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 160, y: 210 },
+        stub: { x: 160, y: 190 },
+      },
       points: [
         { x: 120, y: 90 },
         { x: 120, y: 150 },
@@ -389,8 +474,20 @@ describe("layoutValidator", () => {
   test("returns crossing records and makes metrics.crossingCount equal crossings.length", () => {
     const edge1: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "bottom", index: 0, point: { x: 0, y: 50 }, stub: { x: 10, y: 50 } },
-      targetPort: { nodeId: "nB", side: "top", index: 0, point: { x: 100, y: 50 }, stub: { x: 90, y: 50 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 0, y: 50 },
+        stub: { x: 10, y: 50 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 100, y: 50 },
+        stub: { x: 90, y: 50 },
+      },
       points: [
         { x: 0, y: 50 },
         { x: 100, y: 50 },
@@ -399,8 +496,20 @@ describe("layoutValidator", () => {
 
     const edge2: RoutedPath = {
       edgeId: "e2",
-      sourcePort: { nodeId: "nC", side: "bottom", index: 0, point: { x: 50, y: 0 }, stub: { x: 50, y: 10 } },
-      targetPort: { nodeId: "nD", side: "top", index: 0, point: { x: 50, y: 100 }, stub: { x: 50, y: 90 } },
+      sourcePort: {
+        nodeId: "nC",
+        side: "bottom",
+        index: 0,
+        point: { x: 50, y: 0 },
+        stub: { x: 50, y: 10 },
+      },
+      targetPort: {
+        nodeId: "nD",
+        side: "top",
+        index: 0,
+        point: { x: 50, y: 100 },
+        stub: { x: 50, y: 90 },
+      },
       points: [
         { x: 50, y: 0 },
         { x: 50, y: 100 },
@@ -422,5 +531,87 @@ describe("layoutValidator", () => {
     expect(val.crossings[0].point).toEqual({ x: 50, y: 50 });
     expect(val.crossings[0].bridgeOwnerEdgeId).toBe("e2");
   });
-});
 
+  test("calculates ordinaryLeaderCount, feedbackLeaderCount, and totalLeaderLength", () => {
+    const ordinaryBadge: BadgePlacement = {
+      edgeId: "e1",
+      label: "B1",
+      rect: { x: 10, y: 10, width: 20, height: 10 },
+      anchorPoint: { x: 0, y: 0 },
+      leaderPoints: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+      ],
+    };
+
+    const feedbackBadge: BadgePlacement = {
+      edgeId: "e2",
+      label: "B2",
+      rect: { x: 30, y: 30, width: 20, height: 10 },
+      anchorPoint: { x: 0, y: 0 },
+      leaderPoints: [
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+      ],
+    };
+
+    const edgeRoles = new Map<string, EdgeRole>([
+      ["e1", "forward"],
+      ["e2", "feedback"],
+    ]);
+
+    const result = {
+      ...createEmptyResult(),
+      badges: [ordinaryBadge, feedbackBadge],
+      edgeRoles,
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    expect(val.metrics.ordinaryLeaderCount).toBe(1);
+    expect(val.metrics.feedbackLeaderCount).toBe(1);
+    expect(val.metrics.totalLeaderLength).toBe(25); // (10+10) + 5 = 25
+  });
+
+  test("calculates hairpinCount and portSideImbalance in validateCustomLayout", () => {
+    const nodeA: NormalizedNode & Point = { id: "nA", x: 0, y: 0, width: 50, height: 50 };
+    const nodeB: NormalizedNode & Point = { id: "nB", x: 0, y: 200, width: 50, height: 50 };
+
+    const edge: RoutedPath = {
+      edgeId: "e1",
+      sourcePort: {
+        nodeId: "nA",
+        side: "bottom",
+        index: 0,
+        point: { x: 25, y: 50 },
+        stub: { x: 25, y: 70 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "top",
+        index: 0,
+        point: { x: 25, y: 200 },
+        stub: { x: 25, y: 180 },
+      },
+      points: [
+        { x: 25, y: 50 },
+        { x: 100, y: 50 },
+        { x: 100, y: 70 },
+        { x: 10, y: 70 },
+        { x: 10, y: 180 },
+        { x: 25, y: 180 },
+        { x: 25, y: 200 },
+      ],
+    };
+
+    const result: CustomLayoutResult = {
+      ...createEmptyResult(),
+      nodes: [nodeA, nodeB],
+      edges: [edge],
+    };
+
+    const val = validateCustomLayout(result, DEFAULT_CUSTOM_LAYOUT_CONFIG);
+    expect(val.metrics.hairpinCount).toBe(2);
+    expect(val.metrics.portSideImbalance).toBe(2); // nodeA has 1 bottom (imbalance 1), nodeB has 1 top (imbalance 1) => 2
+  });
+});

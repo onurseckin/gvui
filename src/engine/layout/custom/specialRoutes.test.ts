@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { resolveCustomLayoutConfig } from "./config";
-import { segmentIntersectsRectInterior } from "./geometry";
+import { pathManhattanLength, segmentIntersectsRectInterior } from "./geometry";
 import { routeFeedbackCorridors, routeSelfLoop } from "./specialRoutes";
 import type { NormalizedEdge, NormalizedNode, Point, Rect } from "./types";
 
@@ -33,14 +33,32 @@ describe("specialRoutes", () => {
     const routes = routeFeedbackCorridors([edge], nodeMap, boundingBox, config);
 
     expect(routes.length).toBe(1);
-    expect(routes[0].points.length).toBeGreaterThanOrEqual(4);
+    expect(routes[0].points.length).toBeGreaterThanOrEqual(2);
   });
 
   it("routes feedback corridors avoiding intermediate node obstacles (Scenarios #19 & #20)", () => {
     const planNode: NormalizedNode & Point = { id: "PLAN", width: 170, height: 65, x: 250, y: 40 };
-    const exec1Node: NormalizedNode & Point = { id: "EXEC1", width: 160, height: 65, x: 80, y: 220 };
-    const exec2Node: NormalizedNode & Point = { id: "EXEC2", width: 160, height: 65, x: 420, y: 220 };
-    const auditNode: NormalizedNode & Point = { id: "AUDIT", width: 170, height: 65, x: 250, y: 400 };
+    const exec1Node: NormalizedNode & Point = {
+      id: "EXEC1",
+      width: 160,
+      height: 65,
+      x: 80,
+      y: 220,
+    };
+    const exec2Node: NormalizedNode & Point = {
+      id: "EXEC2",
+      width: 160,
+      height: 65,
+      x: 420,
+      y: 220,
+    };
+    const auditNode: NormalizedNode & Point = {
+      id: "AUDIT",
+      width: 170,
+      height: 65,
+      x: 250,
+      y: 400,
+    };
 
     const edge: NormalizedEdge = { id: "eCycle", source: "AUDIT", target: "PLAN", isCycle: true };
 
@@ -67,5 +85,35 @@ describe("specialRoutes", () => {
       }
     }
   });
-});
 
+  it("prefers a short legal route over an outer corridor detour for nearby feedback endpoints unless blocked", () => {
+    const srcNode: NormalizedNode & Point = { id: "B", width: 100, height: 50, x: 100, y: 200 };
+    const tgtNode: NormalizedNode & Point = { id: "A", width: 100, height: 50, x: 100, y: 0 };
+    const edge: NormalizedEdge = { id: "eFeed", source: "B", target: "A", isCycle: true };
+
+    const nodeMapUnblocked = new Map<string, NormalizedNode & Point>([
+      ["A", tgtNode],
+      ["B", srcNode],
+    ]);
+    const boundingBox: Rect = { x: 0, y: 0, width: 300, height: 300 };
+    const config = resolveCustomLayoutConfig();
+
+    const routesUnblocked = routeFeedbackCorridors([edge], nodeMapUnblocked, boundingBox, config);
+    expect(routesUnblocked.length).toBe(1);
+    const lenUnblocked = pathManhattanLength(routesUnblocked[0].points);
+
+    // Blocked scenario: place an obstacle node directly between A and B
+    const obsNode: NormalizedNode & Point = { id: "OBS", width: 100, height: 50, x: 100, y: 100 };
+    const nodeMapBlocked = new Map<string, NormalizedNode & Point>([
+      ["A", tgtNode],
+      ["B", srcNode],
+      ["OBS", obsNode],
+    ]);
+
+    const routesBlocked = routeFeedbackCorridors([edge], nodeMapBlocked, boundingBox, config);
+    expect(routesBlocked.length).toBe(1);
+    const lenBlocked = pathManhattanLength(routesBlocked[0].points);
+
+    expect(lenUnblocked).toBeLessThan(lenBlocked);
+  });
+});

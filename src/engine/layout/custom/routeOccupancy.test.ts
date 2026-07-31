@@ -57,12 +57,7 @@ describe("routeOccupancy", () => {
     };
 
     // GW-USER route points from GW port to USER port including 20px endpoint stub legs
-    const routePointsGWUSER = [
-      gwPort.point,
-      gwPort.stub,
-      { x: 500, y: 200 },
-      userPort.point,
-    ];
+    const routePointsGWUSER = [gwPort.point, gwPort.stub, { x: 500, y: 200 }, userPort.point];
 
     ledger.commitRoute("e-GW-USER", routePointsGWUSER, gwPort, userPort);
 
@@ -148,14 +143,26 @@ describe("routeOccupancy", () => {
 
     // Leg penetrating NODE-B obstacle
     const penetratingLeg: Segment = { a: { x: 150, y: 60 }, b: { x: 250, y: 60 } };
-    const obstacleConflicts = preflightEndpointLeg("edge-2", "NODE-A", penetratingLeg, obstacles, ledger.getReservations());
+    const obstacleConflicts = preflightEndpointLeg(
+      "edge-2",
+      "NODE-A",
+      penetratingLeg,
+      obstacles,
+      ledger.getReservations(),
+    );
     expect(obstacleConflicts.length).toBe(1);
     expect(obstacleConflicts[0].reason).toBe("node_penetration");
     expect(obstacleConflicts[0].edgeIdB).toBe("NODE-B");
 
     // Leg overlapping existing reservation for edge-1
     const overlappingLeg: Segment = { a: { x: 100, y: 150 }, b: { x: 100, y: 250 } };
-    const resConflicts = preflightEndpointLeg("edge-2", "NODE-A", overlappingLeg, obstacles, ledger.getReservations());
+    const resConflicts = preflightEndpointLeg(
+      "edge-2",
+      "NODE-A",
+      overlappingLeg,
+      obstacles,
+      ledger.getReservations(),
+    );
     expect(resConflicts.length).toBe(1);
     expect(resConflicts[0].reason).toBe("collinear_overlap");
   });

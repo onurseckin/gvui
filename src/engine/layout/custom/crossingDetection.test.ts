@@ -6,8 +6,20 @@ describe("crossingDetection", () => {
   test("detects interior perpendicular crossings", () => {
     const edgeA: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "left", index: 0, point: { x: 0, y: 50 }, stub: { x: 10, y: 50 } },
-      targetPort: { nodeId: "nB", side: "right", index: 0, point: { x: 100, y: 50 }, stub: { x: 90, y: 50 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "left",
+        index: 0,
+        point: { x: 0, y: 50 },
+        stub: { x: 10, y: 50 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "right",
+        index: 0,
+        point: { x: 100, y: 50 },
+        stub: { x: 90, y: 50 },
+      },
       points: [
         { x: 0, y: 50 },
         { x: 100, y: 50 },
@@ -16,8 +28,20 @@ describe("crossingDetection", () => {
 
     const edgeB: RoutedPath = {
       edgeId: "e2",
-      sourcePort: { nodeId: "nC", side: "top", index: 0, point: { x: 50, y: 0 }, stub: { x: 50, y: 10 } },
-      targetPort: { nodeId: "nD", side: "bottom", index: 0, point: { x: 50, y: 100 }, stub: { x: 50, y: 90 } },
+      sourcePort: {
+        nodeId: "nC",
+        side: "top",
+        index: 0,
+        point: { x: 50, y: 0 },
+        stub: { x: 50, y: 10 },
+      },
+      targetPort: {
+        nodeId: "nD",
+        side: "bottom",
+        index: 0,
+        point: { x: 50, y: 100 },
+        stub: { x: 50, y: 90 },
+      },
       points: [
         { x: 50, y: 0 },
         { x: 50, y: 100 },
@@ -35,8 +59,20 @@ describe("crossingDetection", () => {
     // edgeA ends at (50, 50), edgeB starts at (50, 50)
     const edgeA: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "left", index: 0, point: { x: 0, y: 50 }, stub: { x: 10, y: 50 } },
-      targetPort: { nodeId: "nB", side: "right", index: 0, point: { x: 50, y: 50 }, stub: { x: 40, y: 50 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "left",
+        index: 0,
+        point: { x: 0, y: 50 },
+        stub: { x: 10, y: 50 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "right",
+        index: 0,
+        point: { x: 50, y: 50 },
+        stub: { x: 40, y: 50 },
+      },
       points: [
         { x: 0, y: 50 },
         { x: 50, y: 50 },
@@ -45,8 +81,20 @@ describe("crossingDetection", () => {
 
     const edgeB: RoutedPath = {
       edgeId: "e2",
-      sourcePort: { nodeId: "nC", side: "top", index: 0, point: { x: 50, y: 50 }, stub: { x: 50, y: 60 } },
-      targetPort: { nodeId: "nD", side: "bottom", index: 0, point: { x: 50, y: 100 }, stub: { x: 50, y: 90 } },
+      sourcePort: {
+        nodeId: "nC",
+        side: "top",
+        index: 0,
+        point: { x: 50, y: 50 },
+        stub: { x: 50, y: 60 },
+      },
+      targetPort: {
+        nodeId: "nD",
+        side: "bottom",
+        index: 0,
+        point: { x: 50, y: 100 },
+        stub: { x: 50, y: 90 },
+      },
       points: [
         { x: 50, y: 50 },
         { x: 50, y: 100 },
@@ -60,8 +108,20 @@ describe("crossingDetection", () => {
   test("assigns deterministic bridgeOwnerEdgeId based on edge role priority", () => {
     const edgeA: RoutedPath = {
       edgeId: "e1",
-      sourcePort: { nodeId: "nA", side: "left", index: 0, point: { x: 0, y: 50 }, stub: { x: 10, y: 50 } },
-      targetPort: { nodeId: "nB", side: "right", index: 0, point: { x: 100, y: 50 }, stub: { x: 90, y: 50 } },
+      sourcePort: {
+        nodeId: "nA",
+        side: "left",
+        index: 0,
+        point: { x: 0, y: 50 },
+        stub: { x: 10, y: 50 },
+      },
+      targetPort: {
+        nodeId: "nB",
+        side: "right",
+        index: 0,
+        point: { x: 100, y: 50 },
+        stub: { x: 90, y: 50 },
+      },
       points: [
         { x: 0, y: 50 },
         { x: 100, y: 50 },
@@ -70,8 +130,20 @@ describe("crossingDetection", () => {
 
     const edgeB: RoutedPath = {
       edgeId: "e2",
-      sourcePort: { nodeId: "nC", side: "top", index: 0, point: { x: 50, y: 0 }, stub: { x: 50, y: 10 } },
-      targetPort: { nodeId: "nD", side: "bottom", index: 0, point: { x: 50, y: 100 }, stub: { x: 50, y: 90 } },
+      sourcePort: {
+        nodeId: "nC",
+        side: "top",
+        index: 0,
+        point: { x: 50, y: 0 },
+        stub: { x: 50, y: 10 },
+      },
+      targetPort: {
+        nodeId: "nD",
+        side: "bottom",
+        index: 0,
+        point: { x: 50, y: 100 },
+        stub: { x: 50, y: 90 },
+      },
       points: [
         { x: 50, y: 0 },
         { x: 50, y: 100 },
@@ -85,7 +157,7 @@ describe("crossingDetection", () => {
 
     const owner = getBridgeOwnerEdgeId(
       { id: "e1", role: "forward" },
-      { id: "e2", role: "feedback" }
+      { id: "e2", role: "feedback" },
     );
     expect(owner).toBe("e2");
 
@@ -97,7 +169,7 @@ describe("crossingDetection", () => {
   test("assigns deterministic bridgeOwnerEdgeId based on edge ID when roles are equal", () => {
     const owner = getBridgeOwnerEdgeId(
       { id: "edge-b", role: "forward" },
-      { id: "edge-a", role: "forward" }
+      { id: "edge-a", role: "forward" },
     );
     expect(owner).toBe("edge-b");
   });

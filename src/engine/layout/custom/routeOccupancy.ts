@@ -1,7 +1,4 @@
-import {
-  collinearOverlapLength,
-  segmentIntersectsRectInterior,
-} from "./geometry";
+import { collinearOverlapLength, segmentIntersectsRectInterior } from "./geometry";
 import type {
   OccupancyRecord,
   Point,
@@ -51,15 +48,19 @@ function segmentIntersectionPoint(s1: Segment, s2: Segment, epsilon = 0.001): Po
 
   if (s1Horiz && s2Vert) {
     const pt = { x: s2.a.x, y: s1.a.y };
-    const onS1 = pt.x >= Math.min(s1.a.x, s1.b.x) - epsilon && pt.x <= Math.max(s1.a.x, s1.b.x) + epsilon;
-    const onS2 = pt.y >= Math.min(s2.a.y, s2.b.y) - epsilon && pt.y <= Math.max(s2.a.y, s2.b.y) + epsilon;
+    const onS1 =
+      pt.x >= Math.min(s1.a.x, s1.b.x) - epsilon && pt.x <= Math.max(s1.a.x, s1.b.x) + epsilon;
+    const onS2 =
+      pt.y >= Math.min(s2.a.y, s2.b.y) - epsilon && pt.y <= Math.max(s2.a.y, s2.b.y) + epsilon;
     return onS1 && onS2 ? pt : null;
   }
 
   if (s1Vert && s2Horiz) {
     const pt = { x: s1.a.x, y: s2.a.y };
-    const onS1 = pt.y >= Math.min(s1.a.y, s1.b.y) - epsilon && pt.y <= Math.max(s1.a.y, s1.b.y) + epsilon;
-    const onS2 = pt.x >= Math.min(s2.a.x, s2.b.x) - epsilon && pt.x <= Math.max(s2.a.x, s2.b.x) + epsilon;
+    const onS1 =
+      pt.y >= Math.min(s1.a.y, s1.b.y) - epsilon && pt.y <= Math.max(s1.a.y, s1.b.y) + epsilon;
+    const onS2 =
+      pt.x >= Math.min(s2.a.x, s2.b.x) - epsilon && pt.x <= Math.max(s2.a.x, s2.b.x) + epsilon;
     return onS1 && onS2 ? pt : null;
   }
 
@@ -127,7 +128,7 @@ export function preflightEndpointLeg(
   leg: Segment,
   obstacles: { nodeId: string; rect: Rect }[],
   ledgerReservations: RouteReservation[],
-  epsilon = 0.001
+  epsilon = 0.001,
 ): RouteConflict[] {
   const conflicts: RouteConflict[] = [];
 
@@ -187,14 +188,17 @@ export class RouteOccupancyLedger {
     edgeId: string,
     points: Point[],
     sourcePort?: PortRef,
-    targetPort?: PortRef
+    targetPort?: PortRef,
   ): void {
     const rawReservations: RouteReservation[] = [];
 
     // Include source point-to-stub leg if provided
     if (sourcePort) {
       const srcLeg: Segment = { a: sourcePort.point, b: sourcePort.stub };
-      if (Math.abs(srcLeg.a.x - srcLeg.b.x) > this.epsilon || Math.abs(srcLeg.a.y - srcLeg.b.y) > this.epsilon) {
+      if (
+        Math.abs(srcLeg.a.x - srcLeg.b.x) > this.epsilon ||
+        Math.abs(srcLeg.a.y - srcLeg.b.y) > this.epsilon
+      ) {
         rawReservations.push({ edgeId, segment: srcLeg, isEndpointLeg: true });
       }
     }
@@ -206,7 +210,12 @@ export class RouteOccupancyLedger {
 
       const isEndpointLeg = Boolean(isSrcStubLeg || isTgtStubLeg);
 
-      if (isSrcStubLeg && rawReservations.some((r) => r.isEndpointLeg && isLegForPort(r.segment, sourcePort, this.epsilon))) {
+      if (
+        isSrcStubLeg &&
+        rawReservations.some(
+          (r) => r.isEndpointLeg && isLegForPort(r.segment, sourcePort, this.epsilon),
+        )
+      ) {
         continue;
       }
 
@@ -216,8 +225,13 @@ export class RouteOccupancyLedger {
     // Include target point-to-stub leg if provided
     if (targetPort) {
       const tgtLeg: Segment = { a: targetPort.stub, b: targetPort.point };
-      if (Math.abs(tgtLeg.a.x - tgtLeg.b.x) > this.epsilon || Math.abs(tgtLeg.a.y - tgtLeg.b.y) > this.epsilon) {
-        const exists = rawReservations.some((r) => r.isEndpointLeg && isLegForPort(r.segment, targetPort, this.epsilon));
+      if (
+        Math.abs(tgtLeg.a.x - tgtLeg.b.x) > this.epsilon ||
+        Math.abs(tgtLeg.a.y - tgtLeg.b.y) > this.epsilon
+      ) {
+        const exists = rawReservations.some(
+          (r) => r.isEndpointLeg && isLegForPort(r.segment, targetPort, this.epsilon),
+        );
         if (!exists) {
           rawReservations.push({ edgeId, segment: tgtLeg, isEndpointLeg: true });
         }
@@ -302,7 +316,10 @@ export class RouteOccupancyLedger {
 
         const overlap = collinearOverlapLength(cand.segment, res.segment, this.epsilon);
         if (overlap > this.epsilon) {
-          const reason = cand.isEndpointLeg || res.isEndpointLeg ? "endpoint_stub_conflict" : "collinear_overlap";
+          const reason =
+            cand.isEndpointLeg || res.isEndpointLeg
+              ? "endpoint_stub_conflict"
+              : "collinear_overlap";
           conflicts.push({
             edgeIdA: cand.edgeId,
             edgeIdB: res.edgeId,
@@ -322,9 +339,12 @@ export class RouteOccupancyLedger {
   public getReservations(): RouteReservation[] {
     return [...this.reservations].sort((a, b) => {
       if (a.edgeId !== b.edgeId) return a.edgeId.localeCompare(b.edgeId);
-      if (Math.abs(a.segment.a.x - b.segment.a.x) > this.epsilon) return a.segment.a.x - b.segment.a.x;
-      if (Math.abs(a.segment.a.y - b.segment.a.y) > this.epsilon) return a.segment.a.y - b.segment.a.y;
-      if (Math.abs(a.segment.b.x - b.segment.b.x) > this.epsilon) return a.segment.b.x - b.segment.b.x;
+      if (Math.abs(a.segment.a.x - b.segment.a.x) > this.epsilon)
+        return a.segment.a.x - b.segment.a.x;
+      if (Math.abs(a.segment.a.y - b.segment.a.y) > this.epsilon)
+        return a.segment.a.y - b.segment.a.y;
+      if (Math.abs(a.segment.b.x - b.segment.b.x) > this.epsilon)
+        return a.segment.b.x - b.segment.b.x;
       return a.segment.b.y - b.segment.b.y;
     });
   }

@@ -1,6 +1,10 @@
 import { measureBadgeRect } from "./badgeMeasurement";
 import type { CustomLayoutConfig } from "./config";
-import { compareLayoutScores, validateCustomLayout } from "./layoutValidator";
+import {
+  compareLayoutScores,
+  type ExtendedLayoutValidationResult,
+  validateCustomLayout,
+} from "./layoutValidator";
 import type { NodeLayoutResult } from "./nodeLayout";
 import { assignPortSidesGlobally } from "./portAssignment";
 import { generatePortCandidates, type PortCandidate } from "./portCandidates";
@@ -15,6 +19,7 @@ import type {
   OccupancyRecord,
   Point,
   PortRef,
+  PortSideAssignment,
   RoutedPath,
   Side,
 } from "./types";
@@ -23,6 +28,10 @@ export interface EdgeRouterResult {
   routes: RoutedPath[];
   status: "success" | "unresolved_soft_conflicts";
   occupancy: OccupancyRecord[];
+}
+
+export interface EdgeRouterOptions {
+  sideAssignments?: Map<string, PortSideAssignment>;
 }
 
 interface EdgeSortMeta {
@@ -56,9 +65,11 @@ function compareEdgeMetas(a: EdgeSortMeta, b: EdgeSortMeta, epsilon: number): nu
 
 export function routeAllEdges(
   nodeLayout: NodeLayoutResult,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  options?: EdgeRouterOptions,
 ): EdgeRouterResult {
-  const { normalizedGraph, classifiedEdges, nodePositions, rankAssignment, boundingBox } = nodeLayout;
+  const { normalizedGraph, classifiedEdges, nodePositions, rankAssignment, boundingBox } =
+    nodeLayout;
 
   const selfEdges: NormalizedEdge[] = [];
   const nonSelfEdges: NormalizedEdge[] = [];
@@ -71,8 +82,6 @@ export function routeAllEdges(
     }
   }
 
-  const routesMap = new Map<string, RoutedPath>();
-
   const nodeMap = new Map<string, NormalizedNode & Point>();
   for (const n of normalizedGraph.nodes) {
     const pos = nodePositions.get(n.id) ?? { x: 0, y: 0 };
@@ -81,26 +90,11 @@ export function routeAllEdges(
 
   const allNodesList = Array.from(nodeMap.values());
 
-  const ledger = new RouteOccupancyLedger({ epsilon: config.epsilon });
+  // Candidates and Metadata computation for non-self edges
+  const candidatesMap = new Map<string, PortCandidate[]>();
+  const edgeMetaMap = new Map<string, EdgeSortMeta>();
 
-  // 1. Route self loops
-  const selfLoopCounts = new Map<string, number>();
-  for (const edge of selfEdges) {
-    const node = nodeMap.get(edge.source);
-    if (!node) continue;
-    const idx = selfLoopCounts.get(node.id) ?? 0;
-    selfLoopCounts.set(node.id, idx + 1);
-
-    const r = routeSelfLoop(edge, node, config, idx);
-    routesMap.set(edge.id, r);
-    ledger.commitRoute(r.edgeId, r.points);
-  }
-
-  // 2. Process non-self edges (forward, cross, and feedback edges in one unified pass)
   if (nonSelfEdges.length > 0) {
-    const candidatesMap = new Map<string, PortCandidate[]>();
-    const edgeMetaMap = new Map<string, EdgeSortMeta>();
-
     for (const edge of nonSelfEdges) {
       const srcNode = nodeMap.get(edge.source);
       const tgtNode = nodeMap.get(edge.target);
@@ -117,7 +111,7 @@ export function routeAllEdges(
         role,
         nodePositions,
         config,
-        allNodesList
+        allNodesList,
       );
       candidatesMap.set(edge.id, cands);
 
@@ -141,9 +135,23 @@ export function routeAllEdges(
         badgeArea,
       });
     }
+  }
 
-    // Unified Side Assignment & Distribution
-    const metaMapForAssignment = new Map<string, { isFeedback?: boolean; rankSpan?: number; badgeArea?: number }>();
+  // Side Assignment & Distribution
+  const sideAssignmentsMap = new Map<string, { srcSide: Side; tgtSide: Side }>();
+
+  if (options?.sideAssignments) {
+    for (const [eId, assignment] of options.sideAssignments.entries()) {
+      sideAssignmentsMap.set(eId, { srcSide: assignment.srcSide, tgtSide: assignment.tgtSide });
+    }
+  }
+
+  const unassignedEdges = nonSelfEdges.filter((e) => !sideAssignmentsMap.has(e.id));
+  if (unassignedEdges.length > 0) {
+    const metaMapForAssignment = new Map<
+      string,
+      { isFeedback?: boolean; rankSpan?: number; badgeArea?: number }
+    >();
     for (const [id, meta] of edgeMetaMap.entries()) {
       metaMapForAssignment.set(id, {
         isFeedback: meta.isFeedback,
@@ -156,30 +164,134 @@ export function routeAllEdges(
       nonSelfEdges,
       candidatesMap,
       config,
-      metaMapForAssignment
+      metaMapForAssignment,
     );
 
-    const sideAssignmentsMap = new Map<string, { srcSide: Side; tgtSide: Side }>();
     for (const [eId, cand] of sideAssignmentResult.assignments.entries()) {
-      sideAssignmentsMap.set(eId, { srcSide: cand.srcSide, tgtSide: cand.tgtSide });
+      if (!sideAssignmentsMap.has(eId)) {
+        sideAssignmentsMap.set(eId, { srcSide: cand.srcSide, tgtSide: cand.tgtSide });
+      }
+    }
+  }
+
+  const portDistributionResult = distributePorts(
+    nonSelfEdges,
+    sideAssignmentsMap,
+    nodeMap,
+    config,
+  );
+
+  // Collect all ports for grid construction
+  const allPortRefs: PortRef[] = [];
+  for (const ports of portDistributionResult.portsByEdge.values()) {
+    allPortRefs.push(ports.sourcePort);
+    allPortRefs.push(ports.targetPort);
+  }
+
+  // Build Order Variants
+  const hardestFirst = [...nonSelfEdges].sort((a, b) => {
+    const metaA = edgeMetaMap.get(a.id);
+    const metaB = edgeMetaMap.get(b.id);
+    if (metaA && metaB) {
+      return compareEdgeMetas(metaA, metaB, config.epsilon);
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  const reverseHardestFirst = [...hardestFirst].reverse();
+
+  const badgeAreaDesc = [...nonSelfEdges].sort((a, b) => {
+    const metaA = edgeMetaMap.get(a.id);
+    const metaB = edgeMetaMap.get(b.id);
+    if (metaA && metaB) {
+      if (Math.abs(metaB.badgeArea - metaA.badgeArea) > config.epsilon) {
+        return metaB.badgeArea - metaA.badgeArea;
+      }
+      if (Math.abs(metaB.rankSpan - metaA.rankSpan) > config.epsilon) {
+        return metaB.rankSpan - metaA.rankSpan;
+      }
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  const sourceNodeIdAndPortIndex = [...nonSelfEdges].sort((a, b) => {
+    const portsA = portDistributionResult.portsByEdge.get(a.id);
+    const portsB = portDistributionResult.portsByEdge.get(b.id);
+    const srcA = a.source;
+    const srcB = b.source;
+    if (srcA !== srcB) return srcA.localeCompare(srcB);
+
+    const idxA = portsA?.sourcePort.index ?? 0;
+    const idxB = portsB?.sourcePort.index ?? 0;
+    if (idxA !== idxB) return idxA - idxB;
+
+    const tgtA = a.target;
+    const tgtB = b.target;
+    if (tgtA !== tgtB) return tgtA.localeCompare(tgtB);
+
+    return a.id.localeCompare(b.id);
+  });
+
+  const rankSpanAscending = [...nonSelfEdges].sort((a, b) => {
+    const metaA = edgeMetaMap.get(a.id);
+    const metaB = edgeMetaMap.get(b.id);
+    if (metaA && metaB) {
+      if (Math.abs(metaA.rankSpan - metaB.rankSpan) > config.epsilon) {
+        return metaA.rankSpan - metaB.rankSpan;
+      }
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  const edgeIdAscending = [...nonSelfEdges].sort((a, b) => a.id.localeCompare(b.id));
+
+  const orderCandidates = [
+    hardestFirst,
+    reverseHardestFirst,
+    badgeAreaDesc,
+    sourceNodeIdAndPortIndex,
+    rankSpanAscending,
+    edgeIdAscending,
+  ];
+
+  const orderVariants: NormalizedEdge[][] = [];
+  const seenSignatures = new Set<string>();
+
+  for (const cand of orderCandidates) {
+    const sig = cand.map((e) => e.id).join(",");
+    if (!seenSignatures.has(sig)) {
+      seenSignatures.add(sig);
+      orderVariants.push(cand);
+      if (orderVariants.length >= config.maxRouteOrderVariants) {
+        break;
+      }
+    }
+  }
+
+  // Execute Routing for each Order Variant and pick the best result
+  let globalBestRoutesMap = new Map<string, RoutedPath>();
+  let globalBestValidation: ExtendedLayoutValidationResult | null = null;
+  let globalBestOccupancy: OccupancyRecord[] = [];
+
+  for (const variantEdges of orderVariants) {
+    const ledger = new RouteOccupancyLedger({ epsilon: config.epsilon });
+    const routesMap = new Map<string, RoutedPath>();
+
+    // Route self loops
+    const selfLoopCounts = new Map<string, number>();
+    for (const edge of selfEdges) {
+      const node = nodeMap.get(edge.source);
+      if (!node) continue;
+      const idx = selfLoopCounts.get(node.id) ?? 0;
+      selfLoopCounts.set(node.id, idx + 1);
+
+      const r = routeSelfLoop(edge, node, config, idx);
+      routesMap.set(edge.id, r);
+      ledger.commitRoute(r.edgeId, r.points);
     }
 
-    const portDistributionResult = distributePorts(
-      nonSelfEdges,
-      sideAssignmentsMap,
-      nodeMap,
-      config
-    );
-
-    // Collect all ports for grid construction
-    const allPortRefs: PortRef[] = [];
-    for (const ports of portDistributionResult.portsByEdge.values()) {
-      allPortRefs.push(ports.sourcePort);
-      allPortRefs.push(ports.targetPort);
-    }
-
-    let laneRings = config.initialLaneRings;
-    let grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
+    const laneRings = config.initialLaneRings;
+    const grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
 
     function syncLedgerGrid(g: typeof grid) {
       const xCoords = Array.from(new Set(Array.from(g.vertices.values()).map((p) => p.x)));
@@ -189,46 +301,25 @@ export function routeAllEdges(
 
     syncLedgerGrid(grid);
 
-    // Sort non-self edges by: feedback constraint, rank span, candidate regret, badge area, then edge ID
-    const sortedEdges = [...nonSelfEdges].sort((a, b) => {
-      const metaA = edgeMetaMap.get(a.id);
-      const metaB = edgeMetaMap.get(b.id);
-      if (metaA && metaB) {
-        return compareEdgeMetas(metaA, metaB, config.epsilon);
-      }
-      return a.id.localeCompare(b.id);
-    });
-
-    // Initial Routing Pass
+    // Initial Routing Pass for this variant
     const unroutedEdges = new Set<string>();
 
-    for (const edge of sortedEdges) {
+    for (const edge of variantEdges) {
       const ports = portDistributionResult.portsByEdge.get(edge.id);
       if (!ports) continue;
 
-      const occupancy = ledger.toOccupancyRecords();
-      let route = searchOrthogonalRoute(
+      const meta = edgeMetaMap.get(edge.id);
+      const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
+
+      const route = searchOrthogonalRoute(
         edge.id,
         ports.sourcePort,
         ports.targetPort,
         grid,
-        occupancy,
-        config
+        ledger.toOccupancyRecords(),
+        config,
+        { role: isFeedback ? "feedback" : undefined },
       );
-
-      if (!route && laneRings < config.maxLaneRings) {
-        laneRings = config.maxLaneRings;
-        grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
-        syncLedgerGrid(grid);
-        route = searchOrthogonalRoute(
-          edge.id,
-          ports.sourcePort,
-          ports.targetPort,
-          grid,
-          ledger.toOccupancyRecords(),
-          config
-        );
-      }
 
       if (route) {
         routesMap.set(edge.id, route);
@@ -238,8 +329,26 @@ export function routeAllEdges(
       }
     }
 
-    // Rip-Up & Reroute Loop
+    // Rip-Up & Conflict-Directed Reroute Loop (including perpendicular crossings)
+    function evaluateCurrentValidation() {
+      return validateCustomLayout(
+        {
+          nodes: allNodesList,
+          edges: Array.from(routesMap.values()),
+          badges: [],
+          classifiedEdges,
+        },
+        config,
+      );
+    }
+
+    let currValidation = evaluateCurrentValidation();
+    let variantBestValidation = currValidation;
+    let variantBestRoutesMap = new Map(routesMap);
+    let variantBestOccupancy = ledger.toOccupancyRecords();
+
     const seenStateSignatures = new Set<string>();
+    const seenConflictSignatures = new Set<string>();
 
     function getRoutesSignature(): string {
       return Array.from(routesMap.entries())
@@ -248,53 +357,57 @@ export function routeAllEdges(
         .join(";");
     }
 
-    function evaluateCurrentValidation() {
-      return validateCustomLayout(
-        {
-          nodes: allNodesList,
-          edges: Array.from(routesMap.values()),
-          badges: [],
-        },
-        config
-      );
-    }
+    let noImprovementCount = 0;
+    const maxPasses = Math.min(2, config.maxRipUpPasses);
 
-    let bestValidation = evaluateCurrentValidation();
-    let bestRoutesMap = new Map(routesMap);
-
-    for (let pass = 0; pass < config.maxRipUpPasses; pass++) {
+    for (let pass = 0; pass < maxPasses; pass++) {
       const stateSig = getRoutesSignature();
       if (seenStateSignatures.has(stateSig)) {
-        break; // Repeated state stop condition
+        break;
       }
       seenStateSignatures.add(stateSig);
 
-      // Check current reservations for conflicts
       const reservations = ledger.getReservations();
       const conflicts = ledger.queryConflicts(reservations);
+      const crossings = currValidation.crossings;
 
-      if (unroutedEdges.size === 0 && conflicts.length === 0 && bestValidation.isValid) {
-        break; // Success stop condition
+      if (
+        unroutedEdges.size === 0 &&
+        conflicts.length === 0 &&
+        crossings.length === 0 &&
+        currValidation.isValid
+      ) {
+        break; // Zero conflicts & zero crossings
       }
 
-      // Build Conflict Set
+      // Build Conflict Set (unrouted + hard ledger conflicts + perpendicular crossings)
       const conflictSet = new Set<string>(unroutedEdges);
       for (const c of conflicts) {
         conflictSet.add(c.edgeIdA);
         conflictSet.add(c.edgeIdB);
+      }
+      for (const cross of crossings) {
+        conflictSet.add(cross.edgeIdA);
+        conflictSet.add(cross.edgeIdB);
       }
 
       if (conflictSet.size === 0) {
         break;
       }
 
-      // Release ONLY conflict-set routes from ledger and active routes
+      const conflictSig = Array.from(conflictSet).sort().join(",");
+      if (seenConflictSignatures.has(conflictSig)) {
+        break; // Repeated conflict set stop condition
+      }
+      seenConflictSignatures.add(conflictSig);
+
+      // Release conflict set routes
       for (const eId of conflictSet) {
         ledger.release(eId);
         routesMap.delete(eId);
       }
 
-      // Sort conflict-set edges (hardest edge first)
+      // Sort conflict set edges by hardest-first
       const edgesToReroute = nonSelfEdges
         .filter((e) => conflictSet.has(e.id))
         .sort((a, b) => {
@@ -308,33 +421,22 @@ export function routeAllEdges(
 
       unroutedEdges.clear();
 
-      // Reroute hardest edge first
       for (const edge of edgesToReroute) {
         const ports = portDistributionResult.portsByEdge.get(edge.id);
         if (!ports) continue;
 
-        let route = searchOrthogonalRoute(
+        const meta = edgeMetaMap.get(edge.id);
+        const isFeedback = meta?.isFeedback ?? Boolean(edge.isCycle);
+
+        const route = searchOrthogonalRoute(
           edge.id,
           ports.sourcePort,
           ports.targetPort,
           grid,
           ledger.toOccupancyRecords(),
-          config
+          config,
+          { role: isFeedback ? "feedback" : undefined },
         );
-
-        if (!route && laneRings < config.maxLaneRings) {
-          laneRings = config.maxLaneRings;
-          grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
-          syncLedgerGrid(grid);
-          route = searchOrthogonalRoute(
-            edge.id,
-            ports.sourcePort,
-            ports.targetPort,
-            grid,
-            ledger.toOccupancyRecords(),
-            config
-          );
-        }
 
         if (route) {
           routesMap.set(edge.id, route);
@@ -344,43 +446,46 @@ export function routeAllEdges(
         }
       }
 
-      const currValidation = evaluateCurrentValidation();
-      const scoreDiff = compareLayoutScores(currValidation, bestValidation);
+      currValidation = evaluateCurrentValidation();
+      const scoreDiff = compareLayoutScores(currValidation, variantBestValidation);
 
       if (scoreDiff < 0) {
-        bestValidation = currValidation;
-        bestRoutesMap = new Map(routesMap);
-      } else if (scoreDiff > 0 && pass > 0) {
-        // No score improvement stop condition
-        break;
+        variantBestValidation = currValidation;
+        variantBestRoutesMap = new Map(routesMap);
+        variantBestOccupancy = ledger.toOccupancyRecords();
+        noImprovementCount = 0;
+      } else {
+        noImprovementCount++;
+        if (noImprovementCount >= 2 && pass > 0) {
+          break; // Stop rip-up loop if no score improvement for 2 consecutive passes
+        }
       }
     }
 
-    // Restore best routes if rip-up ended with a better historical pass
-    if (compareLayoutScores(bestValidation, evaluateCurrentValidation()) < 0) {
-      routesMap.clear();
-      for (const [id, r] of bestRoutesMap.entries()) {
-        routesMap.set(id, r);
-      }
+    if (!globalBestValidation || compareLayoutScores(variantBestValidation, globalBestValidation) < 0) {
+      globalBestValidation = variantBestValidation;
+      globalBestRoutesMap = new Map(variantBestRoutesMap);
+      globalBestOccupancy = variantBestOccupancy;
+    }
+
+    if (
+      globalBestValidation.isValid &&
+      globalBestValidation.metrics.edgeNodePenetrations === 0 &&
+      globalBestValidation.metrics.sharedEdgeSegmentLength === 0
+    ) {
+      break; // Valid layout with zero hard errors achieved, stop running order variants early!
     }
   }
 
-  const finalRoutes = Array.from(routesMap.values());
-  const finalValidation = validateCustomLayout(
-    {
-      nodes: allNodesList,
-      edges: finalRoutes,
-      badges: [],
-    },
-    config
-  );
-
-  const status = finalValidation.isValid ? "success" : "unresolved_soft_conflicts";
+  const finalRoutes = Array.from(globalBestRoutesMap.values());
+  const status =
+    globalBestValidation && globalBestValidation.isValid
+      ? "success"
+      : "unresolved_soft_conflicts";
 
   return {
     routes: finalRoutes,
     status,
-    occupancy: ledger.toOccupancyRecords(),
+    occupancy: globalBestOccupancy,
   };
 }
-

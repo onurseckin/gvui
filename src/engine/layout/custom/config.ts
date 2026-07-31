@@ -29,6 +29,11 @@ export interface CustomLayoutConfig {
   maxRipUpPasses: number;
   maxGlobalPasses: number;
   epsilon: number;
+  maxAestheticPasses: number;
+  maxPortStatesPerPass: number;
+  maxPortAlternativesPerEdge: number;
+  maxRouteOrderVariants: number;
+  coordinateSweepLimit: number;
 }
 
 export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object.freeze({
@@ -55,9 +60,16 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   maxRipUpPasses: 12,
   maxGlobalPasses: 8,
   epsilon: 0.001,
+  maxAestheticPasses: 12,
+  maxPortStatesPerPass: 8,
+  maxPortAlternativesPerEdge: 4,
+  maxRouteOrderVariants: 4,
+  coordinateSweepLimit: 16,
 });
 
-export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>): CustomLayoutConfig {
+export function resolveCustomLayoutConfig(
+  partial?: Partial<CustomLayoutConfig>,
+): CustomLayoutConfig {
   const merged: CustomLayoutConfig = {
     ...DEFAULT_CUSTOM_LAYOUT_CONFIG,
     ...partial,
@@ -81,12 +93,17 @@ export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>)
     "maxRipUpPasses",
     "maxGlobalPasses",
     "epsilon",
+    "maxAestheticPasses",
+    "maxPortStatesPerPass",
+    "maxPortAlternativesPerEdge",
+    "maxRouteOrderVariants",
+    "coordinateSweepLimit",
   ];
 
   for (const field of positiveFields) {
     if (typeof merged[field] !== "number" || merged[field] <= 0 || Number.isNaN(merged[field])) {
       throw new LayoutConfigurationError(
-        `Configuration property '${field}' must be a positive number, got ${merged[field]}`
+        `Configuration property '${field}' must be a positive number, got ${merged[field]}`,
       );
     }
   }
@@ -103,7 +120,7 @@ export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>)
   for (const field of nonNegativeFields) {
     if (typeof merged[field] !== "number" || merged[field] < 0 || Number.isNaN(merged[field])) {
       throw new LayoutConfigurationError(
-        `Configuration property '${field}' must be a non-negative number, got ${merged[field]}`
+        `Configuration property '${field}' must be a non-negative number, got ${merged[field]}`,
       );
     }
   }

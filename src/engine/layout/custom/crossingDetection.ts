@@ -10,10 +10,10 @@ const ROLE_PRIORITY: Record<EdgeRole, number> = {
 
 export function getBridgeOwnerEdgeId(
   edgeA: { id: string; role?: EdgeRole },
-  edgeB: { id: string; role?: EdgeRole }
+  edgeB: { id: string; role?: EdgeRole },
 ): string {
-  const roleA = edgeA.role ? ROLE_PRIORITY[edgeA.role] ?? 0 : 0;
-  const roleB = edgeB.role ? ROLE_PRIORITY[edgeB.role] ?? 0 : 0;
+  const roleA = edgeA.role ? (ROLE_PRIORITY[edgeA.role] ?? 0) : 0;
+  const roleB = edgeB.role ? (ROLE_PRIORITY[edgeB.role] ?? 0) : 0;
 
   if (roleA !== roleB) {
     return roleA > roleB ? edgeB.id : edgeA.id;
@@ -25,7 +25,7 @@ export function getBridgeOwnerEdgeId(
 export function detectEdgeCrossings(
   edges: RoutedPath[],
   edgeRoleInput?: Map<string, EdgeRole> | Record<string, EdgeRole> | ClassifiedEdge[],
-  epsilon = 0.001
+  epsilon = 0.001,
 ): EdgeCrossing[] {
   const crossings: EdgeCrossing[] = [];
 
@@ -61,16 +61,14 @@ export function detectEdgeCrossings(
 
           if (segmentsCross(segA, segB, epsilon)) {
             const s1Horiz = Math.abs(segA.a.y - segA.b.y) <= epsilon;
-            const pt: Point = s1Horiz
-              ? { x: segB.a.x, y: segA.a.y }
-              : { x: segA.a.x, y: segB.a.y };
+            const pt: Point = s1Horiz ? { x: segB.a.x, y: segA.a.y } : { x: segA.a.x, y: segB.a.y };
 
             const roleA = roleMap.get(edgeA.edgeId);
             const roleB = roleMap.get(edgeB.edgeId);
 
             const bridgeOwnerEdgeId = getBridgeOwnerEdgeId(
               { id: edgeA.edgeId, role: roleA },
-              { id: edgeB.edgeId, role: roleB }
+              { id: edgeB.edgeId, role: roleB },
             );
 
             crossings.push({

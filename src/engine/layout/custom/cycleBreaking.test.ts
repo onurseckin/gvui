@@ -141,7 +141,7 @@ describe("cycleBreaking", () => {
     const result2 = classifyEdgeRoles(graph2, scc2);
 
     expect(Array.from(result1.edgeRoleMap.entries())).toEqual(
-      Array.from(result2.edgeRoleMap.entries())
+      Array.from(result2.edgeRoleMap.entries()),
     );
   });
 });

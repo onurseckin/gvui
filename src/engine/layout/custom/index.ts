@@ -13,15 +13,16 @@ export * from "./portCandidates";
 export * from "./portAssignment";
 export * from "./portDistribution";
 export * from "./routingGrid";
-export * from "./routeSearch";
+export { compareRouteCost, searchOrthogonalRoute, type RouteSearchOptions } from "./routeSearch";
 export * from "./specialRoutes";
 export * from "./edgeRouter";
 export * from "./badgeMeasurement";
 export * from "./badgePlacement";
 export * from "./layoutValidator";
+export * from "./layoutObjective";
+export { computeBadgeSpacingDemands, resolveEffectiveSpacingOverrides } from "./spacingDemand";
 export * from "./svgPath";
 export * from "./crossingDetection";
 export * from "./routeOccupancy";
 export * from "./optimizeLayout";
 export * from "./computeCustomLayout";
-

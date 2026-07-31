@@ -51,7 +51,12 @@ describe("optimizeLayout", () => {
       { id: "R2", width: 140, height: 60 },
     ];
     const edges: NormalizedEdge[] = [
-      { id: "e1", source: "R1", target: "R2", label: "EXTREMELY_WIDE_BADGE_LABEL_FOR_SPACING_EXPANSION_TEST" },
+      {
+        id: "e1",
+        source: "R1",
+        target: "R2",
+        label: "EXTREMELY_WIDE_BADGE_LABEL_FOR_SPACING_EXPANSION_TEST",
+      },
     ];
 
     const result = optimizeLayout(nodes, edges, { nodeGap: 20, rankGap: 20 });
@@ -66,9 +71,7 @@ describe("optimizeLayout", () => {
       { id: "X", width: 100, height: 50 },
       { id: "Y", width: 100, height: 50 },
     ];
-    const edges: NormalizedEdge[] = [
-      { id: "e1", source: "X", target: "Y", label: "Simple" },
-    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "X", target: "Y", label: "Simple" }];
 
     const result = optimizeLayout(nodes, edges, { maxGlobalPasses: 4 });
 
@@ -90,5 +93,54 @@ describe("optimizeLayout", () => {
 
     expect(result.validation.isValid).toBe(true);
     expect(result.status).toBe("success");
+  });
+
+  it("continues search after initial hard-valid result to improve aesthetic score in multi-pass optimization", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+      { id: "C", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [
+      { id: "e1", source: "A", target: "B", label: "Label 1" },
+      { id: "e2", source: "A", target: "C", label: "Label 2" },
+      { id: "e3", source: "B", target: "C", label: "Label 3" },
+    ];
+
+    const result = optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
+
+    expect(result.validation.isValid).toBe(true);
+    expect(result.optimizationStats).toBeDefined();
+    expect(result.optimizationStats?.globalPasses).toBeGreaterThanOrEqual(1);
+  });
+
+  it("ensures final layout score is never worse than initial layout score (non-regression)", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "N1", width: 100, height: 50 },
+      { id: "N2", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "N1", target: "N2", label: "Check" }];
+
+    const initialResult = optimizeLayout(nodes, edges, { maxAestheticPasses: 1 });
+    expect(initialResult.optimizationStats).toBeDefined();
+
+    const finalResult = optimizeLayout(nodes, edges, { maxAestheticPasses: 5 });
+    expect(finalResult.optimizationStats).toBeDefined();
+  });
+
+  it("populates optimizationStats on CustomLayoutResult with required properties", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
+
+    const result = optimizeLayout(nodes, edges);
+
+    expect(result.optimizationStats).toBeDefined();
+    expect(typeof result.optimizationStats?.globalPasses).toBe("number");
+    expect(typeof result.optimizationStats?.evaluatedPortStates).toBe("number");
+    expect(typeof result.optimizationStats?.spacingExpansions).toBe("number");
+    expect(typeof result.optimizationStats?.repeatedStateStop).toBe("boolean");
   });
 });

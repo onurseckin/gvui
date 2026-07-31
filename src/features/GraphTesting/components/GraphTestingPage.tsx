@@ -1,7 +1,15 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
-import { computeCustomLayout, type ExtendedLayoutDiagnostic, type NormalizedEdge, type NormalizedNode } from "../../../engine/layout/custom";
-import { pointsToSvgPath, renderPathWithCrossingBridges } from "../../../engine/layout/custom/svgPath";
+import {
+  computeCustomLayout,
+  type ExtendedLayoutDiagnostic,
+  type NormalizedEdge,
+  type NormalizedNode,
+} from "../../../engine/layout/custom";
+import {
+  pointsToSvgPath,
+  renderPathWithCrossingBridges,
+} from "../../../engine/layout/custom/svgPath";
 import { Button } from "../../../ui";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
@@ -24,7 +32,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   });
 
   const activeScenario: TestScenario = useMemo(() => {
-    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[20] ?? { id: 20, title: "DevOps Mesh", nodes: [], edges: [] };
+    return (
+      CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ??
+      CUSTOM_LAYOUT_SCENARIOS[20] ?? { id: 20, title: "DevOps Mesh", nodes: [], edges: [] }
+    );
   }, [selectedScenarioId]);
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
@@ -58,7 +69,9 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
         status: "invalid_hard_failure" as const,
         validation: {
           isValid: false,
-          diagnostics: [{ code: "RENDER_ERROR", severity: "error" as const, message: String(err), ids: [] }],
+          diagnostics: [
+            { code: "RENDER_ERROR", severity: "error" as const, message: String(err), ids: [] },
+          ],
           metrics: {
             nodeNodeOverlaps: 0,
             edgeNodePenetrations: 0,
@@ -162,7 +175,12 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               <span>{activeScenario.title}</span>
             </div>
             <div className="testing-stat-badge">
-              Nodes: {renderedNodes.length} | Edges: {renderedEdges.length} | Status:{" "}
+              Nodes: {renderedNodes.length} | Edges: {renderedEdges.length} | Crossings:{" "}
+              {layoutResult.validation?.metrics?.crossingCount ?? 0} | Hairpins:{" "}
+              {layoutResult.validation?.metrics?.hairpinCount ?? 0} | Leaders:{" "}
+              {(layoutResult.validation?.metrics?.ordinaryLeaderCount ?? 0) +
+                (layoutResult.validation?.metrics?.feedbackLeaderCount ?? 0)}{" "}
+              | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
               <strong>{layoutResult.status}</strong>
             </div>
           </div>
@@ -181,7 +199,9 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                     height: `${node.height}px`,
                   }}
                 >
-                  <div className="testing-node-title">{origNode?.name ?? node.label ?? node.id}</div>
+                  <div className="testing-node-title">
+                    {origNode?.name ?? node.label ?? node.id}
+                  </div>
                   {origNode?.desc && <div className="testing-node-desc">{origNode.desc}</div>}
                 </div>
               );
@@ -209,7 +229,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                 const ownedCrossings = renderedCrossings
                   .filter((c) => (c.bridgeOwnerEdgeId ?? c.edgeIdB) === routedPath.edgeId)
                   .map((c) => c.point);
-                const dPath = renderPathWithCrossingBridges(routedPath.points || [], ownedCrossings);
+                const dPath = renderPathWithCrossingBridges(
+                  routedPath.points || [],
+                  ownedCrossings,
+                );
 
                 return (
                   <g key={`edge-group-${routedPath.edgeId}`}>
@@ -278,45 +301,45 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
               {/* Diagnostic Geometry Highlights */}
               {debugOptions.showDiagnostics &&
-                (layoutResult.validation?.diagnostics as ExtendedLayoutDiagnostic[] | undefined)?.map(
-                  (diag, i) => (
-                    <g key={`diag-geom-${diag.code}-${i}`}>
-                      {diag.rect && (
-                        <rect
-                          x={diag.rect.x}
-                          y={diag.rect.y}
-                          width={diag.rect.width}
-                          height={diag.rect.height}
-                          fill="rgba(239, 68, 68, 0.15)"
-                          stroke="#ef4444"
-                          strokeWidth="2"
-                          strokeDasharray="4,4"
-                        />
-                      )}
-                      {diag.segment && (
-                        <line
-                          x1={diag.segment.a.x}
-                          y1={diag.segment.a.y}
-                          x2={diag.segment.b.x}
-                          y2={diag.segment.b.y}
-                          stroke="#ef4444"
-                          strokeWidth="3"
-                          strokeDasharray="4,2"
-                        />
-                      )}
-                      {diag.point && (
-                        <circle
-                          cx={diag.point.x}
-                          cy={diag.point.y}
-                          r="6"
-                          fill="#ef4444"
-                          stroke="#ffffff"
-                          strokeWidth="2"
-                        />
-                      )}
-                    </g>
-                  )
-                )}
+                (
+                  layoutResult.validation?.diagnostics as ExtendedLayoutDiagnostic[] | undefined
+                )?.map((diag, i) => (
+                  <g key={`diag-geom-${diag.code}-${i}`}>
+                    {diag.rect && (
+                      <rect
+                        x={diag.rect.x}
+                        y={diag.rect.y}
+                        width={diag.rect.width}
+                        height={diag.rect.height}
+                        fill="rgba(239, 68, 68, 0.15)"
+                        stroke="#ef4444"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                      />
+                    )}
+                    {diag.segment && (
+                      <line
+                        x1={diag.segment.a.x}
+                        y1={diag.segment.a.y}
+                        x2={diag.segment.b.x}
+                        y2={diag.segment.b.y}
+                        stroke="#ef4444"
+                        strokeWidth="3"
+                        strokeDasharray="4,2"
+                      />
+                    )}
+                    {diag.point && (
+                      <circle
+                        cx={diag.point.x}
+                        cy={diag.point.y}
+                        r="6"
+                        fill="#ef4444"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                      />
+                    )}
+                  </g>
+                ))}
 
               {/* Badges */}
               {debugOptions.showBadges &&
@@ -327,7 +350,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                     badge.anchorPoint &&
                     Math.hypot(
                       badge.anchorPoint.x - badgeCenterX,
-                      badge.anchorPoint.y - badgeCenterY
+                      badge.anchorPoint.y - badgeCenterY,
                     ) > 4;
 
                   return (
@@ -383,9 +406,9 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
       {/* Footer */}
       <footer className="graph-testing-page-footer">
-        📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>. Scenarios #1 through #20 powered by custom top-to-bottom layout & orthogonal edge router.
+        📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>.
+        Scenarios #1 through #20 powered by custom top-to-bottom layout & orthogonal edge router.
       </footer>
     </div>
   );
 };
-

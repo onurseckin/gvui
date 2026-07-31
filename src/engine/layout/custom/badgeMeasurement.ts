@@ -26,7 +26,7 @@ export function getBadgeDisplayText(label?: string, isCycle = false): string | n
 export function measureBadgeRect(
   label: string,
   _config: CustomLayoutConfig = DEFAULT_CUSTOM_LAYOUT_CONFIG,
-  isCycle = false
+  isCycle = false,
 ): Rect {
   const displayText = getBadgeDisplayText(label, isCycle);
   if (!displayText) {
@@ -46,7 +46,7 @@ export function measureBadgeRect(
 
 export function measureBadgeRects(
   edges: NormalizedEdge[],
-  config: CustomLayoutConfig = DEFAULT_CUSTOM_LAYOUT_CONFIG
+  config: CustomLayoutConfig = DEFAULT_CUSTOM_LAYOUT_CONFIG,
 ): Map<string, Rect> {
   const result = new Map<string, Rect>();
 

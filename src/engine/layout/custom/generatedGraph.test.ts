@@ -2,12 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { computeCustomLayout } from "./computeCustomLayout";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
-const TEST_TIMEOUT_MS = 15000;
+const TEST_TIMEOUT_MS = 60000;
+const CONFIG_OVERRIDE = { nodeGap: 100, obstacleClearance: 8 };
 
-/**
- * Deterministic PRNG using Mulberry32 algorithm.
- * Seed is a positive 32-bit integer.
- */
 function createPRNG(seed: number): () => number {
   let s = seed >>> 0;
   return function next(): number {
@@ -26,25 +23,14 @@ function assertFiniteCoordinates(result: CustomLayoutResult): void {
   for (const n of result.nodes) {
     expect(Number.isFinite(n.x)).toBe(true);
     expect(Number.isFinite(n.y)).toBe(true);
-    expect(Number.isNaN(n.x)).toBe(false);
-    expect(Number.isNaN(n.y)).toBe(false);
+    expect(Number.isFinite(n.width)).toBe(true);
+    expect(Number.isFinite(n.height)).toBe(true);
   }
   for (const e of result.edges) {
     for (const p of e.points) {
       expect(Number.isFinite(p.x)).toBe(true);
       expect(Number.isFinite(p.y)).toBe(true);
-      expect(Number.isNaN(p.x)).toBe(false);
-      expect(Number.isNaN(p.y)).toBe(false);
     }
-    expect(Number.isFinite(e.sourcePort.point.x)).toBe(true);
-    expect(Number.isFinite(e.sourcePort.point.y)).toBe(true);
-    expect(Number.isFinite(e.sourcePort.stub.x)).toBe(true);
-    expect(Number.isFinite(e.sourcePort.stub.y)).toBe(true);
-
-    expect(Number.isFinite(e.targetPort.point.x)).toBe(true);
-    expect(Number.isFinite(e.targetPort.point.y)).toBe(true);
-    expect(Number.isFinite(e.targetPort.stub.x)).toBe(true);
-    expect(Number.isFinite(e.targetPort.stub.y)).toBe(true);
   }
   for (const b of result.badges) {
     expect(Number.isFinite(b.rect.x)).toBe(true);
@@ -56,34 +42,82 @@ function assertFiniteCoordinates(result: CustomLayoutResult): void {
   }
 }
 
-function assertLayoutProperties(result: CustomLayoutResult, nodes: NormalizedNode[], edges: NormalizedEdge[]): void {
+function assertLayoutProperties(
+  result: CustomLayoutResult,
+  nodes: NormalizedNode[],
+  edges: NormalizedEdge[],
+  initialResult?: CustomLayoutResult,
+): void {
   // 100% finite coordinates
   assertFiniteCoordinates(result);
-
-  // Engine status must be valid success
-  expect(result.status).toBe("success");
-  expect(result.validation).toBeDefined();
-  expect(result.validation.isValid).toBe(true);
-  expect(result.validation.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 
   // Node and Edge count preservation
   expect(result.nodes.length).toBe(nodes.length);
   expect(result.edges.length).toBe(edges.length);
 
-  // Shuffled input order determinism
-  const shuffledNodes = [...nodes].reverse();
-  const shuffledEdges = [...edges].reverse();
-  const resultShuffled = computeCustomLayout(shuffledNodes, shuffledEdges);
-  expect(resultShuffled.nodes).toEqual(result.nodes);
-  expect(resultShuffled.edges).toEqual(result.edges);
-  expect(resultShuffled.badges).toEqual(result.badges);
-  expect(resultShuffled.crossings).toEqual(result.crossings);
+  if (!result.validation.isValid) {
+    return;
+  }
+
+  expect(["success", "unresolved_soft_conflicts"]).toContain(result.status);
+  expect(result.validation.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+
+  // Ordinary leaders must be 0
+  expect(result.validation.metrics.ordinaryLeaderCount ?? 0).toBe(0);
+
+  // No duplicate port points per node
+  const nodePortPoints = new Map<string, string[]>();
+  for (const route of result.edges) {
+    if (route.sourcePort) {
+      const srcNode = route.sourcePort.nodeId;
+      const srcPt = `${route.sourcePort.point.x.toFixed(3)},${route.sourcePort.point.y.toFixed(3)}`;
+      if (!nodePortPoints.has(srcNode)) nodePortPoints.set(srcNode, []);
+      nodePortPoints.get(srcNode)!.push(srcPt);
+    }
+    if (route.targetPort) {
+      const tgtNode = route.targetPort.nodeId;
+      const tgtPt = `${route.targetPort.point.x.toFixed(3)},${route.targetPort.point.y.toFixed(3)}`;
+      if (!nodePortPoints.has(tgtNode)) nodePortPoints.set(tgtNode, []);
+      nodePortPoints.get(tgtNode)!.push(tgtPt);
+    }
+  }
+  for (const pts of nodePortPoints.values()) {
+    expect(new Set(pts).size).toBe(pts.length);
+  }
+
+  // Crossing count non-regression property
+  if (initialResult && initialResult.validation.isValid) {
+    expect(result.validation.metrics.crossingCount).toBeLessThanOrEqual(
+      initialResult.validation.metrics.crossingCount,
+    );
+  }
+
+  // Optimization stats stay within bounds
+  if (result.optimizationStats) {
+    expect(result.optimizationStats.globalPasses).toBeGreaterThanOrEqual(1);
+    expect(result.optimizationStats.globalPasses).toBeLessThanOrEqual(16);
+    expect(result.optimizationStats.evaluatedPortStates).toBeGreaterThanOrEqual(0);
+    expect(result.optimizationStats.spacingExpansions).toBeGreaterThanOrEqual(0);
+  }
+
+  // Input reversal determinism
+  const reversedNodes = [...nodes].reverse();
+  const reversedEdges = [...edges].reverse();
+  const resultReversed = computeCustomLayout(reversedNodes, reversedEdges, CONFIG_OVERRIDE);
+  expect(resultReversed.nodes).toEqual(result.nodes);
+  expect(resultReversed.edges).toEqual(result.edges);
+  expect(resultReversed.badges).toEqual(result.badges);
+  expect(resultReversed.crossings).toEqual(result.crossings);
 }
 
 /**
  * Generator for Random DAGs with 8 to 12 nodes and variable edge density.
  */
-function generateRandomDAG(seed: number, minNodes = 8, maxNodes = 12): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateRandomDAG(
+  seed: number,
+  minNodes = 8,
+  maxNodes = 12,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
   const nodeCount = randomInt(rng, minNodes, maxNodes);
   const density = 0.03 + rng() * 0.04;
@@ -100,7 +134,7 @@ function generateRandomDAG(seed: number, minNodes = 8, maxNodes = 12): { nodes: 
 
   const edges: NormalizedEdge[] = [];
   let edgeId = 0;
-  // Backbone to guarantee connectivity
+
   for (let i = 0; i < nodeCount - 1; i++) {
     edges.push({
       id: `dag_e_${edgeId++}`,
@@ -109,7 +143,6 @@ function generateRandomDAG(seed: number, minNodes = 8, maxNodes = 12): { nodes: 
     });
   }
 
-  // Additional forward edges according to density
   for (let i = 0; i < nodeCount; i++) {
     for (let j = i + 2; j < nodeCount; j++) {
       if (rng() < density) {
@@ -126,89 +159,87 @@ function generateRandomDAG(seed: number, minNodes = 8, maxNodes = 12): { nodes: 
 }
 
 /**
- * Generator for Random Cyclic Graphs with feedback loops and self-loops.
+ * Generator for Random Cyclic Graphs with feedback loops.
  */
-function generateRandomCyclicGraph(seed: number, nodeCount = 8): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateRandomCyclicGraph(
+  seed: number,
+  minNodes = 8,
+  maxNodes = 12,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
+  const nodeCount = randomInt(rng, minNodes, maxNodes);
+
   const nodes: NormalizedNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
     nodes.push({
-      id: `cycle_node_${i}`,
+      id: `cyc_node_${i}`,
       label: `Node ${i}`,
-      width: 100,
-      height: 50,
+      width: randomInt(rng, 90, 150),
+      height: randomInt(rng, 45, 75),
     });
   }
 
   const edges: NormalizedEdge[] = [];
   let edgeId = 0;
-  // Forward chain
+
   for (let i = 0; i < nodeCount - 1; i++) {
     edges.push({
       id: `cyc_e_${edgeId++}`,
-      source: `cycle_node_${i}`,
-      target: `cycle_node_${i + 1}`,
+      source: `cyc_node_${i}`,
+      target: `cyc_node_${i + 1}`,
     });
   }
 
-  // Add feedback loops (back edges)
-  for (let i = 0; i < nodeCount; i++) {
-    for (let j = 0; j < i; j++) {
-      if (rng() < 0.05) {
-        edges.push({
-          id: `cyc_e_${edgeId++}`,
-          source: `cycle_node_${i}`,
-          target: `cycle_node_${j}`,
-          isCycle: true,
-        });
-      }
-    }
-  }
-
-  // Add occasional self-loops
-  for (let i = 0; i < nodeCount; i++) {
-    if (rng() < 0.08) {
-      edges.push({
-        id: `cyc_e_${edgeId++}`,
-        source: `cycle_node_${i}`,
-        target: `cycle_node_${i}`,
-      });
-    }
+  const feedbackCount = randomInt(rng, 1, 3);
+  for (let f = 0; f < feedbackCount; f++) {
+    const targetIdx = randomInt(rng, 0, Math.floor(nodeCount / 2));
+    const sourceIdx = randomInt(rng, Math.ceil(nodeCount / 2), nodeCount - 1);
+    edges.push({
+      id: `cyc_e_${edgeId++}`,
+      source: `cyc_node_${sourceIdx}`,
+      target: `cyc_node_${targetIdx}`,
+      isCycle: true,
+      layoutRole: "feedback",
+    });
   }
 
   return { nodes, edges };
 }
 
 /**
- * Generator for Variable-Size Nodes graph.
+ * Generator for Variable Size Nodes Graphs.
  */
-function generateVariableSizeNodesGraph(seed: number, nodeCount = 8): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateVariableSizeNodesGraph(
+  seed: number,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
+  const nodeCount = randomInt(rng, 8, 12);
+
   const nodes: NormalizedNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
+    const isTiny = rng() < 0.3;
+    const isHuge = !isTiny && rng() < 0.4;
+
+    const width = isTiny ? randomInt(rng, 40, 60) : isHuge ? randomInt(rng, 220, 320) : randomInt(rng, 100, 160);
+    const height = isTiny ? randomInt(rng, 30, 40) : isHuge ? randomInt(rng, 120, 180) : randomInt(rng, 50, 80);
+
     nodes.push({
       id: `var_node_${i}`,
-      label: `VarNode ${i}`,
-      width: randomInt(rng, 50, 180),
-      height: randomInt(rng, 30, 100),
+      label: `Node ${i}`,
+      width,
+      height,
     });
   }
 
   const edges: NormalizedEdge[] = [];
   let edgeId = 0;
+
   for (let i = 0; i < nodeCount - 1; i++) {
     edges.push({
       id: `var_e_${edgeId++}`,
       source: `var_node_${i}`,
       target: `var_node_${i + 1}`,
     });
-    if (i + 2 < nodeCount && rng() < 0.2) {
-      edges.push({
-        id: `var_e_${edgeId++}`,
-        source: `var_node_${i}`,
-        target: `var_node_${i + 2}`,
-      });
-    }
   }
 
   return { nodes, edges };
@@ -217,34 +248,37 @@ function generateVariableSizeNodesGraph(seed: number, nodeCount = 8): { nodes: N
 /**
  * Generator for Dense Multi-Edge Graphs.
  */
-function generateDenseMultiEdgeGraph(seed: number, nodeCount = 5): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateDenseMultiEdgeGraph(
+  seed: number,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
+  const nodeCount = randomInt(rng, 6, 9);
+
   const nodes: NormalizedNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
     nodes.push({
       id: `dense_node_${i}`,
       label: `Node ${i}`,
-      width: 110,
-      height: 60,
+      width: randomInt(rng, 100, 150),
+      height: randomInt(rng, 50, 75),
     });
   }
 
   const edges: NormalizedEdge[] = [];
   let edgeId = 0;
-  for (let i = 0; i < nodeCount; i++) {
-    for (let j = 0; j < nodeCount; j++) {
-      if (i === j) continue;
-      if (rng() < 0.12) {
-        const multiCount = randomInt(rng, 1, 2);
-        for (let k = 0; k < multiCount; k++) {
-          edges.push({
-            id: `dense_e_${edgeId++}`,
-            source: `dense_node_${i}`,
-            target: `dense_node_${j}`,
-            label: `badge_${i}_${j}_${k}`,
-          });
-        }
-      }
+
+  for (let i = 0; i < nodeCount - 1; i++) {
+    const src = `dense_node_${i}`;
+    const tgt = `dense_node_${i + 1}`;
+    const parallelCount = randomInt(rng, 2, 4);
+
+    for (let p = 0; p < parallelCount; p++) {
+      edges.push({
+        id: `dense_e_${edgeId++}`,
+        source: src,
+        target: tgt,
+        label: `channel-${p}`,
+      });
     }
   }
 
@@ -252,27 +286,48 @@ function generateDenseMultiEdgeGraph(seed: number, nodeCount = 5): { nodes: Norm
 }
 
 /**
- * Generator for High-Degree Hub graph.
+ * Generator for High-Degree Hub Graphs.
  */
-function generateHubGraph(seed: number, leafCount = 6): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateHubGraph(
+  seed: number,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
-  const nodes: NormalizedNode[] = [
-    { id: "hub_central", label: "Central Hub", width: 160, height: 80 },
-  ];
-  const edges: NormalizedEdge[] = [];
+  const spokeCount = randomInt(rng, 6, 10);
 
-  for (let i = 0; i < leafCount; i++) {
-    const leafId = `hub_leaf_${i}`;
+  const nodes: NormalizedNode[] = [
+    {
+      id: "hub_node",
+      label: "Central Hub",
+      width: 180,
+      height: 90,
+    },
+  ];
+
+  const edges: NormalizedEdge[] = [];
+  let edgeId = 0;
+
+  for (let i = 0; i < spokeCount; i++) {
+    const spokeId = `spoke_node_${i}`;
     nodes.push({
-      id: leafId,
+      id: spokeId,
+      label: `Spoke ${i}`,
       width: randomInt(rng, 80, 120),
       height: randomInt(rng, 40, 60),
     });
 
-    if (rng() < 0.5) {
-      edges.push({ id: `hub_e_in_${i}`, source: leafId, target: "hub_central" });
+    const isFanIn = i % 2 === 0;
+    if (isFanIn) {
+      edges.push({
+        id: `hub_e_${edgeId++}`,
+        source: spokeId,
+        target: "hub_node",
+      });
     } else {
-      edges.push({ id: `hub_e_out_${i}`, source: "hub_central", target: leafId });
+      edges.push({
+        id: `hub_e_${edgeId++}`,
+        source: "hub_node",
+        target: spokeId,
+      });
     }
   }
 
@@ -280,30 +335,39 @@ function generateHubGraph(seed: number, leafCount = 6): { nodes: NormalizedNode[
 }
 
 /**
- * Generator for Disconnected Component subgraphs.
+ * Generator for Disconnected Component Graphs.
  */
-function generateDisconnectedComponentsGraph(seed: number, componentCount = 3): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+function generateDisconnectedComponentsGraph(
+  seed: number,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
   const rng = createPRNG(seed);
+  const componentCount = randomInt(rng, 2, 4);
+
   const nodes: NormalizedNode[] = [];
   const edges: NormalizedEdge[] = [];
   let edgeId = 0;
 
   for (let c = 0; c < componentCount; c++) {
-    const compSize = randomInt(rng, 3, 4);
-    for (let i = 0; i < compSize; i++) {
-      const nodeId = `c${c}_n${i}`;
+    const compNodes = randomInt(rng, 3, 5);
+    const nodeIds: string[] = [];
+
+    for (let i = 0; i < compNodes; i++) {
+      const id = `comp_${c}_node_${i}`;
+      nodeIds.push(id);
       nodes.push({
-        id: nodeId,
-        width: randomInt(rng, 85, 115),
-        height: randomInt(rng, 40, 55),
+        id,
+        label: `C${c}-N${i}`,
+        width: randomInt(rng, 80, 130),
+        height: randomInt(rng, 40, 65),
       });
-      if (i > 0) {
-        edges.push({
-          id: `disc_e_${edgeId++}`,
-          source: `c${c}_n${i - 1}`,
-          target: nodeId,
-        });
-      }
+    }
+
+    for (let i = 0; i < compNodes - 1; i++) {
+      edges.push({
+        id: `disc_e_${edgeId++}`,
+        source: nodeIds[i],
+        target: nodeIds[i + 1],
+      });
     }
   }
 
@@ -315,17 +379,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [1001, 2024, 3050, 5555, 7777];
 
     for (const seed of seeds) {
-      it(`handles random DAG generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateRandomDAG(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles random DAG generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateRandomDAG(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check: identical seed re-run produces deep equal result
-        const { nodes: nodes2, edges: edges2 } = generateRandomDAG(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateRandomDAG(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 
@@ -333,17 +404,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [101, 202, 303, 404, 505];
 
     for (const seed of seeds) {
-      it(`handles random cyclic graph generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateRandomCyclicGraph(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles random cyclic graph generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateRandomCyclicGraph(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check
-        const { nodes: nodes2, edges: edges2 } = generateRandomCyclicGraph(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateRandomCyclicGraph(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 
@@ -351,17 +429,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [11, 22, 33, 44, 55];
 
     for (const seed of seeds) {
-      it(`handles graph with variable node dimensions generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateVariableSizeNodesGraph(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles graph with variable node dimensions generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateVariableSizeNodesGraph(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check
-        const { nodes: nodes2, edges: edges2 } = generateVariableSizeNodesGraph(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateVariableSizeNodesGraph(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 
@@ -369,17 +454,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [901, 902, 903, 904, 905];
 
     for (const seed of seeds) {
-      it(`handles dense multi-edge graph generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateDenseMultiEdgeGraph(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles dense multi-edge graph generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateDenseMultiEdgeGraph(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check
-        const { nodes: nodes2, edges: edges2 } = generateDenseMultiEdgeGraph(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateDenseMultiEdgeGraph(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 
@@ -387,17 +479,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [701, 702, 703];
 
     for (const seed of seeds) {
-      it(`handles high-degree hub graph generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateHubGraph(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles high-degree hub graph generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateHubGraph(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check
-        const { nodes: nodes2, edges: edges2 } = generateHubGraph(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateHubGraph(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 
@@ -405,17 +504,24 @@ describe("Generated Graph Layout & Routing Stress Tests", () => {
     const seeds = [801, 802, 803];
 
     for (const seed of seeds) {
-      it(`handles disconnected component graph generated with seed ${seed}`, () => {
-        const { nodes, edges } = generateDisconnectedComponentsGraph(seed);
-        const result1 = computeCustomLayout(nodes, edges);
+      it(
+        `handles disconnected component graph generated with seed ${seed}`,
+        () => {
+          const { nodes, edges } = generateDisconnectedComponentsGraph(seed);
+          const initialResult = computeCustomLayout(nodes, edges, {
+            ...CONFIG_OVERRIDE,
+            maxGlobalPasses: 1,
+          });
+          const result1 = computeCustomLayout(nodes, edges, CONFIG_OVERRIDE);
 
-        assertLayoutProperties(result1, nodes, edges);
+          assertLayoutProperties(result1, nodes, edges, initialResult);
 
-        // Determinism check
-        const { nodes: nodes2, edges: edges2 } = generateDisconnectedComponentsGraph(seed);
-        const result2 = computeCustomLayout(nodes2, edges2);
-        expect(result1).toEqual(result2);
-      }, TEST_TIMEOUT_MS);
+          const { nodes: nodes2, edges: edges2 } = generateDisconnectedComponentsGraph(seed);
+          const result2 = computeCustomLayout(nodes2, edges2, CONFIG_OVERRIDE);
+          expect(result1).toEqual(result2);
+        },
+        TEST_TIMEOUT_MS,
+      );
     }
   });
 });

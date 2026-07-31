@@ -1,6 +1,12 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 
-import { getBadgeDisplayText, hasBadge, measureBadgeRect } from "../../../engine/layout/custom/badgeMeasurement";
+import {
+  getBadgeDisplayText,
+  hasBadge,
+  measureBadgeRect,
+} from "../../../engine/layout/custom/badgeMeasurement";
+import { pointsToSvgPath } from "../../../engine/layout/custom/svgPath";
+import type { Point } from "../../../engine/layout/custom/types";
 
 export interface EdgeBadgeOverlayProps {
   x: number;
@@ -8,6 +14,8 @@ export interface EdgeBadgeOverlayProps {
   label?: string;
   isCycle?: boolean;
   isSelected?: boolean;
+  leaderPoints?: Point[];
+  anchorPoint?: Point;
   onClick?: (e: MouseEvent<SVGGElement>) => void;
 }
 
@@ -17,6 +25,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
   label,
   isCycle = false,
   isSelected = false,
+  leaderPoints,
+  anchorPoint,
   onClick,
 }) => {
   if (!hasBadge(label, isCycle)) {
@@ -40,6 +50,11 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
     }
   };
 
+  const hasLeaderPoints = Boolean(leaderPoints && leaderPoints.length >= 2);
+  const hasLeaderLine =
+    !hasLeaderPoints &&
+    Boolean(anchorPoint && Math.hypot(anchorPoint.x - x, anchorPoint.y - y) > 4);
+
   return (
     <g
       transform={`translate(${x}, ${y})`}
@@ -49,6 +64,29 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
       role="button"
       tabIndex={0}
     >
+      {hasLeaderPoints && leaderPoints ? (
+        <path
+          d={pointsToSvgPath(leaderPoints)}
+          stroke="#38bdf8"
+          strokeWidth="1"
+          strokeDasharray="3,3"
+          fill="none"
+          transform={`translate(${-x}, ${-y})`}
+        />
+      ) : (
+        hasLeaderLine &&
+        anchorPoint && (
+          <line
+            x1={anchorPoint.x - x}
+            y1={anchorPoint.y - y}
+            x2={0}
+            y2={0}
+            stroke="#38bdf8"
+            strokeWidth="1"
+            strokeDasharray="3,3"
+          />
+        )
+      )}
       <rect
         x={-width / 2}
         y={-height / 2}

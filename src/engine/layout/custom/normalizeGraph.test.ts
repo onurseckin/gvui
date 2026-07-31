@@ -29,9 +29,13 @@ describe("normalizeGraph", () => {
   });
 
   it("throws LayoutInputError for empty node ID or non-positive dimensions", () => {
-    expect(() => normalizeGraph([{ id: "", width: 100, height: 50 }], [])).toThrow(LayoutInputError);
+    expect(() => normalizeGraph([{ id: "", width: 100, height: 50 }], [])).toThrow(
+      LayoutInputError,
+    );
     expect(() => normalizeGraph([{ id: "A", width: 0, height: 50 }], [])).toThrow(LayoutInputError);
-    expect(() => normalizeGraph([{ id: "A", width: 100, height: -10 }], [])).toThrow(LayoutInputError);
+    expect(() => normalizeGraph([{ id: "A", width: 100, height: -10 }], [])).toThrow(
+      LayoutInputError,
+    );
   });
 
   it("produces deterministic node and edge order regardless of input order", () => {

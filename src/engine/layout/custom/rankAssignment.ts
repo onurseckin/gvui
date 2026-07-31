@@ -10,7 +10,7 @@ export interface RankAssignmentResult {
 
 export function assignRanks(
   graph: NormalizedGraph,
-  cycleBreaking: CycleBreakingResult
+  cycleBreaking: CycleBreakingResult,
 ): RankAssignmentResult {
   const forwardInDegree = new Map<string, number>();
   const forwardPredecessors = new Map<string, string[]>();

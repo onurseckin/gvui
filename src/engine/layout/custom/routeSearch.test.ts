@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { resolveCustomLayoutConfig } from "./config";
 import { collinearOverlapLength, segmentIntersectsRectInterior, segmentsCross } from "./geometry";
-import { searchOrthogonalRoute } from "./routeSearch";
+import { compareRouteCost, searchOrthogonalRoute, type RouteCost } from "./routeSearch";
 import { buildRoutingGrid } from "./routingGrid";
 import type { NormalizedNode, OccupancyRecord, Point, PortRef, Rect } from "./types";
 
@@ -144,9 +144,7 @@ describe("routeSearch", () => {
     const grid = buildRoutingGrid(nodes, [sourcePort, targetPort], boundingBox, config);
 
     const occupiedSegment = { a: { x: 150, y: 70 }, b: { x: 150, y: 180 } };
-    const occupancy: OccupancyRecord[] = [
-      { edgeId: "e1", segment: occupiedSegment },
-    ];
+    const occupancy: OccupancyRecord[] = [{ edgeId: "e1", segment: occupiedSegment }];
 
     const route = searchOrthogonalRoute("e2", sourcePort, targetPort, grid, occupancy, config);
 
@@ -189,7 +187,14 @@ describe("routeSearch", () => {
       segment: { a: { x: 200, y: 80 }, b: { x: 200, y: 170 } },
     };
 
-    const route = searchOrthogonalRoute("e1", sourcePort, targetPort, grid, [crossingOccupancy], config);
+    const route = searchOrthogonalRoute(
+      "e1",
+      sourcePort,
+      targetPort,
+      grid,
+      [crossingOccupancy],
+      config,
+    );
 
     expect(route).toBeDefined();
     // Ensure no segment in route crosses crossingOccupancy
@@ -231,9 +236,100 @@ describe("routeSearch", () => {
     });
 
     expect(route).toBeDefined();
-    const visitsCorridor = route!.points.some((p) => Math.abs(p.x - requiredCorridorX) < config.epsilon);
+    const visitsCorridor = route!.points.some(
+      (p) => Math.abs(p.x - requiredCorridorX) < config.epsilon,
+    );
     expect(visitsCorridor).toBe(true);
   });
-});
 
+  describe("crossing-first route search", () => {
+    it("prefers an arbitrarily long crossing-free path", () => {
+      const longClean: RouteCost = {
+        crossings: 0,
+        hairpins: 0,
+        bends: 2,
+        directionDeviation: 0,
+        length: 100000,
+        nearObstaclePenalty: 0,
+      };
+      const shortCrossed: RouteCost = {
+        crossings: 1,
+        hairpins: 0,
+        bends: 0,
+        directionDeviation: 0,
+        length: 10,
+        nearObstaclePenalty: 0,
+      };
+      expect(compareRouteCost(longClean, shortCrossed)).toBeLessThan(0);
+    });
+
+    it("grid search selects long clean detour over short crossed path when crossingPenalty = 0", () => {
+      const nodes: (NormalizedNode & Point)[] = [
+        { id: "A", width: 100, height: 50, x: 0, y: 100 },
+        { id: "B", width: 100, height: 50, x: 300, y: 100 },
+      ];
+
+      const sourcePort: PortRef = {
+        nodeId: "A",
+        side: "right",
+        index: 0,
+        point: { x: 100, y: 125 },
+        stub: { x: 120, y: 125 },
+      };
+
+      const targetPort: PortRef = {
+        nodeId: "B",
+        side: "left",
+        index: 0,
+        point: { x: 300, y: 125 },
+        stub: { x: 280, y: 125 },
+      };
+
+      const boundingBox: Rect = { x: 0, y: 0, width: 500, height: 400 };
+      const config = resolveCustomLayoutConfig({ crossingPenalty: 0 });
+      const grid = buildRoutingGrid(nodes, [sourcePort, targetPort], boundingBox, config);
+
+      // Vertical barrier at x=200 crossing y=125 from y=80 to y=170
+      const crossingOccupancy: OccupancyRecord = {
+        edgeId: "e_cross",
+        segment: { a: { x: 200, y: 80 }, b: { x: 200, y: 170 } },
+      };
+
+      const route = searchOrthogonalRoute(
+        "e1",
+        sourcePort,
+        targetPort,
+        grid,
+        [crossingOccupancy],
+        config,
+      );
+
+      expect(route).toBeDefined();
+      for (let i = 0; i < route!.points.length - 1; i++) {
+        const seg = { a: route!.points[i], b: route!.points[i + 1] };
+        expect(segmentsCross(seg, crossingOccupancy.segment, config.epsilon)).toBe(false);
+      }
+    });
+
+    it("prefers route with no U-turn over route with 1 hairpin when crossings tie", () => {
+      const noHairpin: RouteCost = {
+        crossings: 0,
+        hairpins: 0,
+        bends: 3,
+        directionDeviation: 0,
+        length: 100,
+        nearObstaclePenalty: 0,
+      };
+      const withHairpin: RouteCost = {
+        crossings: 0,
+        hairpins: 1,
+        bends: 1,
+        directionDeviation: 0,
+        length: 20,
+        nearObstaclePenalty: 0,
+      };
+      expect(compareRouteCost(noHairpin, withHairpin)).toBeLessThan(0);
+    });
+  });
+});
 

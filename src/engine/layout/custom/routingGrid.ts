@@ -19,11 +19,14 @@ export function buildRoutingGrid(
   ports: PortRef[],
   boundingBox: Rect,
   config: CustomLayoutConfig,
-  laneRings = 2
+  laneRings = 2,
 ): RoutingGrid {
   const nodeObstacles = nodes.map((n) => ({
     nodeId: n.id,
-    rect: expandRect({ x: n.x, y: n.y, width: n.width, height: n.height }, config.obstacleClearance),
+    rect: expandRect(
+      { x: n.x, y: n.y, width: n.width, height: n.height },
+      config.obstacleClearance,
+    ),
   }));
   const obstacles = nodeObstacles.map((no) => no.rect);
 
@@ -144,9 +147,7 @@ export function buildRoutingGrid(
 
   // 5. Connect horizontal neighbors
   for (const y of yCoords) {
-    const rowVertices = xCoords
-      .map((x) => ({ x, y }))
-      .filter((pt) => vertices.has(vertexKey(pt)));
+    const rowVertices = xCoords.map((x) => ({ x, y })).filter((pt) => vertices.has(vertexKey(pt)));
 
     for (let i = 0; i < rowVertices.length - 1; i++) {
       const p1 = rowVertices[i];
@@ -161,9 +162,7 @@ export function buildRoutingGrid(
 
   // 6. Connect vertical neighbors
   for (const x of xCoords) {
-    const colVertices = yCoords
-      .map((y) => ({ x, y }))
-      .filter((pt) => vertices.has(vertexKey(pt)));
+    const colVertices = yCoords.map((y) => ({ x, y })).filter((pt) => vertices.has(vertexKey(pt)));
 
     for (let i = 0; i < colVertices.length - 1; i++) {
       const p1 = colVertices[i];

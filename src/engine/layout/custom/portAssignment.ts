@@ -1,9 +1,10 @@
 import type { CustomLayoutConfig } from "./config";
 import type { PortCandidate } from "./portCandidates";
-import type { NormalizedEdge, Side } from "./types";
+import type { NormalizedEdge, PortSideAssignment, Side } from "./types";
 
 export interface PortSideAssignmentResult {
   assignments: Map<string, PortCandidate>;
+  assignmentsByEdge: Map<string, PortSideAssignment>;
   sideUseMap: Map<string, number>;
 }
 
@@ -11,11 +12,50 @@ function sideKey(nodeId: string, side: Side): string {
   return `${nodeId}:${side}`;
 }
 
+export function enumeratePortAlternatives(
+  _edgeId: string,
+  current: PortSideAssignment,
+  candidates: PortCandidate[],
+  limit: number,
+): PortSideAssignment[] {
+  const sorted = [...candidates].sort((a, b) => {
+    if (Math.abs(a.baseCost - b.baseCost) > 1e-9) {
+      return a.baseCost - b.baseCost;
+    }
+    const keyA = `${a.srcSide}:${a.tgtSide}`;
+    const keyB = `${b.srcSide}:${b.tgtSide}`;
+    return keyA.localeCompare(keyB);
+  });
+
+  const alternatives: PortSideAssignment[] = [];
+  const seen = new Set<string>();
+
+  const currentKey = `${current.srcSide}:${current.tgtSide}`;
+  seen.add(currentKey);
+
+  for (const cand of sorted) {
+    const key = `${cand.srcSide}:${cand.tgtSide}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    alternatives.push({
+      srcSide: cand.srcSide,
+      tgtSide: cand.tgtSide,
+    });
+    if (alternatives.length >= limit) {
+      break;
+    }
+  }
+
+  return alternatives;
+}
+
 export function assignPortSidesGlobally(
   edges: NormalizedEdge[],
   candidatesMap: Map<string, PortCandidate[]>,
   config: CustomLayoutConfig,
-  edgeMetaMap?: Map<string, { isFeedback?: boolean; rankSpan?: number; badgeArea?: number }>
+  edgeMetaMap?: Map<string, { isFeedback?: boolean; rankSpan?: number; badgeArea?: number }>,
 ): PortSideAssignmentResult {
   const sideUseMap = new Map<string, number>();
 
@@ -147,8 +187,17 @@ export function assignPortSidesGlobally(
     if (!improved) break;
   }
 
+  const assignmentsByEdge = new Map<string, PortSideAssignment>();
+  for (const [edgeId, cand] of assignments.entries()) {
+    assignmentsByEdge.set(edgeId, {
+      srcSide: cand.srcSide,
+      tgtSide: cand.tgtSide,
+    });
+  }
+
   return {
     assignments,
+    assignmentsByEdge,
     sideUseMap,
   };
 }

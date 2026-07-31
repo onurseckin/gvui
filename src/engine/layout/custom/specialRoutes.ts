@@ -1,14 +1,23 @@
 import type { CustomLayoutConfig } from "./config";
-import { simplifyOrthogonalPath } from "./geometry";
+import { pathManhattanLength, segmentIntersectsRectInterior, simplifyOrthogonalPath } from "./geometry";
 import { searchOrthogonalRoute } from "./routeSearch";
 import { buildRoutingGrid } from "./routingGrid";
-import type { NormalizedEdge, NormalizedNode, OccupancyRecord, Point, PortRef, Rect, RoutedPath } from "./types";
+import type {
+  NormalizedEdge,
+  NormalizedNode,
+  OccupancyRecord,
+  Point,
+  PortRef,
+  Rect,
+  RoutedPath,
+  Side,
+} from "./types";
 
 export function routeSelfLoop(
   edge: NormalizedEdge,
   node: NormalizedNode & Point,
   config: CustomLayoutConfig,
-  loopIndex = 0
+  loopIndex = 0,
 ): RoutedPath {
   const loopOffset = config.portStubLength + loopIndex * config.laneSpacing;
 
@@ -51,12 +60,47 @@ export function routeSelfLoop(
   };
 }
 
+function getPortRef(
+  node: NormalizedNode & Point,
+  side: Side,
+  index: number,
+  config: CustomLayoutConfig,
+): PortRef {
+  let point: Point;
+  let stub: Point;
+  switch (side) {
+    case "top":
+      point = { x: node.x + node.width / 2, y: node.y };
+      stub = { x: point.x, y: point.y - config.portStubLength };
+      break;
+    case "bottom":
+      point = { x: node.x + node.width / 2, y: node.y + node.height };
+      stub = { x: point.x, y: point.y + config.portStubLength };
+      break;
+    case "left":
+      point = { x: node.x, y: node.y + node.height / 2 };
+      stub = { x: point.x - config.portStubLength, y: point.y };
+      break;
+    case "right":
+      point = { x: node.x + node.width, y: node.y + node.height / 2 };
+      stub = { x: point.x + config.portStubLength, y: point.y };
+      break;
+  }
+  return {
+    nodeId: node.id,
+    side,
+    index,
+    point,
+    stub,
+  };
+}
+
 export function routeFeedbackCorridors(
   feedbackEdges: NormalizedEdge[],
   nodeMap: Map<string, NormalizedNode & Point>,
   boundingBox: Rect,
   config: CustomLayoutConfig,
-  initialOccupancy: OccupancyRecord[] = []
+  initialOccupancy: OccupancyRecord[] = [],
 ): RoutedPath[] {
   const sortedEdges = [...feedbackEdges].sort((a, b) => {
     const srcA = nodeMap.get(a.source);
@@ -81,54 +125,29 @@ export function routeFeedbackCorridors(
     const tgtNode = nodeMap.get(edge.target);
     if (!srcNode || !tgtNode) return;
 
-    const primaryLeft = idx % 2 === 0;
-
-    const sidesToTry: boolean[] = [primaryLeft, !primaryLeft];
-
     let foundRoute: RoutedPath | null = null;
 
-    for (const useLeftCorridor of sidesToTry) {
-      if (foundRoute) break;
+    // 1. Try short direct routes first
+    const sidePairs: [Side, Side][] = [
+      ["top", "bottom"],
+      ["left", "left"],
+      ["right", "right"],
+      ["top", "left"],
+      ["top", "right"],
+      ["left", "bottom"],
+      ["right", "bottom"],
+      ["bottom", "top"],
+    ];
 
-      const sourcePort: PortRef = useLeftCorridor
-        ? {
-            nodeId: srcNode.id,
-            side: "left",
-            index: idx,
-            point: { x: srcNode.x, y: srcNode.y + srcNode.height / 2 },
-            stub: { x: srcNode.x - config.portStubLength, y: srcNode.y + srcNode.height / 2 },
-          }
-        : {
-            nodeId: srcNode.id,
-            side: "right",
-            index: idx,
-            point: { x: srcNode.x + srcNode.width, y: srcNode.y + srcNode.height / 2 },
-            stub: { x: srcNode.x + srcNode.width + config.portStubLength, y: srcNode.y + srcNode.height / 2 },
-          };
+    let bestShortRoute: RoutedPath | null = null;
+    let minShortLength = Infinity;
 
-      const targetPort: PortRef = useLeftCorridor
-        ? {
-            nodeId: tgtNode.id,
-            side: "left",
-            index: idx,
-            point: { x: tgtNode.x, y: tgtNode.y + tgtNode.height / 2 },
-            stub: { x: tgtNode.x - config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
-          }
-        : {
-            nodeId: tgtNode.id,
-            side: "right",
-            index: idx,
-            point: { x: tgtNode.x + tgtNode.width, y: tgtNode.y + tgtNode.height / 2 },
-            stub: { x: tgtNode.x + tgtNode.width + config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
-          };
+    for (const [srcSide, tgtSide] of sidePairs) {
+      const sourcePort = getPortRef(srcNode, srcSide, idx, config);
+      const targetPort = getPortRef(tgtNode, tgtSide, idx, config);
 
-      for (let r = 1; r <= config.maxLaneRings; r++) {
-        const corridorX = useLeftCorridor
-          ? minNodeX - config.obstacleClearance - r * config.laneSpacing
-          : maxNodeX + config.obstacleClearance + r * config.laneSpacing;
-
+      for (let r = 1; r <= config.initialLaneRings; r++) {
         const grid = buildRoutingGrid(allNodes, [sourcePort, targetPort], boundingBox, config, r);
-
         const route = searchOrthogonalRoute(
           edge.id,
           sourcePort,
@@ -136,15 +155,80 @@ export function routeFeedbackCorridors(
           grid,
           currentOccupancy,
           config,
-          {
-            role: "feedback",
-            requiredCorridorX: corridorX,
-          }
+          { role: "feedback" },
         );
 
         if (route) {
-          foundRoute = route;
-          break;
+          // Check node penetration
+          let penetrates = false;
+          for (let i = 0; i < route.points.length - 1; i++) {
+            const seg = { a: route.points[i], b: route.points[i + 1] };
+            for (const n of allNodes) {
+              const rect: Rect = { x: n.x, y: n.y, width: n.width, height: n.height };
+              if (segmentIntersectsRectInterior(seg, rect, config.epsilon)) {
+                penetrates = true;
+                break;
+              }
+            }
+            if (penetrates) break;
+          }
+
+          if (!penetrates) {
+            const len = pathManhattanLength(route.points);
+            if (len < minShortLength) {
+              minShortLength = len;
+              bestShortRoute = route;
+            }
+          }
+        }
+      }
+    }
+
+    if (bestShortRoute) {
+      foundRoute = bestShortRoute;
+    }
+
+    // 2. If no valid short route, try outer corridor detours
+    if (!foundRoute) {
+      const primaryLeft = idx % 2 === 0;
+      const sidesToTry: boolean[] = [primaryLeft, !primaryLeft];
+
+      for (const useLeftCorridor of sidesToTry) {
+        if (foundRoute) break;
+
+        const sourcePort = getPortRef(srcNode, useLeftCorridor ? "left" : "right", idx, config);
+        const targetPort = getPortRef(tgtNode, useLeftCorridor ? "left" : "right", idx, config);
+
+        for (let r = 1; r <= config.maxLaneRings; r++) {
+          const corridorX = useLeftCorridor
+            ? minNodeX - config.obstacleClearance - r * config.laneSpacing
+            : maxNodeX + config.obstacleClearance + r * config.laneSpacing;
+
+          const grid = buildRoutingGrid(
+            allNodes,
+            [sourcePort, targetPort],
+            boundingBox,
+            config,
+            r,
+          );
+
+          const route = searchOrthogonalRoute(
+            edge.id,
+            sourcePort,
+            targetPort,
+            grid,
+            currentOccupancy,
+            config,
+            {
+              role: "feedback",
+              requiredCorridorX: corridorX,
+            },
+          );
+
+          if (route) {
+            foundRoute = route;
+            break;
+          }
         }
       }
     }
@@ -162,4 +246,3 @@ export function routeFeedbackCorridors(
 
   return routes;
 }
-

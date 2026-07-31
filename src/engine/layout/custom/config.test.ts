@@ -33,19 +33,60 @@ describe("CustomLayoutConfig", () => {
   it("throws LayoutConfigurationError for non-positive gap dimensions", () => {
     expect(() => resolveCustomLayoutConfig({ nodeGap: 0 })).toThrow(LayoutConfigurationError);
     expect(() => resolveCustomLayoutConfig({ rankGap: -10 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ portStubLength: -5 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ obstacleClearance: 0 })).toThrow(LayoutConfigurationError);
+    expect(() => resolveCustomLayoutConfig({ portStubLength: -5 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ obstacleClearance: 0 })).toThrow(
+      LayoutConfigurationError,
+    );
     expect(() => resolveCustomLayoutConfig({ laneSpacing: 0 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ badgeClearance: -1 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ maxBadgeCandidatesPerEdge: 0 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ maxBadgeBacktrackSteps: -5 })).toThrow(LayoutConfigurationError);
+    expect(() => resolveCustomLayoutConfig({ badgeClearance: -1 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ maxBadgeCandidatesPerEdge: 0 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ maxBadgeBacktrackSteps: -5 })).toThrow(
+      LayoutConfigurationError,
+    );
   });
 
   it("throws LayoutConfigurationError for negative cost penalties", () => {
     expect(() => resolveCustomLayoutConfig({ bendPenalty: -1 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ crossingPenalty: -100 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ directionPenalty: -1 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ sideReusePenalty: -1 })).toThrow(LayoutConfigurationError);
-    expect(() => resolveCustomLayoutConfig({ nearObstaclePenalty: -1 })).toThrow(LayoutConfigurationError);
+    expect(() => resolveCustomLayoutConfig({ crossingPenalty: -100 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ directionPenalty: -1 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ sideReusePenalty: -1 })).toThrow(
+      LayoutConfigurationError,
+    );
+    expect(() => resolveCustomLayoutConfig({ nearObstaclePenalty: -1 })).toThrow(
+      LayoutConfigurationError,
+    );
+  });
+
+  it("provides bounded V3 aesthetic search defaults", () => {
+    const config = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+    expect(config.maxAestheticPasses).toBe(12);
+    expect(config.maxPortStatesPerPass).toBe(8);
+    expect(config.maxPortAlternativesPerEdge).toBe(4);
+    expect(config.maxRouteOrderVariants).toBe(4);
+    expect(config.coordinateSweepLimit).toBe(16);
+  });
+
+  it("rejects non-positive V3 search bounds", () => {
+    const keys = [
+      "maxAestheticPasses",
+      "maxPortStatesPerPass",
+      "maxPortAlternativesPerEdge",
+      "maxRouteOrderVariants",
+      "coordinateSweepLimit",
+    ] as const;
+
+    for (const key of keys) {
+      expect(() => resolveCustomLayoutConfig({ [key]: 0 })).toThrow(LayoutConfigurationError);
+    }
   });
 });

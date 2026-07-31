@@ -1,15 +1,57 @@
 import type { CustomLayoutConfig } from "./config";
 import {
   collinearOverlapLength,
+  isOrthogonalSegment,
   pointOnRectBoundary,
   segmentIntersectsRectInterior,
   segmentsCross,
-  simplifyOrthogonalPath,
 } from "./geometry";
-import { vertexKey, type RoutingGrid } from "./routingGrid";
+import { type RoutingGrid, vertexKey } from "./routingGrid";
 import type { OccupancyRecord, Point, PortRef, Rect, RoutedPath, Segment, SegmentDirection } from "./types";
 
-export function sideToOutwardDir(side: string): SegmentDirection {
+export interface RouteCost {
+  crossings: number;
+  hairpins: number;
+  bends: number;
+  directionDeviation: number;
+  length: number;
+  nearObstaclePenalty: number;
+}
+
+export function compareRouteCost(a: RouteCost, b: RouteCost, epsilon = 0.001): number {
+  if (Math.abs(a.crossings - b.crossings) > epsilon) {
+    return a.crossings - b.crossings;
+  }
+  if (Math.abs(a.hairpins - b.hairpins) > epsilon) {
+    return a.hairpins - b.hairpins;
+  }
+  if (Math.abs(a.bends - b.bends) > epsilon) {
+    return a.bends - b.bends;
+  }
+  if (Math.abs(a.directionDeviation - b.directionDeviation) > epsilon) {
+    return a.directionDeviation - b.directionDeviation;
+  }
+  if (Math.abs(a.length - b.length) > epsilon) {
+    return a.length - b.length;
+  }
+  if (Math.abs(a.nearObstaclePenalty - b.nearObstaclePenalty) > epsilon) {
+    return a.nearObstaclePenalty - b.nearObstaclePenalty;
+  }
+  return 0;
+}
+
+interface AStarNode {
+  vId: string;
+  dir: SegmentDirection;
+  previousDir: SegmentDirection | null;
+  visitedRequiredCorridor: boolean;
+  gCost: RouteCost;
+  hLength: number;
+  fCost: RouteCost;
+  parent: AStarNode | null;
+}
+
+function sideToOutwardDir(side: "top" | "bottom" | "left" | "right"): SegmentDirection {
   switch (side) {
     case "top":
       return "up";
@@ -19,12 +61,10 @@ export function sideToOutwardDir(side: string): SegmentDirection {
       return "left";
     case "right":
       return "right";
-    default:
-      return "down";
   }
 }
 
-export function sideToInwardDir(side: string): SegmentDirection {
+function sideToInwardDir(side: "top" | "bottom" | "left" | "right"): SegmentDirection {
   switch (side) {
     case "top":
       return "down";
@@ -34,34 +74,60 @@ export function sideToInwardDir(side: string): SegmentDirection {
       return "right";
     case "right":
       return "left";
-    default:
-      return "up";
   }
 }
+
+const OPPOSITE_DIR: Record<SegmentDirection, SegmentDirection> = {
+  up: "down",
+  down: "up",
+  left: "right",
+  right: "left",
+};
 
 function getSegmentDirection(a: Point, b: Point): SegmentDirection {
-  if (Math.abs(b.x - a.x) > Math.abs(b.y - a.y)) {
+  if (Math.abs(a.x - b.x) > 0.001) {
     return b.x > a.x ? "right" : "left";
   }
   return b.y > a.y ? "down" : "up";
 }
 
 export interface RouteSearchOptions {
-  role?: string;
-  reservations?: OccupancyRecord[];
-  forbiddenRects?: Rect[];
+  role?: "feedback" | "forward" | "self";
   requiredCorridorX?: number;
+  requiredXCorridor?: number;
+  forbiddenRects?: Rect[];
+  reservations?: OccupancyRecord[];
+  maxIterations?: number;
 }
 
-interface AStarNode {
-  vId: string;
-  dir: SegmentDirection;
-  visitedRequiredCorridor: boolean;
-  g: number;
-  h: number;
-  f: number;
-  bends: number;
-  parent: AStarNode | null;
+function compareNodes(a: AStarNode, b: AStarNode, epsilon: number, stateKeyFn: (n: AStarNode) => string): number {
+  const costCmp = compareRouteCost(a.fCost, b.fCost, epsilon);
+  if (costCmp !== 0) return costCmp;
+
+  if (Math.abs(a.hLength - b.hLength) > epsilon) {
+    return a.hLength - b.hLength;
+  }
+
+  const keyA = stateKeyFn(a);
+  const keyB = stateKeyFn(b);
+  const keyCmp = keyA.localeCompare(keyB);
+  if (keyCmp !== 0) return keyCmp;
+
+  return a.vId.localeCompare(b.vId);
+}
+
+function insertSortedNode(list: AStarNode[], node: AStarNode, epsilon: number, stateKeyFn: (n: AStarNode) => string) {
+  let low = 0;
+  let high = list.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (compareNodes(list[mid], node, epsilon, stateKeyFn) <= 0) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  list.splice(low, 0, node);
 }
 
 export function searchOrthogonalRoute(
@@ -71,7 +137,7 @@ export function searchOrthogonalRoute(
   grid: RoutingGrid,
   occupancy: OccupancyRecord[],
   config: CustomLayoutConfig,
-  options?: RouteSearchOptions
+  options?: RouteSearchOptions,
 ): RoutedPath | null {
   const srcStubId = vertexKey(sourcePort.stub);
   const tgtStubId = vertexKey(targetPort.stub);
@@ -80,42 +146,73 @@ export function searchOrthogonalRoute(
     return null;
   }
 
-  const tgtStubPt = grid.vertices.get(tgtStubId)!;
-  const reqX = options?.requiredCorridorX;
-  const hasReqX = reqX !== undefined;
-
-  function manhattanH(p: Point, visitedCorridor: boolean): number {
-    if (!hasReqX || visitedCorridor) {
-      return Math.abs(tgtStubPt.x - p.x) + Math.abs(tgtStubPt.y - p.y);
-    }
-    return Math.abs(reqX - p.x) + Math.abs(tgtStubPt.x - reqX) + Math.abs(tgtStubPt.y - p.y);
-  }
-
   const initialDir = sideToOutwardDir(sourcePort.side);
   const targetInwardDir = sideToInwardDir(targetPort.side);
-  const startPt = grid.vertices.get(srcStubId)!;
-  const startVisited = hasReqX ? Math.abs(startPt.x - reqX) <= config.epsilon : true;
 
-  const openList: AStarNode[] = [
-    {
-      vId: srcStubId,
-      dir: initialDir,
-      visitedRequiredCorridor: startVisited,
-      g: 0,
-      h: manhattanH(startPt, startVisited),
-      f: manhattanH(startPt, startVisited),
-      bends: 0,
-      parent: null,
-    },
-  ];
+  const reqX = options?.requiredXCorridor ?? options?.requiredCorridorX;
+  const hasReqX = reqX !== undefined;
+  const srcStubPt = grid.vertices.get(srcStubId)!;
+  const tgtStubPt = grid.vertices.get(tgtStubId)!;
 
-  const gCosts = new Map<string, number>();
-  const stateKey = (vId: string, dir: SegmentDirection, visitedCorridor: boolean) =>
-    hasReqX ? `${vId}:${dir}:${visitedCorridor}` : `${vId}:${dir}`;
-  gCosts.set(stateKey(srcStubId, initialDir, startVisited), 0);
+  const startVisited = hasReqX ? Math.abs(srcStubPt.x - reqX) <= config.epsilon : true;
+
+  const manhattanH = (p: Point, visited: boolean): number => {
+    let dist = Math.abs(p.x - tgtStubPt.x) + Math.abs(p.y - tgtStubPt.y);
+    if (hasReqX && !visited) {
+      dist += Math.abs(p.x - reqX) * 2;
+    }
+    return dist;
+  };
+
+  const initialHLength = manhattanH(srcStubPt, startVisited);
+
+  const initialGCost: RouteCost = {
+    crossings: 0,
+    hairpins: 0,
+    bends: 0,
+    directionDeviation: 0,
+    length: config.portStubLength * 2,
+    nearObstaclePenalty: 0,
+  };
+
+  const initialFCost: RouteCost = {
+    ...initialGCost,
+    length: initialGCost.length + initialHLength,
+  };
+
+  const startNode: AStarNode = {
+    vId: srcStubId,
+    dir: initialDir,
+    previousDir: null,
+    visitedRequiredCorridor: startVisited,
+    gCost: initialGCost,
+    hLength: initialHLength,
+    fCost: initialFCost,
+    parent: null,
+  };
+
+  const gCosts = new Map<string, RouteCost>();
+
+  const stateKey = (
+    vId: string,
+    dir: SegmentDirection,
+    previousDir: SegmentDirection | null,
+    visitedCorridor: boolean,
+  ) =>
+    hasReqX
+      ? `${vId}:${dir}:${previousDir ?? "none"}:${visitedCorridor}`
+      : `${vId}:${dir}:${previousDir ?? "none"}`;
+
+  const getNodeStateKey = (n: AStarNode) =>
+    stateKey(n.vId, n.dir, n.previousDir, n.visitedRequiredCorridor);
+
+  gCosts.set(getNodeStateKey(startNode), initialGCost);
+
+  const openList: AStarNode[] = [];
+  insertSortedNode(openList, startNode, config.epsilon, getNodeStateKey);
 
   let bestGoalNode: AStarNode | null = null;
-  const maxIterations = 10000;
+  const maxIterations = options?.maxIterations ?? 50000;
   let iterations = 0;
 
   const combinedOccupancy = options?.reservations
@@ -125,16 +222,6 @@ export function searchOrthogonalRoute(
   const forbiddenRects = options?.forbiddenRects ?? [];
 
   while (openList.length > 0 && iterations++ < maxIterations) {
-    // Priority queue sort: lowest f = g + h, then lowest h, then fewest bends, then state key
-    openList.sort((a, b) => {
-      if (Math.abs(a.f - b.f) > config.epsilon) return a.f - b.f;
-      if (Math.abs(a.h - b.h) > config.epsilon) return a.h - b.h;
-      if (a.bends !== b.bends) return a.bends - b.bends;
-      return stateKey(a.vId, a.dir, a.visitedRequiredCorridor).localeCompare(
-        stateKey(b.vId, b.dir, b.visitedRequiredCorridor)
-      );
-    });
-
     const current = openList.shift()!;
 
     if (current.vId === tgtStubId && current.visitedRequiredCorridor) {
@@ -160,9 +247,9 @@ export function searchOrthogonalRoute(
       }
       if (isForbidden) continue;
 
-      // Check collinear occupancy conflict (forbidden)
+      // Check collinear occupancy conflict & perpendicular crossings
       let isCollinearOccupied = false;
-      let crossingPen = 0;
+      let stepCrossings = 0;
 
       for (const occ of combinedOccupancy) {
         if (occ.edgeId === edgeId) continue;
@@ -171,56 +258,71 @@ export function searchOrthogonalRoute(
           break;
         }
         if (segmentsCross(seg, occ.segment, config.epsilon)) {
-          crossingPen += config.crossingPenalty;
+          stepCrossings += 1;
         }
       }
 
       if (isCollinearOccupied) continue;
 
       const isBend = moveDir !== current.dir;
-      const bendCost = isBend ? config.bendPenalty : 0;
+      const isHairpin =
+        (current.previousDir !== null && OPPOSITE_DIR[current.previousDir] === moveDir) ||
+        OPPOSITE_DIR[current.dir] === moveDir;
 
       // Near obstacle penalty
-      let nearObsPen = 0;
+      let stepNearObsPen = 0;
       for (const obs of grid.obstacles) {
-        if (pointOnRectBoundary(currentPt, obs, config.epsilon) || pointOnRectBoundary(nextPt, obs, config.epsilon)) {
-          nearObsPen += config.nearObstaclePenalty;
+        if (
+          pointOnRectBoundary(currentPt, obs, config.epsilon) ||
+          pointOnRectBoundary(nextPt, obs, config.epsilon)
+        ) {
+          stepNearObsPen += config.nearObstaclePenalty;
         }
       }
 
       // Direction penalties
-      let dirPen = 0;
+      let stepDirDev = 0;
       if (current.vId === srcStubId && moveDir !== initialDir) {
-        dirPen += config.directionPenalty;
+        stepDirDev += config.directionPenalty;
       }
       if (neighbor.targetId === tgtStubId && moveDir !== targetInwardDir) {
-        dirPen += config.directionPenalty;
+        stepDirDev += config.directionPenalty;
       }
-
-      const edgeCost = neighbor.edge.weight + bendCost + crossingPen + nearObsPen + dirPen;
 
       const nextVisited =
         current.visitedRequiredCorridor || (hasReqX && Math.abs(nextPt.x - reqX) <= config.epsilon);
-      const newG = current.g + edgeCost;
-      const newBends = current.bends + (isBend ? 1 : 0);
-      const newH = manhattanH(nextPt, nextVisited);
-      const newF = newG + newH;
 
-      const nextKey = stateKey(neighbor.targetId, moveDir, nextVisited);
+      const newGCost: RouteCost = {
+        crossings: current.gCost.crossings + stepCrossings,
+        hairpins: current.gCost.hairpins + (isHairpin ? 1 : 0),
+        bends: current.gCost.bends + (isBend ? 1 : 0),
+        directionDeviation: current.gCost.directionDeviation + stepDirDev,
+        length: current.gCost.length + neighbor.edge.weight,
+        nearObstaclePenalty: current.gCost.nearObstaclePenalty + stepNearObsPen,
+      };
+
+      const newHLength = manhattanH(nextPt, nextVisited);
+      const newFCost: RouteCost = {
+        ...newGCost,
+        length: newGCost.length + newHLength,
+      };
+
+      const nextKey = stateKey(neighbor.targetId, moveDir, current.dir, nextVisited);
       const existingG = gCosts.get(nextKey);
 
-      if (existingG === undefined || newG < existingG - config.epsilon) {
-        gCosts.set(nextKey, newG);
-        openList.push({
+      if (existingG === undefined || compareRouteCost(newGCost, existingG, config.epsilon) < 0) {
+        gCosts.set(nextKey, newGCost);
+        const nextNode: AStarNode = {
           vId: neighbor.targetId,
           dir: moveDir,
+          previousDir: current.dir,
           visitedRequiredCorridor: nextVisited,
-          g: newG,
-          h: newH,
-          f: newF,
-          bends: newBends,
+          gCost: newGCost,
+          hLength: newHLength,
+          fCost: newFCost,
           parent: current,
-        });
+        };
+        insertSortedNode(openList, nextNode, config.epsilon, getNodeStateKey);
       }
     }
   }
@@ -229,31 +331,55 @@ export function searchOrthogonalRoute(
     return null;
   }
 
-  // Reconstruct path
-  const gridPathPoints: Point[] = [];
+  // Reconstruct path: sourcePort.point -> sourcePort.stub -> A* path -> targetPort.stub -> targetPort.point
+  const gridPoints: Point[] = [];
   let curr: AStarNode | null = bestGoalNode;
-  while (curr) {
-    const pt = grid.vertices.get(curr.vId);
-    if (pt) gridPathPoints.unshift(pt);
+
+  while (curr !== null) {
+    gridPoints.push(grid.vertices.get(curr.vId)!);
     curr = curr.parent;
   }
 
-  const rawPoints: Point[] = [
-    sourcePort.point,
-    sourcePort.stub,
-    ...gridPathPoints,
-    targetPort.stub,
-    targetPort.point,
-  ];
+  gridPoints.reverse();
 
-  const points = simplifyOrthogonalPath(rawPoints, config.epsilon);
+  // Deduplicate consecutive points
+  const rawPoints: Point[] = [sourcePort.point, ...gridPoints, targetPort.point];
+  const points: Point[] = [];
+
+  for (const pt of rawPoints) {
+    const last = points[points.length - 1];
+    if (!last || Math.abs(last.x - pt.x) > config.epsilon || Math.abs(last.y - pt.y) > config.epsilon) {
+      points.push(pt);
+    }
+  }
+
+  // Simplify collinear intermediate points
+  const simplifiedPoints: Point[] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (i === 0 || i === points.length - 1) {
+      simplifiedPoints.push(points[i]);
+      continue;
+    }
+
+    const prev = simplifiedPoints[simplifiedPoints.length - 1];
+    const currPt = points[i];
+    const next = points[i + 1];
+
+    if (isOrthogonalSegment({ a: prev, b: next }, config.epsilon)) {
+      const dir1 = getSegmentDirection(prev, currPt);
+      const dir2 = getSegmentDirection(currPt, next);
+      if (dir1 === dir2) {
+        continue; // Skip collinear point
+      }
+    }
+
+    simplifiedPoints.push(currPt);
+  }
 
   return {
     edgeId,
-    points,
+    points: simplifiedPoints,
     sourcePort,
     targetPort,
   };
 }
-
-

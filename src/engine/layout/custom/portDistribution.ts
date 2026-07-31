@@ -1,4 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
+import { projectRemoteToSideOffset } from "./portProjection";
 import type { NormalizedEdge, NormalizedNode, Point, PortRef, Side } from "./types";
 
 export interface EdgePorts {
@@ -15,13 +16,14 @@ interface SideAttachment {
   isSource: boolean;
   remoteNodeId: string;
   remoteCenter: Point;
+  projectedOffset: number;
 }
 
 export function distributePorts(
   edges: NormalizedEdge[],
   sideAssignments: Map<string, { srcSide: Side; tgtSide: Side }>,
   nodeMap: Map<string, NormalizedNode & Point>,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
 ): PortDistributionResult {
   const sideAttachmentsMap = new Map<string, SideAttachment[]>();
 
@@ -48,6 +50,12 @@ export function distributePorts(
       isSource: true,
       remoteNodeId: edge.target,
       remoteCenter: tgtCenter,
+      projectedOffset: projectRemoteToSideOffset(
+        srcNode,
+        assignment.srcSide,
+        tgtCenter,
+        config.epsilon,
+      ),
     });
 
     const tgtKey = key(edge.target, assignment.tgtSide);
@@ -57,6 +65,12 @@ export function distributePorts(
       isSource: false,
       remoteNodeId: edge.source,
       remoteCenter: srcCenter,
+      projectedOffset: projectRemoteToSideOffset(
+        tgtNode,
+        assignment.tgtSide,
+        srcCenter,
+        config.epsilon,
+      ),
     });
   }
 
@@ -71,12 +85,21 @@ export function distributePorts(
 
     const isHorizontalSide = side === "top" || side === "bottom";
 
-    // Sort attachments by remote coordinate, tie-break by edge ID
+    // Sort attachments by projected offset, tie-break by remoteNodeId, edgeId, and isSource
     attachments.sort((a, b) => {
-      const coordA = isHorizontalSide ? a.remoteCenter.x : a.remoteCenter.y;
-      const coordB = isHorizontalSide ? b.remoteCenter.x : b.remoteCenter.y;
-      if (Math.abs(coordA - coordB) > config.epsilon) return coordA - coordB;
-      return a.edgeId.localeCompare(b.edgeId);
+      if (Math.abs(a.projectedOffset - b.projectedOffset) > config.epsilon) {
+        return a.projectedOffset - b.projectedOffset;
+      }
+      const remoteComp = a.remoteNodeId.localeCompare(b.remoteNodeId);
+      if (remoteComp !== 0) return remoteComp;
+
+      const edgeComp = a.edgeId.localeCompare(b.edgeId);
+      if (edgeComp !== 0) return edgeComp;
+
+      if (a.isSource !== b.isSource) {
+        return a.isSource ? -1 : 1;
+      }
+      return 0;
     });
 
     const m = attachments.length;

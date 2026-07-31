@@ -30,7 +30,12 @@ describe("edgeRouter", () => {
 
   it("routes scenario #19 with zero node penetration and zero shared length before badges", () => {
     const scenario = CUSTOM_LAYOUT_SCENARIOS[19];
-    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({ id: n.id, label: n.name, width: n.w, height: n.h }));
+    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({
+      id: n.id,
+      label: n.name,
+      width: n.w,
+      height: n.h,
+    }));
     const edges: NormalizedEdge[] = scenario.edges.map((e, idx) => ({
       id: `e-${e.source}-${e.target}-${idx}`,
       source: e.source,
@@ -53,7 +58,7 @@ describe("edgeRouter", () => {
         edges: routerResult.routes,
         badges: [],
       },
-      config
+      config,
     );
 
     expect(validation.metrics.edgeNodePenetrations).toBe(0);
@@ -62,7 +67,49 @@ describe("edgeRouter", () => {
 
   it("routes scenario #20 with zero node penetration and zero shared length before badges", () => {
     const scenario = CUSTOM_LAYOUT_SCENARIOS[20];
-    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({ id: n.id, label: n.name, width: n.w, height: n.h }));
+    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({
+      id: n.id,
+      label: n.name,
+      width: n.w,
+      height: n.h,
+    }));
+    const edges: NormalizedEdge[] = scenario.edges.map((e, idx) => ({
+      id: `e-${e.source}-${e.target}-${idx}`,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      isCycle: e.isCycle,
+      layoutRole: e.layoutRole,
+    }));
+
+    const config = resolveCustomLayoutConfig({ maxRouteOrderVariants: 2 });
+    const nodeLayout = computeNodeLayout(nodes, edges, config);
+    const routerResult = routeAllEdges(nodeLayout, config);
+
+    const validation = validateCustomLayout(
+      {
+        nodes: nodeLayout.normalizedGraph.nodes.map((n) => ({
+          ...n,
+          ...(nodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 }),
+        })),
+        edges: routerResult.routes,
+        badges: [],
+      },
+      config,
+    );
+
+    expect(validation.metrics.edgeNodePenetrations).toBe(0);
+    expect(validation.metrics.sharedEdgeSegmentLength).toBe(0);
+  });
+
+  it("routes scenario #5 with zero crossings and zero shared length before badges", () => {
+    const scenario = CUSTOM_LAYOUT_SCENARIOS[5];
+    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({
+      id: n.id,
+      label: n.name,
+      width: n.w,
+      height: n.h,
+    }));
     const edges: NormalizedEdge[] = scenario.edges.map((e, idx) => ({
       id: `e-${e.source}-${e.target}-${idx}`,
       source: e.source,
@@ -85,11 +132,47 @@ describe("edgeRouter", () => {
         edges: routerResult.routes,
         badges: [],
       },
-      config
+      config,
     );
 
-    expect(validation.metrics.edgeNodePenetrations).toBe(0);
+    expect(validation.metrics.crossingCount).toBe(0);
+    expect(validation.metrics.sharedEdgeSegmentLength).toBe(0);
+  });
+
+  it("routes scenario #6 with zero crossings and zero shared length before badges", () => {
+    const scenario = CUSTOM_LAYOUT_SCENARIOS[6];
+    const nodes: NormalizedNode[] = scenario.nodes.map((n) => ({
+      id: n.id,
+      label: n.name,
+      width: n.w,
+      height: n.h,
+    }));
+    const edges: NormalizedEdge[] = scenario.edges.map((e, idx) => ({
+      id: `e-${e.source}-${e.target}-${idx}`,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      isCycle: e.isCycle,
+      layoutRole: e.layoutRole,
+    }));
+
+    const config = resolveCustomLayoutConfig();
+    const nodeLayout = computeNodeLayout(nodes, edges, config);
+    const routerResult = routeAllEdges(nodeLayout, config);
+
+    const validation = validateCustomLayout(
+      {
+        nodes: nodeLayout.normalizedGraph.nodes.map((n) => ({
+          ...n,
+          ...(nodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 }),
+        })),
+        edges: routerResult.routes,
+        badges: [],
+      },
+      config,
+    );
+
+    expect(validation.metrics.crossingCount).toBe(0);
     expect(validation.metrics.sharedEdgeSegmentLength).toBe(0);
   });
 });
-

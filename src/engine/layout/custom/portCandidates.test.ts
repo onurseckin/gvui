@@ -14,7 +14,14 @@ describe("portCandidates", () => {
       ["B", { x: 0, y: 200 }],
     ]);
 
-    const candidates = generatePortCandidates(edge, srcNode, tgtNode, "forward", nodePositions, resolveCustomLayoutConfig());
+    const candidates = generatePortCandidates(
+      edge,
+      srcNode,
+      tgtNode,
+      "forward",
+      nodePositions,
+      resolveCustomLayoutConfig(),
+    );
 
     expect(candidates.length).toBe(16);
   });
@@ -29,10 +36,45 @@ describe("portCandidates", () => {
       ["B", { x: 100, y: 200 }],
     ]);
 
-    const candidates = generatePortCandidates(edge, srcNode, tgtNode, "forward", nodePositions, resolveCustomLayoutConfig());
+    const candidates = generatePortCandidates(
+      edge,
+      srcNode,
+      tgtNode,
+      "forward",
+      nodePositions,
+      resolveCustomLayoutConfig(),
+    );
     const best = candidates.sort((a, b) => a.baseCost - b.baseCost)[0];
 
     expect(best.srcSide).toBe("bottom");
     expect(best.tgtSide).toBe("top");
+  });
+
+  it("ranks bottom->top before right->right when target is below and slightly left of source", () => {
+    const srcNode: NormalizedNode & Point = { id: "A", width: 100, height: 50, x: 100, y: 0 };
+    const tgtNode: NormalizedNode & Point = { id: "B", width: 100, height: 50, x: 0, y: 200 };
+    const edge: NormalizedEdge = { id: "e1", source: "A", target: "B" };
+
+    const nodePositions = new Map<string, Point>([
+      ["A", { x: 100, y: 0 }],
+      ["B", { x: 0, y: 200 }],
+    ]);
+
+    const candidates = generatePortCandidates(
+      edge,
+      srcNode,
+      tgtNode,
+      "forward",
+      nodePositions,
+      resolveCustomLayoutConfig(),
+    );
+
+    const sorted = [...candidates].sort((a, b) => a.baseCost - b.baseCost);
+    const indexBT = sorted.findIndex((c) => c.srcSide === "bottom" && c.tgtSide === "top");
+    const indexRR = sorted.findIndex((c) => c.srcSide === "right" && c.tgtSide === "right");
+
+    expect(indexBT).toBeGreaterThanOrEqual(0);
+    expect(indexRR).toBeGreaterThanOrEqual(0);
+    expect(indexBT).toBeLessThan(indexRR);
   });
 });

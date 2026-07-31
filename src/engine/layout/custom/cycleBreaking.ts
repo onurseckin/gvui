@@ -9,7 +9,7 @@ export interface CycleBreakingResult {
 
 export function classifyEdgeRoles(
   graph: NormalizedGraph,
-  sccResult: DetailedSCCResult
+  sccResult: DetailedSCCResult,
 ): CycleBreakingResult {
   const edgeRoleMap = new Map<string, EdgeRole>();
   const reversedMap = new Map<string, boolean>();
@@ -44,7 +44,7 @@ export function classifyEdgeRoles(
         nodesInSCC.has(e.source) &&
         nodesInSCC.has(e.target) &&
         e.source !== e.target &&
-        !edgeRoleMap.has(e.id)
+        !edgeRoleMap.has(e.id),
     );
 
     const inDegree = new Map<string, number>();
@@ -161,7 +161,7 @@ export function classifyEdgeRoles(
         (!e.layoutRole || e.layoutRole === "auto") &&
         !e.isCycle &&
         e.source !== e.target &&
-        edgeRoleMap.get(e.id) === "forward"
+        edgeRoleMap.get(e.id) === "forward",
     )
     .sort((a, b) => a.id.localeCompare(b.id));
 
@@ -269,9 +269,7 @@ export function classifyEdgeRoles(
     const rankU = tempRanks.get(u);
     const rankV = tempRanks.get(v);
 
-    const inDegV = graph.edges.filter(
-      (e) => activeForwardSet.has(e.id) && e.target === v
-    ).length;
+    const inDegV = graph.edges.filter((e) => activeForwardSet.has(e.id) && e.target === v).length;
 
     if (inDegV > 0 && rankU !== undefined && rankV !== undefined && rankU === rankV) {
       const ancestorsU = getAncestors(u, activeForwardSet);

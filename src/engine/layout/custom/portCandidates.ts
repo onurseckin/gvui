@@ -20,7 +20,7 @@ export function getSideCenterAndStub(
   width: number,
   height: number,
   side: Side,
-  stubLen: number
+  stubLen: number,
 ): { point: Point; stub: Point } {
   const { x, y } = nodePos;
   switch (side) {
@@ -47,24 +47,80 @@ export function getSideCenterAndStub(
   }
 }
 
+export function getSideNormal(side: Side): Point {
+  switch (side) {
+    case "top":
+      return { x: 0, y: -1 };
+    case "right":
+      return { x: 1, y: 0 };
+    case "bottom":
+      return { x: 0, y: 1 };
+    case "left":
+      return { x: -1, y: 0 };
+  }
+}
+
 export function generatePortCandidates(
   edge: NormalizedEdge,
   srcNode: NormalizedNode & Point,
   tgtNode: NormalizedNode & Point,
-  role: EdgeRole,
+  _role: EdgeRole,
   _nodePositions: Map<string, Point>,
   config: CustomLayoutConfig,
-  allNodes?: (NormalizedNode & Point)[]
+  allNodes?: (NormalizedNode & Point)[],
 ): PortCandidate[] {
   const sides: Side[] = ["top", "right", "bottom", "left"];
   const allCandidates: PortCandidate[] = [];
   const validCandidates: PortCandidate[] = [];
 
+  const srcCenter: Point = {
+    x: srcNode.x + srcNode.width / 2,
+    y: srcNode.y + srcNode.height / 2,
+  };
+  const tgtCenter: Point = {
+    x: tgtNode.x + tgtNode.width / 2,
+    y: tgtNode.y + tgtNode.height / 2,
+  };
+
+  const dxCenter = tgtCenter.x - srcCenter.x;
+  const dyCenter = tgtCenter.y - srcCenter.y;
+  const distCenter = Math.hypot(dxCenter, dyCenter);
+
+  const srcRemoteUnit: Point =
+    distCenter > config.epsilon
+      ? { x: dxCenter / distCenter, y: dyCenter / distCenter }
+      : { x: 0, y: 0 };
+
+  const tgtRemoteUnit: Point = {
+    x: -srcRemoteUnit.x,
+    y: -srcRemoteUnit.y,
+  };
+
   for (const srcSide of sides) {
-    const srcInfo = getSideCenterAndStub(srcNode, srcNode.width, srcNode.height, srcSide, config.portStubLength);
+    const srcInfo = getSideCenterAndStub(
+      srcNode,
+      srcNode.width,
+      srcNode.height,
+      srcSide,
+      config.portStubLength,
+    );
+
+    const srcNormal = getSideNormal(srcSide);
+    const srcDot = srcRemoteUnit.x * srcNormal.x + srcRemoteUnit.y * srcNormal.y;
+    const srcDev = 1 - Math.max(-1, Math.min(1, srcDot));
 
     for (const tgtSide of sides) {
-      const tgtInfo = getSideCenterAndStub(tgtNode, tgtNode.width, tgtNode.height, tgtSide, config.portStubLength);
+      const tgtInfo = getSideCenterAndStub(
+        tgtNode,
+        tgtNode.width,
+        tgtNode.height,
+        tgtSide,
+        config.portStubLength,
+      );
+
+      const tgtNormal = getSideNormal(tgtSide);
+      const tgtDot = tgtRemoteUnit.x * tgtNormal.x + tgtRemoteUnit.y * tgtNormal.y;
+      const tgtDev = 1 - Math.max(-1, Math.min(1, tgtDot));
 
       const dx = Math.abs(tgtInfo.stub.x - srcInfo.stub.x);
       const dy = Math.abs(tgtInfo.stub.y - srcInfo.stub.y);
@@ -74,37 +130,24 @@ export function generatePortCandidates(
       if (dx < config.epsilon || dy < config.epsilon) {
         bendEstimate = 0;
       } else if (
-        (srcSide === "right" && tgtSide === "top" && tgtInfo.stub.x >= srcInfo.stub.x && tgtInfo.stub.y >= srcInfo.stub.y) ||
-        (srcSide === "bottom" && tgtSide === "left" && tgtInfo.stub.x >= srcInfo.stub.x && tgtInfo.stub.y >= srcInfo.stub.y) ||
-        (srcSide === "bottom" && tgtSide === "right" && tgtInfo.stub.x <= srcInfo.stub.x && tgtInfo.stub.y >= srcInfo.stub.y)
+        (srcSide === "right" &&
+          tgtSide === "top" &&
+          tgtInfo.stub.x >= srcInfo.stub.x &&
+          tgtInfo.stub.y >= srcInfo.stub.y) ||
+        (srcSide === "bottom" &&
+          tgtSide === "left" &&
+          tgtInfo.stub.x >= srcInfo.stub.x &&
+          tgtInfo.stub.y >= srcInfo.stub.y) ||
+        (srcSide === "bottom" &&
+          tgtSide === "right" &&
+          tgtInfo.stub.x <= srcInfo.stub.x &&
+          tgtInfo.stub.y >= srcInfo.stub.y)
       ) {
         bendEstimate = 1;
       }
 
-      let directionPen = 0;
-      if (role === "forward") {
-        if (srcSide === "top") directionPen += config.directionPenalty;
-        if (tgtSide === "bottom") directionPen += config.directionPenalty;
-        if (srcSide === "bottom" && tgtSide === "top") directionPen = 0;
-      } else if (role === "feedback") {
-        const srcIsLR = srcSide === "left" || srcSide === "right";
-        const tgtIsLR = tgtSide === "left" || tgtSide === "right";
-        if (srcIsLR && tgtIsLR) {
-          directionPen = 0;
-        } else {
-          directionPen += config.directionPenalty;
-        }
-      } else if (role === "cross") {
-        const srcIsLR = srcSide === "left" || srcSide === "right";
-        const tgtIsLR = tgtSide === "left" || tgtSide === "right";
-        if (srcIsLR && tgtIsLR) {
-          directionPen = 0;
-        } else {
-          directionPen += config.directionPenalty * 0.5;
-        }
-      }
-
-      const baseCost = estimatedLength + bendEstimate * config.bendPenalty + directionPen;
+      const angularPenalty = (srcDev + tgtDev) * config.directionPenalty;
+      const baseCost = estimatedLength + bendEstimate * config.bendPenalty + angularPenalty;
 
       const candidate: PortCandidate = {
         edgeId: edge.id,
@@ -147,4 +190,3 @@ export function generatePortCandidates(
 
   return validCandidates.length > 0 ? validCandidates : allCandidates;
 }
-

@@ -32,10 +32,22 @@ export function pointInRectInterior(p: Point, rect: Rect, epsilon = 0.001): bool
 }
 
 export function pointOnRectBoundary(p: Point, rect: Rect, epsilon = 0.001): boolean {
-  const onLeft = Math.abs(p.x - rect.x) <= epsilon && p.y >= rect.y - epsilon && p.y <= rect.y + rect.height + epsilon;
-  const onRight = Math.abs(p.x - (rect.x + rect.width)) <= epsilon && p.y >= rect.y - epsilon && p.y <= rect.y + rect.height + epsilon;
-  const onTop = Math.abs(p.y - rect.y) <= epsilon && p.x >= rect.x - epsilon && p.x <= rect.x + rect.width + epsilon;
-  const onBottom = Math.abs(p.y - (rect.y + rect.height)) <= epsilon && p.x >= rect.x - epsilon && p.x <= rect.x + rect.width + epsilon;
+  const onLeft =
+    Math.abs(p.x - rect.x) <= epsilon &&
+    p.y >= rect.y - epsilon &&
+    p.y <= rect.y + rect.height + epsilon;
+  const onRight =
+    Math.abs(p.x - (rect.x + rect.width)) <= epsilon &&
+    p.y >= rect.y - epsilon &&
+    p.y <= rect.y + rect.height + epsilon;
+  const onTop =
+    Math.abs(p.y - rect.y) <= epsilon &&
+    p.x >= rect.x - epsilon &&
+    p.x <= rect.x + rect.width + epsilon;
+  const onBottom =
+    Math.abs(p.y - (rect.y + rect.height)) <= epsilon &&
+    p.x >= rect.x - epsilon &&
+    p.x <= rect.x + rect.width + epsilon;
 
   return onLeft || onRight || onTop || onBottom;
 }
@@ -64,10 +76,7 @@ export function segmentsCross(s1: Segment, s2: Segment, epsilon = 0.001): boolea
     const y = s1.a.y;
 
     return (
-      x > s1MinX + epsilon &&
-      x < s1MaxX - epsilon &&
-      y > s2MinY + epsilon &&
-      y < s2MaxY - epsilon
+      x > s1MinX + epsilon && x < s1MaxX - epsilon && y > s2MinY + epsilon && y < s2MaxY - epsilon
     );
   }
 
@@ -81,10 +90,7 @@ export function segmentsCross(s1: Segment, s2: Segment, epsilon = 0.001): boolea
     const y = s2.a.y;
 
     return (
-      x > s2MinX + epsilon &&
-      x < s2MaxX - epsilon &&
-      y > s1MinY + epsilon &&
-      y < s1MaxY - epsilon
+      x > s2MinX + epsilon && x < s2MaxX - epsilon && y > s1MinY + epsilon && y < s1MaxY - epsilon
     );
   }
 
@@ -181,8 +187,10 @@ export function simplifyOrthogonalPath(points: Point[], epsilon = 0.001): Point[
     const curr = nonDupes[i];
     const next = nonDupes[i + 1];
 
-    const isCollinearX = Math.abs(prev.x - curr.x) <= epsilon && Math.abs(curr.x - next.x) <= epsilon;
-    const isCollinearY = Math.abs(prev.y - curr.y) <= epsilon && Math.abs(curr.y - next.y) <= epsilon;
+    const isCollinearX =
+      Math.abs(prev.x - curr.x) <= epsilon && Math.abs(curr.x - next.x) <= epsilon;
+    const isCollinearY =
+      Math.abs(prev.y - curr.y) <= epsilon && Math.abs(curr.y - next.y) <= epsilon;
 
     if (!isCollinearX && !isCollinearY) {
       result.push(curr);

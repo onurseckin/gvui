@@ -6,7 +6,7 @@ import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types
 export function computeCustomLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
-  configPartial?: Partial<CustomLayoutConfig>
+  configPartial?: Partial<CustomLayoutConfig>,
 ): CustomLayoutResult {
   const config = resolveCustomLayoutConfig(configPartial);
 
@@ -14,6 +14,3 @@ export function computeCustomLayout(
 
   return optimizeLayout(nodes, edges, config);
 }
-
-
-

@@ -14,12 +14,186 @@ export interface CoordinateAssignmentResult {
   boundingBox: Rect;
 }
 
+export type EffectiveSpacingOverrides = SpacingOverrides & {
+  nodeGapByRank?: Map<number, number> | Record<number, number>;
+  rankGapAfterRank?: Map<number, number> | Record<number, number>;
+  nodeGapAfterNodeId?: Map<string, number> | Record<string, number>;
+};
+
+function getEffectiveRankGap(
+  rank: number,
+  spacingOverrides: EffectiveSpacingOverrides | undefined,
+  config: CustomLayoutConfig,
+): number {
+  if (!spacingOverrides) return config.rankGap;
+
+  let override1: number | undefined;
+  if (spacingOverrides.rankGapAfterRank) {
+    if (spacingOverrides.rankGapAfterRank instanceof Map) {
+      override1 = spacingOverrides.rankGapAfterRank.get(rank);
+    } else {
+      override1 = (spacingOverrides.rankGapAfterRank as Record<number, number>)[rank];
+    }
+  }
+
+  let override2: number | undefined;
+  if (spacingOverrides.rankGaps) {
+    override2 = spacingOverrides.rankGaps[rank];
+  }
+
+  return Math.max(config.rankGap, override1 ?? 0, override2 ?? 0);
+}
+
+function getEffectiveNodeGap(
+  rank: number,
+  node: LayerNode,
+  spacingOverrides: EffectiveSpacingOverrides | undefined,
+  config: CustomLayoutConfig,
+): number {
+  if (!spacingOverrides) return config.nodeGap;
+
+  const targetIds = [node.id];
+  if (node.originalNodeId && node.originalNodeId !== node.id) {
+    targetIds.push(node.originalNodeId);
+  }
+
+  let overrideNodeId: number | undefined;
+  if (spacingOverrides.nodeGapAfterNodeId) {
+    if (spacingOverrides.nodeGapAfterNodeId instanceof Map) {
+      for (const id of targetIds) {
+        const val = spacingOverrides.nodeGapAfterNodeId.get(id);
+        if (val !== undefined) {
+          overrideNodeId = Math.max(overrideNodeId ?? 0, val);
+        }
+      }
+    } else {
+      const rec = spacingOverrides.nodeGapAfterNodeId as Record<string, number>;
+      for (const id of targetIds) {
+        const val = rec[id];
+        if (val !== undefined) {
+          overrideNodeId = Math.max(overrideNodeId ?? 0, val);
+        }
+      }
+    }
+  }
+
+  let overrideNodeGaps: number | undefined;
+  if (spacingOverrides.nodeGaps) {
+    for (const id of targetIds) {
+      const val = spacingOverrides.nodeGaps[id];
+      if (val !== undefined) {
+        overrideNodeGaps = Math.max(overrideNodeGaps ?? 0, val);
+      }
+    }
+  }
+
+  let overrideRank: number | undefined;
+  if (spacingOverrides.nodeGapByRank) {
+    if (spacingOverrides.nodeGapByRank instanceof Map) {
+      overrideRank = spacingOverrides.nodeGapByRank.get(rank);
+    } else {
+      overrideRank = (spacingOverrides.nodeGapByRank as Record<number, number>)[rank];
+    }
+  }
+
+  return Math.max(
+    config.nodeGap,
+    overrideNodeId ?? 0,
+    overrideNodeGaps ?? 0,
+    overrideRank ?? 0,
+  );
+}
+
+function projectLayerCenters(
+  layer: LayerNode[],
+  desiredXMap: Map<string, number>,
+  weightsMap: Map<string, number>,
+  rank: number,
+  config: CustomLayoutConfig,
+  spacingOverrides?: EffectiveSpacingOverrides,
+): Map<string, number> {
+  const result = new Map<string, number>();
+  const k = layer.length;
+  if (k === 0) return result;
+  if (k === 1) {
+    const item = layer[0];
+    result.set(item.id, desiredXMap.get(item.id)!);
+    return result;
+  }
+
+  // 1. Compute cumulative separation offsets s_i
+  const s = new Array<number>(k);
+  s[0] = 0;
+  for (let i = 0; i < k - 1; i++) {
+    const curr = layer[i];
+    const next = layer[i + 1];
+    const currW = curr.isVirtual ? 0 : curr.width;
+    const nextW = next.isVirtual ? 0 : next.width;
+    const gap = getEffectiveNodeGap(rank, curr, spacingOverrides, config);
+    const d = (currW + nextW) / 2 + gap;
+    s[i + 1] = s[i] + d;
+  }
+
+  // 2. Prepare a_i = desiredX_i - s_i and w_i = weight_i
+  const a = new Array<number>(k);
+  const w = new Array<number>(k);
+  for (let i = 0; i < k; i++) {
+    const item = layer[i];
+    const desX = desiredXMap.get(item.id)!;
+    a[i] = desX - s[i];
+    w[i] = weightsMap.get(item.id) ?? 1;
+  }
+
+  // 3. Pool Adjacent Violators Algorithm (PAVA)
+  interface Block {
+    weight: number;
+    sumWA: number;
+    value: number;
+    size: number;
+  }
+  const stack: Block[] = [];
+
+  for (let i = 0; i < k; i++) {
+    let b: Block = {
+      weight: w[i],
+      sumWA: w[i] * a[i],
+      value: a[i],
+      size: 1,
+    };
+
+    while (stack.length > 0 && stack[stack.length - 1].value > b.value) {
+      const top = stack.pop()!;
+      b = {
+        weight: top.weight + b.weight,
+        sumWA: top.sumWA + b.sumWA,
+        value: (top.sumWA + b.sumWA) / (top.weight + b.weight),
+        size: top.size + b.size,
+      };
+    }
+
+    stack.push(b);
+  }
+
+  // 4. Unpack stack to get z_i and compute final X_i = z_i + s_i
+  let index = 0;
+  for (const block of stack) {
+    for (let j = 0; j < block.size; j++) {
+      const z = block.value;
+      const finalX = z + s[index];
+      result.set(layer[index].id, finalX);
+      index++;
+    }
+  }
+
+  return result;
+}
+
 export function assignCoordinates(
   _graph: NormalizedGraph,
   layerGraph: ExpandedLayerGraph,
   orderedLayers: LayerNode[][],
   config: CustomLayoutConfig,
-  spacingOverrides?: SpacingOverrides
+  spacingOverrides?: EffectiveSpacingOverrides,
 ): CoordinateAssignmentResult {
   const nodePositions = new Map<string, Point>();
   const rankBandMap = new Map<number, RankBand>();
@@ -31,19 +205,18 @@ export function assignCoordinates(
     const layer = orderedLayers[r];
     const realNodesInRank = layer.filter((n) => !n.isVirtual);
 
-    const rankHeight = realNodesInRank.length > 0
-      ? Math.max(...realNodesInRank.map((n) => n.height))
-      : 40;
+    const rankHeight =
+      realNodesInRank.length > 0 ? Math.max(...realNodesInRank.map((n) => n.height)) : 40;
 
     const centerY = currentY + rankHeight / 2;
     rankBandMap.set(r, { topY: currentY, height: rankHeight, centerY });
 
-    const effectiveRankGap = spacingOverrides?.rankGaps?.[r] ?? config.rankGap;
+    const effectiveRankGap = getEffectiveRankGap(r, spacingOverrides, config);
     currentY += rankHeight + effectiveRankGap;
   }
 
   // 2. Initial X assignment per rank
-  const centerXs = new Map<string, number>();
+  const initialCenterXMap = new Map<string, number>();
 
   for (let r = 0; r < orderedLayers.length; r++) {
     const layer = orderedLayers[r];
@@ -53,74 +226,82 @@ export function assignCoordinates(
       const item = layer[i];
       const width = item.isVirtual ? 0 : item.width;
 
-      centerXs.set(item.id, currentX + width / 2);
-      const effectiveNodeGap = spacingOverrides?.nodeGaps?.[item.id] ?? config.nodeGap;
+      initialCenterXMap.set(item.id, currentX + width / 2);
+      const effectiveNodeGap = getEffectiveNodeGap(r, item, spacingOverrides, config);
       currentX += width + effectiveNodeGap;
     }
   }
 
-  // 3. Alignment sweeps (median alignment with gap enforcement)
-  const maxSweeps = 8;
-  for (let sweep = 0; sweep < maxSweeps; sweep++) {
-    const isDownward = sweep % 2 === 0;
+  // 3. Coordinate sweeps with synchronous isotonic projection
+  let centerXs = new Map<string, number>(initialCenterXMap);
 
-    const rankOrder = isDownward
-      ? Array.from({ length: orderedLayers.length }, (_, i) => i)
-      : Array.from({ length: orderedLayers.length }, (_, i) => orderedLayers.length - 1 - i);
+  for (let sweep = 0; sweep < config.coordinateSweepLimit; sweep++) {
+    const prevCenterXMap = new Map(centerXs);
+    const desiredXMap = new Map<string, number>();
+    const weightsMap = new Map<string, number>();
 
-    for (const r of rankOrder) {
-      const layer = orderedLayers[r];
-      if (layer.length === 0) continue;
-
-      // Calculate median targets
+    // Step 1 & 2: Calculate desired positions & weights for all nodes from prevCenterXMap
+    for (const layer of orderedLayers) {
       for (const item of layer) {
-        const neighbors: string[] = [];
         const preds = layerGraph.predecessorsMap.get(item.id) ?? [];
         const succs = layerGraph.successorsMap.get(item.id) ?? [];
 
-        for (const p of preds) if (centerXs.has(p)) neighbors.push(p);
-        for (const s of succs) if (centerXs.has(s)) neighbors.push(s);
+        const neighbors: string[] = [];
+        for (const p of preds) if (prevCenterXMap.has(p)) neighbors.push(p);
+        for (const s of succs) if (prevCenterXMap.has(s)) neighbors.push(s);
 
+        let desiredX: number;
         if (neighbors.length > 0) {
-          const sortedNeighborX = neighbors.map((id) => centerXs.get(id)!).sort((a, b) => a - b);
+          const sortedNeighborX = neighbors
+            .map((id) => prevCenterXMap.get(id)!)
+            .sort((a, b) => a - b);
           const mid = Math.floor(sortedNeighborX.length / 2);
-          const medianX = sortedNeighborX.length % 2 !== 0
-            ? sortedNeighborX[mid]
-            : (sortedNeighborX[mid - 1] + sortedNeighborX[mid]) / 2;
-
-          centerXs.set(item.id, medianX);
+          const medianNeighborX =
+            sortedNeighborX.length % 2 !== 0
+              ? sortedNeighborX[mid]
+              : (sortedNeighborX[mid - 1] + sortedNeighborX[mid]) / 2;
+          const prevX = prevCenterXMap.get(item.id)!;
+          desiredX = 0.5 * prevX + 0.5 * medianNeighborX;
+        } else {
+          desiredX = prevCenterXMap.get(item.id)!;
         }
+
+        desiredXMap.set(item.id, desiredX);
+        weightsMap.set(item.id, Math.max(1, preds.length + succs.length));
       }
+    }
 
-      // Enforce left-to-right minimum gaps
-      for (let i = 1; i < layer.length; i++) {
-        const prev = layer[i - 1];
-        const curr = layer[i];
-
-        const prevW = prev.isVirtual ? 0 : prev.width;
-        const currW = curr.isVirtual ? 0 : curr.width;
-
-        const effectiveGap = spacingOverrides?.nodeGaps?.[prev.id] ?? config.nodeGap;
-        const minCenterX = centerXs.get(prev.id)! + prevW / 2 + effectiveGap + currW / 2;
-        if (centerXs.get(curr.id)! < minCenterX) {
-          centerXs.set(curr.id, minCenterX);
-        }
+    // Step 4: Project layer centers for each layer
+    const nextCenterXMap = new Map<string, number>();
+    for (let r = 0; r < orderedLayers.length; r++) {
+      const layer = orderedLayers[r];
+      const projected = projectLayerCenters(
+        layer,
+        desiredXMap,
+        weightsMap,
+        r,
+        config,
+        spacingOverrides,
+      );
+      for (const [id, x] of projected.entries()) {
+        nextCenterXMap.set(id, x);
       }
+    }
 
-      // Enforce right-to-left minimum gaps
-      for (let i = layer.length - 2; i >= 0; i--) {
-        const curr = layer[i];
-        const next = layer[i + 1];
-
-        const currW = curr.isVirtual ? 0 : curr.width;
-        const nextW = next.isVirtual ? 0 : next.width;
-
-        const effectiveGap = spacingOverrides?.nodeGaps?.[curr.id] ?? config.nodeGap;
-        const maxCenterX = centerXs.get(next.id)! - nextW / 2 - effectiveGap - currW / 2;
-        if (centerXs.get(curr.id)! > maxCenterX) {
-          centerXs.set(curr.id, maxCenterX);
-        }
+    // Step 5 & 6: Compute max movement and replace layer centers after all layers are projected
+    let maxMovement = 0;
+    for (const [id, newX] of nextCenterXMap.entries()) {
+      const oldX = prevCenterXMap.get(id)!;
+      const movement = Math.abs(newX - oldX);
+      if (movement > maxMovement) {
+        maxMovement = movement;
       }
+    }
+
+    centerXs = nextCenterXMap;
+
+    if (maxMovement <= config.epsilon) {
+      break;
     }
   }
 
@@ -179,8 +360,8 @@ export function assignCoordinates(
 
   for (const [id, pos] of nodePositions.entries()) {
     const item = layerGraph.itemMap.get(id);
-    const w = item?.isVirtual ? 0 : item?.width ?? 0;
-    const h = item?.isVirtual ? 0 : item?.height ?? 0;
+    const w = item?.isVirtual ? 0 : (item?.width ?? 0);
+    const h = item?.isVirtual ? 0 : (item?.height ?? 0);
 
     minX = Math.min(minX, pos.x);
     minY = Math.min(minY, pos.y);

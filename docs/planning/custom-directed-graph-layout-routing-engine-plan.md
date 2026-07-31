@@ -124,16 +124,16 @@ Some adjacent tasks must remain with one agent because their contracts are tight
 
 Required single-owner chains:
 
-| Work package | Tasks | Why one agent owns the chain |
-|---|---|---|
-| `F0-foundation` | 1, 1A | Configuration, internal contracts, and node-size contracts must stabilize together. |
-| `A1-graph-analysis` | 3, 4, 5, 6 | Normalization, SCC IDs, cycle roles, and rank semantics share the same graph model. |
-| `L1-layered-layout` | 7, 8, 9, 10 | Virtual nodes, crossing order, coordinates, and orchestration share the layer graph. |
-| `P1-port-system` | 11, 12, 13 | Candidate costs, selected sides, and exact port positions must agree. |
-| `R1-route-search` | 14, 15 | Grid edge identity and A* occupancy costs must use one representation. |
-| `I1-engine-integration` | 21, 23 | Global optimization and the public synchronous pipeline share convergence and status behavior. |
-| `T1-public-adapter` | 28, 29 | Public routed types and their adapter must be changed together. |
-| `C1-final-cleanup` | 37, 38 | Trial removal and removal of the temporary gate happen only after the same acceptance evidence. |
+| Work package            | Tasks       | Why one agent owns the chain                                                                    |
+| ----------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| `F0-foundation`         | 1, 1A       | Configuration, internal contracts, and node-size contracts must stabilize together.             |
+| `A1-graph-analysis`     | 3, 4, 5, 6  | Normalization, SCC IDs, cycle roles, and rank semantics share the same graph model.             |
+| `L1-layered-layout`     | 7, 8, 9, 10 | Virtual nodes, crossing order, coordinates, and orchestration share the layer graph.            |
+| `P1-port-system`        | 11, 12, 13  | Candidate costs, selected sides, and exact port positions must agree.                           |
+| `R1-route-search`       | 14, 15      | Grid edge identity and A* occupancy costs must use one representation.                          |
+| `I1-engine-integration` | 21, 23      | Global optimization and the public synchronous pipeline share convergence and status behavior.  |
+| `T1-public-adapter`     | 28, 29      | Public routed types and their adapter must be changed together.                                 |
+| `C1-final-cleanup`      | 37, 38      | Trial removal and removal of the temporary gate happen only after the same acceptance evidence. |
 
 Do not split one of these chains across agents even when another concurrency slot is free.
 
@@ -200,31 +200,31 @@ If two supposedly independent packages conflict, do not auto-resolve the conflic
 
 ## Parallel Work Packages
 
-| Package | Agent specialization | Tasks | Writable area | Required input | Expected return |
-|---|---|---:|---|---|---|
-| `F0-foundation` | Contracts and migration | 1, 1A | `custom/types.ts`, `custom/config*`, shared node dimensions, listed Dagre imports | Current main branch | Two ordered commits; frozen contract summary |
-| `G1-geometry` | Computational geometry | 2 | `custom/geometry*` | `F0` | Geometry commit; epsilon behavior summary |
-| `B1-badge-size` | Badge measurement | 18 | `badgeMeasurement*`, `EdgeBadgeOverlay.tsx` | `F0` | Badge measurement commit; visual parity note |
-| `Q1-scenarios` | Test data | 24 | `customLayoutScenarios*` | `F0` | Scenario commit; scenario-purpose index |
-| `A1-graph-analysis` | Directed graph algorithms | 3–6 | normalization, SCC, cycle breaking, ranks and tests | `F0`, `G1` | Four ordered commits; final edge-role and rank contract |
-| `V1-validator` | Geometry validation | 20 | `layoutValidator*` | `F0`, `G1` | Validator commit; invariant coverage matrix |
-| `S1-svg` | SVG path serialization | 22 | `svgPath*` | `F0`, `G1` | Serializer commit; bridge-priority summary |
-| `L1-layered-layout` | Sugiyama-style placement | 7–10 | layer graph, crossing, coordinates, node layout and tests | `A1` | Four ordered commits; node-layout debug schema |
-| `P1-port-system` | Port optimization | 11–13 | port candidate, assignment, distribution files and tests | `L1` | Three ordered commits; side-cost breakdown |
-| `R1-route-search` | Obstacle routing | 14–15 | routing grid, A* search and tests | `P1`, `G1` | Two ordered commits; grid and occupancy contract |
-| `R2-special-routes` | Cyclic routing | 16 | `specialRoutes*` | `R1`, `P1`, `G1` | Special-route commit; corridor policy summary |
-| `R3-global-router` | Route integration | 17 | `edgeRouter*` | `R1`, `R2` | Router commit; lane and rip-up diagnostics |
-| `B2-badge-placement` | Label optimization | 19 | `badgePlacement*` | `R3`, `B1` | Badge placement commit; candidate policy summary |
-| `I1-engine-integration` | Pipeline integration | 21, 23 | optimizer, engine entry, index and tests | `L1`, `P1`, `R3`, `B2`, `V1`, `S1` | Two ordered commits; engine status summary |
-| `Q2-generated-tests` | Property-style QA | 25 | `generatedGraph.test.ts` | `I1` | Generated-test commit; seed list |
-| `U1-laboratory` | React debug UI | 26 | Graph Testing page, debug components, testing CSS | `I1`, `Q1`, `V1` | Laboratory commit; control and metric inventory |
-| `T1-public-adapter` | Public graph contracts | 28–29 | public graph types, adapter and tests | Task 27 acceptance | Two ordered commits; public API diff |
-| `W1-worker` | Worker transport | 30 | worker, client and client tests | `T1` | Worker commit; stale-result behavior |
-| `U2-renderer` | SVG/React rendering | 31 | GraphEdge files and component test | `T1`, `S1`, `B1` | Renderer commit; markup assertions |
-| `D1-dispatcher` | Layout dispatch | 32 | layout dispatcher and test | `T1`, `F0` | Dispatcher commit; rollback behavior |
-| `E1-exporter` | Static export | 34 | HTML exporter and test | `T1`, `I1`, `F0` | Export commit; unresolved-result behavior |
-| `C0-canvas-integration` | Canvas async integration | 33 | GraphCanvas and request test | `W1`, `D1` | Canvas commit; stale-request test result |
-| `C1-final-cleanup` | Final integration cleanup | 37–38 | listed trial files and dispatcher gate | Tasks 35–36 | Two ordered commits; deletion list |
+| Package                 | Agent specialization      |  Tasks | Writable area                                                                     | Required input                     | Expected return                                         |
+| ----------------------- | ------------------------- | -----: | --------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------- |
+| `F0-foundation`         | Contracts and migration   |  1, 1A | `custom/types.ts`, `custom/config*`, shared node dimensions, listed Dagre imports | Current main branch                | Two ordered commits; frozen contract summary            |
+| `G1-geometry`           | Computational geometry    |      2 | `custom/geometry*`                                                                | `F0`                               | Geometry commit; epsilon behavior summary               |
+| `B1-badge-size`         | Badge measurement         |     18 | `badgeMeasurement*`, `EdgeBadgeOverlay.tsx`                                       | `F0`                               | Badge measurement commit; visual parity note            |
+| `Q1-scenarios`          | Test data                 |     24 | `customLayoutScenarios*`                                                          | `F0`                               | Scenario commit; scenario-purpose index                 |
+| `A1-graph-analysis`     | Directed graph algorithms |    3–6 | normalization, SCC, cycle breaking, ranks and tests                               | `F0`, `G1`                         | Four ordered commits; final edge-role and rank contract |
+| `V1-validator`          | Geometry validation       |     20 | `layoutValidator*`                                                                | `F0`, `G1`                         | Validator commit; invariant coverage matrix             |
+| `S1-svg`                | SVG path serialization    |     22 | `svgPath*`                                                                        | `F0`, `G1`                         | Serializer commit; bridge-priority summary              |
+| `L1-layered-layout`     | Sugiyama-style placement  |   7–10 | layer graph, crossing, coordinates, node layout and tests                         | `A1`                               | Four ordered commits; node-layout debug schema          |
+| `P1-port-system`        | Port optimization         |  11–13 | port candidate, assignment, distribution files and tests                          | `L1`                               | Three ordered commits; side-cost breakdown              |
+| `R1-route-search`       | Obstacle routing          |  14–15 | routing grid, A* search and tests                                                 | `P1`, `G1`                         | Two ordered commits; grid and occupancy contract        |
+| `R2-special-routes`     | Cyclic routing            |     16 | `specialRoutes*`                                                                  | `R1`, `P1`, `G1`                   | Special-route commit; corridor policy summary           |
+| `R3-global-router`      | Route integration         |     17 | `edgeRouter*`                                                                     | `R1`, `R2`                         | Router commit; lane and rip-up diagnostics              |
+| `B2-badge-placement`    | Label optimization        |     19 | `badgePlacement*`                                                                 | `R3`, `B1`                         | Badge placement commit; candidate policy summary        |
+| `I1-engine-integration` | Pipeline integration      | 21, 23 | optimizer, engine entry, index and tests                                          | `L1`, `P1`, `R3`, `B2`, `V1`, `S1` | Two ordered commits; engine status summary              |
+| `Q2-generated-tests`    | Property-style QA         |     25 | `generatedGraph.test.ts`                                                          | `I1`                               | Generated-test commit; seed list                        |
+| `U1-laboratory`         | React debug UI            |     26 | Graph Testing page, debug components, testing CSS                                 | `I1`, `Q1`, `V1`                   | Laboratory commit; control and metric inventory         |
+| `T1-public-adapter`     | Public graph contracts    |  28–29 | public graph types, adapter and tests                                             | Task 27 acceptance                 | Two ordered commits; public API diff                    |
+| `W1-worker`             | Worker transport          |     30 | worker, client and client tests                                                   | `T1`                               | Worker commit; stale-result behavior                    |
+| `U2-renderer`           | SVG/React rendering       |     31 | GraphEdge files and component test                                                | `T1`, `S1`, `B1`                   | Renderer commit; markup assertions                      |
+| `D1-dispatcher`         | Layout dispatch           |     32 | layout dispatcher and test                                                        | `T1`, `F0`                         | Dispatcher commit; rollback behavior                    |
+| `E1-exporter`           | Static export             |     34 | HTML exporter and test                                                            | `T1`, `I1`, `F0`                   | Export commit; unresolved-result behavior               |
+| `C0-canvas-integration` | Canvas async integration  |     33 | GraphCanvas and request test                                                      | `W1`, `D1`                         | Canvas commit; stale-request test result                |
+| `C1-final-cleanup`      | Final integration cleanup |  37–38 | listed trial files and dispatcher gate                                            | Tasks 35–36                        | Two ordered commits; deletion list                      |
 
 ---
 
@@ -582,13 +582,16 @@ Plan file: docs/planning/GVUI/custom-directed-graph-layout-routing-engine-plan.m
 Tasks to execute in order: <task numbers>
 
 Writable files:
+
 - <exact file list copied from the tasks>
 
 Read-only context:
+
 - <directly imported contracts>
 - <preceding task outputs required to understand the work>
 
 Constraints:
+
 - Execute every checkbox in each assigned task in order.
 - Write the failing test before implementation.
 - Do not edit files outside the writable list.
@@ -598,9 +601,11 @@ Constraints:
 - Stop and report if an unlisted edit or contract change is required.
 
 Verification:
+
 - <exact focused commands copied from the tasks>
 
 Return:
+
 - Commit hash for each task.
 - Changed-file list.
 - Focused test results.
@@ -616,9 +621,9 @@ Do not pass the entire conversation to a worker. Give it only this prompt, the p
 
 The orchestrator keeps one ledger entry per package:
 
-| Package | Base commit | Agent | Status | Returned commits | Focused checks | Merge result |
-|---|---|---|---|---|---|---|
-| `F0-foundation` | SHA | agent ID | pending/running/review/merged/failed | SHAs | pass/fail | integrated SHA |
+| Package         | Base commit | Agent    | Status                               | Returned commits | Focused checks | Merge result   |
+| --------------- | ----------- | -------- | ------------------------------------ | ---------------- | -------------- | -------------- |
+| `F0-foundation` | SHA         | agent ID | pending/running/review/merged/failed | SHAs             | pass/fail      | integrated SHA |
 
 Allowed status transitions:
 
@@ -724,6 +729,7 @@ Do not start a dependent package until every required package says `merged`, not
 ### Task 1: Define Internal Contracts and Configuration
 
 **Files:**
+
 - Create: `src/engine/layout/custom/types.ts`
 - Create: `src/engine/layout/custom/config.ts`
 - Create: `src/engine/layout/custom/config.test.ts`
@@ -752,13 +758,40 @@ type AxisDirection = "horizontal" | "vertical";
 type EdgeRole = "forward" | "cross" | "feedback" | "self";
 type SegmentDirection = "up" | "right" | "down" | "left";
 
-interface Point { x: number; y: number }
-interface Rect { x: number; y: number; width: number; height: number }
-interface Segment { a: Point; b: Point }
+interface Point {
+  x: number;
+  y: number;
+}
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+interface Segment {
+  a: Point;
+  b: Point;
+}
 type NodeSizeMap = Record<string, { width: number; height: number }>;
-interface PortRef { nodeId: string; side: Side; index: number; point: Point; stub: Point }
-interface RoutedPath { edgeId: string; points: Point[]; sourcePort: PortRef; targetPort: PortRef }
-interface LayoutDiagnostic { code: string; severity: "error" | "warning"; message: string; ids: string[] }
+interface PortRef {
+  nodeId: string;
+  side: Side;
+  index: number;
+  point: Point;
+  stub: Point;
+}
+interface RoutedPath {
+  edgeId: string;
+  points: Point[];
+  sourcePort: PortRef;
+  targetPort: PortRef;
+}
+interface LayoutDiagnostic {
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+  ids: string[];
+}
 ```
 
 Also define normalized graph types, SCC results, layer items, routing-grid vertices and edges, occupancy records, badge candidates, badge placements, crossing records, validation results, layout metrics, and the final `CustomLayoutResult`.
@@ -820,6 +853,7 @@ git commit -m "feat: define custom layout engine contracts"
 ### Task 1A: Centralize Node Dimension Calculation
 
 **Files:**
+
 - Create: `src/engine/layout/nodeDimensions.ts`
 - Create: `src/engine/layout/nodeDimensions.test.ts`
 - Modify: `src/engine/layout/dagreLayout.ts`
@@ -872,6 +906,7 @@ git commit -m "refactor: centralize graph node dimensions"
 ### Task 2: Implement the Geometry Kernel
 
 **Files:**
+
 - Create: `src/engine/layout/custom/geometry.ts`
 - Create: `src/engine/layout/custom/geometry.test.ts`
 
@@ -910,20 +945,20 @@ Expected: FAIL because `geometry.ts` does not exist.
 Export exact functions:
 
 ```ts
-isFinitePoint
-expandRect
-rectsOverlapStrict
-pointInRectInterior
-pointOnRectBoundary
-isOrthogonalSegment
-segmentLength
-segmentsCross
-collinearOverlapLength
-segmentIntersectsRectInterior
-simplifyOrthogonalPath
-pathManhattanLength
-pointAtPathRatio
-canonicalSegmentKey
+isFinitePoint;
+expandRect;
+rectsOverlapStrict;
+pointInRectInterior;
+pointOnRectBoundary;
+isOrthogonalSegment;
+segmentLength;
+segmentsCross;
+collinearOverlapLength;
+segmentIntersectsRectInterior;
+simplifyOrthogonalPath;
+pathManhattanLength;
+pointAtPathRatio;
+canonicalSegmentKey;
 ```
 
 Use `config.epsilon` or an explicit epsilon argument. Do not round geometry during calculation.
@@ -949,6 +984,7 @@ git commit -m "feat: add orthogonal geometry kernel"
 ### Task 3: Normalize and Validate Graph Input
 
 **Files:**
+
 - Create: `src/engine/layout/custom/normalizeGraph.ts`
 - Create: `src/engine/layout/custom/normalizeGraph.test.ts`
 
@@ -1006,6 +1042,7 @@ git commit -m "feat: normalize graph layout input"
 ### Task 4: Detect Strongly Connected Components
 
 **Files:**
+
 - Create: `src/engine/layout/custom/stronglyConnectedComponents.ts`
 - Create: `src/engine/layout/custom/stronglyConnectedComponents.test.ts`
 
@@ -1055,6 +1092,7 @@ git commit -m "feat: detect strongly connected graph regions"
 ### Task 5: Break Cycles and Classify Edge Roles
 
 **Files:**
+
 - Create: `src/engine/layout/custom/cycleBreaking.ts`
 - Create: `src/engine/layout/custom/cycleBreaking.test.ts`
 
@@ -1114,6 +1152,7 @@ git commit -m "feat: classify forward and feedback edges"
 ### Task 6: Assign Top-to-Bottom Ranks
 
 **Files:**
+
 - Create: `src/engine/layout/custom/rankAssignment.ts`
 - Create: `src/engine/layout/custom/rankAssignment.test.ts`
 
@@ -1174,6 +1213,7 @@ git commit -m "feat: assign deterministic graph ranks"
 ### Task 7: Insert Virtual Nodes for Long Forward Edges
 
 **Files:**
+
 - Create: `src/engine/layout/custom/layerGraph.ts`
 - Create: `src/engine/layout/custom/layerGraph.test.ts`
 
@@ -1220,6 +1260,7 @@ git commit -m "feat: expand long edges across graph layers"
 ### Task 8: Minimize Crossings Between Ranks
 
 **Files:**
+
 - Create: `src/engine/layout/custom/crossingMinimization.ts`
 - Create: `src/engine/layout/custom/crossingMinimization.test.ts`
 
@@ -1278,6 +1319,7 @@ git commit -m "feat: minimize layered graph crossings"
 ### Task 9: Assign Collision-Free Node Coordinates
 
 **Files:**
+
 - Create: `src/engine/layout/custom/coordinateAssignment.ts`
 - Create: `src/engine/layout/custom/coordinateAssignment.test.ts`
 
@@ -1349,6 +1391,7 @@ git commit -m "feat: assign collision-free node coordinates"
 ### Task 10: Orchestrate the Node Layout Pipeline
 
 **Files:**
+
 - Create: `src/engine/layout/custom/nodeLayout.ts`
 - Create: `src/engine/layout/custom/nodeLayout.test.ts`
 
@@ -1412,6 +1455,7 @@ git commit -m "feat: orchestrate custom layered node layout"
 ### Task 11: Generate Four-Side Port Candidates
 
 **Files:**
+
 - Create: `src/engine/layout/custom/portCandidates.ts`
 - Create: `src/engine/layout/custom/portCandidates.test.ts`
 
@@ -1474,6 +1518,7 @@ git commit -m "feat: generate graph port candidates"
 ### Task 12: Assign Port Sides Globally
 
 **Files:**
+
 - Create: `src/engine/layout/custom/portAssignment.ts`
 - Create: `src/engine/layout/custom/portAssignment.test.ts`
 
@@ -1534,6 +1579,7 @@ git commit -m "feat: optimize graph port side assignment"
 ### Task 13: Distribute Ports Along Node Sides
 
 **Files:**
+
 - Create: `src/engine/layout/custom/portDistribution.ts`
 - Create: `src/engine/layout/custom/portDistribution.test.ts`
 
@@ -1592,6 +1638,7 @@ git commit -m "feat: distribute graph ports with equal spacing"
 ### Task 14: Build the Sparse Rectilinear Routing Grid
 
 **Files:**
+
 - Create: `src/engine/layout/custom/routingGrid.ts`
 - Create: `src/engine/layout/custom/routingGrid.test.ts`
 
@@ -1656,6 +1703,7 @@ git commit -m "feat: build obstacle-aware routing grid"
 ### Task 15: Implement Direction-Aware A* Route Search
 
 **Files:**
+
 - Create: `src/engine/layout/custom/routeSearch.ts`
 - Create: `src/engine/layout/custom/routeSearch.test.ts`
 
@@ -1675,7 +1723,7 @@ bun test src/engine/layout/custom/routeSearch.test.ts
 
 Expected: FAIL.
 
-- [ ] **Step 3: Define A* state**
+- [ ] _*Step 3: Define A* state_*
 
 State identity must include:
 
@@ -1728,6 +1776,7 @@ git commit -m "feat: add orthogonal edge route search"
 ### Task 16: Route Self-Loops and Feedback Corridors
 
 **Files:**
+
 - Create: `src/engine/layout/custom/specialRoutes.ts`
 - Create: `src/engine/layout/custom/specialRoutes.test.ts`
 
@@ -1787,6 +1836,7 @@ git commit -m "feat: route graph loops and feedback corridors"
 ### Task 17: Route All Edges with Lane Reservation
 
 **Files:**
+
 - Create: `src/engine/layout/custom/edgeRouter.ts`
 - Create: `src/engine/layout/custom/edgeRouter.test.ts`
 
@@ -1852,6 +1902,7 @@ git commit -m "feat: reserve distinct graph edge lanes"
 ### Task 18: Centralize Badge Measurement
 
 **Files:**
+
 - Create: `src/engine/layout/custom/badgeMeasurement.ts`
 - Create: `src/engine/layout/custom/badgeMeasurement.test.ts`
 - Modify: `src/primitives/edges/GraphEdge/EdgeBadgeOverlay.tsx`
@@ -1900,6 +1951,7 @@ git commit -m "refactor: centralize edge badge measurement"
 ### Task 19: Generate and Select Badge Candidates
 
 **Files:**
+
 - Create: `src/engine/layout/custom/badgePlacement.ts`
 - Create: `src/engine/layout/custom/badgePlacement.test.ts`
 
@@ -1974,6 +2026,7 @@ git commit -m "feat: place collision-free edge badges"
 ### Task 20: Implement the Layout Validator and Metrics
 
 **Files:**
+
 - Create: `src/engine/layout/custom/layoutValidator.ts`
 - Create: `src/engine/layout/custom/layoutValidator.test.ts`
 
@@ -2034,6 +2087,7 @@ git commit -m "feat: validate graph layout invariants"
 ### Task 21: Add Badge-Aware Global Optimization
 
 **Files:**
+
 - Create: `src/engine/layout/custom/optimizeLayout.ts`
 - Create: `src/engine/layout/custom/optimizeLayout.test.ts`
 
@@ -2101,6 +2155,7 @@ git commit -m "feat: optimize badge-aware graph routes"
 ### Task 22: Serialize SVG Paths and Crossing Bridges
 
 **Files:**
+
 - Create: `src/engine/layout/custom/svgPath.ts`
 - Create: `src/engine/layout/custom/svgPath.test.ts`
 
@@ -2156,6 +2211,7 @@ git commit -m "feat: serialize routed edges with crossing bridges"
 ### Task 23: Expose the Complete Synchronous Engine
 
 **Files:**
+
 - Create: `src/engine/layout/custom/computeCustomLayout.ts`
 - Create: `src/engine/layout/custom/computeCustomLayout.test.ts`
 - Create: `src/engine/layout/custom/index.ts`
@@ -2186,7 +2242,7 @@ function computeCustomLayout(
   dataset: GraphDataset,
   nodeDimensions: NodeSizeMap,
   config?: Partial<CustomLayoutConfig>,
-): CustomLayoutResult
+): CustomLayoutResult;
 ```
 
 Require one valid size entry for every node. A missing, non-positive, or non-finite size is an `invalid-input` diagnostic.
@@ -2220,13 +2276,13 @@ return result and debug data
 From `index.ts`, export:
 
 ```ts
-computeCustomLayout
-DEFAULT_CUSTOM_LAYOUT_CONFIG
-resolveCustomLayoutConfig
-CustomLayoutConfig
-CustomLayoutResult
-LayoutDiagnostic
-LayoutMetrics
+computeCustomLayout;
+DEFAULT_CUSTOM_LAYOUT_CONFIG;
+resolveCustomLayoutConfig;
+CustomLayoutConfig;
+CustomLayoutResult;
+LayoutDiagnostic;
+LayoutMetrics;
 ```
 
 - [ ] **Step 6: Run all engine tests**
@@ -2251,6 +2307,7 @@ git commit -m "feat: expose custom graph layout engine"
 ### Task 24: Add Comprehensive Scenario Fixtures
 
 **Files:**
+
 - Create: `src/features/GraphTesting/data/customLayoutScenarios.ts`
 - Create: `src/features/GraphTesting/data/customLayoutScenarios.test.ts`
 
@@ -2307,6 +2364,7 @@ git commit -m "test: add adversarial graph layout scenarios"
 ### Task 25: Add Deterministic Generated-Graph Tests
 
 **Files:**
+
 - Create: `src/engine/layout/custom/generatedGraph.test.ts`
 
 - [ ] **Step 1: Implement a test-only seeded generator**
@@ -2350,6 +2408,7 @@ git commit -m "test: validate generated custom graph layouts"
 ### Task 26: Replace the Graph Testing Comparison UI
 
 **Files:**
+
 - Modify: `src/features/GraphTesting/components/GraphTestingPage.tsx`
 - Create: `src/features/GraphTesting/components/CustomLayoutDebugOverlay.tsx`
 - Create: `src/features/GraphTesting/components/CustomLayoutMetrics.tsx`
@@ -2444,6 +2503,7 @@ git commit -m "feat: rebuild graph layout testing laboratory"
 ### Task 27: Complete the Laboratory Acceptance Gate
 
 **Files:**
+
 - Modify only when a failing invariant has a reproducible test in the responsible engine module.
 
 - [ ] **Step 1: Run every named scenario**
@@ -2500,6 +2560,7 @@ Use one focused commit per diagnostic class. Do not combine unrelated visual fix
 ### Task 28: Extend Public Positioned Graph Types
 
 **Files:**
+
 - Modify: `src/types/graphData.ts`
 - Create: `src/types/graphData.test.ts`
 
@@ -2508,10 +2569,20 @@ Use one focused commit per diagnostic class. Do not combine unrelated visual fix
 Add:
 
 ```ts
-export interface GraphPoint { x: number; y: number }
+export interface GraphPoint {
+  x: number;
+  y: number;
+}
 export type GraphPortSide = "top" | "right" | "bottom" | "left";
-export interface GraphPortPosition { side: GraphPortSide; point: GraphPoint; stub: GraphPoint }
-export interface GraphCrossing { point: GraphPoint; bridge: boolean }
+export interface GraphPortPosition {
+  side: GraphPortSide;
+  point: GraphPoint;
+  stub: GraphPoint;
+}
+export interface GraphCrossing {
+  point: GraphPoint;
+  bridge: boolean;
+}
 ```
 
 - [ ] **Step 2: Extend `PositionedEdge`**
@@ -2552,6 +2623,7 @@ git commit -m "feat: expose routed graph geometry types"
 ### Task 29: Adapt Custom Results to Public Graph Types
 
 **Files:**
+
 - Modify: `src/engine/layout/custom/computeCustomLayout.ts`
 - Modify: `src/engine/layout/custom/computeCustomLayout.test.ts`
 
@@ -2587,6 +2659,7 @@ git commit -m "feat: adapt custom layout to graph renderer"
 ### Task 30: Add the Repository-Owned Layout Worker
 
 **Files:**
+
 - Create: `src/engine/layout/custom/customLayout.worker.ts`
 - Create: `src/engine/layout/custom/customLayoutClient.ts`
 - Create: `src/engine/layout/custom/customLayoutClient.test.ts`
@@ -2645,6 +2718,7 @@ git commit -m "feat: run custom layout in repository worker"
 ### Task 31: Render Badge Leaders and Crossing Bridges
 
 **Files:**
+
 - Modify: `src/primitives/edges/GraphEdge/index.tsx`
 - Modify: `src/primitives/edges/GraphEdge/EdgeBadgeOverlay.tsx`
 - Modify: `src/primitives/edges/GraphEdge/GraphEdge.css`
@@ -2695,6 +2769,7 @@ git commit -m "feat: render routed badge leaders and crossings"
 ### Task 32: Gate Top-Down Production Layout Behind the Custom Engine
 
 **Files:**
+
 - Modify: `src/engine/layout/layoutDispatcher.ts`
 - Modify: `src/engine/layout/layoutDispatcher.test.ts`
 
@@ -2748,6 +2823,7 @@ git commit -m "feat: use custom top-down graph layout"
 ### Task 33: Use the Worker from GraphCanvas
 
 **Files:**
+
 - Modify: `src/engine/GraphCanvas/index.tsx`
 - Create: `src/engine/GraphCanvas/layoutRequest.test.ts`
 
@@ -2795,6 +2871,7 @@ git commit -m "feat: compute graph layout without blocking canvas"
 ### Task 34: Integrate Synchronous HTML Export
 
 **Files:**
+
 - Modify: `src/utils/htmlExporter.ts`
 - Create or modify: `src/utils/htmlExporter.test.ts`
 
@@ -2836,6 +2913,7 @@ git commit -m "feat: export custom routed graph layouts"
 ### Task 35: Run Full Automated Verification
 
 **Files:**
+
 - Modify only files required by a reproduced failure.
 
 - [ ] **Step 1: Run custom engine tests**
@@ -2884,6 +2962,7 @@ Use one commit per independent regression class.
 ### Task 36: Perform Final Visual Verification
 
 **Files:**
+
 - No planned edits.
 
 - [ ] **Step 1: Inspect every laboratory scenario**
@@ -2924,6 +3003,7 @@ Use one commit per independent regression class.
 ### Task 37: Remove Obsolete Trial Wiring
 
 **Files:**
+
 - Delete only after final visual approval:
   - `src/features/GraphTesting/algorithm/shortestPathEngine.ts`
   - `src/features/GraphTesting/algorithm/dagreRankEngine.ts`
@@ -2967,6 +3047,7 @@ git commit -m "chore: remove obsolete graph routing trials"
 ### Task 38: Remove the Temporary Production Gate
 
 **Files:**
+
 - Modify: `src/engine/layout/layoutDispatcher.ts`
 - Modify: `src/engine/layout/layoutDispatcher.test.ts`
 

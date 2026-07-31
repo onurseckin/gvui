@@ -87,9 +87,7 @@ describe("svgPath", () => {
       ];
 
       const pathStr = renderPathWithCrossingBridges(points, crossings, 6);
-      expect(pathStr).toBe(
-        "M 0 50 L 24 50 A 6 6 0 0 0 36 50 L 64 50 A 6 6 0 0 0 76 50 L 100 50"
-      );
+      expect(pathStr).toBe("M 0 50 L 24 50 A 6 6 0 0 0 36 50 L 64 50 A 6 6 0 0 0 76 50 L 100 50");
     });
 
     it("preserves path start and end points exactly", () => {

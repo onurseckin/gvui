@@ -131,6 +131,9 @@ export interface RouteConflict {
 export interface SpacingOverrides {
   rankGaps?: Record<number, number>;
   nodeGaps?: Record<string, number>;
+  nodeGapByRank?: Map<number, number>;
+  rankGapAfterRank?: Map<number, number>;
+  nodeGapAfterNodeId?: Map<string, number>;
 }
 
 export interface BadgeCandidate {
@@ -174,6 +177,62 @@ export interface LayoutMetrics {
   directionDeviationPenalty: number;
   portSideReusePenalty: number;
   totalArea: number;
+  ordinaryLeaderCount?: number;
+  feedbackLeaderCount?: number;
+  totalLeaderLength?: number;
+  hairpinCount?: number;
+  portSideImbalance?: number;
+}
+
+export interface OptimizationStats {
+  globalPasses: number;
+  evaluatedPortStates: number;
+  spacingExpansions: number;
+  repeatedStateStop: boolean;
+}
+
+export interface RouteCost {
+  crossings: number;
+  hairpins: number;
+  bends: number;
+  directionDeviation: number;
+  length: number;
+  nearObstaclePenalty: number;
+}
+
+export interface LayoutScore {
+  hardErrorCount: number;
+  nodeNodeOverlaps: number;
+  edgeNodePenetrations: number;
+  sharedEdgeSegmentLength: number;
+  badgeNodeOverlaps: number;
+  badgeBadgeOverlaps: number;
+  badgeUnrelatedEdgeOverlaps: number;
+  crossingCount: number;
+  ordinaryLeaderCount: number;
+  hairpinCount: number;
+  bendCount: number;
+  directionDeviationPenalty: number;
+  totalLength: number;
+  portSideImbalance: number;
+  feedbackLeaderCount: number;
+  totalLeaderLength: number;
+  totalArea: number;
+  stateHash: string;
+}
+
+export interface BadgeSpacingRequest {
+  edgeId: string;
+  kind: "rank-gap" | "node-gap" | "graph-padding";
+  rank?: number;
+  afterNodeId?: string;
+  minimum: number;
+  reason: "same-rank-label" | "parallel-labels" | "blocked-direct-badge";
+}
+
+export interface PortSideAssignment {
+  srcSide: Side;
+  tgtSide: Side;
 }
 
 export interface CustomLayoutResult {
@@ -183,4 +242,5 @@ export interface CustomLayoutResult {
   crossings: EdgeCrossing[];
   validation: LayoutValidationResult;
   status: "success" | "unresolved_soft_conflicts" | "invalid_hard_failure";
+  optimizationStats?: OptimizationStats;
 }

@@ -22,9 +22,7 @@ export function pointsToSvgPath(points: Point[]): string {
     return `M ${roundNum(simplified[0].x)} ${roundNum(simplified[0].y)}`;
   }
 
-  const commands: string[] = [
-    `M ${roundNum(simplified[0].x)} ${roundNum(simplified[0].y)}`,
-  ];
+  const commands: string[] = [`M ${roundNum(simplified[0].x)} ${roundNum(simplified[0].y)}`];
   for (let i = 1; i < simplified.length; i++) {
     commands.push(`L ${roundNum(simplified[i].x)} ${roundNum(simplified[i].y)}`);
   }
@@ -33,10 +31,10 @@ export function pointsToSvgPath(points: Point[]): string {
 
 export function determineCrossingBridgeOwner(
   edgeA: { id: string; role?: EdgeRole },
-  edgeB: { id: string; role?: EdgeRole }
+  edgeB: { id: string; role?: EdgeRole },
 ): { straightEdgeId: string; bridgedEdgeId: string } {
-  const roleA = edgeA.role ? ROLE_PRIORITY[edgeA.role] ?? 0 : 0;
-  const roleB = edgeB.role ? ROLE_PRIORITY[edgeB.role] ?? 0 : 0;
+  const roleA = edgeA.role ? (ROLE_PRIORITY[edgeA.role] ?? 0) : 0;
+  const roleB = edgeB.role ? (ROLE_PRIORITY[edgeB.role] ?? 0) : 0;
 
   if (roleA !== roleB) {
     if (roleA > roleB) {
@@ -63,7 +61,7 @@ export function renderPathWithCrossingBridges(
   points: Point[],
   crossings: Point[],
   bridgeRadius = 6,
-  epsilon = 0.001
+  epsilon = 0.001,
 ): string {
   if (points.length <= 1 || crossings.length === 0) {
     return pointsToSvgPath(points);
@@ -89,11 +87,7 @@ export function renderPathWithCrossingBridges(
 
     for (const c of crossings) {
       if (isHoriz) {
-        if (
-          Math.abs(c.y - a.y) <= epsilon &&
-          c.x > minX + epsilon &&
-          c.x < maxX - epsilon
-        ) {
+        if (Math.abs(c.y - a.y) <= epsilon && c.x > minX + epsilon && c.x < maxX - epsilon) {
           const distOnSeg = Math.abs(c.x - a.x);
           crossingsWithPos.push({
             point: c,
@@ -102,11 +96,7 @@ export function renderPathWithCrossingBridges(
           });
         }
       } else {
-        if (
-          Math.abs(c.x - a.x) <= epsilon &&
-          c.y > minY + epsilon &&
-          c.y < maxY - epsilon
-        ) {
+        if (Math.abs(c.x - a.x) <= epsilon && c.y > minY + epsilon && c.y < maxY - epsilon) {
           const distOnSeg = Math.abs(c.y - a.y);
           crossingsWithPos.push({
             point: c,
@@ -159,9 +149,12 @@ export function renderPathWithCrossingBridges(
     for (let k = 0; k < list.length; k++) {
       const cr = list[k];
       const distOnSeg = isHoriz ? Math.abs(cr.point.x - a.x) : Math.abs(cr.point.y - a.y);
-      const nextDistOnSeg = k < list.length - 1
-        ? (isHoriz ? Math.abs(list[k + 1].point.x - a.x) : Math.abs(list[k + 1].point.y - a.y))
-        : segLen;
+      const nextDistOnSeg =
+        k < list.length - 1
+          ? isHoriz
+            ? Math.abs(list[k + 1].point.x - a.x)
+            : Math.abs(list[k + 1].point.y - a.y)
+          : segLen;
 
       const availBefore = distOnSeg - prevDist;
       const availAfter = nextDistOnSeg - distOnSeg;
@@ -177,7 +170,9 @@ export function renderPathWithCrossingBridges(
       };
 
       parts.push(`L ${roundNum(pStart.x)} ${roundNum(pStart.y)}`);
-      parts.push(`A ${roundNum(maxR)} ${roundNum(maxR)} 0 0 0 ${roundNum(pEnd.x)} ${roundNum(pEnd.y)}`);
+      parts.push(
+        `A ${roundNum(maxR)} ${roundNum(maxR)} 0 0 0 ${roundNum(pEnd.x)} ${roundNum(pEnd.y)}`,
+      );
 
       prevDist = distOnSeg + maxR;
     }

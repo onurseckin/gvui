@@ -11,15 +11,29 @@ import {
   simplifyOrthogonalPath,
 } from "./geometry";
 import type { NodeLayoutResult } from "./nodeLayout";
-import type { BadgeCandidate, BadgePlacement, Point, Rect, RoutedPath, Segment } from "./types";
+import type {
+  BadgeCandidate,
+  BadgePlacement,
+  BadgeSpacingRequest,
+  NormalizedEdge,
+  Point,
+  Rect,
+  RoutedPath,
+  Segment,
+} from "./types";
 
 export interface BadgePlacementResult {
   placements: BadgePlacement[];
   placementsMap: Map<string, BadgePlacement>;
   unresolvedEdgeIds?: string[];
+  spacingRequests?: BadgeSpacingRequest[];
 }
 
-export function candidatesConflict(cA: BadgeCandidate, cB: BadgeCandidate, epsilon = 0.001): boolean {
+export function candidatesConflict(
+  cA: BadgeCandidate,
+  cB: BadgeCandidate,
+  epsilon = 0.001,
+): boolean {
   if (rectsOverlapStrict(cA.rect, cB.rect, epsilon)) return true;
 
   if (cB.leaderPoints) {
@@ -58,7 +72,8 @@ export function generateBadgeCandidates(
   placedBadgeRects: Rect[],
   unrelatedSegments: Segment[],
   graphEnvelope: Rect,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  allowLeaders = true,
 ): BadgeCandidate[] {
   const badgeDim = measureBadgeRect(label, config, isCycle);
   if (badgeDim.width <= 0 || badgeDim.height <= 0) return [];
@@ -100,7 +115,7 @@ export function generateBadgeCandidates(
     center: Point,
     ring: number,
     ratioPenalty: number,
-    isExterior: boolean
+    isExterior: boolean,
   ): void => {
     const bRect: Rect = {
       x: center.x - badgeDim.width / 2,
@@ -119,23 +134,36 @@ export function generateBadgeCandidates(
       if (rectsOverlapStrict(bRect, pRect, config.epsilon)) return;
     }
 
-    // Reject if bRect intersects unrelated edge segments
+    let score = ring * 100 + ratioPenalty * 50;
+
+    // Soft penalty for intersecting unrelated edge segments
     for (const uSeg of unrelatedSegments) {
-      if (segmentIntersectsRectInterior(uSeg, bRect, config.epsilon)) return;
+      if (segmentIntersectsRectInterior(uSeg, bRect, config.epsilon)) {
+        score += 200;
+      }
     }
 
     let leaderPoints: Point[] | undefined = undefined;
-    const isOffset = Math.abs(anchor.x - center.x) > config.epsilon || Math.abs(anchor.y - center.y) > config.epsilon;
+    const isOffset =
+      Math.abs(anchor.x - center.x) > config.epsilon ||
+      Math.abs(anchor.y - center.y) > config.epsilon;
 
-    if (isOffset) {
-      const shape1 = simplifyOrthogonalPath([anchor, { x: center.x, y: anchor.y }, center], config.epsilon);
-      const shape2 = simplifyOrthogonalPath([anchor, { x: anchor.x, y: center.y }, center], config.epsilon);
+    if (!allowLeaders) {
+      if (ring > 3 || isExterior) return;
+    } else if (isOffset) {
+      const shape1 = simplifyOrthogonalPath(
+        [anchor, { x: center.x, y: anchor.y }, center],
+        config.epsilon,
+      );
+      const shape2 = simplifyOrthogonalPath(
+        [anchor, { x: anchor.x, y: center.y }, center],
+        config.epsilon,
+      );
       const legalLeader = getLegalLeader(shape1, shape2);
       if (!legalLeader) return; // Discard if no legal leader shape
       leaderPoints = legalLeader;
     }
 
-    let score = ring * 100 + ratioPenalty * 50;
     if (isOffset && leaderPoints) {
       score += pathManhattanLength(leaderPoints) * 0.1;
     }
@@ -196,7 +224,8 @@ export function generateBadgeCandidates(
     if (segLen <= config.epsilon) continue;
 
     const mid: Point = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    const orientation: "horizontal" | "vertical" = Math.abs(a.x - b.x) <= config.epsilon ? "vertical" : "horizontal";
+    const orientation: "horizontal" | "vertical" =
+      Math.abs(a.x - b.x) <= config.epsilon ? "vertical" : "horizontal";
 
     anchorSpecs.push({
       anchor: mid,
@@ -301,10 +330,44 @@ function sortBadgeItems(items: BadgeItem[]): BadgeItem[] {
   });
 }
 
+function createBadgeSpacingRequest(
+  edge: NormalizedEdge,
+  nodeLayout: NodeLayoutResult,
+  config: CustomLayoutConfig,
+): BadgeSpacingRequest {
+  const badgeDim = measureBadgeRect(edge.label ?? "", config, Boolean(edge.isCycle));
+  const srcRank = nodeLayout.rankAssignment?.nodeRankMap?.get(edge.source);
+  const tgtRank = nodeLayout.rankAssignment?.nodeRankMap?.get(edge.target);
+
+  if (srcRank !== undefined && tgtRank !== undefined && srcRank === tgtRank) {
+    return {
+      edgeId: edge.id,
+      kind: "node-gap",
+      rank: srcRank,
+      afterNodeId: edge.source,
+      minimum: badgeDim.width + 2 * config.badgeClearance,
+      reason: "same-rank-label",
+    };
+  }
+
+  const rankVal =
+    srcRank !== undefined && tgtRank !== undefined
+      ? Math.min(srcRank, tgtRank)
+      : srcRank ?? tgtRank;
+
+  return {
+    edgeId: edge.id,
+    kind: "rank-gap",
+    ...(rankVal !== undefined ? { rank: rankVal } : {}),
+    minimum: badgeDim.height + 2 * config.badgeClearance + 2 * config.portStubLength,
+    reason: "blocked-direct-badge",
+  };
+}
+
 export function placeEdgeBadges(
   routes: RoutedPath[],
   nodeLayout: NodeLayoutResult,
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
 ): BadgePlacementResult {
   const { normalizedGraph, nodePositions } = nodeLayout;
 
@@ -313,7 +376,10 @@ export function placeEdgeBadges(
 
   const nodeRects: Rect[] = normalizedGraph.nodes.map((n) => {
     const pos = nodePositions.get(n.id) ?? { x: 0, y: 0 };
-    return expandRect({ x: pos.x, y: pos.y, width: n.width, height: n.height }, config.badgeClearance);
+    return expandRect(
+      { x: pos.x, y: pos.y, width: n.width, height: n.height },
+      config.badgeClearance,
+    );
   });
 
   let envMinX = Infinity;
@@ -365,6 +431,7 @@ export function placeEdgeBadges(
 
   const badgeItems: BadgeItem[] = [];
   const unresolvedEdgeIds: string[] = [];
+  const spacingRequestsMap = new Map<string, BadgeSpacingRequest>();
 
   for (const route of sortedRoutes) {
     const edge = edgeMap.get(route.edgeId);
@@ -374,6 +441,11 @@ export function placeEdgeBadges(
     const isCycle = Boolean(edge.isCycle);
 
     if (!hasBadge(label, isCycle)) continue;
+
+    const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
+    const role = edge.layoutRole ?? classifiedRole;
+    const isFeedbackOrSelf = role === "feedback" || role === "self" || isCycle;
+    const allowLeaders = isFeedbackOrSelf;
 
     const unrelatedSegments: Segment[] = [];
     for (const [eId, segs] of routeSegmentsMap.entries()) {
@@ -390,7 +462,8 @@ export function placeEdgeBadges(
       [],
       unrelatedSegments,
       graphEnvelope,
-      config
+      config,
+      allowLeaders,
     );
 
     const badgeDim = measureBadgeRect(label ?? "", config, isCycle);
@@ -398,6 +471,9 @@ export function placeEdgeBadges(
 
     if (candidates.length === 0) {
       unresolvedEdgeIds.push(route.edgeId);
+      if (!isFeedbackOrSelf) {
+        spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
+      }
     } else {
       badgeItems.push({
         edgeId: route.edgeId,
@@ -553,6 +629,15 @@ export function placeEdgeBadges(
           });
         } else {
           unresolvedEdgeIds.push(bItem.edgeId);
+          const edge = edgeMap.get(bItem.edgeId);
+          if (edge) {
+            const classifiedRole = nodeLayout.classifiedEdges?.find((ce) => ce.id === edge.id)?.role;
+            const role = edge.layoutRole ?? classifiedRole;
+            const isFeedbackOrSelf = role === "feedback" || role === "self" || Boolean(edge.isCycle);
+            if (!isFeedbackOrSelf) {
+              spacingRequestsMap.set(edge.id, createBadgeSpacingRequest(edge, nodeLayout, config));
+            }
+          }
         }
       }
     }
@@ -569,9 +654,16 @@ export function placeEdgeBadges(
     }
   }
 
+  const spacingRequests = Array.from(spacingRequestsMap.values()).sort((a, b) =>
+    a.edgeId.localeCompare(b.edgeId),
+  );
+
   return {
     placements,
     placementsMap,
     ...(unresolvedEdgeIds.length > 0 ? { unresolvedEdgeIds: unresolvedEdgeIds.sort() } : {}),
+    ...(spacingRequests.length > 0 ? { spacingRequests } : {}),
   };
 }
+
+export const placeBadges = placeEdgeBadges;

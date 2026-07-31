@@ -9,7 +9,7 @@ export interface CrossingMinimizationResult {
 export function countLayerCrossings(
   layerUpper: string[],
   layerLower: string[],
-  edges: { u: string; v: string }[]
+  edges: { u: string; v: string }[],
 ): number {
   const uPos = new Map<string, number>();
   layerUpper.forEach((id, idx) => uPos.set(id, idx));
@@ -43,7 +43,7 @@ export function countLayerCrossings(
 
 export function countTotalGraphCrossings(
   layers: LayerNode[][],
-  successorsMap: Map<string, string[]>
+  successorsMap: Map<string, string[]>,
 ): number {
   let total = 0;
 
@@ -67,7 +67,7 @@ export function countTotalGraphCrossings(
 
 export function minimizeCrossings(
   layerGraph: ExpandedLayerGraph,
-  maxSweeps = 24
+  maxSweeps = 24,
 ): CrossingMinimizationResult {
   // Clone layers
   let currentLayers: LayerNode[][] = layerGraph.layers.map((layer) => [...layer]);

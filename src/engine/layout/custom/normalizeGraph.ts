@@ -1,8 +1,4 @@
-import type {
-  NormalizedEdge,
-  NormalizedGraph,
-  NormalizedNode,
-} from "./types";
+import type { NormalizedEdge, NormalizedGraph, NormalizedNode } from "./types";
 
 export class LayoutInputError extends Error {
   constructor(message: string) {
@@ -17,7 +13,7 @@ export interface NormalizedGraphResult extends NormalizedGraph {
 
 export function normalizeGraph(
   inputNodes: NormalizedNode[],
-  inputEdges: NormalizedEdge[]
+  inputEdges: NormalizedEdge[],
 ): NormalizedGraphResult {
   const nodeMap = new Map<string, NormalizedNode>();
   const edgeMap = new Map<string, NormalizedEdge>();
@@ -39,7 +35,7 @@ export function normalizeGraph(
       !Number.isFinite(node.height)
     ) {
       throw new LayoutInputError(
-        `Node '${node.id}' must have positive finite width and height, got (${node.width}, ${node.height})`
+        `Node '${node.id}' must have positive finite width and height, got (${node.width}, ${node.height})`,
       );
     }
     nodeMap.set(node.id, { ...node });
@@ -54,10 +50,14 @@ export function normalizeGraph(
       throw new LayoutInputError(`Duplicate edge ID '${edge.id}' found`);
     }
     if (!nodeMap.has(edge.source)) {
-      throw new LayoutInputError(`Edge '${edge.id}' references missing source node '${edge.source}'`);
+      throw new LayoutInputError(
+        `Edge '${edge.id}' references missing source node '${edge.source}'`,
+      );
     }
     if (!nodeMap.has(edge.target)) {
-      throw new LayoutInputError(`Edge '${edge.id}' references missing target node '${edge.target}'`);
+      throw new LayoutInputError(
+        `Edge '${edge.id}' references missing target node '${edge.target}'`,
+      );
     }
     const layoutRole = edge.layoutRole ?? "auto";
     if (
@@ -119,7 +119,9 @@ export function normalizeGraph(
       const curr = queue.shift()!;
       component.push(curr);
 
-      const neighbors = Array.from(undirectedAdj.get(curr) ?? []).sort((a, b) => a.localeCompare(b));
+      const neighbors = Array.from(undirectedAdj.get(curr) ?? []).sort((a, b) =>
+        a.localeCompare(b),
+      );
       for (const n of neighbors) {
         if (!visited.has(n)) {
           visited.add(n);

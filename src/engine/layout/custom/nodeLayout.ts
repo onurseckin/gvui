@@ -5,8 +5,19 @@ import { classifyEdgeRoles } from "./cycleBreaking";
 import { buildLayerGraph, type ExpandedLayerGraph } from "./layerGraph";
 import { normalizeGraph, type NormalizedGraphResult } from "./normalizeGraph";
 import { assignRanks, type RankAssignmentResult } from "./rankAssignment";
-import { detectStronglyConnectedComponents, type DetailedSCCResult } from "./stronglyConnectedComponents";
-import type { ClassifiedEdge, LayerNode, NormalizedEdge, NormalizedNode, Point, Rect } from "./types";
+import {
+  detectStronglyConnectedComponents,
+  type DetailedSCCResult,
+} from "./stronglyConnectedComponents";
+import type {
+  ClassifiedEdge,
+  LayerNode,
+  NormalizedEdge,
+  NormalizedNode,
+  Point,
+  Rect,
+  SpacingOverrides,
+} from "./types";
 
 export interface NodeLayoutResult {
   normalizedGraph: NormalizedGraphResult;
@@ -23,7 +34,8 @@ export interface NodeLayoutResult {
 export function computeNodeLayout(
   inputNodes: NormalizedNode[],
   inputEdges: NormalizedEdge[],
-  userConfig?: Partial<CustomLayoutConfig>
+  userConfig?: Partial<CustomLayoutConfig>,
+  spacingOverrides?: SpacingOverrides,
 ): NodeLayoutResult {
   const config = resolveCustomLayoutConfig(userConfig);
 
@@ -33,7 +45,13 @@ export function computeNodeLayout(
   const rankAssignment = assignRanks(normalizedGraph, cycleBreaking);
   const layerGraph = buildLayerGraph(normalizedGraph, cycleBreaking, rankAssignment);
   const minimized = minimizeCrossings(layerGraph, config.maxCrossingSweeps);
-  const coordResult = assignCoordinates(normalizedGraph, layerGraph, minimized.orderedLayers, config);
+  const coordResult = assignCoordinates(
+    normalizedGraph,
+    layerGraph,
+    minimized.orderedLayers,
+    config,
+    spacingOverrides,
+  );
 
   return {
     normalizedGraph,

@@ -14,7 +14,7 @@ export interface ExpandedLayerGraph {
 export function buildLayerGraph(
   graph: NormalizedGraph,
   cycleBreaking: CycleBreakingResult,
-  rankAssignment: RankAssignmentResult
+  rankAssignment: RankAssignmentResult,
 ): ExpandedLayerGraph {
   const itemMap = new Map<string, LayerNode>();
   const realNodes: LayerNode[] = [];

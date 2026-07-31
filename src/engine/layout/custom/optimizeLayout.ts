@@ -1,36 +1,44 @@
 import { placeEdgeBadges, type BadgePlacementResult } from "./badgePlacement";
+import { measureBadgeRects } from "./badgeMeasurement";
 import { resolveCustomLayoutConfig, type CustomLayoutConfig } from "./config";
 import { assignCoordinates } from "./coordinateAssignment";
 import { routeAllEdges, type EdgeRouterResult } from "./edgeRouter";
+import { simplifyOrthogonalPath } from "./geometry";
 import {
-  compareLayoutScores,
+  buildLayoutScore,
+  compareLayoutScore,
+  countPathHairpins,
+} from "./layoutObjective";
+import {
   validateCustomLayout,
   type ExtendedLayoutDiagnostic,
   type ExtendedLayoutValidationResult,
 } from "./layoutValidator";
 import { computeNodeLayout, type NodeLayoutResult } from "./nodeLayout";
+import { enumeratePortAlternatives } from "./portAssignment";
 import { generatePortCandidates, type PortCandidate } from "./portCandidates";
-import { distributePorts } from "./portDistribution";
-import { RouteOccupancyLedger } from "./routeOccupancy";
-import { searchOrthogonalRoute } from "./routeSearch";
-import { buildRoutingGrid } from "./routingGrid";
-import { routeSelfLoop } from "./specialRoutes";
+import {
+  computeBadgeSpacingDemands,
+  resolveEffectiveSpacingOverrides,
+} from "./spacingDemand";
 import type {
   BadgePlacement,
+  ClassifiedEdge,
   CustomLayoutResult,
+  LayoutScore,
   NormalizedEdge,
   NormalizedNode,
+  OptimizationStats,
   Point,
-  PortRef,
+  PortSideAssignment,
   RoutedPath,
-  Side,
   SpacingOverrides,
 } from "./types";
 
 export function hashLayoutState(
   nodes: (NormalizedNode & Point)[],
   edges: RoutedPath[],
-  badges: BadgePlacement[]
+  badges: BadgePlacement[],
 ): string {
   const sortedNodes = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
   const nodeStr = sortedNodes.map((n) => `${n.id}:${n.x.toFixed(2)},${n.y.toFixed(2)}`).join("|");
@@ -62,427 +70,492 @@ export function hashLayoutState(
   return `N[${nodeStr}]E[${edgeStr}]B[${badgeStr}]`;
 }
 
-function routeEdgesWithOffsets(
+interface EvaluatedState {
+  result: CustomLayoutResult;
+  validation: ExtendedLayoutValidationResult;
+  score: LayoutScore;
+  stateHash: string;
+  sideAssignments: Map<string, PortSideAssignment>;
+}
+
+function roundNodePositions(positions: Map<string, Point>): Map<string, Point> {
+  const res = new Map<string, Point>();
+  for (const [id, pos] of positions.entries()) {
+    res.set(id, {
+      x: Math.round(pos.x * 1000) / 1000,
+      y: Math.round(pos.y * 1000) / 1000,
+    });
+  }
+  return res;
+}
+
+function findDefectEdgeIds(
+  routes: RoutedPath[],
+  badges: BadgePlacement[],
+  validation: ExtendedLayoutValidationResult,
+  classifiedEdges: ClassifiedEdge[],
+): string[] {
+  const defectSet = new Set<string>();
+
+  // 1. Perpendicular crossings
+  for (const cross of validation.crossings) {
+    defectSet.add(cross.edgeIdA);
+    defectSet.add(cross.edgeIdB);
+  }
+
+  // 2. Ordinary leaders
+  for (const b of badges) {
+    if (b.leaderPoints && b.leaderPoints.length >= 2) {
+      const classified = classifiedEdges.find((e) => e.id === b.edgeId);
+      const role = classified?.role ?? "forward";
+      if (role !== "feedback" && role !== "self") {
+        defectSet.add(b.edgeId);
+      }
+    }
+  }
+
+  // 3. Hairpins
+  for (const r of routes) {
+    if (countPathHairpins(r.points) > 0) {
+      defectSet.add(r.edgeId);
+    }
+  }
+
+  // 4. High bend count (> 2 bends)
+  for (const r of routes) {
+    const bends = Math.max(0, simplifyOrthogonalPath(r.points).length - 2);
+    if (bends > 2) {
+      defectSet.add(r.edgeId);
+    }
+  }
+
+  // 5. Diagnostic hard errors
+  for (const diag of validation.diagnostics) {
+    if (diag.severity === "error") {
+      for (const id of diag.ids) {
+        defectSet.add(id);
+      }
+    }
+  }
+
+  return Array.from(defectSet).sort();
+}
+
+function evaluateLayoutState(
   nodeLayout: NodeLayoutResult,
   config: CustomLayoutConfig,
-  portCandidateOffsets: Map<string, number>
-): EdgeRouterResult {
-  if (portCandidateOffsets.size === 0) {
-    return routeAllEdges(nodeLayout, config);
-  }
+  sideAssignments?: Map<string, PortSideAssignment>,
+): EvaluatedState {
+  const totalEdges = nodeLayout.classifiedEdges.length;
 
-  const { normalizedGraph, classifiedEdges, nodePositions, boundingBox } = nodeLayout;
-  const selfEdges: NormalizedEdge[] = [];
-  const nonSelfEdges: NormalizedEdge[] = [];
-
-  for (const edge of classifiedEdges) {
-    if (edge.role === "self") {
-      selfEdges.push(edge);
-    } else {
-      nonSelfEdges.push(edge);
-    }
-  }
+  const roundedPositions = roundNodePositions(nodeLayout.nodePositions);
+  const roundedNodeLayout: NodeLayoutResult = {
+    ...nodeLayout,
+    nodePositions: roundedPositions,
+  };
 
   const nodeMap = new Map<string, NormalizedNode & Point>();
-  for (const n of normalizedGraph.nodes) {
-    const pos = nodePositions.get(n.id) ?? { x: 0, y: 0 };
+  for (const n of roundedNodeLayout.normalizedGraph.nodes) {
+    const pos = roundedNodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 };
     nodeMap.set(n.id, { ...n, x: pos.x, y: pos.y });
   }
-  const allNodesList = Array.from(nodeMap.values());
+  const positionedNodes = Array.from(nodeMap.values());
 
-  const candidatesMap = new Map<string, PortCandidate[]>();
-  const sideAssignmentsMap = new Map<string, { srcSide: Side; tgtSide: Side }>();
+  let routerResult: EdgeRouterResult = routeAllEdges(roundedNodeLayout, config, {
+    sideAssignments,
+  });
 
-  for (const edge of nonSelfEdges) {
-    const srcNode = nodeMap.get(edge.source);
-    const tgtNode = nodeMap.get(edge.target);
-    if (!srcNode || !tgtNode) continue;
-
-    const classified = classifiedEdges.find((e) => e.id === edge.id);
-    const role = classified?.role ?? "forward";
-
-    const cands = generatePortCandidates(
-      edge,
-      srcNode,
-      tgtNode,
-      role,
-      nodePositions,
-      config,
-      allNodesList
-    );
-    candidatesMap.set(edge.id, cands);
-
-    const sortedCands = [...cands].sort((a, b) => a.baseCost - b.baseCost);
-    const offset = portCandidateOffsets.get(edge.id) ?? 0;
-    const chosenCand = sortedCands[offset % sortedCands.length] ?? sortedCands[0];
-
-    if (chosenCand) {
-      sideAssignmentsMap.set(edge.id, { srcSide: chosenCand.srcSide, tgtSide: chosenCand.tgtSide });
+  if (routerResult.routes.length < totalEdges && config.initialLaneRings < config.maxLaneRings) {
+    const expandedConfig: CustomLayoutConfig = {
+      ...config,
+      initialLaneRings: config.maxLaneRings,
+    };
+    const retryResult = routeAllEdges(roundedNodeLayout, expandedConfig, {
+      sideAssignments,
+    });
+    if (retryResult.routes.length > routerResult.routes.length) {
+      routerResult = retryResult;
     }
   }
 
-  const portDistributionResult = distributePorts(
-    nonSelfEdges,
-    sideAssignmentsMap,
-    nodeMap,
-    config
+  const currentRoutes = [...routerResult.routes];
+
+  let badgeResult: BadgePlacementResult = placeEdgeBadges(
+    currentRoutes,
+    roundedNodeLayout,
+    config,
   );
 
-  const allPortRefs: PortRef[] = [];
-  for (const ports of portDistributionResult.portsByEdge.values()) {
-    allPortRefs.push(ports.sourcePort);
-    allPortRefs.push(ports.targetPort);
-  }
-
-  const ledger = new RouteOccupancyLedger({ epsilon: config.epsilon });
-  const routesMap = new Map<string, RoutedPath>();
-
-  const selfLoopCounts = new Map<string, number>();
-  for (const edge of selfEdges) {
-    const node = nodeMap.get(edge.source);
-    if (!node) continue;
-    const idx = selfLoopCounts.get(node.id) ?? 0;
-    selfLoopCounts.set(node.id, idx + 1);
-
-    const r = routeSelfLoop(edge, node, config, idx);
-    routesMap.set(edge.id, r);
-    ledger.commitRoute(r.edgeId, r.points);
-  }
-
-  let laneRings = config.initialLaneRings;
-  let grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
-
-  const xCoords = Array.from(new Set(Array.from(grid.vertices.values()).map((p) => p.x)));
-  const yCoords = Array.from(new Set(Array.from(grid.vertices.values()).map((p) => p.y)));
-  ledger.setGridCoordinates(xCoords, yCoords);
-
-  for (const edge of nonSelfEdges) {
-    const ports = portDistributionResult.portsByEdge.get(edge.id);
-    if (!ports) continue;
-
-    let route = searchOrthogonalRoute(
-      edge.id,
-      ports.sourcePort,
-      ports.targetPort,
-      grid,
-      ledger.toOccupancyRecords(),
-      config
-    );
-
-    if (!route && laneRings < config.maxLaneRings) {
-      laneRings = config.maxLaneRings;
-      grid = buildRoutingGrid(allNodesList, allPortRefs, boundingBox, config, laneRings);
-      const xC = Array.from(new Set(Array.from(grid.vertices.values()).map((p) => p.x)));
-      const yC = Array.from(new Set(Array.from(grid.vertices.values()).map((p) => p.y)));
-      ledger.setGridCoordinates(xC, yC);
-
-      route = searchOrthogonalRoute(
-        edge.id,
-        ports.sourcePort,
-        ports.targetPort,
-        grid,
-        ledger.toOccupancyRecords(),
-        config
-      );
-    }
-
-    if (route) {
-      routesMap.set(edge.id, route);
-      ledger.commitRoute(edge.id, route.points, ports.sourcePort, ports.targetPort);
-    }
-  }
-
-  const finalRoutes = Array.from(routesMap.values());
-  const finalValidation = validateCustomLayout(
-    { nodes: allNodesList, edges: finalRoutes, badges: [] },
-    config
+  const rawValidation = validateCustomLayout(
+    {
+      nodes: positionedNodes,
+      edges: currentRoutes,
+      badges: badgeResult.placements,
+      classifiedEdges: roundedNodeLayout.classifiedEdges,
+    },
+    config,
   );
+
+  const diagnostics: ExtendedLayoutDiagnostic[] = [...rawValidation.diagnostics];
+
+  for (const edge of roundedNodeLayout.classifiedEdges) {
+    if (!currentRoutes.some((r) => r.edgeId === edge.id)) {
+      diagnostics.push({
+        code: "MISSING_ROUTE",
+        severity: "error",
+        message: `Edge ${edge.id} could not be routed`,
+        ids: [edge.id],
+      });
+    }
+  }
+
+  if (badgeResult.unresolvedEdgeIds && badgeResult.unresolvedEdgeIds.length > 0) {
+    for (const id of badgeResult.unresolvedEdgeIds) {
+      diagnostics.push({
+        code: "UNRESOLVED_BADGE",
+        severity: "error",
+        message: `Badge for edge ${id} could not be legally placed`,
+        ids: [id],
+      });
+    }
+  }
+
+  const isFullyValid = diagnostics.filter((d) => d.severity === "error").length === 0;
+
+  const fullValidation: ExtendedLayoutValidationResult = {
+    ...rawValidation,
+    isValid: isFullyValid,
+    diagnostics,
+  };
+
+  const status = isFullyValid
+    ? routerResult.status === "success"
+      ? "success"
+      : "unresolved_soft_conflicts"
+    : "invalid_hard_failure";
+
+  const stateHash = hashLayoutState(positionedNodes, currentRoutes, badgeResult.placements);
+  const score = buildLayoutScore(
+    {
+      nodes: positionedNodes,
+      edges: currentRoutes,
+      badges: badgeResult.placements,
+      classifiedEdges: roundedNodeLayout.classifiedEdges,
+    },
+    fullValidation,
+    roundedNodeLayout.classifiedEdges,
+    stateHash,
+  );
+
+  const currentAssignments = new Map<string, PortSideAssignment>();
+  for (const r of currentRoutes) {
+    currentAssignments.set(r.edgeId, {
+      srcSide: r.sourcePort.side,
+      tgtSide: r.targetPort.side,
+    });
+  }
 
   return {
-    routes: finalRoutes,
-    status: finalValidation.isValid ? "success" : "unresolved_soft_conflicts",
-    occupancy: ledger.toOccupancyRecords(),
-  };
-}
-
-function hasSpacingOrPortProgress(
-  curr: ExtendedLayoutValidationResult,
-  prev: ExtendedLayoutValidationResult
-): boolean {
-  const currErrors = curr.diagnostics.filter((d) => d.severity === "error").length;
-  const prevErrors = prev.diagnostics.filter((d) => d.severity === "error").length;
-  return currErrors < prevErrors;
-}
-
-export function optimizeLayout(
-  nodes: NormalizedNode[],
-  edges: NormalizedEdge[],
-  configPartial?: Partial<CustomLayoutConfig>
-): CustomLayoutResult {
-  const config = resolveCustomLayoutConfig(configPartial);
-  const initialNodeLayout = computeNodeLayout(nodes, edges, config);
-
-  const spacingOverrides: SpacingOverrides = {
-    rankGaps: {},
-    nodeGaps: {},
-  };
-  let currentGraphPadding = config.graphPadding;
-
-  const portCandidateOffsets = new Map<string, number>();
-  const seenStateHashes = new Set<string>();
-
-  let bestResult: CustomLayoutResult | null = null;
-  let previousValidation: ExtendedLayoutValidationResult | null = null;
-
-  for (let pass = 0; pass < config.maxGlobalPasses; pass++) {
-    const currentConfig: CustomLayoutConfig = {
-      ...config,
-      graphPadding: currentGraphPadding,
-      maxLaneRings: Math.min(24, config.maxLaneRings + pass * 4),
-    };
-
-    const coordResult = assignCoordinates(
-      initialNodeLayout.normalizedGraph,
-      initialNodeLayout.layerGraph,
-      initialNodeLayout.orderedLayers,
-      currentConfig,
-      spacingOverrides
-    );
-
-    const currentNodeLayout: NodeLayoutResult = {
-      ...initialNodeLayout,
-      nodePositions: coordResult.nodePositions,
-      rankBandMap: coordResult.rankBandMap,
-      boundingBox: coordResult.boundingBox,
-    };
-
-    const positionedNodes: (NormalizedNode & Point)[] = currentNodeLayout.normalizedGraph.nodes.map((n) => {
-      const pos = currentNodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 };
-      return {
-        ...n,
-        x: pos.x,
-        y: pos.y,
-      };
-    });
-
-    const routerResult: EdgeRouterResult = routeEdgesWithOffsets(
-      currentNodeLayout,
-      currentConfig,
-      portCandidateOffsets
-    );
-    const currentRoutes = [...routerResult.routes];
-
-    let badgeResult: BadgePlacementResult = placeEdgeBadges(
-      currentRoutes,
-      currentNodeLayout,
-      currentConfig
-    );
-
-    const tempFullVal = validateCustomLayout(
-      {
-        nodes: positionedNodes,
-        edges: currentRoutes,
-        badges: badgeResult.placements,
-      },
-      currentConfig
-    );
-
-    const badgeHardErrorCount = tempFullVal.diagnostics.filter(
-      (d) =>
-        d.severity === "error" &&
-        (d.code.startsWith("BADGE_") || d.code === "LEADER_COLLISION")
-    ).length;
-
-    if (
-      (badgeResult.unresolvedEdgeIds && badgeResult.unresolvedEdgeIds.length > 0) ||
-      badgeHardErrorCount > 0
-    ) {
-      const retryConfig: CustomLayoutConfig = {
-        ...currentConfig,
-        maxBadgeBacktrackSteps: currentConfig.maxBadgeBacktrackSteps * 4,
-        maxBadgeCandidatesPerEdge: currentConfig.maxBadgeCandidatesPerEdge * 2,
-      };
-      const retryBadgeResult = placeEdgeBadges(currentRoutes, currentNodeLayout, retryConfig);
-
-      const retryFullVal = validateCustomLayout(
-        {
-          nodes: positionedNodes,
-          edges: currentRoutes,
-          badges: retryBadgeResult.placements,
-        },
-        retryConfig
-      );
-
-      if (compareLayoutScores(retryFullVal, tempFullVal) < 0) {
-        badgeResult = retryBadgeResult;
-      }
-    }
-
-    const rawValidation = validateCustomLayout(
-      {
-        nodes: positionedNodes,
-        edges: currentRoutes,
-        badges: badgeResult.placements,
-      },
-      currentConfig
-    );
-
-    const diagnostics: ExtendedLayoutDiagnostic[] = [...rawValidation.diagnostics];
-    if (badgeResult.unresolvedEdgeIds && badgeResult.unresolvedEdgeIds.length > 0) {
-      for (const id of badgeResult.unresolvedEdgeIds) {
-        diagnostics.push({
-          code: "UNRESOLVED_BADGE",
-          severity: "error",
-          message: `Badge for edge ${id} could not be legally placed`,
-          ids: [id],
-        });
-      }
-    }
-
-    const isFullyValid = diagnostics.filter((d) => d.severity === "error").length === 0;
-
-    const fullValidation: ExtendedLayoutValidationResult = {
-      ...rawValidation,
-      isValid: isFullyValid,
-      diagnostics,
-    };
-
-    const status = isFullyValid
-      ? routerResult.status === "success"
-        ? "success"
-        : "unresolved_soft_conflicts"
-      : "invalid_hard_failure";
-
-    const currentResult: CustomLayoutResult = {
+    result: {
       nodes: positionedNodes,
       edges: currentRoutes,
       badges: badgeResult.placements,
       crossings: fullValidation.crossings,
       validation: fullValidation,
       status,
+    },
+    validation: fullValidation,
+    score,
+    stateHash,
+    sideAssignments: currentAssignments,
+  };
+}
+
+export function optimizeLayout(
+  nodes: NormalizedNode[],
+  edges: NormalizedEdge[],
+  configPartial?: Partial<CustomLayoutConfig>,
+): CustomLayoutResult {
+  const config = resolveCustomLayoutConfig(configPartial);
+
+  const badgeMeasurements = measureBadgeRects(edges, config);
+  const rawNodeLayout = computeNodeLayout(nodes, edges, config);
+
+  const nodeRankMap = rawNodeLayout.rankAssignment.nodeRankMap;
+  const spacingRequests = computeBadgeSpacingDemands(
+    nodes,
+    edges,
+    badgeMeasurements,
+    nodeRankMap,
+    config,
+  );
+  let effectiveOverrides = resolveEffectiveSpacingOverrides(
+    spacingRequests,
+    config.nodeGap,
+    config.rankGap,
+  );
+
+  let spacingOverrides: SpacingOverrides = {
+    rankGaps: {},
+    nodeGaps: {},
+    ...effectiveOverrides,
+  };
+  let currentGraphPadding = config.graphPadding;
+
+  let coordResult = assignCoordinates(
+    rawNodeLayout.normalizedGraph,
+    rawNodeLayout.layerGraph,
+    rawNodeLayout.orderedLayers,
+    config,
+    spacingOverrides,
+  );
+
+  let currentNodeLayout: NodeLayoutResult = {
+    ...rawNodeLayout,
+    nodePositions: roundNodePositions(coordResult.nodePositions),
+    rankBandMap: coordResult.rankBandMap,
+    boundingBox: coordResult.boundingBox,
+  };
+
+  let bestEval = evaluateLayoutState(currentNodeLayout, config);
+  let explicitPortOverrides = new Map<string, PortSideAssignment>();
+
+  const maxPasses = Math.min(config.maxAestheticPasses, config.maxGlobalPasses);
+
+  if (maxPasses <= 1) {
+    return {
+      ...bestEval.result,
+      optimizationStats: {
+        globalPasses: 1,
+        evaluatedPortStates: 0,
+        spacingExpansions: 0,
+        repeatedStateStop: false,
+      },
+    };
+  }
+
+  const seenStateHashes = new Set<string>();
+  seenStateHashes.add(bestEval.stateHash);
+
+  let globalPasses = 0;
+  let evaluatedPortStates = 0;
+  let spacingExpansions = 0;
+  let repeatedStateStop = false;
+
+  const getRankGap = (r: number): number => {
+    let val1: number | undefined;
+    if (spacingOverrides.rankGapAfterRank instanceof Map) {
+      val1 = spacingOverrides.rankGapAfterRank.get(r);
+    }
+    let val2 = spacingOverrides.rankGaps?.[r];
+    return Math.max(config.rankGap, val1 ?? 0, val2 ?? 0);
+  };
+
+  const getNodeGap = (nodeId: string): number => {
+    let val1: number | undefined;
+    if (spacingOverrides.nodeGapAfterNodeId instanceof Map) {
+      val1 = spacingOverrides.nodeGapAfterNodeId.get(nodeId);
+    }
+    let val2 = spacingOverrides.nodeGaps?.[nodeId];
+    return Math.max(config.nodeGap, val1 ?? 0, val2 ?? 0);
+  };
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    globalPasses++;
+
+    if (
+      bestEval.score.hardErrorCount === 0 &&
+      bestEval.score.crossingCount === 0 &&
+      bestEval.score.ordinaryLeaderCount === 0 &&
+      bestEval.score.hairpinCount === 0
+    ) {
+      break;
+    }
+
+    const currentConfig: CustomLayoutConfig = {
+      ...config,
+      graphPadding: currentGraphPadding,
+      maxLaneRings: Math.min(24, config.maxLaneRings + pass * 4),
     };
 
-    if (bestResult === null || compareLayoutScores(fullValidation, bestResult.validation) < 0) {
-      bestResult = currentResult;
+    const defectEdgeIds = findDefectEdgeIds(
+      bestEval.result.edges,
+      bestEval.result.badges,
+      bestEval.validation,
+      currentNodeLayout.classifiedEdges,
+    );
+
+    if (defectEdgeIds.length === 0 && bestEval.score.hardErrorCount === 0) {
+      break;
     }
 
-    if (isFullyValid) {
-      return bestResult;
+    const nodeMap = new Map<string, NormalizedNode & Point>();
+    for (const n of currentNodeLayout.normalizedGraph.nodes) {
+      const pos = currentNodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 };
+      nodeMap.set(n.id, { ...n, x: pos.x, y: pos.y });
+    }
+    const allNodesList = Array.from(nodeMap.values());
+
+    const candidatesMap = new Map<string, PortCandidate[]>();
+    for (const eId of defectEdgeIds) {
+      const edge = edges.find((e) => e.id === eId);
+      if (!edge || edge.source === edge.target) continue;
+
+      const srcNode = nodeMap.get(edge.source);
+      const tgtNode = nodeMap.get(edge.target);
+      if (!srcNode || !tgtNode) continue;
+
+      const classified = currentNodeLayout.classifiedEdges.find((e) => e.id === edge.id);
+      const role = classified?.role ?? "forward";
+
+      const cands = generatePortCandidates(
+        edge,
+        srcNode,
+        tgtNode,
+        role,
+        currentNodeLayout.nodePositions,
+        currentConfig,
+        allNodesList,
+      );
+      candidatesMap.set(edge.id, cands);
     }
 
-    const stateHash = hashLayoutState(positionedNodes, currentRoutes, badgeResult.placements);
-    if (seenStateHashes.has(stateHash)) {
-      return bestResult;
-    }
-    seenStateHashes.add(stateHash);
+    const altPortStates: { eId: string; assignmentMap: Map<string, PortSideAssignment> }[] = [];
+    for (const eId of defectEdgeIds) {
+      const cands = candidatesMap.get(eId);
+      if (!cands || cands.length === 0) continue;
 
-    if (pass > 0 && previousValidation !== null) {
-      const scoreDiff = compareLayoutScores(fullValidation, previousValidation);
-      if (scoreDiff > 0 && !hasSpacingOrPortProgress(fullValidation, previousValidation)) {
-        return bestResult;
+      const currentAss = explicitPortOverrides.get(eId) ?? {
+        srcSide: cands[0].srcSide,
+        tgtSide: cands[0].tgtSide,
+      };
+
+      const alts = enumeratePortAlternatives(
+        eId,
+        currentAss,
+        cands,
+        currentConfig.maxPortAlternativesPerEdge,
+      );
+
+      for (const alt of alts) {
+        const candidateMap = new Map<string, PortSideAssignment>(explicitPortOverrides);
+        candidateMap.set(eId, alt);
+
+        altPortStates.push({ eId, assignmentMap: candidateMap });
+        if (altPortStates.length >= currentConfig.maxPortStatesPerPass) {
+          break;
+        }
+      }
+      if (altPortStates.length >= currentConfig.maxPortStatesPerPass) {
+        break;
       }
     }
-    previousValidation = fullValidation;
 
-    const routeConflicts = new Set<string>();
-    const badgeConflicts = new Set<string>();
+    let portImproved = false;
+    for (const { eId, assignmentMap } of altPortStates) {
+      evaluatedPortStates++;
+      const candidateEval = evaluateLayoutState(currentNodeLayout, currentConfig, assignmentMap);
 
-    for (const diag of fullValidation.diagnostics) {
-      if (diag.severity !== "error") continue;
-      if (
-        diag.code === "EDGE_NODE_PENETRATION" ||
-        diag.code === "SHARED_EDGE_SEGMENT" ||
-        diag.code === "ENDPOINT_OFF_BOUNDARY" ||
-        diag.code === "WRONG_DEPARTURE_DIRECTION" ||
-        diag.code === "WRONG_ENTRY_DIRECTION" ||
-        diag.code === "ZERO_LENGTH_ARROW_SEGMENT" ||
-        diag.code === "MISSING_ROUTE"
-      ) {
-        for (const id of diag.ids) {
-          if (edges.some((e) => e.id === id)) {
-            routeConflicts.add(id);
-          }
+      if (seenStateHashes.has(candidateEval.stateHash)) {
+        continue;
+      }
+
+      if (compareLayoutScore(candidateEval.score, bestEval.score) < 0) {
+        bestEval = candidateEval;
+        const newAlt = assignmentMap.get(eId);
+        if (newAlt) {
+          explicitPortOverrides.set(eId, newAlt);
         }
-      } else if (
-        diag.code === "BADGE_NODE_OVERLAP" ||
-        diag.code === "BADGE_BADGE_OVERLAP" ||
-        diag.code === "BADGE_UNRELATED_EDGE_OVERLAP" ||
-        diag.code === "LEADER_COLLISION" ||
-        diag.code === "UNRESOLVED_BADGE"
-      ) {
-        for (const id of diag.ids) {
-          if (edges.some((e) => e.id === id)) {
-            badgeConflicts.add(id);
-          }
-        }
+        seenStateHashes.add(candidateEval.stateHash);
+        portImproved = true;
+        break;
       }
     }
 
-    const allConflicts = new Set<string>([...routeConflicts, ...badgeConflicts]);
-    if (allConflicts.size === 0) {
-      return bestResult;
-    }
+    if (!portImproved) {
+      if (pass >= maxPasses - 1) {
+        break;
+      }
 
-    for (const edgeId of routeConflicts) {
-      const currentOffset = portCandidateOffsets.get(edgeId) ?? 0;
-      portCandidateOffsets.set(edgeId, currentOffset + 1);
+      spacingExpansions++;
 
-      const edge = edges.find((e) => e.id === edgeId);
-      if (edge) {
-        const srcRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.source);
-        const tgtRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.target);
+      for (const eId of defectEdgeIds) {
+        const edge = edges.find((e) => e.id === eId);
+        if (!edge) continue;
+
+        const srcRank = rawNodeLayout.rankAssignment.nodeRankMap.get(edge.source);
+        const tgtRank = rawNodeLayout.rankAssignment.nodeRankMap.get(edge.target);
+
         if (srcRank !== undefined && tgtRank !== undefined && srcRank !== tgtRank) {
           const minRank = Math.min(srcRank, tgtRank);
-          const currentRankGap = spacingOverrides.rankGaps?.[minRank] ?? config.rankGap;
-          spacingOverrides.rankGaps = {
-            ...spacingOverrides.rankGaps,
-            [minRank]: currentRankGap + 40,
-          };
+          const curr = getRankGap(minRank);
+          if (!(spacingOverrides.rankGapAfterRank instanceof Map)) {
+            spacingOverrides.rankGapAfterRank = new Map();
+          }
+          (spacingOverrides.rankGapAfterRank as Map<number, number>).set(minRank, curr + 40);
+        } else if (srcRank !== undefined && tgtRank !== undefined && srcRank === tgtRank) {
+          const currSrc = getNodeGap(edge.source);
+          const currTgt = getNodeGap(edge.target);
+          if (!(spacingOverrides.nodeGapAfterNodeId instanceof Map)) {
+            spacingOverrides.nodeGapAfterNodeId = new Map();
+          }
+          (spacingOverrides.nodeGapAfterNodeId as Map<string, number>).set(edge.source, currSrc + 30);
+          (spacingOverrides.nodeGapAfterNodeId as Map<string, number>).set(edge.target, currTgt + 30);
         } else {
           currentGraphPadding += 30;
         }
       }
-    }
 
-    for (const edgeId of badgeConflicts) {
-      const edge = edges.find((e) => e.id === edgeId);
-      if (!edge) continue;
+      const expandedConfig: CustomLayoutConfig = {
+        ...currentConfig,
+        graphPadding: currentGraphPadding,
+      };
 
-      const srcRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.source);
-      const tgtRank = initialNodeLayout.rankAssignment.nodeRankMap.get(edge.target);
+      coordResult = assignCoordinates(
+        rawNodeLayout.normalizedGraph,
+        rawNodeLayout.layerGraph,
+        rawNodeLayout.orderedLayers,
+        expandedConfig,
+        spacingOverrides,
+      );
 
-      if (srcRank !== undefined && tgtRank !== undefined && srcRank !== tgtRank) {
-        const minRank = Math.min(srcRank, tgtRank);
-        const currentRankGap = spacingOverrides.rankGaps?.[minRank] ?? config.rankGap;
-        spacingOverrides.rankGaps = {
-          ...spacingOverrides.rankGaps,
-          [minRank]: currentRankGap + 40,
-        };
-      } else if (srcRank !== undefined && tgtRank !== undefined && srcRank === tgtRank) {
-        const currentSrcGap = spacingOverrides.nodeGaps?.[edge.source] ?? config.nodeGap;
-        const currentTgtGap = spacingOverrides.nodeGaps?.[edge.target] ?? config.nodeGap;
-        spacingOverrides.nodeGaps = {
-          ...spacingOverrides.nodeGaps,
-          [edge.source]: currentSrcGap + 30,
-          [edge.target]: currentTgtGap + 30,
-        };
+      currentNodeLayout = {
+        ...rawNodeLayout,
+        nodePositions: roundNodePositions(coordResult.nodePositions),
+        rankBandMap: coordResult.rankBandMap,
+        boundingBox: coordResult.boundingBox,
+      };
+
+      const spacingEval = evaluateLayoutState(
+        currentNodeLayout,
+        expandedConfig,
+        explicitPortOverrides,
+      );
+
+      if (seenStateHashes.has(spacingEval.stateHash)) {
+        repeatedStateStop = true;
+        break;
+      }
+
+      seenStateHashes.add(spacingEval.stateHash);
+
+      if (compareLayoutScore(spacingEval.score, bestEval.score) < 0) {
+        bestEval = spacingEval;
       } else {
-        currentGraphPadding += 30;
+        break;
       }
     }
   }
 
-  return (
-    bestResult ?? {
-      nodes: initialNodeLayout.normalizedGraph.nodes.map((n) => {
-        const pos = initialNodeLayout.nodePositions.get(n.id) ?? { x: 0, y: 0 };
-        return { ...n, x: pos.x, y: pos.y };
-      }),
-      edges: [],
-      badges: [],
-      crossings: [],
-      validation: validateCustomLayout({ nodes: [], edges: [], badges: [] }, config),
-      status: "invalid_hard_failure",
-    }
-  );
+  const finalStats: OptimizationStats = {
+    globalPasses,
+    evaluatedPortStates,
+    spacingExpansions,
+    repeatedStateStop,
+  };
+
+  return {
+    ...bestEval.result,
+    optimizationStats: finalStats,
+  };
 }

@@ -10,6 +10,12 @@ import {
   segmentIntersectsRectInterior,
   simplifyOrthogonalPath,
 } from "./geometry";
+import {
+  calculateHairpinCount,
+  calculateLeaderMetrics,
+  calculatePortSideImbalance,
+  compareLayoutScore,
+} from "./layoutObjective";
 import type {
   ClassifiedEdge,
   CustomLayoutResult,
@@ -17,6 +23,7 @@ import type {
   EdgeRole,
   LayoutDiagnostic,
   LayoutMetrics,
+  LayoutScore,
   LayoutValidationResult,
   Point,
   Rect,
@@ -38,7 +45,7 @@ export interface ExtendedLayoutValidationResult extends LayoutValidationResult {
 function addDiagnostic(
   diagnostics: ExtendedLayoutDiagnostic[],
   seenKeys: Set<string>,
-  diag: ExtendedLayoutDiagnostic
+  diag: ExtendedLayoutDiagnostic,
 ): boolean {
   let key: string;
   if (diag.ids.length === 0) {
@@ -83,6 +90,11 @@ export function validateCustomLayout(
     directionDeviationPenalty: 0,
     portSideReusePenalty: 0,
     totalArea: 0,
+    ordinaryLeaderCount: 0,
+    feedbackLeaderCount: 0,
+    totalLeaderLength: 0,
+    hairpinCount: 0,
+    portSideImbalance: 0,
   };
 
   const nodes = result.nodes ?? [];
@@ -108,10 +120,12 @@ export function validateCustomLayout(
   for (const edge of edges) {
     let hasNonFinite = false;
     if (edge.sourcePort) {
-      if (!isFinitePoint(edge.sourcePort.point) || !isFinitePoint(edge.sourcePort.stub)) hasNonFinite = true;
+      if (!isFinitePoint(edge.sourcePort.point) || !isFinitePoint(edge.sourcePort.stub))
+        hasNonFinite = true;
     }
     if (edge.targetPort) {
-      if (!isFinitePoint(edge.targetPort.point) || !isFinitePoint(edge.targetPort.stub)) hasNonFinite = true;
+      if (!isFinitePoint(edge.targetPort.point) || !isFinitePoint(edge.targetPort.stub))
+        hasNonFinite = true;
     }
     if (edge.points) {
       for (const p of edge.points) {
@@ -256,16 +270,20 @@ export function validateCustomLayout(
       let validEntry = true;
       switch (edge.targetPort.side) {
         case "top":
-          validEntry = pPrev.y < pLast.y - config.epsilon && Math.abs(pPrev.x - pLast.x) <= config.epsilon;
+          validEntry =
+            pPrev.y < pLast.y - config.epsilon && Math.abs(pPrev.x - pLast.x) <= config.epsilon;
           break;
         case "bottom":
-          validEntry = pPrev.y > pLast.y + config.epsilon && Math.abs(pPrev.x - pLast.x) <= config.epsilon;
+          validEntry =
+            pPrev.y > pLast.y + config.epsilon && Math.abs(pPrev.x - pLast.x) <= config.epsilon;
           break;
         case "left":
-          validEntry = pPrev.x < pLast.x - config.epsilon && Math.abs(pPrev.y - pLast.y) <= config.epsilon;
+          validEntry =
+            pPrev.x < pLast.x - config.epsilon && Math.abs(pPrev.y - pLast.y) <= config.epsilon;
           break;
         case "right":
-          validEntry = pPrev.x > pLast.x + config.epsilon && Math.abs(pPrev.y - pLast.y) <= config.epsilon;
+          validEntry =
+            pPrev.x > pLast.x + config.epsilon && Math.abs(pPrev.y - pLast.y) <= config.epsilon;
           break;
       }
       if (!validEntry) {
@@ -405,7 +423,7 @@ export function validateCustomLayout(
           if (
             addDiagnostic(diagnostics, seenDiagnosticKeys, {
               code: "BADGE_UNRELATED_EDGE_OVERLAP",
-              severity: "error",
+              severity: "warning",
               message: `Badge for edge ${badge.edgeId} overlaps unrelated edge ${edge.edgeId}`,
               ids: [badge.edgeId, edge.edgeId],
               rect: badge.rect,
@@ -463,7 +481,7 @@ export function validateCustomLayout(
   const crossings = detectEdgeCrossings(
     edges,
     result.edgeRoles ?? result.classifiedEdges,
-    config.epsilon
+    config.epsilon,
   );
   metrics.crossingCount = crossings.length;
 
@@ -558,6 +576,15 @@ export function validateCustomLayout(
     metrics.totalArea = 0;
   }
 
+  const roles = result.edgeRoles ?? result.classifiedEdges;
+  const leaderMetrics = calculateLeaderMetrics(badges, roles);
+  metrics.ordinaryLeaderCount = leaderMetrics.ordinaryLeaderCount;
+  metrics.feedbackLeaderCount = leaderMetrics.feedbackLeaderCount;
+  metrics.totalLeaderLength = leaderMetrics.totalLeaderLength;
+
+  metrics.hairpinCount = calculateHairpinCount(edges, config.epsilon);
+  metrics.portSideImbalance = calculatePortSideImbalance(nodes, edges);
+
   const hasError = diagnostics.some((d) => d.severity === "error");
   const isValid = !hasError;
 
@@ -569,64 +596,30 @@ export function validateCustomLayout(
   };
 }
 
+function validationResultToScore(res: LayoutValidationResult): LayoutScore {
+  const hardErrorCount = res.diagnostics.filter((d) => d.severity === "error").length;
+  return {
+    hardErrorCount: res.isValid ? hardErrorCount : Math.max(1, hardErrorCount),
+    nodeNodeOverlaps: res.metrics.nodeNodeOverlaps,
+    edgeNodePenetrations: res.metrics.edgeNodePenetrations,
+    sharedEdgeSegmentLength: res.metrics.sharedEdgeSegmentLength,
+    badgeNodeOverlaps: res.metrics.badgeNodeOverlaps,
+    badgeBadgeOverlaps: res.metrics.badgeBadgeOverlaps,
+    badgeUnrelatedEdgeOverlaps: res.metrics.badgeUnrelatedEdgeOverlaps,
+    crossingCount: res.metrics.crossingCount,
+    ordinaryLeaderCount: res.metrics.ordinaryLeaderCount ?? 0,
+    hairpinCount: res.metrics.hairpinCount ?? 0,
+    bendCount: res.metrics.bendCount,
+    directionDeviationPenalty: res.metrics.directionDeviationPenalty,
+    totalLength: res.metrics.totalLength,
+    portSideImbalance: res.metrics.portSideImbalance ?? 0,
+    feedbackLeaderCount: res.metrics.feedbackLeaderCount ?? 0,
+    totalLeaderLength: res.metrics.totalLeaderLength ?? 0,
+    totalArea: res.metrics.totalArea,
+    stateHash: "",
+  };
+}
+
 export function compareLayoutScores(a: LayoutValidationResult, b: LayoutValidationResult): number {
-  if (a.isValid !== b.isValid) {
-    return a.isValid ? -1 : 1;
-  }
-
-  const aErrorCount = a.diagnostics.filter((d) => d.severity === "error").length;
-  const bErrorCount = b.diagnostics.filter((d) => d.severity === "error").length;
-  if (aErrorCount !== bErrorCount) {
-    return aErrorCount - bErrorCount;
-  }
-
-  if (a.metrics.nodeNodeOverlaps !== b.metrics.nodeNodeOverlaps) {
-    return a.metrics.nodeNodeOverlaps - b.metrics.nodeNodeOverlaps;
-  }
-
-  if (a.metrics.edgeNodePenetrations !== b.metrics.edgeNodePenetrations) {
-    return a.metrics.edgeNodePenetrations - b.metrics.edgeNodePenetrations;
-  }
-
-  if (a.metrics.sharedEdgeSegmentLength !== b.metrics.sharedEdgeSegmentLength) {
-    return a.metrics.sharedEdgeSegmentLength - b.metrics.sharedEdgeSegmentLength;
-  }
-
-  if (a.metrics.badgeNodeOverlaps !== b.metrics.badgeNodeOverlaps) {
-    return a.metrics.badgeNodeOverlaps - b.metrics.badgeNodeOverlaps;
-  }
-
-  if (a.metrics.badgeBadgeOverlaps !== b.metrics.badgeBadgeOverlaps) {
-    return a.metrics.badgeBadgeOverlaps - b.metrics.badgeBadgeOverlaps;
-  }
-
-  if (a.metrics.badgeUnrelatedEdgeOverlaps !== b.metrics.badgeUnrelatedEdgeOverlaps) {
-    return a.metrics.badgeUnrelatedEdgeOverlaps - b.metrics.badgeUnrelatedEdgeOverlaps;
-  }
-
-  if (a.metrics.crossingCount !== b.metrics.crossingCount) {
-    return a.metrics.crossingCount - b.metrics.crossingCount;
-  }
-
-  if (a.metrics.bendCount !== b.metrics.bendCount) {
-    return a.metrics.bendCount - b.metrics.bendCount;
-  }
-
-  if (a.metrics.totalLength !== b.metrics.totalLength) {
-    return a.metrics.totalLength - b.metrics.totalLength;
-  }
-
-  if (a.metrics.directionDeviationPenalty !== b.metrics.directionDeviationPenalty) {
-    return a.metrics.directionDeviationPenalty - b.metrics.directionDeviationPenalty;
-  }
-
-  if (a.metrics.portSideReusePenalty !== b.metrics.portSideReusePenalty) {
-    return a.metrics.portSideReusePenalty - b.metrics.portSideReusePenalty;
-  }
-
-  if (a.metrics.totalArea !== b.metrics.totalArea) {
-    return a.metrics.totalArea - b.metrics.totalArea;
-  }
-
-  return 0;
+  return compareLayoutScore(validationResultToScore(a), validationResultToScore(b));
 }

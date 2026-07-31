@@ -8,9 +8,7 @@ describe("computeCustomLayout", () => {
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
     ];
-    const edges: NormalizedEdge[] = [
-      { id: "e1", source: "A", target: "B" },
-    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
 
     const result = computeCustomLayout(nodes, edges);
 
@@ -50,7 +48,9 @@ describe("computeCustomLayout", () => {
       { id: "B", width: 400, height: 400 },
     ];
     const edges: NormalizedEdge[] = [
-      { id: "e1", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE" },
+      { id: "e1", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE_1" },
+      { id: "e2", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE_2" },
+      { id: "e3", source: "A", target: "B", label: "HUGE_LABEL_INSIDE_TIGHT_CLEARANCE_3" },
     ];
 
     const result = computeCustomLayout(nodes, edges, {
@@ -59,6 +59,7 @@ describe("computeCustomLayout", () => {
       badgeClearance: 100,
       maxGlobalPasses: 1,
       maxBadgeCandidatesPerEdge: 1,
+      maxBadgeBacktrackSteps: 1,
     });
 
     expect(result).toBeDefined();
@@ -67,6 +68,19 @@ describe("computeCustomLayout", () => {
     expect(result.validation.isValid).toBe(false);
   });
 
+  it("forwards optimizationStats on CustomLayoutResult", () => {
+    const nodes: NormalizedNode[] = [
+      { id: "A", width: 100, height: 50 },
+      { id: "B", width: 100, height: 50 },
+    ];
+    const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
+
+    const result = computeCustomLayout(nodes, edges);
+
+    expect(result.optimizationStats).toBeDefined();
+    expect(result.optimizationStats?.globalPasses).toBeGreaterThanOrEqual(1);
+    expect(typeof result.optimizationStats?.evaluatedPortStates).toBe("number");
+    expect(typeof result.optimizationStats?.spacingExpansions).toBe("number");
+    expect(typeof result.optimizationStats?.repeatedStateStop).toBe("boolean");
+  });
 });
-
-
