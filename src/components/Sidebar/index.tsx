@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import type { GraphDataset } from "../../types/graphData";
 import { Button, FileUploadButton } from "../../ui";
 import "./Sidebar.css";
@@ -26,6 +27,21 @@ export const Sidebar: FC<SidebarProps> = ({
   onOpenDeveloperSettings,
   onOpenGraphTesting,
 }) => {
+  const navigate = useNavigate();
+
+  const handleSelectSample = (fileId: string) => {
+    onSelectSample(fileId);
+    void navigate({
+      to: "/graphs/$fileId",
+      params: { fileId },
+    });
+  };
+
+  const handleOpenGraphTesting = () => {
+    onOpenGraphTesting?.();
+    void navigate({ to: "/testing" });
+  };
+
   return (
     <aside className="sidebar-container">
       <div className="sidebar-content">
@@ -37,7 +53,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 <Button
                   variant={currentFile === sample.id ? "primary" : "ghost"}
                   className={`sample-btn ${currentFile === sample.id ? "active" : ""}`}
-                  onClick={() => onSelectSample(sample.id)}
+                  onClick={() => handleSelectSample(sample.id)}
                 >
                   <span className="sample-icon">{sample.icon}</span>
                   <span className="sample-label">{sample.name}</span>
@@ -60,7 +76,7 @@ export const Sidebar: FC<SidebarProps> = ({
         <Button
           variant="ghost"
           className="sidebar-settings-btn"
-          onClick={onOpenGraphTesting}
+          onClick={handleOpenGraphTesting}
           style={{ marginTop: "6px" }}
         >
           🧪 Graph Testing

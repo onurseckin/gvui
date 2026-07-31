@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog } from "@base-ui-components/react/dialog";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../../ui/atoms/Button";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphDataset } from "../../types/graphData";
@@ -25,6 +26,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   currentFile,
   onNavigateNode,
 }) => {
+  const navigate = useNavigate();
   const [scope, setScope] = useState<CommandPaletteScope>("current");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -149,9 +151,14 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   const handleSelectItem = useCallback(
     (node: SearchResultNode) => {
       onNavigateNode(node.fileId, node.id);
+      void navigate({
+        to: "/graphs/$fileId",
+        params: { fileId: node.fileId },
+        search: { node: node.id },
+      });
       onClose();
     },
-    [onNavigateNode, onClose],
+    [onNavigateNode, navigate, onClose],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

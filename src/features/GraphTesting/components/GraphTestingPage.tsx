@@ -18,11 +18,14 @@ import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
 import { LayoutErrorBoundary } from "./LayoutErrorBoundary";
 import { useCustomLayoutWorker } from "../hooks/useCustomLayoutWorker";
 
+import { useNavigate } from "@tanstack/react-router";
+
 interface GraphTestingPageProps {
-  onBackToApp: () => void;
+  onBackToApp?: () => void;
 }
 
 export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => {
+  const navigate = useNavigate();
   // Default to Scenario #20 (Full DevOps Microservice Mesh)
   const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
   const [debugOptions, setDebugOptions] = useState<DebugOptions>({
@@ -83,7 +86,11 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
       {/* Page Header */}
       <header className="graph-testing-page-header">
         <div className="graph-testing-header-left">
-          <Button variant="outline" onClick={onBackToApp} className="back-to-app-btn">
+          <Button
+            variant="outline"
+            onClick={() => (onBackToApp ? onBackToApp() : void navigate({ to: "/" }))}
+            className="back-to-app-btn"
+          >
             ← Back to Graph App
           </Button>
           <h1 className="graph-testing-title">🧪 Graph Layout Playground</h1>
