@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { computeCustomEngineGraphLayout } from "./customLayoutAdapter";
+import { computeCustomEngineGraphLayout, computeCustomEngineGraphLayoutAsync } from "./customLayoutAdapter";
 import type { GraphDataset } from "../../types/graphData";
 
 describe("computeCustomEngineGraphLayout", () => {
@@ -48,5 +48,28 @@ describe("computeCustomEngineGraphLayout", () => {
     const result = computeCustomEngineGraphLayout(dataset);
     expect(result.nodes).toEqual([]);
     expect(result.edges).toEqual([]);
+  });
+
+  it("computes layout asynchronously and triggers onProgress callbacks", async () => {
+    const dataset: GraphDataset = {
+      id: "async-ds-1",
+      title: "Async Test Dataset",
+      nodes: [
+        { id: "A", name: "Node A" },
+        { id: "B", name: "Node B" },
+      ],
+      edges: [{ id: "e1", source: "A", target: "B" }],
+    };
+
+    const progressReports: Array<{ stageIndex: number; totalStages: number; percent: number }> = [];
+    const result = await computeCustomEngineGraphLayoutAsync(dataset, {
+      onProgress: (progress) => {
+        progressReports.push(progress);
+      },
+    });
+
+    expect(result.nodes).toHaveLength(2);
+    expect(result.edges).toHaveLength(1);
+    expect(progressReports.length).toBeGreaterThan(0);
   });
 });
