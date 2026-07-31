@@ -365,4 +365,79 @@ describe("customLayoutWorkerClient", () => {
     }
     expect(errorEmitted).toBe(true);
   });
+
+  it("invokes onProgress callback when worker streams progress messages", async () => {
+    let requestId: string | undefined;
+    const expectedResult = { nodes: [], edges: [], badges: [], crossings: [], validation: {} } as never;
+    const progressEvents: Array<{
+      stageIndex: number;
+      totalStages: number;
+      percent: number;
+      stageText: string;
+      detail: string;
+    }> = [];
+
+    const worker: WorkerLike & { terminateCalls: number } = {
+      terminateCalls: 0,
+      postMessage: (request) => {
+        requestId = request.id;
+      },
+      terminate() {
+        this.terminateCalls += 1;
+      },
+    };
+
+    const promise = computeCustomLayoutAsync(
+      {
+        nodes: [{ id: "A", width: 100, height: 50 }],
+        edges: [],
+        onProgress: (progress) => {
+          progressEvents.push(progress);
+        },
+      },
+      {
+        runtime: {
+          createWorker: () => worker,
+          setTimer: () => "watchdog",
+          clearTimer: () => {},
+        },
+      },
+    );
+
+    worker.onmessage?.({
+      data: {
+        id: requestId!,
+        type: "progress",
+        stageIndex: 1,
+        totalStages: 5,
+        percent: 20,
+        stageText: "Stage 1 of 5",
+        detail: "Normalizing topology...",
+      },
+    } as never);
+
+    worker.onmessage?.({
+      data: {
+        id: requestId!,
+        type: "progress",
+        stageIndex: 2,
+        totalStages: 5,
+        percent: 40,
+        stageText: "Stage 2 of 5",
+        detail: "Building hierarchy tree...",
+      },
+    } as never);
+
+    expect(progressEvents.length).toBe(2);
+    expect(progressEvents[0].detail).toBe("Normalizing topology...");
+    expect(progressEvents[1].detail).toBe("Building hierarchy tree...");
+
+    worker.onmessage?.({
+      data: { id: requestId!, type: "success", result: expectedResult },
+    } as never);
+
+    const result = await promise;
+    expect(result).toBe(expectedResult);
+  });
 });
+

@@ -10,6 +10,16 @@ export interface CustomLayoutWorkerRequest {
   configPartial?: Partial<CustomLayoutConfig>;
 }
 
+export interface CustomLayoutWorkerProgressMessage {
+  id: string;
+  type: "progress";
+  stageIndex: number;
+  totalStages: number;
+  percent: number;
+  stageText: string;
+  detail: string;
+}
+
 export interface CustomLayoutWorkerResponse {
   id: string;
   type: "success" | "error";
@@ -17,12 +27,23 @@ export interface CustomLayoutWorkerResponse {
   error?: string;
 }
 
+export type CustomLayoutWorkerMessage =
+  | CustomLayoutWorkerResponse
+  | CustomLayoutWorkerProgressMessage;
+
 if (typeof self !== "undefined" && typeof self.postMessage === "function") {
   self.onmessage = (event: MessageEvent<CustomLayoutWorkerRequest>) => {
     const { id, nodes, edges, configPartial } = event.data;
     try {
       const config = resolveCustomLayoutConfig(configPartial);
-      const result = optimizeLayout(nodes, edges, config);
+      const result = optimizeLayout(nodes, edges, config, (progress) => {
+        const progressMessage: CustomLayoutWorkerProgressMessage = {
+          id,
+          type: "progress",
+          ...progress,
+        };
+        self.postMessage(progressMessage);
+      });
       const response: CustomLayoutWorkerResponse = {
         id,
         type: "success",
@@ -39,3 +60,4 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function") {
     }
   };
 }
+

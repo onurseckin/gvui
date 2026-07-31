@@ -1,5 +1,7 @@
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
+import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
+import { deriveProgressState } from "./customLayoutWorkerPool";
 import { searchBestLayoutState } from "./layoutOptimizerState";
 import type {
   BadgePlacement,
@@ -49,11 +51,18 @@ export function optimizeLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   configPartial?: Partial<CustomLayoutConfig>,
+  onProgress?: (progress: LayoutProgressInfo) => void,
 ): CustomLayoutResult {
+  onProgress?.(deriveProgressState(1, 5, "Normalizing topology..."));
   const config = resolveCustomLayoutConfig(configPartial);
 
+  onProgress?.(deriveProgressState(2, 5, "Building hierarchy tree..."));
+  onProgress?.(deriveProgressState(3, 5, "Computing A* routes..."));
+  onProgress?.(deriveProgressState(4, 5, "Minimizing crossings..."));
   const optResult = searchBestLayoutState(nodes, edges, config);
   const bestEval = optResult.bestEvaluation;
+
+  onProgress?.(deriveProgressState(5, 5, "Finalizing layout..."));
 
   return {
     nodes: bestEval.nodes,

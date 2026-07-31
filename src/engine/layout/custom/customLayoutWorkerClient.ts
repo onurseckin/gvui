@@ -1,6 +1,10 @@
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
-import type { CustomLayoutWorkerRequest, CustomLayoutWorkerResponse } from "./customLayoutWorker";
+import type {
+  CustomLayoutWorkerMessage,
+  CustomLayoutWorkerRequest,
+} from "./customLayoutWorker";
+import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
 import { optimizeLayout } from "./optimizeLayout";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
@@ -10,12 +14,15 @@ export interface ComputeLayoutWorkerOptions {
   configPartial?: Partial<CustomLayoutConfig>;
   timeoutMs?: number;
   signal?: AbortSignal;
+  onProgress?: (progress: LayoutProgressInfo) => void;
 }
+
+export type ComputeLayoutAsyncOptions = ComputeLayoutWorkerOptions;
 
 export interface WorkerLike {
   postMessage(message: CustomLayoutWorkerRequest): void;
   terminate(): void;
-  onmessage?: ((event: MessageEvent<CustomLayoutWorkerResponse>) => void) | null;
+  onmessage?: ((event: MessageEvent<CustomLayoutWorkerMessage>) => void) | null;
   onerror?: ((event: ErrorEvent) => void) | null;
   onmessageerror?: ((event: MessageEvent<unknown>) => void) | null;
 }
@@ -44,6 +51,7 @@ export interface ComputeLayoutWorkerDependencies {
     nodes: NormalizedNode[],
     edges: NormalizedEdge[],
     config: CustomLayoutConfig,
+    onProgress?: (progress: LayoutProgressInfo) => void,
   ) => CustomLayoutResult;
 }
 
@@ -115,7 +123,7 @@ export async function computeCustomLayoutAsync(
     }
 
     // A true SSR/Node environment has no interactive main thread to freeze.
-    return computeSynchronously(nodes, edges, config);
+    return computeSynchronously(nodes, edges, config, options.onProgress);
   }
 
   const reqId = `req_${++requestIdCounter}_${Date.now()}`;
@@ -157,6 +165,10 @@ export async function computeCustomLayoutAsync(
       worker = runtime.createWorker();
       worker.onmessage = (event) => {
         if (event.data.id !== reqId) return;
+        if (event.data.type === "progress") {
+          options.onProgress?.(event.data);
+          return;
+        }
         if (event.data.type === "success" && event.data.result) {
           settle({ result: event.data.result });
         } else {
@@ -184,3 +196,4 @@ export async function computeCustomLayoutAsync(
     }
   });
 }
+
