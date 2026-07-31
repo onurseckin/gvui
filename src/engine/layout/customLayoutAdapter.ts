@@ -32,8 +32,14 @@ function mapLayoutResultToPositioned(
     const badge = badgeMap.get(edgeId);
 
     let path = "";
+    let midX = 0;
+    let midY = 0;
+
     if (route && route.points.length >= 2) {
       path = renderPathWithCrossingBridges(route.points, crossingPoints);
+      const midPointIdx = Math.floor(route.points.length / 2);
+      midX = route.points[midPointIdx].x;
+      midY = route.points[midPointIdx].y;
     } else {
       const srcNode = nodePosMap.get(edge.source);
       const tgtNode = nodePosMap.get(edge.target);
@@ -43,14 +49,19 @@ function mapLayoutResultToPositioned(
         const tgtCx = tgtNode.x + tgtNode.width / 2;
         const tgtCy = tgtNode.y + tgtNode.height / 2;
         path = `M ${srcCx} ${srcCy} L ${tgtCx} ${tgtCy}`;
+        midX = (srcCx + tgtCx) / 2;
+        midY = (srcCy + tgtCy) / 2;
       }
     }
+
+    const labelX = badge ? badge.rect.x + badge.rect.width / 2 : midX;
+    const labelY = badge ? badge.rect.y + badge.rect.height / 2 : midY;
 
     return {
       ...edge,
       path,
-      labelX: badge ? badge.rect.x + badge.rect.width / 2 : undefined,
-      labelY: badge ? badge.rect.y + badge.rect.height / 2 : undefined,
+      labelX,
+      labelY,
     };
   });
 

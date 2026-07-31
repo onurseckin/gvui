@@ -52,7 +52,7 @@ export const GraphCanvas: FC = () => {
     if (stored) {
       setPositionedGraph(stored.nodes, stored.edges);
       if (useGraphStore.getState().shouldAutoFit) {
-        const fitResult = calculateFitView(stored.nodes, containerRef.current?.parentElement);
+        const fitResult = calculateFitView(stored.nodes, stored.edges, containerRef.current?.parentElement);
         setZoomLevel(fitResult.zoomLevel);
         setPanOffset(fitResult.panOffset);
         setShouldAutoFit(false);
@@ -82,7 +82,7 @@ export const GraphCanvas: FC = () => {
           saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
           if (useGraphStore.getState().shouldAutoFit) {
-            const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+            const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
             setZoomLevel(fitResult.zoomLevel);
             setPanOffset(fitResult.panOffset);
             setShouldAutoFit(false);
@@ -97,7 +97,7 @@ export const GraphCanvas: FC = () => {
                 saveStoredLayout(layoutMode, signature, { nodes, edges });
                 setPositionedGraph(nodes, edges);
                 if (useGraphStore.getState().shouldAutoFit) {
-                  const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+                  const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
                   setZoomLevel(fitResult.zoomLevel);
                   setPanOffset(fitResult.panOffset);
                   setShouldAutoFit(false);
@@ -114,7 +114,7 @@ export const GraphCanvas: FC = () => {
           saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
           if (useGraphStore.getState().shouldAutoFit) {
-            const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+            const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
             setZoomLevel(fitResult.zoomLevel);
             setPanOffset(fitResult.panOffset);
             setShouldAutoFit(false);
@@ -306,8 +306,16 @@ export const GraphCanvas: FC = () => {
               return null;
             }
             const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
-            const badgeX = edge.labelX ?? 0;
-            const badgeY = edge.labelY ?? 0;
+            let badgeX = edge.labelX ?? 0;
+            let badgeY = edge.labelY ?? 0;
+            if ((badgeX === 0 && badgeY === 0) && edge.path) {
+              const matches = edge.path.match(/[-+]?\d*\.?\d+/g);
+              if (matches && matches.length >= 4) {
+                const midIdx = Math.floor(matches.length / 4) * 2;
+                badgeX = parseFloat(matches[midIdx]) || 0;
+                badgeY = parseFloat(matches[midIdx + 1]) || 0;
+              }
+            }
 
             return (
               <g key={`badge-${edge.id}`} style={{ pointerEvents: "auto" }}>

@@ -10,6 +10,7 @@ export const CanvasToolbar: FC = () => {
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const positionedNodes = useGraphStore((state) => state.positionedNodes);
+  const positionedEdges = useGraphStore((state) => state.positionedEdges);
 
   const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
@@ -24,11 +25,11 @@ export const CanvasToolbar: FC = () => {
       resetViewport();
       return;
     }
-    const fitResult = calculateFitView(positionedNodes);
+    const fitResult = calculateFitView(positionedNodes, positionedEdges);
     setZoomLevel(fitResult.zoomLevel);
     setPanOffset(fitResult.panOffset);
     useGraphStore.setState({ collapsedNodeIds: new Set<string>() });
-  }, [positionedNodes, resetViewport, setPanOffset, setZoomLevel]);
+  }, [positionedNodes, positionedEdges, resetViewport, setPanOffset, setZoomLevel]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
