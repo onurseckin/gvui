@@ -41,96 +41,232 @@ This decoupled approach retains the elegant curved "hub-and-spoke" wheel aesthet
 
 ---
 
-## 2. Bottom-Up Mathematical Deconstruction
+## 2. Bottom-Up Mathematical Deconstruction & Numerical Sub-Steps
 
 We derive the quadratic Bezier curve, its tangent vectors, the true curve apex $\mathbf{B}(0.5)$, the linear chord midpoint $\mathbf{P}_{\text{label}}$, and the deflection vector $\mathbf{D}$ step by step.
 
-### Step 1: Endpoint Identification
+---
 
-For an edge $e = (u, v)$ connecting source node $u$ and target node $v$, node center coordinates are extracted from node top-left origins $(X_u, Y_u)$ and dimensions $(W_u, H_u)$:
+### Sub-step 2.1: Node Center Extraction $\mathbf{P}_s, \mathbf{P}_t$ & Central Hub Anchor $\mathbf{P}_0$
 
-$$\mathbf{P}_s = \begin{pmatrix} srcCx \\ srcCy \end{pmatrix} = \begin{pmatrix} X_u + \frac{W_u}{2} \\[4pt] Y_u + \frac{H_u}{2} \end{pmatrix}, \quad \mathbf{P}_t = \begin{pmatrix} tgtCx \\ tgtCy \end{pmatrix} = \begin{pmatrix} X_v + \frac{W_v}{2} \\[4pt] Y_v + \frac{H_v}{2} \end{pmatrix}$$
+#### 1. Mathematical Sub-Component Formula
+For edge $e = (u, v)$, endpoint centers $\mathbf{P}_s, \mathbf{P}_t$ and control hub $\mathbf{P}_0$ are extracted from node top-left origins $(X, Y)$ and dimensions $(W, H)$:
 
-The control point $\mathbf{P}_0$ is fixed at the central hub canvas origin:
+$$\mathbf{P}_s = \begin{pmatrix} srcCx \\ srcCy \end{pmatrix} = \begin{pmatrix} X_u + \frac{W_u}{2} \\[4pt] Y_u + \frac{H_u}{2} \end{pmatrix}, \quad \mathbf{P}_t = \begin{pmatrix} tgtCx \\ tgtCy \end{pmatrix} = \begin{pmatrix} X_v + \frac{W_v}{2} \\[4pt] Y_v + \frac{H_v}{2} \end{pmatrix}, \quad \mathbf{P}_0 = \begin{pmatrix} X_0 \\ Y_0 \end{pmatrix}$$
 
-$$\mathbf{P}_0 = \begin{pmatrix} centerX \\ centerY \end{pmatrix} = \begin{pmatrix} X_0 \\ Y_0 \end{pmatrix}$$
+#### 2. Concrete Numerical Graph Example
+Given edge $e = (u, v)$ connecting Source Node $u$ at origin $(40, 170)$ with dimensions $120 \times 60$, Target Node $v$ at origin $(640, 170)$ with dimensions $120 \times 60$, and Canvas Hub Origin $(X_0, Y_0) = (400, 500)$:
+1. **Source Node Center**:
+   $$\mathbf{P}_s = \begin{pmatrix} 40 + \frac{120}{2} \\[4pt] 170 + \frac{60}{2} \end{pmatrix} = \begin{pmatrix} 100 \\[4pt] 200 \end{pmatrix}$$
+2. **Target Node Center**:
+   $$\mathbf{P}_t = \begin{pmatrix} 640 + \frac{120}{2} \\[4pt] 170 + \frac{60}{2} \end{pmatrix} = \begin{pmatrix} 700 \\[4pt] 200 \end{pmatrix}$$
+3. **Central Hub Control Point Anchor**:
+   $$\mathbf{P}_0 = \begin{pmatrix} 400 \\[4pt] 500 \end{pmatrix}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ExtractEndpointsAndHub(srcNode, tgtNode, centerX, centerY):
+    // Input: srcNode (x=40,y=170,w=120,h=60), tgtNode (x=640,y=170,w=120,h=60), hub=(400,500)
+    // Output: P_s, P_t, P_0 points
+    srcCx <- srcNode.x + (srcNode.width / 2)   // 40 + 60 = 100
+    srcCy <- srcNode.y + (srcNode.height / 2)  // 170 + 30 = 200
+    tgtCx <- tgtNode.x + (tgtNode.width / 2)   // 640 + 60 = 700
+    tgtCy <- tgtNode.y + (tgtNode.height / 2)  // 170 + 30 = 200
+    RETURN { P_s: (srcCx, srcCy), P_t: (tgtCx, tgtCy), P_0: (centerX, centerY) }
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+P_s (100, 200)                                                  P_t (700, 200)
+     o                                                               o
+     │                                                               │
+     │                                                               │
+     └───────────────────────────────┐───────────────────────────────┘
+                                     ▼
+                            Central Hub P_0 (400, 500)
+```
 
 ---
 
-### Step 2: Parametric Quadratic Bezier Equation $\mathbf{B}(t)$
+### Sub-step 2.2: Parametric Quadratic Bezier Equation $\mathbf{B}(t)$ & Curve Apex $\mathbf{B}(0.5)$
 
-The continuous 2D parametric trajectory $\mathbf{B}(t)$ for $t \in [0, 1]$ between $\mathbf{P}_s$ and $\mathbf{P}_t$ anchored by control point $\mathbf{P}_0$ is defined as:
+#### 1. Mathematical Sub-Component Formula
+The 2D parametric trajectory $\mathbf{B}(t)$ for $t \in [0, 1]$ anchored by control point $\mathbf{P}_0$ is:
 
 $$\mathbf{B}(t) = (1-t)^2 \mathbf{P}_s + 2(1-t)t \mathbf{P}_0 + t^2 \mathbf{P}_t$$
 
-Expanding into Cartesian component equations:
-
-$$B_x(t) = (1-t)^2 \cdot srcCx + 2(1-t)t \cdot centerX + t^2 \cdot tgtCx$$
-
-$$B_y(t) = (1-t)^2 \cdot srcCy + 2(1-t)t \cdot centerY + t^2 \cdot tgtCy$$
-
-In SVG path syntax, this quadratic Bezier curve is encoded as:
-
-$$\texttt{"M } srcCx \text{ } srcCy \texttt{ Q } centerX \text{ } centerY \text{ } tgtCx \text{ } tgtCy\texttt{"}$$
-
----
-
-### Step 3: Tangent & Velocity Vector Analysis $\mathbf{B}'(t)$
-
-Taking the first derivative of $\mathbf{B}(t)$ with respect to parameter $t$ yields the velocity vector $\mathbf{B}'(t)$ along the trajectory:
-
-$$\mathbf{B}'(t) = \frac{d\mathbf{B}(t)}{dt} = 2(1-t)(\mathbf{P}_0 - \mathbf{P}_s) + 2t(\mathbf{P}_t - \mathbf{P}_0)$$
-
-Evaluating at path endpoints:
-
-1. **Initial Departure Tangent ($t = 0$)**:
-   $$\mathbf{B}'(0) = 2(\mathbf{P}_0 - \mathbf{P}_s)$$
-   *Physical Meaning*: The trajectory leaves source node center $\mathbf{P}_s$ pointing directly toward the central hub origin $\mathbf{P}_0$.
-
-2. **Terminal Arrival Tangent ($t = 1$)**:
-   $$\mathbf{B}'(1) = 2(\mathbf{P}_t - \mathbf{P}_0)$$
-   *Physical Meaning*: The trajectory approaches target node center $\mathbf{P}_t$ coming directly from the direction of the central hub origin $\mathbf{P}_0$.
-
----
-
-### Step 4: True Curve Apex Derivation ($\mathbf{B}(0.5)$)
-
-Evaluating $\mathbf{B}(t)$ at mid-parameter $t = 0.5$:
-
-$$\mathbf{B}(0.5) = (1-0.5)^2 \mathbf{P}_s + 2(1-0.5)(0.5) \mathbf{P}_0 + (0.5)^2 \mathbf{P}_t$$
+Evaluating at mid-parameter $t = 0.5$ yields the true geometric curve apex:
 
 $$\mathbf{B}(0.5) = 0.25 \, \mathbf{P}_s + 0.5 \, \mathbf{P}_0 + 0.25 \, \mathbf{P}_t = \frac{\mathbf{P}_s + 2\mathbf{P}_0 + \mathbf{P}_t}{4}$$
 
-Note that $\mathbf{B}(0.5)$ is weighted $50\%$ by central hub $\mathbf{P}_0$, pulling the true geometric midpoint of the curve heavily inward toward the center origin.
+SVG path string representation: `M srcCx srcCy Q centerX centerY tgtCx tgtCy`.
+
+#### 2. Concrete Numerical Graph Example
+Given $\mathbf{P}_s = (100, 200)$, $\mathbf{P}_t = (700, 200)$, $\mathbf{P}_0 = (400, 500)$, evaluating at $t = 0.5$:
+1. **X Coordinate Calculation**:
+   $$B_x(0.5) = 0.25(100) + 0.5(400) + 0.25(700) = 25 + 200 + 175 = 400\text{px}$$
+2. **Y Coordinate Calculation**:
+   $$B_y(0.5) = 0.25(200) + 0.5(500) + 0.25(200) = 50 + 250 + 50 = 350\text{px}$$
+3. **Curve Apex Tuple**: $\mathbf{B}(0.5) = (400, 350)$.
+4. **SVG Path String**: `M 100 200 Q 400 500 700 200`.
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION EvaluateQuadraticBezier(P_s, P_0, P_t, t):
+    // Input: P_s=(100,200), P_0=(400,500), P_t=(700,200), t=0.5
+    // Output: B(t) point and SVG path string
+    bx <- ((1 - t)^2 * P_s.x) + (2 * (1 - t) * t * P_0.x) + (t^2 * P_t.x) // 400
+    by <- ((1 - t)^2 * P_s.y) + (2 * (1 - t) * t * P_0.y) + (t^2 * P_t.y) // 350
+    pathStr <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", P_s.x, P_s.y, P_0.x, P_0.y, P_t.x, P_t.y)
+    RETURN { B_t: (bx, by), pathString: pathStr }
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+P_s (100, 200)                                                  P_t (700, 200)
+     o                                                               o
+      \                                                             /
+       \                   B(0.5) Curve Apex                       /
+        \                      (400, 350)                         /
+         ` .                       o                           . '
+            ` . _                 / \                 _ . '
+                 ` ` - - . _     /   \     _ . - - ` `
+                             ` - o - - `
+                            Hub Anchor P_0
+                              (400, 500)
+```
 
 ---
 
-### Step 5: Linear Chord Midpoint Calculation ($\mathbf{P}_{\text{label}}$)
+### Sub-step 2.3: Tangent & Velocity Vector Analysis $\mathbf{B}'(t)$
 
+#### 1. Mathematical Sub-Component Formula
+Taking the first derivative of $\mathbf{B}(t)$ with respect to $t$ yields velocity vector $\mathbf{B}'(t)$:
+
+$$\mathbf{B}'(t) = \frac{d\mathbf{B}(t)}{dt} = 2(1-t)(\mathbf{P}_0 - \mathbf{P}_s) + 2t(\mathbf{P}_t - \mathbf{P}_0)$$
+
+Evaluating at boundary endpoints $t=0$ and $t=1$:
+
+$$\mathbf{B}'(0) = 2(\mathbf{P}_0 - \mathbf{P}_s), \quad \mathbf{B}'(1) = 2(\mathbf{P}_t - \mathbf{P}_0)$$
+
+#### 2. Concrete Numerical Graph Example
+Given $\mathbf{P}_s = (100, 200)$, $\mathbf{P}_t = (700, 200)$, $\mathbf{P}_0 = (400, 500)$:
+1. **Departure Vector ($t = 0$)**:
+   $$\mathbf{B}'(0) = 2(400-100, 500-200) = 2(300, 300) = (600, 600)$$
+   Departure Angle: $\theta_{\text{dep}} = \arctan(600/600) = 45^\circ$ (pointing directly toward hub $\mathbf{P}_0$).
+2. **Arrival Vector ($t = 1$)**:
+   $$\mathbf{B}'(1) = 2(700-400, 200-500) = 2(300, -300) = (600, -600)$$
+   Arrival Angle: $\theta_{\text{arr}} = \arctan(-600/600) = -45^\circ$ (approaching from hub $\mathbf{P}_0$).
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeBezierTangents(P_s, P_0, P_t):
+    // Input: P_s=(100,200), P_0=(400,500), P_t=(700,200)
+    // Output: tangent vectors B'(0) and B'(1)
+    v0_x <- 2 * (P_0.x - P_s.x)              // 2 * 300 = 600
+    v0_y <- 2 * (P_0.y - P_s.y)              // 2 * 300 = 600
+    v1_x <- 2 * (P_t.x - P_0.x)              // 2 * 300 = 600
+    v1_y <- 2 * (P_t.y - P_0.y)              // 2 * (-300) = -600
+    RETURN { B_prime_0: (v0_x, v0_y), B_prime_1: (v1_x, v1_y) }
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+P_s (100, 200)                                                  P_t (700, 200)
+     o ────────┐                                            ┌──> o
+      \        │ B'(0) = (600, 600)        B'(1) = (600, -600)│   /
+       \       ▼ (45° angle)                 (-45° angle)   │  /
+        \                                                   └──'
+         ▼
+      Hub Anchor P_0 (400, 500)
+```
+
+---
+
+### Sub-step 2.4: Linear Chord Midpoint Label Placement $\mathbf{P}_{\text{label}}$
+
+#### 1. Mathematical Sub-Component Formula
 To avoid hub label congestion, edge label coordinates $(X_{\text{label}}, Y_{\text{label}})$ are assigned to the linear midpoint of the secant chord connecting $\mathbf{P}_s$ and $\mathbf{P}_t$:
 
 $$\mathbf{P}_{\text{label}} = \begin{pmatrix} X_{\text{label}} \\[4pt] Y_{\text{label}} \end{pmatrix} = \frac{\mathbf{P}_s + \mathbf{P}_t}{2} = \begin{pmatrix} \frac{srcCx + tgtCx}{2} \\[4pt] \frac{srcCy + tgtCy}{2} \end{pmatrix}$$
 
+#### 2. Concrete Numerical Graph Example
+Given $\mathbf{P}_s = (100, 200)$ and $\mathbf{P}_t = (700, 200)$:
+1. **Label X Coordinate**:
+   $$X_{\text{label}} = \frac{100 + 700}{2} = \frac{800}{2} = 400\text{px}$$
+2. **Label Y Coordinate**:
+   $$Y_{\text{label}} = \frac{200 + 200}{2} = \frac{400}{2} = 200\text{px}$$
+3. **Label Placement Tuple**: $\mathbf{P}_{\text{label}} = (400, 200)$.
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeChordLabelPlacement(P_s, P_t):
+    // Input: P_s=(100,200), P_t=(700,200)
+    // Output: P_label (labelX, labelY)
+    labelX <- (P_s.x + P_t.x) / 2            // (100 + 700) / 2 = 400
+    labelY <- (P_s.y + P_t.y) / 2            // (200 + 200) / 2 = 200
+    RETURN { labelX: labelX, labelY: labelY } // Returns (400, 200)
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+P_s (100, 200)               Secant Chord Line                P_t (700, 200)
+     o ───────────────────────────── o ───────────────────────────── o
+                              P_label (400, 200)
+                              [ Edge Label ]
+```
+
 ---
 
-### Step 6: Inward Deflection Vector Analysis ($\mathbf{D}$)
+### Sub-step 2.5: Inward Deflection Vector Analysis $\mathbf{D}$
 
+#### 1. Mathematical Sub-Component Formula
 The spatial deflection vector $\mathbf{D}$ measuring the difference between the true Bezier curve apex $\mathbf{B}(0.5)$ and the label badge location $\mathbf{P}_{\text{label}}$ is derived as:
 
-$$\mathbf{D} = \mathbf{B}(0.5) - \mathbf{P}_{\text{label}} = \frac{\mathbf{P}_s + 2\mathbf{P}_0 + \mathbf{P}_t}{4} - \frac{2\mathbf{P}_s + 2\mathbf{P}_t}{4}$$
+$$\mathbf{D} = \mathbf{B}(0.5) - \mathbf{P}_{\text{label}} = \frac{1}{2} (\mathbf{P}_0 - \mathbf{P}_{\text{label}})$$
 
-$$\mathbf{D} = \frac{2\mathbf{P}_0 - (\mathbf{P}_s + \mathbf{P}_t)}{4} = \frac{\mathbf{P}_0 - \left(\frac{\mathbf{P}_s + \mathbf{P}_t}{2}\right)}{2} = \frac{\mathbf{P}_0 - \mathbf{P}_{\text{label}}}{2}$$
+#### 2. Concrete Numerical Graph Example
+Given $\mathbf{P}_0 = (400, 500)$, $\mathbf{P}_{\text{label}} = (400, 200)$, and $\mathbf{B}(0.5) = (400, 350)$:
+1. **Deflection Vector Subtraction**:
+   $$\mathbf{D} = (400, 350) - (400, 200) = (0, 150\text{px})$$
+2. **Verification via Half-Hub Formula**:
+   $$\mathbf{D} = \frac{1}{2} ((400, 500) - (400, 200)) = \frac{1}{2} (0, 300) = (0, 150\text{px})$$
+3. **Deflection Distance Magnitude**: $\|\mathbf{D}\| = \sqrt{0^2 + 150^2} = 150\text{px}$.
 
-$$\mathbf{D} = \frac{1}{2} (\mathbf{P}_0 - \mathbf{P}_{\text{label}})$$
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeDeflectionVector(P_0, P_label, B_05):
+    // Input: P_0=(400,500), P_label=(400,200), B_05=(400,350)
+    // Output: Deflection vector D (dx, dy) and magnitude
+    dx <- B_05.x - P_label.x                 // 400 - 400 = 0
+    dy <- B_05.y - P_label.y                 // 350 - 200 = 150
+    dist <- SQRT(dx^2 + dy^2)                // 150px
+    RETURN { dx: dx, dy: dy, magnitude: dist }
+END FUNCTION
+```
 
-#### Mathematical Insight:
-The true curve apex $\mathbf{B}(0.5)$ is deflected **exactly halfway** along the line segment connecting the linear chord midpoint $\mathbf{P}_{\text{label}}$ to the central hub origin $\mathbf{P}_0$. By placing labels at $\mathbf{P}_{\text{label}}$, label text is maintained at a safe distance away from the central origin hub.
+#### 4. Sub-Step ASCII Infographic
+```
+P_label (400, 200) ------------ [ Label Badge ]
+        │
+        │ Deflection Vector D = (0, 150px)
+        ▼
+ B(0.5) (400, 350) ---------- [ Curve Apex ]
+        │
+        │ Remaining Segment = (0, 150px)
+        ▼
+    P_0 (400, 500) ---------- [ Hub Origin ]
+```
 
 ---
 
-## 3. Step-by-Step Computational Pseudocode
+## 3. Step-by-Step Computational Pseudocode & Master Synthesis
 
-The following pseudocode details edge quadratic Bezier string construction and label coordinate calculation:
+Combining sub-steps 2.1 through 2.5 into the complete master hub-and-spoke Bezier routing algorithm:
 
 ```text
 ALGORITHM RouteHubSpokeBeziers(dataset, nodeMap, centerX, centerY):
@@ -148,16 +284,16 @@ ALGORITHM RouteHubSpokeBeziers(dataset, nodeMap, centerX, centerY):
                CONTINUE
            END IF
 
-           // Step 1: Calculate node center points
+           // Sub-step 2.1: Extract node center points
            srcCx <- srcNode.x + (srcNode.width / 2)
            srcCy <- srcNode.y + (srcNode.height / 2)
            tgtCx <- tgtNode.x + (tgtNode.width / 2)
            tgtCy <- tgtNode.y + (tgtNode.height / 2)
 
-           // Step 2: Build SVG Quadratic Bezier path string (Control point = centerX, centerY)
+           // Sub-step 2.2: Build SVG Quadratic Bezier path string (Control point = centerX, centerY)
            pathString <- FORMAT("M {0} {1} Q {2} {3} {4} {5}", srcCx, srcCy, centerX, centerY, tgtCx, tgtCy)
 
-           // Step 5: Compute linear chord midpoint for label badge
+           // Sub-step 2.4: Compute linear chord midpoint for label badge
            labelX <- (srcCx + tgtCx) / 2
            labelY <- (srcCy + tgtCy) / 2
 
@@ -170,28 +306,28 @@ END ALGORITHM
 
 ---
 
-## 4. Hub Control Point Deflection Schematic Diagram
+## 4. Master Hub Control Point Deflection Schematic Diagram
 
 ```
                  Source Node Center (P_s)                      Target Node Center (P_t)
-                     (srcCx, srcCy)                                (tgtCx, tgtCy)
+                     (100, 200)                                    (700, 200)
                            │                                             │
                            │\                                           /│
                            │ \          Linear Chord Midpoint          / │
-                           │  \        P_label = (P_s + P_t) / 2      /  │
+                           │  \       P_label = (P_s + P_t) / 2       /  │
                            │   \─────────────── o ───────────────/   │
-                           │    \               │               /    │
-                           │     \              │ Deflection   /     │
-                           │      \             │ D = (P_0 - P_l)/2  │
-                           │       \            ▼            /       │
+                           │    \           (400, 200)          /    │
+                           │     \              │              /     │
+                           │      \             │ Deflection  /      │
+                           │       \            │ D = (0, 150)       │
                            │        \──────> B(0.5) <───────/        │
-                           │          True Curve Midpoint            │
+                           │                 (400, 350)              │
                            │                     │                   │
                            │                     │                   │
                            └─────────────────────┼───────────────────┘
                                                  ▼
                                         Central Hub Control
-                                          Point P_0 (X_0, Y_0)
+                                          Point P_0 (400, 500)
 ```
 
 ---

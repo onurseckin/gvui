@@ -6,7 +6,7 @@ This document maps the **Concentric Radial Engine** specification, polar coordin
 
 ---
 
-## ⚡ Asymptotic Complexity Bounds
+## ⚡ Asymptotic Complexity Bounds & Numerical Derivations
 
 ```
 ┌───────────────────────────────┬───────────────────────────────┬───────────────────────────────┐
@@ -21,8 +21,32 @@ This document maps the **Concentric Radial Engine** specification, polar coordin
 └───────────────────────────────┴───────────────────────────────┴───────────────────────────────┘
 ```
 
-- **Time Complexity $O(|V| + |E|)$**: Nodes are positioned in a single $O(|V|)$ pass using closed-form polar-to-Cartesian trigonometric equations without iterative physical simulation or sorting. Edges are routed in a single $O(|E|)$ pass with $O(1)$ node lookup via `nodeMap`.
-- **Space Complexity $O(|V| + |E|)$**: Allocates memory for `positionedNodes` of size $|V|$, `nodeMap` hash table of size $|V|$, and `positionedEdges` array of size $|E|$.
+### Numerical Operation Count Derivation ($|V| = 8, |E| = 12$)
+
+For a sample graph containing $|V| = 8$ vertices and $|E| = 12$ edges:
+
+1. **Dynamic Radius & Center Setup**:
+   $$N = 8 \implies R = \max(280, 8 \cdot 45) = 360\text{px}, \quad X_0 = 460\text{px}, \quad Y_0 = 460\text{px}$$
+   - Operation Count: $1$ max operation $+ 2$ additions $= 3$ ops $\in O(1)$.
+
+2. **Node Polar Transformation Pass**:
+   - Loop runs $|V| = 8$ times.
+   - Per node: 1 angular division, 1 multiplication, 1 subtraction, 1 cosine, 1 sine, 2 multiplications, 2 additions, 2 dimension offset subtractions $= 11$ floating point ops per node.
+   - Total Node Transformation Ops: $8 \times 11 = 88$ ops $\in O(|V|)$.
+
+3. **Node Lookup Map Construction**:
+   - Inserts 8 entries into `Map<string, PositionedNode>`.
+   - Total Map Insert Ops: $8$ ops $\in O(|V|)$.
+
+4. **Edge Quadratic Bezier Routing Pass**:
+   - Loop runs $|E| = 12$ times.
+   - Per edge: 2 Hash Map lookups, 4 half-dimension additions, 1 string formatting, 2 chord midpoint additions/divisions $= 9$ ops per edge.
+   - Total Edge Routing Ops: $12 \times 9 = 108$ ops $\in O(|E|)$.
+
+5. **Grand Total Execution Cost**:
+   $$\text{Total Operations} = 3 + 88 + 8 + 108 = 207\text{ ops}$$
+
+This demonstrates closed-form deterministic performance with zero iterative simulation overhead.
 
 ---
 
@@ -106,25 +130,38 @@ function computeRadialLayout(dataset: GraphDataset): {
 
 ---
 
-## 🔍 Step-by-Step Execution Breakdown
+## 🔍 Step-by-Step Execution Breakdown & Numerical Trace
 
-1. **Base Case Validation** ([L14-L16](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L14-L16)):
-   Checks if `dataset.nodes.length === 0` and immediately returns empty arrays if no nodes exist.
+### 1. Base Case Validation ([L14-L16](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L14-L16))
+Checks if `dataset.nodes.length === 0` and immediately returns empty arrays if no nodes exist.
 
-2. **Orbit Geometry Setup** ([L18-L20](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L18-L20)):
-   Calculates `radius = Math.max(280, nodeCount * 45)` and canvas center origin `centerX = radius + 100`, `centerY = radius + 100`.
+### 2. Orbit Geometry Setup ([L18-L20](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L18-L20))
+Calculates `radius = Math.max(280, nodeCount * 45)` and canvas center origin `centerX = radius + 100`, `centerY = radius + 100`.
+- *Numerical Trace ($N = 8$)*: `radius = 360`, `centerX = 460`, `centerY = 460`.
 
-3. **Node Polar Transformation Loop** ([L22-L36](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L22-L36)):
-   Computes angular displacement `angle = (2 * Math.PI * index) / nodeCount - Math.PI / 2`, converts polar space to Cartesian center `(cx, cy)`, and subtracts half-dimensions `(dims.width / 2, dims.height / 2)` to determine node top-left origin `(x, y)`.
+### 3. Node Polar Transformation Loop ([L22-L36](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L22-L36))
+Computes angular displacement `angle = (2 * Math.PI * index) / nodeCount - Math.PI / 2`, converts polar space to Cartesian center `(cx, cy)`, and subtracts half-dimensions `(dims.width / 2, dims.height / 2)` to determine node top-left origin `(x, y)`.
+- *Numerical Trace (Node index $i = 2$)*:
+  `angle = (2 * Math.PI * 2) / 8 - Math.PI / 2 = 0`
+  `cx = 460 + 360 * cos(0) = 820`
+  `cy = 460 + 360 * sin(0) = 460`
+  `x = 820 - 120 / 2 = 760`
+  `y = 460 - 60 / 2 = 430`
 
-4. **Node Lookup Map Creation** ([L38](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L38)):
-   Constructs a `Map<string, PositionedNode>` mapping node IDs to positioned node instances for $O(1)$ lookup during edge routing.
+### 4. Node Lookup Map Creation ([L38](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L38))
+Constructs a `Map<string, PositionedNode>` mapping node IDs to positioned node instances for $O(1)$ lookup during edge routing.
 
-5. **Edge Quadratic Bezier Routing Loop** ([L40-L63](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L40-L63)):
-   Retrieves source and target node centers `(srcCx, srcCy)` and `(tgtCx, tgtCy)`, builds the SVG quadratic Bezier curve path string `M ${srcCx} ${srcCy} Q ${centerX} ${centerY} ${tgtCx} ${tgtCy}`, and computes label placement at linear chord midpoint `labelX = (srcCx + tgtCx) / 2`, `labelY = (srcCy + tgtCy) / 2`.
+### 5. Edge Quadratic Bezier Routing Loop ([L40-L63](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L40-L63))
+Retrieves source and target node centers `(srcCx, srcCy)` and `(tgtCx, tgtCy)`, builds the SVG quadratic Bezier curve path string `M ${srcCx} ${srcCy} Q ${centerX} ${centerY} ${tgtCx} ${tgtCy}`, and computes label placement at linear chord midpoint `labelX = (srcCx + tgtCx) / 2`, `labelY = (srcCy + tgtCy) / 2`.
+- *Numerical Trace (Edge Node $u \to$ Node $v$, Node $u$ at $(40, 170)$, Node $v$ at $(640, 170)$)*:
+  `srcCx = 100`, `srcCy = 200`
+  `tgtCx = 700`, `tgtCy = 200`
+  `path = "M 100 200 Q 460 460 700 200"`
+  `labelX = (100 + 700) / 2 = 400`
+  `labelY = (200 + 200) / 2 = 200`
 
-6. **Dispatcher Mode Handler** ([L147-L148](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L147-L148)):
-   Executes `computeRadialLayout(dataset)` when `mode === "radial"` inside `computeGraphLayout`.
+### 6. Dispatcher Mode Handler ([L147-L148](file:///Users/onurseckinsenoglu/repos/gvui/src/engine/layout/layoutDispatcher.ts#L147-L148))
+Executes `computeRadialLayout(dataset)` when `mode === "radial"` inside `computeGraphLayout`.
 
 ---
 

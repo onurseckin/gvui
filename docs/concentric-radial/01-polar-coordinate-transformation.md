@@ -43,78 +43,244 @@ By computing angular positions closed-form in $O(|V|)$ time, every satellite nod
 
 ---
 
-## 2. Bottom-Up Mathematical Deconstruction
+## 2. Bottom-Up Mathematical Deconstruction & Numerical Sub-Steps
 
 We construct the polar-to-Cartesian projection transformation incrementally from primary geometric primitives.
 
-### Step 1: Dynamic Orbit Radius $R(N_{\text{nodes}})$
-
-To prevent node overlap on large graphs while maintaining compactness on small graphs, the orbit radius $R$ scales linearly with vertex count $N_{\text{nodes}}$, bounded below by a minimum radius floor $R_{\text{min}} = 280\text{px}$:
-
-$$R(N_{\text{nodes}}) = \max\left(280\text{px},\, N_{\text{nodes}} \cdot 45\text{px}\right)$$
-
-- For $N_{\text{nodes}} \le 6$: $R = 280\text{px}$.
-- For $N_{\text{nodes}} = 20$: $R = 20 \cdot 45 = 900\text{px}$.
-
 ---
 
-### Step 2: Canvas Center Origin & Padding Margins
+### Sub-step 2.1: Dynamic Orbit Radius $R(N)$ & Canvas Center Origin $(X_0, Y_0)$
 
-The center hub origin point $(X_0, Y_0)$ is computed by adding a constant padding margin of $100\text{px}$ to the orbit radius $R$:
+#### 1. Mathematical Sub-Component Formula
+To prevent node overlap on large graphs while maintaining compactness on small graphs, the orbit radius $R(N)$ scales linearly with vertex count $N$, bounded below by minimum floor $R_{\text{min}} = 280\text{px}$:
+
+$$R(N) = \max\left(280\text{px},\, N \cdot 45\text{px}\right)$$
+
+The canvas center origin $(X_0, Y_0)$ adds a padding margin of $100\text{px}$:
 
 $$X_0 = R + 100\text{px}, \quad Y_0 = R + 100\text{px}$$
 
-This guarantees that all satellite nodes remain strictly within the canvas bounding extents:
+Total canvas bounding box dimensions $W_{\text{canvas}} = H_{\text{canvas}} = 2R + 200\text{px}$.
 
-$$W_{\text{canvas}} = H_{\text{canvas}} = 2R + 200\text{px}$$
+#### 2. Concrete Numerical Graph Example
+Given a graph dataset with $N = 8$ satellite nodes:
+1. **Dynamic Orbit Radius**:
+   $$R(8) = \max(280, 8 \cdot 45) = \max(280, 360) = 360\text{px}$$
+2. **Canvas Center Origin Point**:
+   $$X_0 = 360 + 100 = 460\text{px}, \quad Y_0 = 360 + 100 = 460\text{px}$$
+3. **Canvas Extents**:
+   $$W_{\text{canvas}} = H_{\text{canvas}} = 2(360) + 200 = 920\text{px}$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeOrbitGeometry(nodeCount):
+    // Input: integer nodeCount N = 8
+    // Output: tuple (radius R, centerX X_0, centerY Y_0, canvasSize)
+    R <- MAX(280, nodeCount * 45)             // MAX(280, 360) = 360px
+    X_0 <- R + 100                            // 360 + 100 = 460px
+    Y_0 <- R + 100                            // 360 + 100 = 460px
+    canvasSize <- 2 * R + 200                 // 2 * 360 + 200 = 920px
+    RETURN { radius: R, centerX: X_0, centerY: Y_0, canvasSize: canvasSize }
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
++-------------------------------------------------------------+
+| Canvas Bounds (920px x 920px)                               |
+|                                                             |
+|             Padding Margin = 100px                          |
+|             +---------------------------------+             |
+|             |                                 |             |
+|             |          R = 360px              |             |
+|             |      <--------------->          |             |
+|             |             (X_0, Y_0)          |             |
+|             |              (460, 460)         |             |
+|             |                 o               |             |
+|             |                                 |             |
+|             +---------------------------------+             |
+|                                                             |
++-------------------------------------------------------------+
+```
 
 ---
 
-### Step 3: Angular Displacement & Top-Center Alignment
+### Sub-step 2.2: Angular Displacement $\theta_i$ & Phase Shift Offset
 
-For a graph containing $N_{\text{nodes}}$ vertices indexed $i \in \{0, 1, \dots, N_{\text{nodes}} - 1\}$, the uniform angular step size $\Delta\theta$ between adjacent nodes along the circle is:
+#### 1. Mathematical Sub-Component Formula
+For $N$ vertices indexed $i \in \{0, 1, \dots, N - 1\}$, the uniform angular step size $\Delta\theta$ is:
 
-$$\Delta\theta = \frac{2\pi}{N_{\text{nodes}}}$$
+$$\Delta\theta = \frac{2\pi}{N}$$
 
-Standard trigonometric functions ($\cos, \sin$) measure angles counterclockwise starting from the positive X-axis (3 o'clock position). To align the initial node ($i = 0$) at the traditional 12 o'clock top-center position, an angular phase shift offset of $-\frac{\pi}{2}$ radians ($-90^\circ$) is applied:
+An angular phase shift of $-\frac{\pi}{2}$ radians ($-90^\circ$) aligns index $i = 0$ at the top 12 o'clock position:
 
-$$\theta_i = i \cdot \Delta\theta - \frac{\pi}{2} = \frac{2\pi \cdot i}{N_{\text{nodes}}} - \frac{\pi}{2}$$
+$$\theta_i = i \cdot \Delta\theta - \frac{\pi}{2} = \frac{2\pi \cdot i}{N} - \frac{\pi}{2}$$
+
+#### 2. Concrete Numerical Graph Example
+For $N = 8$ nodes indexed $i \in \{0, \dots, 7\}$:
+1. **Angular Step**: $\Delta\theta = \frac{2\pi}{8} = \frac{\pi}{4} = 45^\circ \approx 0.7854\text{ rad}$.
+2. **Node 0 ($i = 0$, Top 12 o'clock)**:
+   $$\theta_0 = 0 \cdot \frac{\pi}{4} - \frac{\pi}{2} = -\frac{\pi}{2}\text{ rad} = -90^\circ$$
+3. **Node 2 ($i = 2$, Right 3 o'clock)**:
+   $$\theta_2 = 2 \cdot \frac{\pi}{4} - \frac{\pi}{2} = \frac{\pi}{2} - \frac{\pi}{2} = 0\text{ rad} = 0^\circ$$
+4. **Node 4 ($i = 4$, Bottom 6 o'clock)**:
+   $$\theta_4 = 4 \cdot \frac{\pi}{4} - \frac{\pi}{2} = \pi - \frac{\pi}{2} = \frac{\pi}{2}\text{ rad} = 90^\circ$$
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeNodeAngle(index, totalNodes):
+    // Input: node index i = 2, totalNodes N = 8
+    // Output: angle theta in radians
+    stepAngle <- (2 * PI) / totalNodes        // 2*PI / 8 = PI/4 rad (45 deg)
+    phaseShift <- PI / 2                      // PI/2 rad (90 deg top offset)
+    theta <- (index * stepAngle) - phaseShift // 2*(PI/4) - PI/2 = 0 rad
+    RETURN theta                             // Returns 0.0 rad for i=2
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                      Node 0 (i=0)
+                    θ_0 = -π/2 (-90°)
+                         (12 o'clock)
+                            ▲
+                            │
+Node 6 (i=6)                │                Node 2 (i=2)
+θ_6 = π (180°) <──── (460, 460) ────> θ_2 = 0 (0°)
+(9 o'clock)                 │                (3 o'clock)
+                            │
+                            ▼
+                      Node 4 (i=4)
+                    θ_4 = π/2 (90°)
+                         (6 o'clock)
+```
 
 ---
 
-### Step 4: Arc Length Circumferential Separation
+### Sub-step 2.3: Arc Length Circumferential Separation $s$
 
-The arc length distance $s$ along the orbit ring between any two adjacent node centers is given by:
+#### 1. Mathematical Sub-Component Formula
+The circumferential arc length distance $s$ along the orbit ring between any two adjacent node centers is:
 
-$$s = R \cdot \Delta\theta = R \cdot \frac{2\pi}{N_{\text{nodes}}}$$
+$$s = R \cdot \Delta\theta = R \cdot \frac{2\pi}{N}$$
 
-Substituting the scaled radius equation $R = N_{\text{nodes}} \cdot 45\text{px}$ for $N_{\text{nodes}} \ge 7$:
+For scaled radius $R = N \cdot 45\text{px}$ ($N \ge 7$):
 
-$$s = (N_{\text{nodes}} \cdot 45) \cdot \frac{2\pi}{N_{\text{nodes}}} = 45 \cdot 2\pi \approx 282.74\text{px}$$
+$$s = (N \cdot 45) \cdot \frac{2\pi}{N} = 90\pi \approx 282.74\text{px}$$
 
-Thus, for all graph scales $N_{\text{nodes}} \ge 7$, the circumferential center-to-center distance between adjacent satellite nodes remains constant at $\approx 282.74\text{px}$, providing ample spatial clearance for node rendering without overlaps.
+#### 2. Concrete Numerical Graph Example
+Given $R = 360\text{px}$ and $N = 8$:
+1. **Angular Step**: $\Delta\theta = \frac{\pi}{4} \approx 0.7854\text{ rad}$.
+2. **Arc Length Separation**:
+   $$s = 360\text{px} \times \frac{\pi}{4} = 90\pi \approx 282.74\text{px}$$
+3. **Spacing Clearance**: Provides $\approx 282.74\text{px}$ center-to-center spacing along the ring, easily accommodating $120\text{px}$ wide nodes with $\approx 162.74\text{px}$ gap clearance between adjacent boundaries.
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeArcSeparation(radius, totalNodes):
+    // Input: radius R = 360px, totalNodes N = 8
+    // Output: arc length distance s between adjacent node centers
+    stepAngle <- (2 * PI) / totalNodes        // PI/4 rad (45 deg)
+    arcLength <- radius * stepAngle           // 360 * (PI/4) = 282.74px
+    RETURN arcLength                          // Returns 282.74px
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                     (460, 100) Node 0
+                         .---'---.
+                       .'         '.
+                     .'             '.  Arc length s = 282.74px
+Node 7 (i=7)       .'                 '. Node 1 (i=1)
+(205.4, 205.4)    /  R = 360px   Δθ=45° \ (714.6, 205.4)
+                 ;        \        /     ;
+                 |         (460,460)     |
+```
 
 ---
 
-### Step 5: Polar-to-Cartesian Center Projection
+### Sub-step 2.4: Polar-to-Cartesian Center Projection $(cx_i, cy_i)$
 
-The polar coordinate tuple $\langle R, \theta_i \rangle$ for node $i$ is projected into 2D Cartesian center coordinates $\mathbf{P}_{\text{center}, i} = (cx_i, cy_i)$:
+#### 1. Mathematical Sub-Component Formula
+The polar coordinate tuple $\langle R, \theta_i \rangle$ is projected into 2D Cartesian center coordinates $\mathbf{P}_{\text{center}, i} = (cx_i, cy_i)$:
 
 $$\begin{pmatrix} cx_i \\ cy_i \end{pmatrix} = \begin{pmatrix} X_0 + R \cdot \cos(\theta_i) \\ Y_0 + R \cdot \sin(\theta_i) \end{pmatrix}$$
 
+#### 2. Concrete Numerical Graph Example
+Given $X_0 = 460\text{px}, Y_0 = 460\text{px}, R = 360\text{px}$, evaluating for Node 2 ($i = 2, \theta_2 = 0\text{ rad}$):
+1. **Trigonometric values**: $\cos(0) = 1.0$, $\sin(0) = 0.0$.
+2. **Center X Coordinate**:
+   $$cx_2 = 460 + 360 \cdot \cos(0) = 460 + 360 \cdot 1.0 = 820\text{px}$$
+3. **Center Y Coordinate**:
+   $$cy_2 = 460 + 360 \cdot \sin(0) = 460 + 360 \cdot 0.0 = 460\text{px}$$
+4. **Node 2 Center Vector**: $\mathbf{P}_{\text{center}, 2} = (820, 460)$.
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ProjectPolarToCartesianCenter(centerX, centerY, radius, theta):
+    // Input: (X_0=460, Y_0=460), radius R=360, theta=0.0
+    // Output: Cartesian center point (cx, cy)
+    cx <- centerX + radius * COS(theta)      // 460 + 360 * 1.0 = 820
+    cy <- centerY + radius * SIN(theta)      // 460 + 360 * 0.0 = 460
+    RETURN { cx: cx, cy: cy }                // Returns (820, 460)
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                       Center (460, 460)
+                              o
+                              │
+                              │ R * cos(0) = +360px  (R * sin(0) = 0px)
+                              └─────────────────────────► Node 2 Center
+                                                          (820, 460)
+```
+
 ---
 
-### Step 6: Rendering Origin Offset Subtraction
+### Sub-step 2.5: Top-Left Rendering Origin Offset $(X_i, Y_i)$
 
-SVG elements (such as HTML `<div` elements or SVG `<g>` groups) are positioned using their top-left bounding box corner $(X_i, Y_i)$. Given calculated node dimensions $(W_i, H_i)$ from `calculateNodeDimensions`, half-width and half-height offsets are subtracted:
+#### 1. Mathematical Sub-Component Formula
+Given node dimensions $(W_i, H_i)$, top-left rendering origin $(X_i, Y_i)$ is derived by subtracting half-width and half-height:
 
 $$\begin{pmatrix} X_i \\ Y_i \end{pmatrix} = \begin{pmatrix} cx_i - \frac{W_i}{2} \\ cy_i - \frac{H_i}{2} \end{pmatrix} = \begin{pmatrix} X_0 + R \cdot \cos(\theta_i) - \frac{W_i}{2} \\ Y_0 + R \cdot \sin(\theta_i) - \frac{H_i}{2} \end{pmatrix}$$
 
+#### 2. Concrete Numerical Graph Example
+Given Node 2 Center $(cx_2, cy_2) = (820, 460)$ and dimensions $W_2 = 120\text{px}, H_2 = 60\text{px}$:
+1. **Top-Left X Coordinate**:
+   $$X_2 = 820 - \frac{120}{2} = 820 - 60 = 760\text{px}$$
+2. **Top-Left Y Coordinate**:
+   $$Y_2 = 460 - \frac{60}{2} = 460 - 30 = 430\text{px}$$
+3. **Top-Left Origin Tuple**: $(X_2, Y_2) = (760, 430)$.
+
+#### 3. Targeted Sub-Step Pseudocode
+```text
+FUNCTION ComputeTopLeftOrigin(cx, cy, width, height):
+    // Input: center (820, 460), dimensions (120, 60)
+    // Output: top-left rendering origin (x, y)
+    x <- cx - (width / 2)                    // 820 - 60 = 760
+    y <- cy - (height / 2)                   // 460 - 30 = 430
+    RETURN { x: x, y: y }                    // Returns (760, 430)
+END FUNCTION
+```
+
+#### 4. Sub-Step ASCII Infographic
+```
+                   (760, 430) Top-Left Origin
+                         ┌─────────────────────────┐
+                         │                         │
+                         │   • Center (820, 460)   │  H = 60px
+                         │                         │
+                         └─────────────────────────┘
+                                  W = 120px
+```
+
 ---
 
-## 3. Step-by-Step Computational Pseudocode
+## 3. Step-by-Step Computational Pseudocode & Master Synthesis
 
-The following structured pseudocode outlines the complete algorithm for polar coordinate calculation and canvas node positioning:
+Combining sub-steps 2.1 through 2.5 into the complete master polar transformation algorithm:
 
 ```text
 ALGORITHM ComputePolarRadialPositions(dataset):
@@ -125,7 +291,7 @@ ALGORITHM ComputePolarRadialPositions(dataset):
            RETURN empty array
        END IF
 
-    2. // Step 1 & 2: Calculate dynamic radius and center origin
+    2. // Sub-step 2.1: Dynamic radius & center setup
        radius <- MAX(280, N * 45)
        centerX <- radius + 100
        centerY <- radius + 100
@@ -136,14 +302,14 @@ ALGORITHM ComputePolarRadialPositions(dataset):
            node <- V[i]
            dims <- CalculateNodeDimensions(node)   // Returns (width, height)
 
-           // Step 3: Compute angular position with 12 o'clock offset (-PI/2)
+           // Sub-step 2.2: Compute angular position with 12 o'clock offset (-PI/2)
            angle <- (2 * PI * i / N) - (PI / 2)
 
-           // Step 5: Project polar coordinates to Cartesian center
+           // Sub-step 2.4: Project polar coordinates to Cartesian center
            cx <- centerX + radius * COS(angle)
            cy <- centerY + radius * SIN(angle)
 
-           // Step 6: Offset center to obtain top-left rendering origin
+           // Sub-step 2.5: Offset center to obtain top-left rendering origin
            topLx <- cx - (dims.width / 2)
            topLy <- cy - (dims.height / 2)
 
@@ -156,7 +322,7 @@ END ALGORITHM
 
 ---
 
-## 4. Radial Orbit ASCII Diagram & Axis Alignment
+## 4. Master Radial Orbit ASCII Diagram & Axis Alignment
 
 ```
                          θ_0 = -π/2 (12 o'clock)
@@ -168,19 +334,19 @@ END ALGORITHM
                                   │
                                   │  R (Orbit Radius)
                                   │
-    θ_3 = π (9 o'clock)           ▼           θ_1 = 0 (3 o'clock)
+    θ_6 = π (9 o'clock)           ▼           θ_2 = 0 (3 o'clock)
       ┌───────────┐         (X_0, Y_0)          ┌───────────┐
-      │  Node 3   │<────── Central Hub ────────>│  Node 1   │
+      │  Node 6   │<────── Central Hub ────────>│  Node 2   │
       └───────────┘       Origin (0, 0)         └───────────┘
-                                  ▲
+                                  ▲             (760, 430)
                                   │
                                   │  R (Orbit Radius)
                                   │
                                   │
                             ┌─────┴─────┐
-                            │  Node 2   │
+                            │  Node 4   │
                             └───────────┘
-                         θ_2 = π/2 (6 o'clock)
+                         θ_4 = π/2 (6 o'clock)
 ```
 
 ---
