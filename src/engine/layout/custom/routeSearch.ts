@@ -2,11 +2,12 @@ import type { CustomLayoutConfig } from "./config";
 import {
   collinearOverlapLength,
   pointOnRectBoundary,
+  segmentIntersectsRectInterior,
   segmentsCross,
   simplifyOrthogonalPath,
 } from "./geometry";
 import { vertexKey, type RoutingGrid } from "./routingGrid";
-import type { OccupancyRecord, Point, PortRef, RoutedPath, Segment, SegmentDirection } from "./types";
+import type { OccupancyRecord, Point, PortRef, Rect, RoutedPath, Segment, SegmentDirection } from "./types";
 
 export function sideToOutwardDir(side: string): SegmentDirection {
   switch (side) {
@@ -45,9 +46,17 @@ function getSegmentDirection(a: Point, b: Point): SegmentDirection {
   return b.y > a.y ? "down" : "up";
 }
 
+export interface RouteSearchOptions {
+  role?: string;
+  reservations?: OccupancyRecord[];
+  forbiddenRects?: Rect[];
+  requiredCorridorX?: number;
+}
+
 interface AStarNode {
   vId: string;
   dir: SegmentDirection;
+  visitedRequiredCorridor: boolean;
   g: number;
   h: number;
   f: number;
@@ -61,7 +70,8 @@ export function searchOrthogonalRoute(
   targetPort: PortRef,
   grid: RoutingGrid,
   occupancy: OccupancyRecord[],
-  config: CustomLayoutConfig
+  config: CustomLayoutConfig,
+  options?: RouteSearchOptions
 ): RoutedPath | null {
   const srcStubId = vertexKey(sourcePort.stub);
   const tgtStubId = vertexKey(targetPort.stub);
@@ -71,34 +81,48 @@ export function searchOrthogonalRoute(
   }
 
   const tgtStubPt = grid.vertices.get(tgtStubId)!;
+  const reqX = options?.requiredCorridorX;
+  const hasReqX = reqX !== undefined;
 
-  function manhattanH(p: Point): number {
-    return Math.abs(tgtStubPt.x - p.x) + Math.abs(tgtStubPt.y - p.y);
+  function manhattanH(p: Point, visitedCorridor: boolean): number {
+    if (!hasReqX || visitedCorridor) {
+      return Math.abs(tgtStubPt.x - p.x) + Math.abs(tgtStubPt.y - p.y);
+    }
+    return Math.abs(reqX - p.x) + Math.abs(tgtStubPt.x - reqX) + Math.abs(tgtStubPt.y - p.y);
   }
 
   const initialDir = sideToOutwardDir(sourcePort.side);
   const targetInwardDir = sideToInwardDir(targetPort.side);
   const startPt = grid.vertices.get(srcStubId)!;
+  const startVisited = hasReqX ? Math.abs(startPt.x - reqX) <= config.epsilon : true;
 
   const openList: AStarNode[] = [
     {
       vId: srcStubId,
       dir: initialDir,
+      visitedRequiredCorridor: startVisited,
       g: 0,
-      h: manhattanH(startPt),
-      f: manhattanH(startPt),
+      h: manhattanH(startPt, startVisited),
+      f: manhattanH(startPt, startVisited),
       bends: 0,
       parent: null,
     },
   ];
 
   const gCosts = new Map<string, number>();
-  const stateKey = (vId: string, dir: SegmentDirection) => `${vId}:${dir}`;
-  gCosts.set(stateKey(srcStubId, initialDir), 0);
+  const stateKey = (vId: string, dir: SegmentDirection, visitedCorridor: boolean) =>
+    hasReqX ? `${vId}:${dir}:${visitedCorridor}` : `${vId}:${dir}`;
+  gCosts.set(stateKey(srcStubId, initialDir, startVisited), 0);
 
   let bestGoalNode: AStarNode | null = null;
   const maxIterations = 10000;
   let iterations = 0;
+
+  const combinedOccupancy = options?.reservations
+    ? [...occupancy, ...options.reservations]
+    : occupancy;
+
+  const forbiddenRects = options?.forbiddenRects ?? [];
 
   while (openList.length > 0 && iterations++ < maxIterations) {
     // Priority queue sort: lowest f = g + h, then lowest h, then fewest bends, then state key
@@ -106,12 +130,14 @@ export function searchOrthogonalRoute(
       if (Math.abs(a.f - b.f) > config.epsilon) return a.f - b.f;
       if (Math.abs(a.h - b.h) > config.epsilon) return a.h - b.h;
       if (a.bends !== b.bends) return a.bends - b.bends;
-      return stateKey(a.vId, a.dir).localeCompare(stateKey(b.vId, b.dir));
+      return stateKey(a.vId, a.dir, a.visitedRequiredCorridor).localeCompare(
+        stateKey(b.vId, b.dir, b.visitedRequiredCorridor)
+      );
     });
 
     const current = openList.shift()!;
 
-    if (current.vId === tgtStubId) {
+    if (current.vId === tgtStubId && current.visitedRequiredCorridor) {
       bestGoalNode = current;
       break;
     }
@@ -124,11 +150,21 @@ export function searchOrthogonalRoute(
       const seg: Segment = { a: currentPt, b: nextPt };
       const moveDir = getSegmentDirection(currentPt, nextPt);
 
+      // Check forbidden rectangles
+      let isForbidden = false;
+      for (const rect of forbiddenRects) {
+        if (segmentIntersectsRectInterior(seg, rect, config.epsilon)) {
+          isForbidden = true;
+          break;
+        }
+      }
+      if (isForbidden) continue;
+
       // Check collinear occupancy conflict (forbidden)
       let isCollinearOccupied = false;
       let crossingPen = 0;
 
-      for (const occ of occupancy) {
+      for (const occ of combinedOccupancy) {
         if (occ.edgeId === edgeId) continue;
         if (collinearOverlapLength(seg, occ.segment, config.epsilon) > config.epsilon) {
           isCollinearOccupied = true;
@@ -163,12 +199,14 @@ export function searchOrthogonalRoute(
 
       const edgeCost = neighbor.edge.weight + bendCost + crossingPen + nearObsPen + dirPen;
 
+      const nextVisited =
+        current.visitedRequiredCorridor || (hasReqX && Math.abs(nextPt.x - reqX) <= config.epsilon);
       const newG = current.g + edgeCost;
       const newBends = current.bends + (isBend ? 1 : 0);
-      const newH = manhattanH(nextPt);
+      const newH = manhattanH(nextPt, nextVisited);
       const newF = newG + newH;
 
-      const nextKey = stateKey(neighbor.targetId, moveDir);
+      const nextKey = stateKey(neighbor.targetId, moveDir, nextVisited);
       const existingG = gCosts.get(nextKey);
 
       if (existingG === undefined || newG < existingG - config.epsilon) {
@@ -176,6 +214,7 @@ export function searchOrthogonalRoute(
         openList.push({
           vId: neighbor.targetId,
           dir: moveDir,
+          visitedRequiredCorridor: nextVisited,
           g: newG,
           h: newH,
           f: newF,
@@ -216,4 +255,5 @@ export function searchOrthogonalRoute(
     targetPort,
   };
 }
+
 

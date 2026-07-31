@@ -198,5 +198,42 @@ describe("routeSearch", () => {
       expect(segmentsCross(seg, crossingOccupancy.segment, config.epsilon)).toBe(false);
     }
   });
+
+  it("enforces visiting requiredCorridorX before reaching target stub", () => {
+    const nodes: (NormalizedNode & Point)[] = [
+      { id: "A", width: 100, height: 50, x: 200, y: 0 },
+      { id: "B", width: 100, height: 50, x: 200, y: 200 },
+    ];
+
+    const sourcePort: PortRef = {
+      nodeId: "A",
+      side: "left",
+      index: 0,
+      point: { x: 200, y: 25 },
+      stub: { x: 180, y: 25 },
+    };
+
+    const targetPort: PortRef = {
+      nodeId: "B",
+      side: "left",
+      index: 0,
+      point: { x: 200, y: 225 },
+      stub: { x: 180, y: 225 },
+    };
+
+    const boundingBox: Rect = { x: 0, y: 0, width: 400, height: 300 };
+    const config = resolveCustomLayoutConfig();
+    const grid = buildRoutingGrid(nodes, [sourcePort, targetPort], boundingBox, config, 2);
+
+    const requiredCorridorX = 160;
+    const route = searchOrthogonalRoute("e1", sourcePort, targetPort, grid, [], config, {
+      requiredCorridorX,
+    });
+
+    expect(route).toBeDefined();
+    const visitsCorridor = route!.points.some((p) => Math.abs(p.x - requiredCorridorX) < config.epsilon);
+    expect(visitsCorridor).toBe(true);
+  });
 });
+
 

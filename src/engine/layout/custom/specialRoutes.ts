@@ -1,6 +1,8 @@
 import type { CustomLayoutConfig } from "./config";
 import { simplifyOrthogonalPath } from "./geometry";
-import type { NormalizedEdge, NormalizedNode, Point, PortRef, Rect, RoutedPath } from "./types";
+import { searchOrthogonalRoute } from "./routeSearch";
+import { buildRoutingGrid } from "./routingGrid";
+import type { NormalizedEdge, NormalizedNode, OccupancyRecord, Point, PortRef, Rect, RoutedPath } from "./types";
 
 export function routeSelfLoop(
   edge: NormalizedEdge,
@@ -52,8 +54,9 @@ export function routeSelfLoop(
 export function routeFeedbackCorridors(
   feedbackEdges: NormalizedEdge[],
   nodeMap: Map<string, NormalizedNode & Point>,
-  _boundingBox: Rect,
-  config: CustomLayoutConfig
+  boundingBox: Rect,
+  config: CustomLayoutConfig,
+  initialOccupancy: OccupancyRecord[] = []
 ): RoutedPath[] {
   const sortedEdges = [...feedbackEdges].sort((a, b) => {
     const srcA = nodeMap.get(a.source);
@@ -65,85 +68,98 @@ export function routeFeedbackCorridors(
   });
 
   const routes: RoutedPath[] = [];
+  const currentOccupancy: OccupancyRecord[] = [...initialOccupancy];
+
+  const allNodes = Array.from(nodeMap.values());
+  if (allNodes.length === 0) return routes;
+
+  const minNodeX = Math.min(...allNodes.map((n) => n.x));
+  const maxNodeX = Math.max(...allNodes.map((n) => n.x + n.width));
 
   sortedEdges.forEach((edge, idx) => {
     const srcNode = nodeMap.get(edge.source);
     const tgtNode = nodeMap.get(edge.target);
     if (!srcNode || !tgtNode) return;
 
-    const useLeftCorridor = idx % 2 === 0;
-    const laneOffset = config.obstacleClearance + Math.floor(idx / 2 + 1) * config.laneSpacing;
+    const primaryLeft = idx % 2 === 0;
 
-    if (useLeftCorridor) {
-      const corridorX = Math.min(srcNode.x, tgtNode.x) - laneOffset;
+    const sidesToTry: boolean[] = [primaryLeft, !primaryLeft];
 
-      const sourcePort: PortRef = {
-        nodeId: srcNode.id,
-        side: "left",
-        index: idx,
-        point: { x: srcNode.x, y: srcNode.y + srcNode.height / 2 },
-        stub: { x: srcNode.x - config.portStubLength, y: srcNode.y + srcNode.height / 2 },
-      };
+    let foundRoute: RoutedPath | null = null;
 
-      const targetPort: PortRef = {
-        nodeId: tgtNode.id,
-        side: "left",
-        index: idx,
-        point: { x: tgtNode.x, y: tgtNode.y + tgtNode.height / 2 },
-        stub: { x: tgtNode.x - config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
-      };
+    for (const useLeftCorridor of sidesToTry) {
+      if (foundRoute) break;
 
-      const rawPoints: Point[] = [
-        sourcePort.point,
-        sourcePort.stub,
-        { x: corridorX, y: sourcePort.stub.y },
-        { x: corridorX, y: targetPort.stub.y },
-        targetPort.stub,
-        targetPort.point,
-      ];
+      const sourcePort: PortRef = useLeftCorridor
+        ? {
+            nodeId: srcNode.id,
+            side: "left",
+            index: idx,
+            point: { x: srcNode.x, y: srcNode.y + srcNode.height / 2 },
+            stub: { x: srcNode.x - config.portStubLength, y: srcNode.y + srcNode.height / 2 },
+          }
+        : {
+            nodeId: srcNode.id,
+            side: "right",
+            index: idx,
+            point: { x: srcNode.x + srcNode.width, y: srcNode.y + srcNode.height / 2 },
+            stub: { x: srcNode.x + srcNode.width + config.portStubLength, y: srcNode.y + srcNode.height / 2 },
+          };
 
-      routes.push({
-        edgeId: edge.id,
-        points: simplifyOrthogonalPath(rawPoints, config.epsilon),
-        sourcePort,
-        targetPort,
-      });
-    } else {
-      const corridorX = Math.max(srcNode.x + srcNode.width, tgtNode.x + tgtNode.width) + laneOffset;
+      const targetPort: PortRef = useLeftCorridor
+        ? {
+            nodeId: tgtNode.id,
+            side: "left",
+            index: idx,
+            point: { x: tgtNode.x, y: tgtNode.y + tgtNode.height / 2 },
+            stub: { x: tgtNode.x - config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
+          }
+        : {
+            nodeId: tgtNode.id,
+            side: "right",
+            index: idx,
+            point: { x: tgtNode.x + tgtNode.width, y: tgtNode.y + tgtNode.height / 2 },
+            stub: { x: tgtNode.x + tgtNode.width + config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
+          };
 
-      const sourcePort: PortRef = {
-        nodeId: srcNode.id,
-        side: "right",
-        index: idx,
-        point: { x: srcNode.x + srcNode.width, y: srcNode.y + srcNode.height / 2 },
-        stub: { x: srcNode.x + srcNode.width + config.portStubLength, y: srcNode.y + srcNode.height / 2 },
-      };
+      for (let r = 1; r <= config.maxLaneRings; r++) {
+        const corridorX = useLeftCorridor
+          ? minNodeX - config.obstacleClearance - r * config.laneSpacing
+          : maxNodeX + config.obstacleClearance + r * config.laneSpacing;
 
-      const targetPort: PortRef = {
-        nodeId: tgtNode.id,
-        side: "right",
-        index: idx,
-        point: { x: tgtNode.x + tgtNode.width, y: tgtNode.y + tgtNode.height / 2 },
-        stub: { x: tgtNode.x + tgtNode.width + config.portStubLength, y: tgtNode.y + tgtNode.height / 2 },
-      };
+        const grid = buildRoutingGrid(allNodes, [sourcePort, targetPort], boundingBox, config, r);
 
-      const rawPoints: Point[] = [
-        sourcePort.point,
-        sourcePort.stub,
-        { x: corridorX, y: sourcePort.stub.y },
-        { x: corridorX, y: targetPort.stub.y },
-        targetPort.stub,
-        targetPort.point,
-      ];
+        const route = searchOrthogonalRoute(
+          edge.id,
+          sourcePort,
+          targetPort,
+          grid,
+          currentOccupancy,
+          config,
+          {
+            role: "feedback",
+            requiredCorridorX: corridorX,
+          }
+        );
 
-      routes.push({
-        edgeId: edge.id,
-        points: simplifyOrthogonalPath(rawPoints, config.epsilon),
-        sourcePort,
-        targetPort,
-      });
+        if (route) {
+          foundRoute = route;
+          break;
+        }
+      }
+    }
+
+    if (foundRoute) {
+      routes.push(foundRoute);
+      for (let i = 0; i < foundRoute.points.length - 1; i++) {
+        currentOccupancy.push({
+          edgeId: edge.id,
+          segment: { a: foundRoute.points[i], b: foundRoute.points[i + 1] },
+        });
+      }
     }
   });
 
   return routes;
 }
+
