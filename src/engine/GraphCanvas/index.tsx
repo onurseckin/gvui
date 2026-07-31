@@ -6,6 +6,7 @@ import { useGraphStore } from "../../state/useGraphStore";
 import type { PositionedNode } from "../../types/graphData";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { calculateFitView } from "../../utils/fitView";
+import { computeCustomEngineGraphLayoutAsync } from "../layout/customLayoutAdapter";
 import { computeGraphLayout } from "../layout/layoutDispatcher";
 import "./GraphCanvas.css";
 import { usePanZoom } from "./usePanZoom";
@@ -36,15 +37,53 @@ export const GraphCanvas: FC = () => {
       setPositionedGraph([], []);
       return;
     }
-    const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
-    setPositionedGraph(nodes, edges);
 
-    if (shouldAutoFit) {
-      const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
-      setZoomLevel(fitResult.zoomLevel);
-      setPanOffset(fitResult.panOffset);
-      setShouldAutoFit(false);
+    const controller = new AbortController();
+    let isSubscribed = true;
+
+    if (layoutMode === "top-down") {
+      computeCustomEngineGraphLayoutAsync(dataset, { signal: controller.signal })
+        .then(({ nodes, edges }) => {
+          if (!isSubscribed) return;
+          setPositionedGraph(nodes, edges);
+
+          if (shouldAutoFit) {
+            const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+            setZoomLevel(fitResult.zoomLevel);
+            setPanOffset(fitResult.panOffset);
+            setShouldAutoFit(false);
+          }
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
+            if (isSubscribed) {
+              setPositionedGraph(nodes, edges);
+              if (shouldAutoFit) {
+                const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+                setZoomLevel(fitResult.zoomLevel);
+                setPanOffset(fitResult.panOffset);
+                setShouldAutoFit(false);
+              }
+            }
+          }
+        });
+    } else {
+      const { nodes, edges } = computeGraphLayout(dataset, layoutMode);
+      setPositionedGraph(nodes, edges);
+
+      if (shouldAutoFit) {
+        const fitResult = calculateFitView(nodes, containerRef.current?.parentElement);
+        setZoomLevel(fitResult.zoomLevel);
+        setPanOffset(fitResult.panOffset);
+        setShouldAutoFit(false);
+      }
     }
+
+    return () => {
+      isSubscribed = false;
+      controller.abort();
+    };
   }, [
     dataset,
     layoutMode,

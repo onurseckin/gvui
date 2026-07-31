@@ -105,8 +105,11 @@ export const App: FC = () => {
     const params = new URLSearchParams(window.location.search);
     const graphParam = params.get("graph") || "ai_agent_trace.json";
     const nodeParam = params.get("node");
-    void loadGraphFile(graphParam, nodeParam);
-  }, [loadGraphFile]);
+
+    if (currentFile !== graphParam || !useGraphStore.getState().dataset) {
+      void loadGraphFile(graphParam, nodeParam);
+    }
+  }, [currentFile, loadGraphFile]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
