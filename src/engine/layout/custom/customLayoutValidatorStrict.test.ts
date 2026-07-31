@@ -18,13 +18,36 @@ describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)",
         target: e.target,
         label: e.label,
         isCycle: e.isCycle,
+        layoutRole: e.layoutRole,
       }));
 
       const result = computeCustomLayout(normalizedNodes, normalizedEdges);
 
+      // Node, Edge, and Badge Count Assertions
       expect(result.nodes.length).toBe(scenario.nodes.length);
       expect(result.edges.length).toBe(scenario.edges.length);
-      expect(result.badges.length).toBeLessThanOrEqual(scenario.edges.length);
+
+      const labeledEdgesCount = scenario.edges.filter((e) => e.label && e.label.trim() !== "").length;
+      expect(result.badges.length).toBe(labeledEdgesCount);
+
+      // Orthogonality Assertion: Every segment in every edge route must be orthogonal
+      for (const edge of result.edges) {
+        for (let i = 0; i < edge.points.length - 1; i++) {
+          const p1 = edge.points[i];
+          const p2 = edge.points[i + 1];
+          const isOrthogonal = Math.abs(p1.x - p2.x) < 0.001 || Math.abs(p1.y - p2.y) < 0.001;
+          expect(isOrthogonal).toBe(true);
+        }
+      }
+
+      // Hard Error Metrics Assertions
+      const { metrics } = result.validation;
+      expect(metrics.nodeNodeOverlaps).toBe(0);
+      expect(metrics.edgeNodePenetrations).toBe(0);
+      expect(metrics.sharedEdgeSegmentLength).toBe(0);
+      expect(metrics.badgeNodeOverlaps).toBe(0);
+      expect(metrics.badgeBadgeOverlaps).toBe(0);
+      expect(metrics.badgeUnrelatedEdgeOverlaps).toBe(0);
 
       const errors = result.validation.diagnostics.filter((d) => d.severity === "error");
       if (errors.length > 0) {
@@ -33,6 +56,36 @@ describe("Custom Layout Engine Strict Validation Suite (All 20 Plan Scenarios)",
 
       expect(result.validation.isValid).toBe(true);
       expect(errors).toEqual([]);
+      expect(result.status).toBe("success");
+
+      // Determinism Assertion: Shuffled input order produces deeply equal results
+      const shuffledNodes = [...normalizedNodes].reverse();
+      const shuffledEdges = [...normalizedEdges].reverse();
+      const shuffledResult = computeCustomLayout(shuffledNodes, shuffledEdges);
+
+      expect(shuffledResult.nodes).toEqual(result.nodes);
+      expect(shuffledResult.edges).toEqual(result.edges);
+      expect(shuffledResult.badges).toEqual(result.badges);
+      expect(shuffledResult.crossings).toEqual(result.crossings);
+
+      // Scenario-Specific Assertions
+      if (scenario.id === 8) {
+        const mid1 = result.nodes.find((n) => n.id === "MID1");
+        const mid2 = result.nodes.find((n) => n.id === "MID2");
+        expect(mid1).toBeDefined();
+        expect(mid2).toBeDefined();
+        if (mid1 && mid2) {
+          expect(Math.abs(mid1.y - mid2.y)).toBeLessThan(0.001);
+        }
+      }
+
+      if (scenario.id === 9) {
+        expect(metrics.sharedEdgeSegmentLength).toBe(0);
+      }
+
+      if (scenario.id === 14) {
+        expect(metrics.sharedEdgeSegmentLength).toBe(0);
+      }
     });
   });
 });

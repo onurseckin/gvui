@@ -111,7 +111,7 @@ export const CUSTOM_LAYOUT_SCENARIOS: Record<number, TestScenario> = {
     edges: [
       { source: "SRC", target: "MID1" },
       { source: "SRC", target: "MID2" },
-      { source: "MID1", target: "MID2", label: "horizontal sync" },
+      { source: "MID1", target: "MID2", label: "horizontal sync", layoutRole: "cross" },
       { source: "MID1", target: "SINK" },
       { source: "MID2", target: "SINK" },
     ],

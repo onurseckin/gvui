@@ -1,3 +1,5 @@
+import type { EdgeLayoutHint } from "../../engine/layout/custom/types";
+
 export type PortSide = "Top" | "Right" | "Bottom" | "Left";
 
 export interface TestNode {
@@ -15,6 +17,7 @@ export interface TestEdge {
   target: string;
   label?: string;
   isCycle?: boolean;
+  layoutRole?: EdgeLayoutHint;
 }
 
 export interface TestScenario {
