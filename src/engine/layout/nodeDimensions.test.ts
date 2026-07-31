@@ -6,7 +6,7 @@ import {
   findTotalPathMidpoint,
   getSideFromAngle,
   snapPolyline8Dir,
-} from "./dagreLayout";
+} from "./nodeDimensions";
 
 describe("dagreLayout multi-port equal spacing", () => {
   it("determines correct side based on angle theta", () => {

@@ -1,12 +1,13 @@
 import { rectsOverlapStrict } from "./geometry";
 import type { CustomLayoutConfig } from "./config";
-import type { ExactSpacingDemand, BadgePlacement, RoutedPath } from "./types";
+import type { ExactSpacingDemand, BadgePlacement, RoutedPath, NormalizedNode, Point } from "./types";
 
 export interface LabelLanePlannerContext {
   rankByNodeId: Map<string, number>;
   layerNodeIds: string[][];
   nodeGapByRank?: Map<number, number>;
   rankGapAfterRank?: Map<number, number>;
+  nodeLayout?: { nodes: Array<NormalizedNode & Point> };
 }
 
 type RouteAxis = "horizontal" | "vertical";
@@ -115,6 +116,7 @@ export function planLabelLaneDemands(
   });
   const demands: ExactSpacingDemand[] = [];
 
+  // 1. Badge vs Badge Overlap Demands
   for (let i = 0; i < routeMetadata.length; i++) {
     const left = routeMetadata[i];
     if (!left || !left.axis) continue;
@@ -155,6 +157,41 @@ export function planLabelLaneDemands(
             affectedEdgeIds,
             minimum,
             reason: "parallel-labels",
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Badge vs Node Overlap Demands (Widen nodeGap for rank when badge overlaps a node)
+  for (const meta of routeMetadata) {
+    if (!meta) continue;
+    const badge = meta.placement;
+    for (const rank of meta.endpointRanks) {
+      const nodesOnRank = context.layerNodeIds[rank];
+      if (!nodesOnRank || nodesOnRank.length < 2) continue;
+
+      const minimum = badge.rect.width + 2 * config.badgeClearance + 20;
+      const current = context.nodeGapByRank?.get(rank) ?? config.nodeGap;
+      if (minimum > current + config.epsilon) {
+        // Verify badge rect actually intersects a node or narrow corridor
+        const hasNodeIntersection = (context.nodeLayout?.nodes ?? []).some((node) => {
+          const nodeRank = context.rankByNodeId.get(node.id);
+          if (nodeRank !== rank) return false;
+          return rectsOverlapStrict(
+            badge.rect,
+            { x: node.x, y: node.y, width: node.width, height: node.height },
+            config.epsilon,
+          );
+        });
+
+        if (hasNodeIntersection) {
+          demands.push({
+            kind: "lane-x",
+            rank,
+            affectedEdgeIds: [badge.edgeId],
+            minimum,
+            reason: "node-overlap",
           });
         }
       }

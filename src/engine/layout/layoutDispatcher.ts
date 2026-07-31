@@ -1,7 +1,7 @@
 import type { LayoutMode } from "../../state/useGraphStore";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
 import { computeCustomEngineGraphLayout } from "./customLayoutAdapter";
-import { calculateNodeDimensions, computeDagreLayout } from "./dagreLayout";
+import { calculateNodeDimensions, computeDagreLayout } from "./nodeDimensions";
 
 /**
  * Computes radial layout coordinates where nodes are arranged along concentric circular paths.

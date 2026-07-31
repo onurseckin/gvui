@@ -2,7 +2,7 @@ import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/g
 import { computeCustomLayout } from "./custom";
 import type { NormalizedEdge, NormalizedNode } from "./custom";
 import { renderPathWithCrossingBridges } from "./custom/svgPath";
-import { calculateNodeDimensions } from "./dagreLayout";
+import { calculateNodeDimensions } from "./nodeDimensions";
 
 /**
  * Computes graph layout coordinates using the custom directed layout and orthogonal routing engine.

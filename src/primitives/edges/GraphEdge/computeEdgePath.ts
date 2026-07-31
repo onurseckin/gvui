@@ -3,7 +3,7 @@ import {
   findTotalPathMidpoint,
   snapPolyline8Dir,
   type Point2D,
-} from "../../../engine/layout/dagreLayout";
+} from "../../../engine/layout/nodeDimensions";
 
 export type EdgePathType = "straight" | "smoothstep" | "bezier";
 

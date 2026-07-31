@@ -221,7 +221,8 @@ export interface ExactSpacingDemand {
     | "parallel-labels"
     | "blocked-direct-badge"
     | "endpoint-fan-out"
-    | "crossing-channel";
+    | "crossing-channel"
+    | "node-overlap";
 }
 
 export type SearchStopReason =
