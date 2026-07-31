@@ -146,7 +146,16 @@ export function generatePortCandidates(
         bendEstimate = 1;
       }
 
-      const angularPenalty = (srcDev + tgtDev) * config.directionPenalty;
+      let angularPenalty = (srcDev + tgtDev) * config.directionPenalty;
+
+      // Upward feedback edge preference discount: prefer leaving right/left and entering top/right/left
+      const isUpwardFeedback = tgtCenter.y < srcCenter.y - config.nodeGap;
+      if (isUpwardFeedback) {
+        if ((srcSide === "right" || srcSide === "left") && (tgtSide === "top" || tgtSide === "right" || tgtSide === "left")) {
+          angularPenalty *= 0.1; // heavily discount side-looping candidate for feedback edge
+        }
+      }
+
       const baseCost = estimatedLength + bendEstimate * config.bendPenalty + angularPenalty;
 
       const candidate: PortCandidate = {

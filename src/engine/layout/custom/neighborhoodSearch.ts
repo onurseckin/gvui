@@ -13,12 +13,26 @@ export function generateNeighborhoodStates(
 
   const validSides: Side[] = ["top", "right", "bottom", "left"];
 
-  // 1. Generate Port Side Swap Moves for edges with crossings or high bends
+  // 1. Generate Port Side Swap Moves for edges with crossings, hairpins, or excess bends
   const problemEdgeIds = new Set<string>();
   const crossings = evalResult.validation.crossings ?? [];
   for (const cross of crossings) {
     problemEdgeIds.add(cross.edgeIdA);
     problemEdgeIds.add(cross.edgeIdB);
+  }
+
+  // Include edges with hairpins or invalid departure/entry directions
+  for (const diag of evalResult.validation.diagnostics) {
+    if (diag.ids && diag.ids.length > 0) {
+      problemEdgeIds.add(diag.ids[0]);
+    }
+  }
+
+  // Include cycle / feedback edges
+  for (const route of evalResult.routes) {
+    if (route.edgeId.toLowerCase().includes("cycle") || route.edgeId.toLowerCase().includes("loop")) {
+      problemEdgeIds.add(route.edgeId);
+    }
   }
 
   for (const edgeId of problemEdgeIds) {
@@ -28,12 +42,16 @@ export function generateNeighborhoodStates(
     const srcSide = currentSide?.srcSide ?? "bottom";
     const tgtSide = currentSide?.tgtSide ?? "top";
 
+    // Combined (altSrc, altTgt) pairs first
     for (const altSrc of validSides) {
-      if (altSrc === srcSide) continue;
-      const nextState = cloneSearchState(state);
-      nextState.sideAssignments.set(edgeId, { srcSide: altSrc, tgtSide });
-      neighbors.push(nextState);
       if (neighbors.length >= maxNeighbors) break;
+      for (const altTgt of validSides) {
+        if (neighbors.length >= maxNeighbors) break;
+        if (altSrc === srcSide && altTgt === tgtSide) continue;
+        const nextState = cloneSearchState(state);
+        nextState.sideAssignments.set(edgeId, { srcSide: altSrc, tgtSide: altTgt });
+        neighbors.push(nextState);
+      }
     }
   }
 

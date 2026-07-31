@@ -276,13 +276,14 @@ export function routeAllEdges(
 
   const orderVariants: NormalizedEdge[][] = [];
   const seenSignatures = new Set<string>();
+  const maxVariants = options?.sideAssignments ? 1 : config.maxRouteOrderVariants;
 
   for (const cand of orderCandidates) {
     const sig = cand.map((e) => e.id).join(",");
     if (!seenSignatures.has(sig)) {
       seenSignatures.add(sig);
       orderVariants.push(cand);
-      if (orderVariants.length >= config.maxRouteOrderVariants) {
+      if (orderVariants.length >= maxVariants) {
         break;
       }
     }

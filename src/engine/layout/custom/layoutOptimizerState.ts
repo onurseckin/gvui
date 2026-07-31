@@ -76,8 +76,8 @@ export function searchBestLayoutState(
       bestEval.validation.isValid &&
       bestEval.validation.metrics.crossingCount === 0 &&
       (bestEval.validation.metrics.ordinaryLeaderCount ?? 0) === 0 &&
-      (bestEval.validation.metrics.avoidableHairpinCount ?? 0) === 0 &&
-      (bestEval.validation.metrics.excessBendCount ?? 0) === 0
+      (bestEval.validation.metrics.badgeUnrelatedEdgeOverlaps ?? 0) === 0 &&
+      bestEval.validation.diagnostics.length === 0
     ) {
       stopReason = "objective-target";
       break;
@@ -129,6 +129,17 @@ export function searchBestLayoutState(
       }
 
       frontier.push({ state: nextState, evalResult: nextEval });
+
+      if (
+        bestEval.validation.isValid &&
+        bestEval.validation.metrics.crossingCount === 0 &&
+        (bestEval.validation.metrics.ordinaryLeaderCount ?? 0) === 0 &&
+        (bestEval.validation.metrics.badgeUnrelatedEdgeOverlaps ?? 0) === 0 &&
+        bestEval.validation.diagnostics.length === 0
+      ) {
+        stopReason = "objective-target";
+        break;
+      }
 
       if (frontier.length > maxFrontier) {
         frontier.sort((a, b) => compareLayoutScores(a.evalResult.validation, b.evalResult.validation));
