@@ -65,7 +65,6 @@ export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>)
     "componentGap",
     "graphPadding",
     "portStubLength",
-    "portEndpointPadding",
     "obstacleClearance",
     "laneSpacing",
     "initialLaneRings",
@@ -87,6 +86,7 @@ export function resolveCustomLayoutConfig(partial?: Partial<CustomLayoutConfig>)
   }
 
   const nonNegativeFields: (keyof CustomLayoutConfig)[] = [
+    "portEndpointPadding",
     "bendPenalty",
     "crossingPenalty",
     "directionPenalty",
