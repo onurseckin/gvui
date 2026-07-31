@@ -13,10 +13,10 @@ interface GraphTestingModalProps {
 }
 
 export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose }) => {
-  const [selectedScenarioId, setSelectedScenarioId] = useState<number>(1);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
 
   const activeScenario: TestScenario = useMemo(() => {
-    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[1];
+    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[20];
   }, [selectedScenarioId]);
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
@@ -55,8 +55,8 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
   if (!isOpen) return null;
 
   return (
-    <div className="graph-testing-backdrop" role="dialog" aria-modal="true">
-      <div className="graph-testing-dialog">
+    <div className="graph-testing-backdrop" onClick={onClose}>
+      <div className="graph-testing-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="graph-testing-header">
           <div className="graph-testing-header-left">
@@ -79,13 +79,13 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                 className={`graph-testing-tab-btn ${selectedScenarioId === scenario.id ? "active" : ""}`}
                 onClick={() => setSelectedScenarioId(scenario.id)}
               >
-                {scenario.title}
+                #{scenario.id} {scenario.title}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Content Canvas */}
+        {/* Main Content */}
         <div className="graph-testing-content single-panel">
           <div className="testing-panel">
             <div className="testing-panel-header">

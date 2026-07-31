@@ -15,7 +15,8 @@ interface GraphTestingPageProps {
 }
 
 export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => {
-  const [selectedScenarioId, setSelectedScenarioId] = useState<number>(1);
+  // Default to Scenario #20 (Full DevOps Microservice Mesh) so a rich graph is rendered on initial load
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
   const [debugOptions, setDebugOptions] = useState<DebugOptions>({
     showPorts: true,
     showBadges: true,
@@ -24,7 +25,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   });
 
   const activeScenario: TestScenario = useMemo(() => {
-    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[1];
+    return CUSTOM_LAYOUT_SCENARIOS[selectedScenarioId] ?? CUSTOM_LAYOUT_SCENARIOS[20];
   }, [selectedScenarioId]);
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
