@@ -138,8 +138,13 @@ export function generateNeighborhoodStates(
     }
   }
 
+  const compareByAssignmentThenId = (left: string, right: string): number => {
+    const assignmentOrder =
+      Number(state.sideAssignments.has(left)) - Number(state.sideAssignments.has(right));
+    return assignmentOrder || left.localeCompare(right);
+  };
   const orderedProblemEdgeIds = [
-    ...Array.from(priorityProblemEdgeIds).sort(),
+    ...Array.from(priorityProblemEdgeIds).sort(compareByAssignmentThenId),
     ...Array.from(feedbackFillerEdgeIds)
       .filter((edgeId) => !priorityProblemEdgeIds.has(edgeId))
       .sort(),

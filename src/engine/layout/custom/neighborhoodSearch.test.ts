@@ -296,6 +296,35 @@ describe("neighborhoodSearch", () => {
     expect(neighbors[1].sideAssignments.has("z-demand")).toBe(true);
   });
 
+  it("admits a capped priority edge from a child state on the next expansion level", () => {
+    const state = createInitialSearchState();
+    const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 16 });
+    const edgeIds = Array.from(
+      { length: 17 },
+      (_, index) => `e-${index.toString().padStart(2, "0")}`,
+    );
+    const evalResult = {
+      routes: [],
+      classifiedEdges: edgeIds.map((id) => ({
+        id,
+        source: "A",
+        target: "B",
+        role: "forward" as const,
+        reversed: false,
+      })),
+      validation: { crossings: [], diagnostics: [{ ids: edgeIds }] },
+      nodeLayout: { orderedLayers: [] },
+      exactDemands: [],
+    } as unknown as ReturnType<typeof evaluateSearchState>;
+
+    const firstLevel = generateNeighborhoodStates(state, evalResult, config);
+    const secondLevel = generateNeighborhoodStates(firstLevel[0], evalResult, config);
+
+    expect(firstLevel).toHaveLength(16);
+    expect(firstLevel.some((neighbor) => neighbor.sideAssignments.has("e-16"))).toBe(false);
+    expect(secondLevel.some((neighbor) => neighbor.sideAssignments.has("e-16"))).toBe(true);
+  });
+
   it("gives a clean forward route with excess bends a port-side alternative", () => {
     const state = createInitialSearchState();
     const config = resolveCustomLayoutConfig({ maxNeighborsPerState: 2 });
