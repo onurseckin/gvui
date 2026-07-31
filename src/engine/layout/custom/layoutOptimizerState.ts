@@ -11,15 +11,28 @@ export interface OptimizationResult {
   stats: OptimizationStats;
 }
 
+export interface SearchOptions {
+  initialState?: LayoutSearchState;
+  signal?: AbortSignal;
+  deadlineMs?: number;
+}
+
 export function searchBestLayoutState(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   config: CustomLayoutConfig,
-  initialState?: LayoutSearchState,
+  options?: SearchOptions | LayoutSearchState,
 ): OptimizationResult {
   const startTime = Date.now();
+  const searchOpts: SearchOptions =
+    options && "sideAssignments" in options
+      ? { initialState: options }
+      : (options as SearchOptions) ?? {};
 
-  const startState = initialState ?? createInitialSearchState();
+  const deadlineTime = searchOpts.deadlineMs ? startTime + searchOpts.deadlineMs : undefined;
+  const signal = searchOpts.signal;
+
+  const startState = searchOpts.initialState ?? createInitialSearchState();
   const startEval = evaluateSearchState(nodes, edges, startState, config);
 
   let bestState = startState;
@@ -44,6 +57,16 @@ export function searchBestLayoutState(
   const maxFrontier = config.maxFrontierSize;
 
   while (frontier.length > 0) {
+    if (signal?.aborted) {
+      stopReason = "cancelled";
+      break;
+    }
+
+    if (deadlineTime && Date.now() >= deadlineTime) {
+      stopReason = "deadline-exceeded";
+      break;
+    }
+
     if (evaluatedStates >= maxStates) {
       stopReason = "layout-state-budget";
       break;
@@ -76,6 +99,14 @@ export function searchBestLayoutState(
     const neighborStates = generateNeighborhoodStates(curr.state, curr.evalResult, config);
 
     for (const nextState of neighborStates) {
+      if (signal?.aborted) {
+        stopReason = "cancelled";
+        break;
+      }
+      if (deadlineTime && Date.now() >= deadlineTime) {
+        stopReason = "deadline-exceeded";
+        break;
+      }
       if (evaluatedStates >= maxStates) {
         stopReason = "layout-state-budget";
         break;
