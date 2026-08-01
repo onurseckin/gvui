@@ -61,15 +61,9 @@ describe("computeCustomEngineGraphLayout", () => {
       edges: [{ id: "e1", source: "A", target: "B" }],
     };
 
-    const progressReports: Array<{ stageIndex: number; totalStages: number; percent: number }> = [];
-    const result = await computeCustomEngineGraphLayoutAsync(dataset, {
-      onProgress: (progress) => {
-        progressReports.push(progress);
-      },
-    });
+    const result = await computeCustomEngineGraphLayoutAsync(dataset);
 
     expect(result.nodes).toHaveLength(2);
     expect(result.edges).toHaveLength(1);
-    expect(progressReports.length).toBeGreaterThan(0);
   });
 });

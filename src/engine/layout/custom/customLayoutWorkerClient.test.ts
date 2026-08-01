@@ -5,7 +5,7 @@ import {
   type LayoutWorkerRuntime,
   type WorkerLike,
 } from "./customLayoutWorkerClient";
-import type { NormalizedEdge, NormalizedNode } from "./types";
+import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
 describe("customLayoutWorkerClient", () => {
   it("rejects a browser without Worker support instead of using the main thread", async () => {
@@ -366,35 +366,23 @@ describe("customLayoutWorkerClient", () => {
     expect(errorEmitted).toBe(true);
   });
 
-  it("invokes onProgress callback when worker streams progress messages", async () => {
+  it("resolves layout successfully when worker posts success message", async () => {
     let requestId: string | undefined;
-    const expectedResult = { nodes: [], edges: [], badges: [], crossings: [], validation: {} } as never;
-    const progressEvents: Array<{
-      stageIndex: number;
-      totalStages: number;
-      percent: number;
-      stageText: string;
-      detail: string;
-    }> = [];
+    const expectedResult = { nodes: [], edges: [] } as unknown as CustomLayoutResult;
 
-    const worker: WorkerLike & { terminateCalls: number } = {
-      terminateCalls: 0,
-      postMessage: (request) => {
-        requestId = request.id;
+    const worker: {
+      onmessage?: (event: { data: unknown }) => void;
+      postMessage: (msg: { id: string }) => void;
+      terminate: () => void;
+    } = {
+      postMessage: (msg) => {
+        requestId = msg.id;
       },
-      terminate() {
-        this.terminateCalls += 1;
-      },
+      terminate: () => {},
     };
 
     const promise = computeCustomLayoutAsync(
-      {
-        nodes: [{ id: "A", width: 100, height: 50 }],
-        edges: [],
-        onProgress: (progress) => {
-          progressEvents.push(progress);
-        },
-      },
+      { nodes: [{ id: "A", width: 100, height: 50 }], edges: [] },
       {
         runtime: {
           createWorker: () => worker,
@@ -405,34 +393,6 @@ describe("customLayoutWorkerClient", () => {
     );
 
     worker.onmessage?.({
-      data: {
-        id: requestId!,
-        type: "progress",
-        stageIndex: 1,
-        totalStages: 5,
-        percent: 20,
-        stageText: "Stage 1 of 5",
-        detail: "Normalizing topology...",
-      },
-    } as never);
-
-    worker.onmessage?.({
-      data: {
-        id: requestId!,
-        type: "progress",
-        stageIndex: 2,
-        totalStages: 5,
-        percent: 40,
-        stageText: "Stage 2 of 5",
-        detail: "Building hierarchy tree...",
-      },
-    } as never);
-
-    expect(progressEvents.length).toBe(2);
-    expect(progressEvents[0].detail).toBe("Normalizing topology...");
-    expect(progressEvents[1].detail).toBe("Building hierarchy tree...");
-
-    worker.onmessage?.({
       data: { id: requestId!, type: "success", result: expectedResult },
     } as never);
 
@@ -440,35 +400,19 @@ describe("customLayoutWorkerClient", () => {
     expect(result).toBe(expectedResult);
   });
 
-  it("streams real solver pass progress events during layout optimization", async () => {
+  it("streams layout optimization synchronously without worker seam", async () => {
     const nodes: NormalizedNode[] = [
       { id: "A", width: 100, height: 50 },
       { id: "B", width: 100, height: 50 },
     ];
     const edges: NormalizedEdge[] = [{ id: "e1", source: "A", target: "B" }];
-    const progressEvents: Array<{
-      stageIndex: number;
-      totalStages: number;
-      percent: number;
-      stageText: string;
-      detail: string;
-    }> = [];
 
-    await computeCustomLayoutAsync(
-      {
-        nodes,
-        edges,
-        onProgress: (progress) => {
-          progressEvents.push(progress);
-        },
-      },
+    const result = await computeCustomLayoutAsync(
+      { nodes, edges },
       { environment: { isBrowser: false, runtime: null } },
     );
 
-    expect(progressEvents.length).toBeGreaterThanOrEqual(3);
-    expect(progressEvents[0].detail).toContain("Pre-search topology normalization");
-    expect(progressEvents.some((p) => p.stageText.startsWith("Pass"))).toBe(true);
-    expect(progressEvents[progressEvents.length - 1].detail).toContain("Post-search geometry finalization");
+    expect(result.nodes).toHaveLength(2);
+    expect(result.edges).toHaveLength(1);
   });
 });
-

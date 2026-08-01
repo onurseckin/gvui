@@ -4,7 +4,6 @@ import type {
   CustomLayoutWorkerMessage,
   CustomLayoutWorkerRequest,
 } from "./customLayoutWorker";
-import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
 import { optimizeLayout } from "./optimizeLayout";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
@@ -14,7 +13,6 @@ export interface ComputeLayoutWorkerOptions {
   configPartial?: Partial<CustomLayoutConfig>;
   timeoutMs?: number;
   signal?: AbortSignal;
-  onProgress?: (progress: LayoutProgressInfo) => void;
 }
 
 export type ComputeLayoutAsyncOptions = ComputeLayoutWorkerOptions;
@@ -51,7 +49,6 @@ export interface ComputeLayoutWorkerDependencies {
     nodes: NormalizedNode[],
     edges: NormalizedEdge[],
     config: CustomLayoutConfig,
-    onProgress?: (progress: LayoutProgressInfo) => void,
   ) => Promise<CustomLayoutResult> | CustomLayoutResult;
 }
 
@@ -123,7 +120,7 @@ export async function computeCustomLayoutAsync(
     }
 
     // A true SSR/Node environment has no interactive main thread to freeze.
-    return await computeSynchronously(nodes, edges, config, options.onProgress);
+    return await computeSynchronously(nodes, edges, config);
   }
 
   const reqId = `req_${++requestIdCounter}_${Date.now()}`;
@@ -165,10 +162,6 @@ export async function computeCustomLayoutAsync(
       worker = runtime.createWorker();
       worker.onmessage = (event) => {
         if (event.data.id !== reqId) return;
-        if (event.data.type === "progress") {
-          options.onProgress?.(event.data);
-          return;
-        }
         if (event.data.type === "success" && event.data.result) {
           settle({ result: event.data.result });
         } else {

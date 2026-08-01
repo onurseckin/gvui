@@ -1,6 +1,5 @@
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
-import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
 import { searchBestLayoutState } from "./layoutOptimizerState";
 import type {
   BadgePlacement,
@@ -50,32 +49,11 @@ export async function optimizeLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   configPartial?: Partial<CustomLayoutConfig>,
-  onProgress?: (progress: LayoutProgressInfo) => void,
 ): Promise<CustomLayoutResult> {
   const config = resolveCustomLayoutConfig(configPartial);
 
-  if (onProgress) {
-    onProgress({
-      stageIndex: 1,
-      totalStages: 100,
-      percent: 0,
-      stageText: "Step 1",
-      detail: "Pre-search topology normalization",
-    });
-  }
-
-  const optResult = await searchBestLayoutState(nodes, edges, config, { onProgress });
+  const optResult = await searchBestLayoutState(nodes, edges, config);
   const bestEval = optResult.bestEvaluation;
-
-  if (onProgress) {
-    onProgress({
-      stageIndex: 100,
-      totalStages: 100,
-      percent: 100,
-      stageText: "Final Step",
-      detail: "Post-search geometry finalization",
-    });
-  }
 
   return {
     nodes: bestEval.nodes,

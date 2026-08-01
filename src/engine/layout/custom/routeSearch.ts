@@ -51,14 +51,33 @@ export function compareRouteCost(a: RouteCost, b: RouteCost, epsilon = 0.001): n
 
 interface AStarNode {
   vId: string;
+  vIndex: number;
   dir: SegmentDirection;
+  dirCode: number;
   previousDir: SegmentDirection | null;
+  prevDirCode: number;
   visitedRequiredCorridor: boolean;
-  stateKey: string;
+  stateKeyNum: number;
   gCost: RouteCost;
   hLength: number;
   fCost: RouteCost;
   parent: AStarNode | null;
+}
+
+const DIR_TO_CODE: Record<SegmentDirection, number> = {
+  up: 1,
+  down: 2,
+  left: 3,
+  right: 4,
+};
+
+function encodeStateKeyNum(
+  vIndex: number,
+  dirCode: number,
+  prevDirCode: number,
+  visitedCorridor: boolean,
+): number {
+  return (vIndex * 50) + (dirCode * 10) + (prevDirCode * 2) + (visitedCorridor ? 1 : 0);
 }
 
 function sideToOutwardDir(side: "top" | "bottom" | "left" | "right"): SegmentDirection {
@@ -109,6 +128,7 @@ export interface RouteSearchOptions {
   reservations?: OccupancyRecord[];
   maxIterations?: number;
   allowDoglegFallback?: boolean;
+  skipBoundingWindowFilter?: boolean;
 }
 
 function findGridDoglegRoute(
@@ -248,10 +268,11 @@ function compareNodes(a: AStarNode, b: AStarNode, epsilon: number): number {
     return a.hLength - b.hLength;
   }
 
-  const keyCmp = a.stateKey.localeCompare(b.stateKey);
-  if (keyCmp !== 0) return keyCmp;
+  if (a.stateKeyNum !== b.stateKeyNum) {
+    return a.stateKeyNum - b.stateKeyNum;
+  }
 
-  return a.vId.localeCompare(b.vId);
+  return a.vIndex - b.vIndex;
 }
 
 class AStarMinHeap {
@@ -480,7 +501,18 @@ export function searchOrthogonalRoute(
     return null;
   }
 
+  // Pre-index vertices to fast integer indices
+  let vIdxCounter = 0;
+  const vertexIndexMap = new Map<string, number>();
+  for (const vId of grid.vertices.keys()) {
+    vertexIndexMap.set(vId, vIdxCounter++);
+  }
+
+  const srcStubIdx = vertexIndexMap.get(srcStubId)!;
+  const tgtStubIdx = vertexIndexMap.get(tgtStubId)!;
+
   const initialDir = sideToOutwardDir(sourcePort.side);
+  const initialDirCode = DIR_TO_CODE[initialDir];
   const targetInwardDir = sideToInwardDir(targetPort.side);
 
   const reqX = options?.requiredXCorridor ?? options?.requiredCorridorX;
@@ -514,31 +546,25 @@ export function searchOrthogonalRoute(
     length: initialGCost.length + initialHLength,
   };
 
-  const stateKey = (
-    vId: string,
-    dir: SegmentDirection,
-    previousDir: SegmentDirection | null,
-    visitedCorridor: boolean,
-  ) =>
-    hasReqX
-      ? `${vId}:${dir}:${previousDir ?? "none"}:${visitedCorridor}`
-      : `${vId}:${dir}:${previousDir ?? "none"}`;
+  const startStateKey = encodeStateKeyNum(srcStubIdx, initialDirCode, 0, startVisited);
 
   const startNode: AStarNode = {
     vId: srcStubId,
+    vIndex: srcStubIdx,
     dir: initialDir,
+    dirCode: initialDirCode,
     previousDir: null,
+    prevDirCode: 0,
     visitedRequiredCorridor: startVisited,
-    stateKey: stateKey(srcStubId, initialDir, null, startVisited),
+    stateKeyNum: startStateKey,
     gCost: initialGCost,
     hLength: initialHLength,
     fCost: initialFCost,
     parent: null,
   };
 
-  const gCosts = new Map<string, RouteCost>();
-
-  gCosts.set(startNode.stateKey, initialGCost);
+  const gCosts = new Map<number, RouteCost>();
+  gCosts.set(startStateKey, initialGCost);
 
   const openHeap = new AStarMinHeap(config.epsilon);
   openHeap.push(startNode);
@@ -563,7 +589,7 @@ export function searchOrthogonalRoute(
     }
 
     const current = openHeap.pop()!;
-    const bestG = gCosts.get(current.stateKey);
+    const bestG = gCosts.get(current.stateKeyNum);
 
     // Skip stale queue entries
     if (bestG && compareRouteCost(current.gCost, bestG, config.epsilon) > 0) {
@@ -572,7 +598,7 @@ export function searchOrthogonalRoute(
 
     expandedStates++;
 
-    if (current.vId === tgtStubId && current.visitedRequiredCorridor) {
+    if (current.vIndex === tgtStubIdx && current.visitedRequiredCorridor) {
       bestGoalNode = current;
       stopReason = "target_reached";
       break;
@@ -583,8 +609,10 @@ export function searchOrthogonalRoute(
 
     for (const neighbor of neighbors) {
       const nextPt = grid.vertices.get(neighbor.targetId)!;
+      const nextVIdx = vertexIndexMap.get(neighbor.targetId)!;
       const seg: Segment = { a: currentPt, b: nextPt };
       const moveDir = getSegmentDirection(currentPt, nextPt);
+      const moveDirCode = DIR_TO_CODE[moveDir];
 
       // Check forbidden rectangles
       let isForbidden = false;
@@ -612,10 +640,10 @@ export function searchOrthogonalRoute(
 
       // Direction penalties
       let stepDirDev = 0;
-      if (current.vId === srcStubId && moveDir !== initialDir) {
+      if (current.vIndex === srcStubIdx && moveDir !== initialDir) {
         stepDirDev += config.directionPenalty;
       }
-      if (neighbor.targetId === tgtStubId && moveDir !== targetInwardDir) {
+      if (nextVIdx === tgtStubIdx && moveDir !== targetInwardDir) {
         stepDirDev += config.directionPenalty;
       }
 
@@ -637,17 +665,20 @@ export function searchOrthogonalRoute(
         length: newGCost.length + newHLength,
       };
 
-      const nextKey = stateKey(neighbor.targetId, moveDir, current.dir, nextVisited);
-      const existingG = gCosts.get(nextKey);
+      const nextKeyNum = encodeStateKeyNum(nextVIdx, moveDirCode, current.dirCode, nextVisited);
+      const existingG = gCosts.get(nextKeyNum);
 
       if (existingG === undefined || compareRouteCost(newGCost, existingG, config.epsilon) < 0) {
-        gCosts.set(nextKey, newGCost);
+        gCosts.set(nextKeyNum, newGCost);
         const nextNode: AStarNode = {
           vId: neighbor.targetId,
+          vIndex: nextVIdx,
           dir: moveDir,
+          dirCode: moveDirCode,
           previousDir: current.dir,
+          prevDirCode: current.dirCode,
           visitedRequiredCorridor: nextVisited,
-          stateKey: nextKey,
+          stateKeyNum: nextKeyNum,
           gCost: newGCost,
           hLength: newHLength,
           fCost: newFCost,

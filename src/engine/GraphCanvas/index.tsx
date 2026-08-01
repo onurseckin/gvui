@@ -8,7 +8,6 @@ import type { PositionedNode } from "../../types/graphData";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { calculateFitView } from "../../utils/fitView";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
-import { deriveProgressState } from "../layout/custom/customLayoutWorkerPool";
 import { computeCustomEngineGraphLayoutAsync } from "../layout/customLayoutAdapter";
 import { computeGraphLayout } from "../layout/layoutDispatcher";
 import "./GraphCanvas.css";
@@ -35,9 +34,6 @@ export const GraphCanvas: FC = () => {
   const { containerRef, zoomLevel, panOffset, isDragging, handleMouseDown } = usePanZoom();
 
   const [isCalculating, setIsCalculating] = useState(false);
-  const [progressState, setProgressState] = useState(() =>
-    deriveProgressState(1, 5, "Normalizing topology..."),
-  );
 
   useEffect(() => {
     if (!dataset) {
@@ -64,21 +60,16 @@ export const GraphCanvas: FC = () => {
     // Immediate unmount of old canvas elements on cache miss
     setPositionedGraph([], []);
     setIsCalculating(true);
-    setProgressState(deriveProgressState(1, 5, "Normalizing topology..."));
 
     const controller = new AbortController();
     let isSubscribed = true;
 
     if (layoutMode === "top-down") {
-      setProgressState(deriveProgressState(2, 5, "Building hierarchy tree..."));
-
       computeCustomEngineGraphLayoutAsync(dataset, {
         signal: controller.signal,
-        onProgress: (p) => isSubscribed && setProgressState(p),
       })
         .then(({ nodes, edges }) => {
           if (!isSubscribed) return;
-          setProgressState(deriveProgressState(4, 5, "Computing A* routes..."));
           saveStoredLayout(layoutMode, signature, { nodes, edges });
           setPositionedGraph(nodes, edges);
           if (useGraphStore.getState().shouldAutoFit) {
@@ -87,7 +78,6 @@ export const GraphCanvas: FC = () => {
             setPanOffset(fitResult.panOffset);
             setShouldAutoFit(false);
           }
-          setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
           setIsCalculating(false);
         })
         .catch((err) => {
@@ -108,7 +98,6 @@ export const GraphCanvas: FC = () => {
           }
         });
     } else {
-      setProgressState(deriveProgressState(3, 5, "Computing layout..."));
       void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
         if (isSubscribed) {
           saveStoredLayout(layoutMode, signature, { nodes, edges });
@@ -119,7 +108,6 @@ export const GraphCanvas: FC = () => {
             setPanOffset(fitResult.panOffset);
             setShouldAutoFit(false);
           }
-          setProgressState(deriveProgressState(5, 5, "Finalizing layout..."));
           setIsCalculating(false);
         }
       });
@@ -233,15 +221,7 @@ export const GraphCanvas: FC = () => {
       onMouseDown={handleMouseDown}
       onClick={() => setSelectedNodeId(null)}
     >
-      {isCalculating && (
-        <LoadingOverlay
-          percent={progressState.percent}
-          stageText={progressState.stageText}
-          detail={progressState.detail}
-          nodeCount={dataset?.nodes.length}
-          edgeCount={dataset?.edges.length}
-        />
-      )}
+      {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
         <svg className="graph-svg-layer">
           <EdgeMarkerDefs />

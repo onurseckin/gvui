@@ -5,7 +5,6 @@ import {
   isPrimaryCleanEvaluation,
   runBoundedAestheticSearch,
 } from "./boundedAestheticSearch";
-import type { LayoutProgressInfo } from "./customLayoutWorkerPool";
 import { compareLayoutScores } from "./layoutValidator";
 import {
   generateAestheticTrialStates,
@@ -32,7 +31,6 @@ export interface SearchOptions {
   initialState?: LayoutSearchState;
   signal?: AbortSignal;
   deadlineMs?: number;
-  onProgress?: (progress: LayoutProgressInfo) => void;
 }
 
 export interface SearchStateBudgets {
@@ -118,23 +116,8 @@ export async function searchBestLayoutState(
   const maxStates = budgets.maxLayoutStates;
   const maxFrontier = config.maxFrontierSize;
 
-  const notifyProgress = async (evaluated: number, passDescription: string) => {
-    if (searchOpts.onProgress) {
-      const percent = Math.round((evaluated / maxStates) * 100);
-      searchOpts.onProgress({
-        stageIndex: evaluated,
-        totalStages: maxStates,
-        percent,
-        stageText: `Pass ${evaluated}/${maxStates}`,
-        detail: `Evaluating pass ${evaluated}/${maxStates}: ${passDescription}`,
-      });
-    }
-    await new Promise((r) => setTimeout(r, 40));
-  };
-
   let evaluatedStates = 1;
   const startState = searchOpts.initialState ?? createInitialSearchState();
-  await notifyProgress(evaluatedStates, "initial layout layering and topological placement");
   const startEval = evaluateSearchState(nodes, edges, startState, searchConfig);
 
   let bestState = startState;
@@ -183,7 +166,6 @@ export async function searchBestLayoutState(
           ? "layout-state-budget"
           : "aesthetic-state-budget";
 
-      let localAestheticEvaluations = 0;
       const aestheticResult = await runBoundedAestheticSearch({
         bestState,
         bestEvaluation: bestEval,
@@ -191,12 +173,8 @@ export async function searchBestLayoutState(
         budgetStopReason,
         visitedHashes,
         dependencies: {
-          evaluateState: async (candidate) => {
-            localAestheticEvaluations++;
-            const currentPass = evaluatedStates + localAestheticEvaluations;
-            await notifyProgress(currentPass, "bounded aesthetic optimization pass");
-            return evaluateSearchState(nodes, edges, candidate, searchConfig);
-          },
+          evaluateState: (candidate) =>
+            evaluateSearchState(nodes, edges, candidate, searchConfig),
           generateTrialStates: (candidate, evaluation) =>
             generateAestheticTrialStates(candidate, evaluation, searchConfig),
           generateCompletionStates: (candidate, evaluation) =>
@@ -257,11 +235,6 @@ export async function searchBestLayoutState(
       nextState.visitedSignatures.add(hash);
 
       evaluatedStates++;
-      const passDesc =
-        nextState.sideAssignments.size > 0
-          ? "A* orthogonal corridor route repair candidate"
-          : "neighborhood topology candidate";
-      await notifyProgress(evaluatedStates, passDesc);
       const nextEval = evaluateSearchState(nodes, edges, nextState, searchConfig);
 
       if (compareLayoutScores(nextEval.validation, bestEval.validation) < 0) {

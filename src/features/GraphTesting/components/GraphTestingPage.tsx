@@ -9,7 +9,7 @@ import {
   pointsToSvgPath,
   renderPathWithCrossingBridges,
 } from "../../../engine/layout/custom/svgPath";
-import { Button } from "../../../ui";
+import { Button, Spinner } from "../../../ui";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
 import type { TestScenario } from "../types";
@@ -141,25 +141,31 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
           className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"}
           role={error ? "alert" : "status"}
           aria-busy={isCalculating}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", minHeight: "300px" }}
         >
-          <span>
-            {error
-              ? `Layout worker failed: ${error.message}`
-              : isCalculating
-                ? "Calculating graph layout…"
-                : "Layout is unavailable."}
-          </span>
-          {(error || !isCalculating) && (
-            <button type="button" onClick={recalculate}>
-              Retry layout
-            </button>
+          {error ? (
+            <>
+              <span>Layout worker failed: {error.message}</span>
+              <button type="button" onClick={recalculate}>
+                Retry layout
+              </button>
+            </>
+          ) : isCalculating ? (
+            <Spinner size="lg" />
+          ) : (
+            <span>Layout is unavailable.</span>
           )}
         </div>
       ) : (
         <>
           {isCalculating && (
-            <div className="graph-layout-worker-loading" role="status" aria-busy="true">
-              <span>Recalculating graph layout…</span>
+            <div
+              className="graph-layout-worker-loading"
+              role="status"
+              aria-busy="true"
+              style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: 10 }}
+            >
+              <Spinner size="sm" />
             </div>
           )}
           <LayoutErrorBoundary onRetry={recalculate} resultGeneration={resultGeneration}>
