@@ -88,3 +88,88 @@ fn test_layout_validator_detects_node_overlap() {
     assert!(!val_res.is_valid);
     assert_eq!(val_res.metrics.node_node_overlaps, 1);
 }
+
+#[test]
+fn test_layout_validator_badge_non_finite_coordinate() {
+    let config = CustomLayoutConfig::default();
+    let badges = vec![crate::types::BadgePlacement {
+        edge_id: "e1".to_string(),
+        label: "badge".to_string(),
+        rect: crate::types::Rect {
+            x: f64::NAN,
+            y: 0.0,
+            width: 50.0,
+            height: 20.0,
+        },
+        anchor_point: Point { x: 10.0, y: 10.0 },
+        leader_points: None,
+    }];
+    let val_res = validate_custom_layout(&[], &[], &badges, None, None, &config);
+    assert!(!val_res.is_valid);
+    assert!(val_res.diagnostics.iter().any(|d| d.code == "NON_FINITE_COORDINATE"));
+}
+
+#[test]
+fn test_layout_validator_zero_length_arrow_segment() {
+    let config = CustomLayoutConfig::default();
+    let edges = vec![RoutedPath {
+        edge_id: "e1".to_string(),
+        points: vec![
+            Point { x: 50.0, y: 50.0 },
+            Point { x: 50.0, y: 200.0 },
+            Point { x: 50.0, y: 200.0 }, // zero-length final segment
+        ],
+        source_port: PortRef {
+            node_id: "N1".to_string(),
+            side: Side::Bottom,
+            index: 0,
+            point: Point { x: 50.0, y: 50.0 },
+            stub: Point { x: 50.0, y: 70.0 },
+        },
+        target_port: PortRef {
+            node_id: "N2".to_string(),
+            side: Side::Top,
+            index: 0,
+            point: Point { x: 50.0, y: 200.0 },
+            stub: Point { x: 50.0, y: 180.0 },
+        },
+    }];
+    let val_res = validate_custom_layout(&[], &edges, &[], None, None, &config);
+    assert!(!val_res.is_valid);
+    assert!(val_res.diagnostics.iter().any(|d| d.code == "ZERO_LENGTH_ARROW_SEGMENT"));
+}
+
+#[test]
+fn test_layout_validator_leader_collision_and_status_resolution() {
+    let config = CustomLayoutConfig::default();
+    let nodes = vec![PositionedNode {
+        id: "N1".to_string(),
+        label: None,
+        x: 0.0,
+        y: 0.0,
+        width: 100.0,
+        height: 100.0,
+        rank: 0,
+        order: 0,
+    }];
+    let badges = vec![crate::types::BadgePlacement {
+        edge_id: "e1".to_string(),
+        label: "badge".to_string(),
+        rect: crate::types::Rect {
+            x: 200.0,
+            y: 200.0,
+            width: 50.0,
+            height: 20.0,
+        },
+        anchor_point: Point { x: 200.0, y: 200.0 },
+        leader_points: Some(vec![
+            Point { x: 200.0, y: 200.0 },
+            Point { x: 50.0, y: 50.0 }, // cuts into interior of N1
+        ]),
+    }];
+    let val_res = validate_custom_layout(&nodes, &[], &badges, None, None, &config);
+    assert!(!val_res.is_valid);
+    assert!(val_res.diagnostics.iter().any(|d| d.code == "LEADER_COLLISION"));
+    let status = crate::validation::layout_validator::resolve_layout_status(&val_res);
+    assert_eq!(status, "invalid_hard_failure");
+}

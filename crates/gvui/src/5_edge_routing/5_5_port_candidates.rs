@@ -270,7 +270,9 @@ pub fn generate_port_candidates(
             let mut has_leg_conflict = false;
             if let (Some(nodes), Some(positions)) = (all_nodes, node_positions) {
                 for n in nodes {
-                    let pos = positions.get(&n.id).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
+                    let Some(pos) = positions.get(&n.id) else {
+                        continue;
+                    };
                     let rect = Rect {
                         x: pos.x,
                         y: pos.y,
@@ -317,8 +319,8 @@ pub fn enumerate_port_alternatives(
         if (a.base_cost - b.base_cost).abs() > 1e-9 {
             a.base_cost.partial_cmp(&b.base_cost).unwrap()
         } else {
-            let key_a = format!("{:?}:{:?}", a.src_side, a.tgt_side);
-            let key_b = format!("{:?}:{:?}", b.src_side, b.tgt_side);
+            let key_a = format!("{}:{}", a.src_side.as_str(), a.tgt_side.as_str());
+            let key_b = format!("{}:{}", b.src_side.as_str(), b.tgt_side.as_str());
             key_a.cmp(&key_b)
         }
     });
@@ -326,11 +328,11 @@ pub fn enumerate_port_alternatives(
     let mut alternatives: Vec<PortSideAssignment> = Vec::new();
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-    let current_key = format!("{:?}:{:?}", current.src_side, current.tgt_side);
+    let current_key = format!("{}:{}", current.src_side.as_str(), current.tgt_side.as_str());
     seen.insert(current_key);
 
     for cand in sorted {
-        let key = format!("{:?}:{:?}", cand.src_side, cand.tgt_side);
+        let key = format!("{}:{}", cand.src_side.as_str(), cand.tgt_side.as_str());
         if seen.contains(&key) {
             continue;
         }

@@ -137,10 +137,11 @@ pub fn replace_conflict_reservations(
 pub fn route_all_edges(
     nodes: &[PositionedNode],
     edges: &[NormalizedEdge],
-    _classified_edges: Option<&[NormalizedEdge]>,
+    classified_edges: Option<&[NormalizedEdge]>,
     config: &CustomLayoutConfig,
     options: Option<&EdgeRouterOptions>,
 ) -> EdgeRouterResult {
+    crate::edge_routing::bounded_astar::clear_route_cache();
     let mut self_edges: Vec<&NormalizedEdge> = Vec::new();
     let mut non_self_edges: Vec<&NormalizedEdge> = Vec::new();
 
@@ -225,7 +226,10 @@ pub fn route_all_edges(
             let src_pos = node_positions.get(&edge.source).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
             let tgt_pos = node_positions.get(&edge.target).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
 
-            let is_feedback = edge.is_cycle.unwrap_or(false);
+            let classified = classified_edges.and_then(|ce| ce.iter().find(|c| c.id == edge.id));
+            let is_feedback = edge.is_cycle.unwrap_or(false)
+                || edge.layout_role == Some(crate::types::EdgeLayoutHint::Feedback)
+                || classified.is_some_and(|c| c.is_cycle.unwrap_or(false) || c.layout_role == Some(crate::types::EdgeLayoutHint::Feedback));
             let role = if is_feedback {
                 EdgeRole::Feedback
             } else {

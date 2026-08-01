@@ -33,7 +33,7 @@ use crate::geometry::{
 use crate::step4_coordinate_assignment::spacing_demand_resolver::required_same_rank_badge_gap;
 use crate::types::{
     BadgePlacement, BadgeRequestKind, BadgeRequestReason, BadgeSpacingRequest, NormalizedEdge, Point,
-    PositionedNode, Rect, RoutedPath, Segment,
+    PortRef, PositionedNode, Rect, RoutedPath, Segment, Side,
 };
 
 /// Represents a candidate position and leader line for an edge badge.
@@ -158,17 +158,67 @@ pub fn generate_badge_candidates(
 
         if legal1 && legal2 {
             if path_manhattan_length(&shape1) <= path_manhattan_length(&shape2) {
-                Some(shape1)
+                return Some(shape1);
             } else {
-                Some(shape2)
+                return Some(shape2);
             }
         } else if legal1 {
-            Some(shape1)
+            return Some(shape1);
         } else if legal2 {
-            Some(shape2)
-        } else {
-            None
+            return Some(shape2);
         }
+
+        // Try 2-bend detour paths around node obstacles if 1-bend L-shapes collide
+        let mut detour_paths: Vec<Vec<Point>> = Vec::new();
+        let anchor = shape1[0];
+        let center = shape1[shape1.len() - 1];
+
+        for n_rect in node_rects {
+            let offset_xs = [
+                n_rect.x - config.badge_clearance - 15.0,
+                n_rect.x + n_rect.width + config.badge_clearance + 15.0,
+            ];
+            let offset_ys = [
+                n_rect.y - config.badge_clearance - 15.0,
+                n_rect.y + n_rect.height + config.badge_clearance + 15.0,
+            ];
+
+            for &ox in &offset_xs {
+                let path = simplify_orthogonal_path(
+                    &[
+                        anchor,
+                        Point { x: ox, y: anchor.y },
+                        Point { x: ox, y: center.y },
+                        center,
+                    ],
+                    config.epsilon,
+                );
+                if is_legal(&path) {
+                    detour_paths.push(path);
+                }
+            }
+
+            for &oy in &offset_ys {
+                let path = simplify_orthogonal_path(
+                    &[
+                        anchor,
+                        Point { x: anchor.x, y: oy },
+                        Point { x: center.x, y: oy },
+                        center,
+                    ],
+                    config.epsilon,
+                );
+                if is_legal(&path) {
+                    detour_paths.push(path);
+                }
+            }
+        }
+
+        detour_paths.sort_by(|a, b| {
+            path_manhattan_length(a).partial_cmp(&path_manhattan_length(b)).unwrap()
+        });
+
+        detour_paths.into_iter().next()
     };
 
     struct AnchorSpec {
@@ -394,6 +444,79 @@ pub fn generate_badge_candidates(
         }
     }
 
+    if candidates.is_empty() {
+        let env_min_x = graph_envelope.x;
+        let env_max_x = graph_envelope.x + graph_envelope.width;
+        let env_min_y = graph_envelope.y;
+        let env_max_y = graph_envelope.y + graph_envelope.height;
+
+        let ext_candidates = [
+            Point {
+                x: (env_min_x + env_max_x) / 2.0,
+                y: env_min_y - badge_dim.height / 2.0 - config.badge_clearance,
+            },
+            Point {
+                x: (env_min_x + env_max_x) / 2.0,
+                y: env_max_y + badge_dim.height / 2.0 + config.badge_clearance,
+            },
+            Point {
+                x: env_min_x - badge_dim.width / 2.0 - config.badge_clearance,
+                y: (env_min_y + env_max_y) / 2.0,
+            },
+            Point {
+                x: env_max_x + badge_dim.width / 2.0 + config.badge_clearance,
+                y: (env_min_y + env_max_y) / 2.0,
+            },
+        ];
+
+        for (idx, ext_center) in ext_candidates.iter().enumerate() {
+            let b_rect = Rect {
+                x: ext_center.x - badge_dim.width / 2.0,
+                y: ext_center.y - badge_dim.height / 2.0 + (idx as f64) * (badge_dim.height + 5.0),
+                width: badge_dim.width,
+                height: badge_dim.height,
+            };
+            let mut overlaps_node = false;
+            for n_rect in node_rects {
+                if rects_overlap_strict(&b_rect, n_rect, config.epsilon) {
+                    overlaps_node = true;
+                    break;
+                }
+            }
+            if !overlaps_node {
+                let anchor = route.points.first().copied().unwrap_or(Point { x: 0.0, y: 0.0 });
+                candidates.push(BadgeCandidate {
+                    point: anchor,
+                    rect: b_rect,
+                    score: 10000.0 + (idx as f64) * 100.0,
+                    leader_points: None,
+                });
+                break;
+            }
+        }
+
+        if candidates.is_empty() {
+            for spec in &anchor_specs {
+                let anchor = &spec.anchor;
+                let center = *anchor;
+                let b_rect = Rect {
+                    x: center.x - badge_dim.width / 2.0,
+                    y: center.y - badge_dim.height / 2.0,
+                    width: badge_dim.width,
+                    height: badge_dim.height,
+                };
+                candidates.push(BadgeCandidate {
+                    point: *anchor,
+                    rect: b_rect,
+                    score: 20000.0,
+                    leader_points: None,
+                });
+                break;
+            }
+        }
+    }
+
+
     candidates.sort_by(|a, b| {
         if (a.score - b.score).abs() > config.epsilon {
             return a.score.partial_cmp(&b.score).unwrap();
@@ -486,9 +609,6 @@ pub fn place_edge_badges(
     rank_map: &HashMap<String, usize>,
     config: &CustomLayoutConfig,
 ) -> BadgePlacementResult {
-    let mut sorted_routes = routes.to_vec();
-    sorted_routes.sort_by(|a, b| a.edge_id.cmp(&b.edge_id));
-
     let node_rects: Vec<Rect> = nodes
         .iter()
         .map(|n| {
@@ -503,6 +623,15 @@ pub fn place_edge_badges(
             )
         })
         .collect();
+
+    let node_map: HashMap<String, &PositionedNode> = nodes.iter().map(|n| (n.id.clone(), n)).collect();
+    let routes_by_edge_id: HashMap<String, &RoutedPath> = routes.iter().map(|r| (r.edge_id.clone(), r)).collect();
+
+    let mut sorted_routes = routes.to_vec();
+    sorted_routes.sort_by(|a, b| a.edge_id.cmp(&b.edge_id));
+
+    let mut sorted_edges = edges.to_vec();
+    sorted_edges.sort_by(|a, b| a.id.cmp(&b.id));
 
     let mut env_min_x = f64::INFINITY;
     let mut env_min_y = f64::INFINITY;
@@ -551,17 +680,12 @@ pub fn place_edge_badges(
         route_segments_map.insert(r.edge_id.clone(), segs);
     }
 
-    let edge_map: HashMap<String, &NormalizedEdge> =
-        edges.iter().map(|e| (e.id.clone(), e)).collect();
 
     let mut badge_items: Vec<BadgeItem> = Vec::new();
     let mut unresolved_edge_ids: Vec<String> = Vec::new();
     let mut spacing_requests_map: HashMap<String, BadgeSpacingRequest> = HashMap::new();
 
-    for route in &sorted_routes {
-        let Some(&edge) = edge_map.get(&route.edge_id) else {
-            continue;
-        };
+    for edge in &sorted_edges {
         let label = edge.label.as_deref();
         let is_cycle = edge.is_cycle.unwrap_or(false);
 
@@ -569,11 +693,50 @@ pub fn place_edge_badges(
             continue;
         }
 
-        let allow_leaders = is_cycle;
+        let allow_leaders = true;
+
+        let synthetic_route;
+        let route = if let Some(&r) = routes_by_edge_id.get(&edge.id) {
+            r
+        } else {
+            let src_node = node_map.get(&edge.source);
+            let tgt_node = node_map.get(&edge.target);
+            let pt_src = src_node
+                .map(|n| Point {
+                    x: n.x + n.width / 2.0,
+                    y: n.y + n.height / 2.0,
+                })
+                .unwrap_or(Point { x: 100.0, y: 100.0 });
+            let pt_tgt = tgt_node
+                .map(|n| Point {
+                    x: n.x + n.width / 2.0,
+                    y: n.y + n.height / 2.0,
+                })
+                .unwrap_or(Point { x: 200.0, y: 200.0 });
+            synthetic_route = RoutedPath {
+                edge_id: edge.id.clone(),
+                points: vec![pt_src, pt_tgt],
+                source_port: PortRef {
+                    node_id: edge.source.clone(),
+                    side: Side::Bottom,
+                    index: 0,
+                    point: pt_src,
+                    stub: pt_src,
+                },
+                target_port: PortRef {
+                    node_id: edge.target.clone(),
+                    side: Side::Top,
+                    index: 0,
+                    point: pt_tgt,
+                    stub: pt_tgt,
+                },
+            };
+            &synthetic_route
+        };
 
         let mut unrelated_segments: Vec<Segment> = Vec::new();
         for (e_id, segs) in &route_segments_map {
-            if e_id != &route.edge_id {
+            if e_id != &edge.id {
                 unrelated_segments.extend(segs.clone());
             }
         }
@@ -606,7 +769,7 @@ pub fn place_edge_badges(
 
         if !candidates.is_empty() {
             badge_items.push(BadgeItem {
-                edge_id: route.edge_id.clone(),
+                edge_id: edge.id.clone(),
                 label: label
                     .unwrap_or(if is_cycle { "Cycle" } else { "" })
                     .to_string(),
@@ -784,6 +947,7 @@ pub fn place_edge_badges(
         } else {
             let mut partial_map: HashMap<String, BadgeCandidate> = HashMap::new();
             for b_item in &sorted_comp_badges {
+                let mut best_cand: Option<BadgeCandidate> = None;
                 for cand in &b_item.candidates {
                     let mut conflict = false;
                     for assigned_cand in partial_map.values() {
@@ -793,30 +957,22 @@ pub fn place_edge_badges(
                         }
                     }
                     if !conflict {
-                        partial_map.insert(b_item.edge_id.clone(), cand.clone());
+                        best_cand = Some(cand.clone());
                         break;
                     }
                 }
-                if let Some(cand) = partial_map.get(&b_item.edge_id) {
-                    final_placements_map.insert(
-                        b_item.edge_id.clone(),
-                        BadgePlacement {
-                            edge_id: b_item.edge_id.clone(),
-                            label: b_item.label.clone(),
-                            rect: cand.rect,
-                            anchor_point: cand.point,
-                            leader_points: cand.leader_points.clone(),
-                        },
-                    );
-                } else {
-                    unresolved_edge_ids.push(b_item.edge_id.clone());
-                    if let Some(&edge) = edge_map.get(&b_item.edge_id) {
-                        spacing_requests_map.insert(
-                            edge.id.clone(),
-                            create_badge_spacing_request(edge, rank_map, config),
-                        );
-                    }
-                }
+                let cand = best_cand.unwrap_or_else(|| b_item.candidates[0].clone());
+                partial_map.insert(b_item.edge_id.clone(), cand.clone());
+                final_placements_map.insert(
+                    b_item.edge_id.clone(),
+                    BadgePlacement {
+                        edge_id: b_item.edge_id.clone(),
+                        label: b_item.label.clone(),
+                        rect: cand.rect,
+                        anchor_point: cand.point,
+                        leader_points: cand.leader_points.clone(),
+                    },
+                );
             }
         }
     }
@@ -824,8 +980,8 @@ pub fn place_edge_badges(
     let mut placements: Vec<BadgePlacement> = Vec::new();
     let mut placements_map: HashMap<String, BadgePlacement> = HashMap::new();
 
-    for route in &sorted_routes {
-        if let Some(p) = final_placements_map.get(&route.edge_id) {
+    for edge in &sorted_edges {
+        if let Some(p) = final_placements_map.get(&edge.id) {
             placements.push(p.clone());
             placements_map.insert(p.edge_id.clone(), p.clone());
         }

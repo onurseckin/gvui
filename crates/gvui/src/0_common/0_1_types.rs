@@ -14,6 +14,18 @@ pub enum Side {
     Left,
 }
 
+impl Side {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Side::Top => "top",
+            Side::Right => "right",
+            Side::Bottom => "bottom",
+            Side::Left => "left",
+        }
+    }
+}
+
+
 /// User-provided or inferred layout hints for edge role classification during cycle breaking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -475,12 +487,22 @@ pub struct OptimizationStats {
     /// Total number of global optimization passes completed.
     #[serde(rename = "globalPasses")]
     pub global_passes: usize,
+    /// Total number of evaluated port states.
+    #[serde(rename = "evaluatedPortStates", default = "default_one")]
+    pub evaluated_port_states: usize,
+    /// Total number of spacing expansion iterations.
+    #[serde(rename = "spacingExpansions", default)]
+    pub spacing_expansions: usize,
     /// Total execution duration in milliseconds.
     #[serde(rename = "durationMs")]
     pub duration_ms: f64,
     /// Reason string describing optimization termination.
     #[serde(rename = "stopReason")]
     pub stop_reason: String,
+}
+
+fn default_one() -> usize {
+    1
 }
 
 /// Final layout payload produced for WebAssembly or renderer consumption.
@@ -506,8 +528,8 @@ pub struct RankAssignmentResult {
     pub rank_nodes_map: HashMap<usize, Vec<String>>,
     /// Highest rank index assigned in the graph.
     pub max_rank: usize,
-    /// Map of edge ID to rank span distance (|target_rank - source_rank|).
-    pub edge_rank_span_map: HashMap<String, usize>,
+    /// Map of edge ID to rank span distance (target_rank - source_rank).
+    pub edge_rank_span_map: HashMap<String, i32>,
 }
 
 /// Vertical band region occupied by a layout rank layer.

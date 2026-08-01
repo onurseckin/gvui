@@ -19,6 +19,8 @@
     "lint": "oxlint",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check",
+    "audit": "bun run build:wasm && bun scripts/runLayoutAudit.ts",
+    "test": "cargo test --manifest-path crates/gvui/Cargo.toml && bun test src/ && bun run audit",
     "build": "bun run build:wasm && bun run build:local",
     "prod": "bun run build:wasm && docker compose -f docker-compose.prod.yml up -d --build",
     "prod:stop": "docker compose -f docker-compose.prod.yml down",

@@ -20,6 +20,187 @@ use crate::geometry::{
 };
 use crate::types::{NormalizedEdge, NormalizedNode, Point, PortRef, Rect, RoutedPath, Segment, Side};
 
+/// Simplifies an orthogonal path and snaps segment coordinates to ensure 100% strict orthogonality
+/// and perpendicular entry/exit at source and target ports.
+pub fn sanitize_orthogonal_path(
+    raw_points: &[Point],
+    source_port: &PortRef,
+    target_port: &PortRef,
+    epsilon: f64,
+) -> Vec<Point> {
+    if raw_points.is_empty() {
+        return Vec::new();
+    }
+    if raw_points.len() == 1 {
+        return vec![source_port.point];
+    }
+
+    let mut pts = raw_points.to_vec();
+
+    // 1. Force exact start/end port positions
+    pts[0] = source_port.point;
+    let last = pts.len() - 1;
+    pts[last] = target_port.point;
+
+    let snap_tol = epsilon.max(0.05);
+    let src_is_vert = matches!(source_port.side, Side::Top | Side::Bottom);
+    let tgt_is_vert = matches!(target_port.side, Side::Top | Side::Bottom);
+
+    // Snap target_port.point to source_port.point if near-equal along relevant axis
+    if (pts[0].x - pts[last].x).abs() <= snap_tol && (src_is_vert || tgt_is_vert) {
+        pts[last].x = pts[0].x;
+    }
+    if (pts[0].y - pts[last].y).abs() <= snap_tol && (!src_is_vert || !tgt_is_vert) {
+        pts[last].y = pts[0].y;
+    }
+
+    // 2. Snap near-equal coordinates along adjacent segments to guarantee exact orthogonality
+    for i in 0..pts.len() - 1 {
+        if (pts[i].x - pts[i + 1].x).abs() <= snap_tol {
+            pts[i + 1].x = pts[i].x;
+        }
+        if (pts[i].y - pts[i + 1].y).abs() <= snap_tol {
+            pts[i + 1].y = pts[i].y;
+        }
+    }
+
+    // 3. Force perpendicular departure from source port stub
+    if pts.len() > 1 {
+        if src_is_vert {
+            pts[1].x = pts[0].x;
+        } else {
+            pts[1].y = pts[0].y;
+        }
+    }
+
+    // 4. Force perpendicular arrival into target port stub
+    if pts.len() > 2 {
+        let n = pts.len();
+        if tgt_is_vert {
+            pts[n - 2].x = pts[n - 1].x;
+        } else {
+            pts[n - 2].y = pts[n - 1].y;
+        }
+    }
+
+    // 5. Simplify collinear/duplicate points
+    let mut simplified = simplify_orthogonal_path(&pts, epsilon);
+
+    if simplified.is_empty() {
+        return vec![source_port.point, target_port.point];
+    }
+
+    // Re-enforce exact start/end
+    simplified[0] = source_port.point;
+    let end_idx = simplified.len() - 1;
+    simplified[end_idx] = target_port.point;
+    if (simplified[0].x - simplified[end_idx].x).abs() <= snap_tol && (src_is_vert || tgt_is_vert) {
+        simplified[end_idx].x = simplified[0].x;
+    }
+    if (simplified[0].y - simplified[end_idx].y).abs() <= snap_tol && (!src_is_vert || !tgt_is_vert) {
+        simplified[end_idx].y = simplified[0].y;
+    }
+
+    // Handle 2-point paths
+    if simplified.len() == 2 {
+        let p0 = simplified[0];
+        let p1 = simplified[1];
+        let dx = (p0.x - p1.x).abs();
+        let dy = (p0.y - p1.y).abs();
+
+        if dx > epsilon && dy > epsilon {
+            // Diagonal 2-point path! Must convert to 3 or 4 point orthogonal path.
+            if src_is_vert && tgt_is_vert {
+                let y_mid = (p0.y + p1.y) / 2.0;
+                simplified = vec![
+                    p0,
+                    Point { x: p0.x, y: y_mid },
+                    Point { x: p1.x, y: y_mid },
+                    p1,
+                ];
+            } else if !src_is_vert && !tgt_is_vert {
+                let x_mid = (p0.x + p1.x) / 2.0;
+                simplified = vec![
+                    p0,
+                    Point { x: x_mid, y: p0.y },
+                    Point { x: x_mid, y: p1.y },
+                    p1,
+                ];
+            } else if src_is_vert && !tgt_is_vert {
+                simplified = vec![
+                    p0,
+                    Point { x: p0.x, y: p1.y },
+                    p1,
+                ];
+            } else {
+                simplified = vec![
+                    p0,
+                    Point { x: p1.x, y: p0.y },
+                    p1,
+                ];
+            }
+        } else {
+            // Straight 2-point path, ensure exact coordinate alignment
+            if src_is_vert || tgt_is_vert {
+                simplified[1].x = p0.x;
+            } else {
+                simplified[1].y = p0.y;
+            }
+        }
+    } else if simplified.len() == 3 {
+        let p0 = simplified[0];
+        let p1 = simplified[1];
+        let p2 = simplified[2];
+
+        if src_is_vert && tgt_is_vert && (p0.x - p2.x).abs() > epsilon {
+            // Conflict! 3-point path cannot have both endpoints vertical with different X coordinates.
+            let y_mid = p1.y;
+            simplified = vec![
+                p0,
+                Point { x: p0.x, y: y_mid },
+                Point { x: p2.x, y: y_mid },
+                p2,
+            ];
+        } else if !src_is_vert && !tgt_is_vert && (p0.y - p2.y).abs() > epsilon {
+            // Conflict! 3-point path cannot have both endpoints horizontal with different Y coordinates.
+            let x_mid = p1.x;
+            simplified = vec![
+                p0,
+                Point { x: x_mid, y: p0.y },
+                Point { x: x_mid, y: p2.y },
+                p2,
+            ];
+        } else {
+            if src_is_vert {
+                simplified[1].x = p0.x;
+            } else {
+                simplified[1].y = p0.y;
+            }
+            if tgt_is_vert {
+                simplified[1].x = p2.x;
+            } else {
+                simplified[1].y = p2.y;
+            }
+        }
+    } else {
+        // len >= 4
+        let n = simplified.len();
+        if src_is_vert {
+            simplified[1].x = simplified[0].x;
+        } else {
+            simplified[1].y = simplified[0].y;
+        }
+        if tgt_is_vert {
+            simplified[n - 2].x = simplified[n - 1].x;
+        } else {
+            simplified[n - 2].y = simplified[n - 1].y;
+        }
+    }
+
+    simplify_orthogonal_path(&simplified, epsilon)
+}
+
+
 /// Routes a self-loop edge originating and terminating on the same node.
 /// Loops depart from the Top side of the node and enter via the Right side around the top-right corner.
 pub fn route_self_loop(
@@ -72,7 +253,7 @@ pub fn route_self_loop(
         target_port.point,
     ];
 
-    let points = simplify_orthogonal_path(&raw_points, config.epsilon);
+    let points = sanitize_orthogonal_path(&raw_points, &source_port, &target_port, config.epsilon);
 
     RoutedPath {
         edge_id: edge.id.clone(),
@@ -157,18 +338,12 @@ pub fn find_grid_dogleg_route(
     config: &CustomLayoutConfig,
     options: &RouteSearchOptions,
 ) -> Option<RoutedPath> {
-    let mut x_set: std::collections::HashSet<i64> = std::collections::HashSet::new();
-    let mut y_set: std::collections::HashSet<i64> = std::collections::HashSet::new();
-
-    for pt in grid.vertices.values() {
-        x_set.insert((pt.x * 1000.0).round() as i64);
-        y_set.insert((pt.y * 1000.0).round() as i64);
-    }
-
-    let mut x_coords: Vec<f64> = x_set.into_iter().map(|v| (v as f64) / 1000.0).collect();
-    let mut y_coords: Vec<f64> = y_set.into_iter().map(|v| (v as f64) / 1000.0).collect();
-    x_coords.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    y_coords.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mut x_coords: Vec<f64> = grid.vertices.values().map(|pt| pt.x).collect();
+    let mut y_coords: Vec<f64> = grid.vertices.values().map(|pt| pt.y).collect();
+    x_coords.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    y_coords.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    x_coords.dedup_by(|a, b| (*a - *b).abs() <= config.epsilon);
+    y_coords.dedup_by(|a, b| (*a - *b).abs() <= config.epsilon);
 
     let select_tracks = |coordinates: &[f64], src_coord: f64, tgt_coord: f64| -> Vec<f64> {
         let midpoint = (src_coord + tgt_coord) / 2.0;
@@ -209,111 +384,140 @@ pub fn find_grid_dogleg_route(
     let candidate_y_tracks = select_tracks(&y_coords, source_port.stub.y, target_port.stub.y);
     let indexed_occupancy = IndexedOccupancy::new(occupancy, config.epsilon);
 
-    let try_candidate = |pts: Vec<Point>| -> Option<RoutedPath> {
-        let simplified = simplify_orthogonal_path(&pts, config.epsilon);
-        if simplified.len() < 2 {
-            return None;
+    let mut best_route: Option<(usize, usize, f64, RoutedPath)> = None;
+
+    for allow_collinear in [false, true] {
+        if best_route.is_some() {
+            break;
         }
 
-        if get_segment_direction(&simplified[0], &simplified[1])
-            != side_to_outward_dir(source_port.side)
-            || get_segment_direction(
-                &simplified[simplified.len() - 2],
-                &simplified[simplified.len() - 1],
-            ) != side_to_inward_dir(target_port.side)
-        {
-            return None;
-        }
+        for &x in &candidate_x_tracks {
+            for &y in &candidate_y_tracks {
+                let mut run_candidate = |pts: Vec<Point>| {
+                    let simplified = sanitize_orthogonal_path(&pts, source_port, target_port, config.epsilon);
+                    if simplified.len() < 2 {
+                        return;
+                    }
 
-        if let Some(rx) = req_x {
-            if !simplified
-                .iter()
-                .any(|p| (p.x - rx).abs() <= config.epsilon)
-            {
-                return None;
-            }
-        }
+                    if get_segment_direction(&simplified[0], &simplified[1])
+                        != side_to_outward_dir(source_port.side)
+                        || get_segment_direction(
+                            &simplified[simplified.len() - 2],
+                            &simplified[simplified.len() - 1],
+                        ) != side_to_inward_dir(target_port.side)
+                    {
+                        return;
+                    }
 
-        for index in 0..simplified.len() - 1 {
-            let segment = Segment {
-                a: simplified[index],
-                b: simplified[index + 1],
-            };
-            let is_source_endpoint_leg = index == 0;
-            let is_target_endpoint_leg = index == simplified.len() - 2;
+                    if let Some(rx) = req_x {
+                        if !simplified
+                            .iter()
+                            .any(|p| (p.x - rx).abs() <= config.epsilon)
+                        {
+                            return;
+                        }
+                    }
 
-            if !is_orthogonal_segment(&segment, config.epsilon)
-                || grid.node_obstacles.iter().any(|no| {
-                    segment_intersects_rect_interior(&segment, &no.rect, config.epsilon)
-                        && !(is_source_endpoint_leg && no.node_id == source_port.node_id)
-                        && !(is_target_endpoint_leg && no.node_id == target_port.node_id)
-                })
-                || options.forbidden_rects.iter().any(|rect| {
-                    !is_source_endpoint_leg
-                        && !is_target_endpoint_leg
-                        && segment_intersects_rect_interior(&segment, rect, config.epsilon)
-                })
-            {
-                return None;
-            }
+                    let mut total_crossings = 0;
+                    let mut total_length = 0.0;
 
-            let occ_result = indexed_occupancy.check_segment_conflict(&segment, edge_id);
-            if occ_result.is_collinear_occupied || occ_result.step_crossings > 0 {
-                return None;
-            }
-        }
+                    for index in 0..simplified.len() - 1 {
+                        let segment = Segment {
+                            a: simplified[index],
+                            b: simplified[index + 1],
+                        };
+                        let is_source_endpoint_leg = index == 0;
+                        let is_target_endpoint_leg = index == simplified.len() - 2;
 
-        Some(RoutedPath {
-            edge_id: edge_id.to_string(),
-            points: simplified,
-            source_port: source_port.clone(),
-            target_port: target_port.clone(),
-        })
-    };
+                        if !is_orthogonal_segment(&segment, config.epsilon)
+                            || grid.node_obstacles.iter().any(|no| {
+                                segment_intersects_rect_interior(&segment, &no.rect, config.epsilon)
+                                    && !(is_source_endpoint_leg && no.node_id == source_port.node_id)
+                                    && !(is_target_endpoint_leg && no.node_id == target_port.node_id)
+                            })
+                            || options.forbidden_rects.iter().any(|rect| {
+                                !is_source_endpoint_leg
+                                    && !is_target_endpoint_leg
+                                    && segment_intersects_rect_interior(&segment, rect, config.epsilon)
+                            })
+                        {
+                            return;
+                        }
 
-    for &x in &candidate_x_tracks {
-        for &y in &candidate_y_tracks {
-            let horizontal_first = try_candidate(vec![
-                source_port.point,
-                source_port.stub,
-                Point {
-                    x,
-                    y: source_port.stub.y,
-                },
-                Point { x, y },
-                Point {
-                    x: target_port.stub.x,
-                    y,
-                },
-                target_port.stub,
-                target_port.point,
-            ]);
-            if horizontal_first.is_some() {
-                return horizontal_first;
-            }
+                        let occ_result = indexed_occupancy.check_segment_conflict(&segment, edge_id);
+                        if occ_result.is_collinear_occupied && !allow_collinear {
+                            return;
+                        }
+                        if occ_result.is_collinear_occupied {
+                            let seg_len = (segment.b.x - segment.a.x).abs() + (segment.b.y - segment.a.y).abs();
+                            total_length += seg_len * 1000.0;
+                        }
+                        total_crossings += occ_result.step_crossings;
+                        total_length += (segment.b.x - segment.a.x).abs() + (segment.b.y - segment.a.y).abs();
+                    }
 
-            let vertical_first = try_candidate(vec![
-                source_port.point,
-                source_port.stub,
-                Point {
-                    x: source_port.stub.x,
-                    y,
-                },
-                Point { x, y },
-                Point {
-                    x,
-                    y: target_port.stub.y,
-                },
-                target_port.stub,
-                target_port.point,
-            ]);
-            if vertical_first.is_some() {
-                return vertical_first;
+                    let bends = simplified.len().saturating_sub(2);
+                    let cand_route = RoutedPath {
+                        edge_id: edge_id.to_string(),
+                        points: simplified,
+                        source_port: source_port.clone(),
+                        target_port: target_port.clone(),
+                    };
+
+                    let is_better = match &best_route {
+                        None => true,
+                        Some((best_cross, best_bends, best_len, _)) => {
+                            if total_crossings != *best_cross {
+                                total_crossings < *best_cross
+                            } else if bends != *best_bends {
+                                bends < *best_bends
+                            } else {
+                                total_length < *best_len
+                            }
+                        }
+                    };
+
+                    if is_better {
+                        best_route = Some((total_crossings, bends, total_length, cand_route));
+                    }
+                };
+
+                run_candidate(vec![
+                    source_port.point,
+                    source_port.stub,
+                    Point {
+                        x,
+                        y: source_port.stub.y,
+                    },
+                    Point { x, y },
+                    Point {
+                        x: target_port.stub.x,
+                        y,
+                    },
+                    target_port.stub,
+                    target_port.point,
+                ]);
+
+                run_candidate(vec![
+                    source_port.point,
+                    source_port.stub,
+                    Point {
+                        x: source_port.stub.x,
+                        y,
+                    },
+                    Point { x, y },
+                    Point {
+                        x,
+                        y: target_port.stub.y,
+                    },
+                    target_port.stub,
+                    target_port.point,
+                ]);
             }
         }
     }
 
-    None
+    best_route.map(|(_, _, _, route)| route)
 }
 
 /// Routes feedback back-edges through outer graph corridors when direct routes fail or cross nodes.
@@ -503,7 +707,13 @@ pub fn route_feedback_corridors(
             }
         }
 
-        if let Some(f_route) = found_route {
+        if let Some(mut f_route) = found_route {
+            f_route.points = sanitize_orthogonal_path(
+                &f_route.points,
+                &f_route.source_port,
+                &f_route.target_port,
+                config.epsilon,
+            );
             for i in 0..f_route.points.len().saturating_sub(1) {
                 current_occupancy.push(OccupancyRecord {
                     edge_id: edge.id.clone(),

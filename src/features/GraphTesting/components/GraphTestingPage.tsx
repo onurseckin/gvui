@@ -6,17 +6,10 @@ import {
   type NormalizedNode,
 } from "../../../engine/layout/custom";
 
-function pointsToSvgPath(points: Array<{ x: number; y: number }>): string {
-  if (!points || points.length === 0) return "";
-  return points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "").trim();
-}
-
-function renderPathWithCrossingBridges(
-  points: Array<{ x: number; y: number }>,
-  _ownedCrossings?: unknown,
-): string {
-  return pointsToSvgPath(points);
-}
+import {
+  pointsToSvgPath,
+  renderPathWithCrossingBridges,
+} from "../../../engine/layout/custom/svgPath";
 
 import { Button, Spinner } from "../../../ui";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";

@@ -33,7 +33,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use crate::config::CustomLayoutConfig;
-use crate::geometry::{is_orthogonal_segment, segment_intersects_rect_interior};
+use crate::geometry::segment_intersects_rect_interior;
 use crate::route_occupancy::{IndexedOccupancy, OccupancyRecord};
 use crate::routing_grid::{vertex_key, RoutingGrid};
 use crate::types::{EdgeRole, Point, PortRef, Rect, RoutedPath, Segment, Side};
@@ -257,6 +257,7 @@ pub fn search_orthogonal_route(
         return None;
     }
 
+
     let mut vertex_index_map: HashMap<String, usize> = HashMap::new();
     for (v_idx_counter, v_id) in grid.vertices.keys().enumerate() {
         vertex_index_map.insert(v_id.clone(), v_idx_counter);
@@ -336,11 +337,12 @@ pub fn search_orthogonal_route(
     });
 
     let mut best_goal_node_idx: Option<usize> = None;
+    let endpoint_dist = (src_stub_pt.x - tgt_stub_pt.x).abs() + (src_stub_pt.y - tgt_stub_pt.y).abs();
+    let adaptive_max_states = (config.max_astar_states_per_route * 4).max((endpoint_dist * 10.0) as usize);
     let max_iterations = options
         .max_iterations
-        .unwrap_or(config.max_astar_states_per_route);
+        .unwrap_or(adaptive_max_states);
     let mut expanded_states = 0;
-    let mut stop_reason = "queue_exhausted".to_string();
 
     let mut combined_occupancy = occupancy.to_vec();
     combined_occupancy.extend(options.reservations.clone());
@@ -370,7 +372,6 @@ pub fn search_orthogonal_route(
 
     while let Some(top_item) = open_heap.pop() {
         if expanded_states >= max_iterations {
-            stop_reason = "max_iterations".to_string();
             break;
         }
 
@@ -390,7 +391,6 @@ pub fn search_orthogonal_route(
             && node_pool[curr_idx].visited_required_corridor
         {
             best_goal_node_idx = Some(curr_idx);
-            stop_reason = "target_reached".to_string();
             break;
         }
 
@@ -530,7 +530,7 @@ pub fn search_orthogonal_route(
                 },
             );
         }
-        return if stop_reason == "max_iterations" && options.allow_dogleg_fallback {
+        return if options.allow_dogleg_fallback {
             crate::edge_routing::special_routes::find_grid_dogleg_route(
                 edge_id,
                 source_port,
@@ -544,6 +544,7 @@ pub fn search_orthogonal_route(
             None
         };
     }
+
 
     let mut grid_points: Vec<Point> = Vec::new();
     let mut curr_opt = best_goal_node_idx;
@@ -560,42 +561,16 @@ pub fn search_orthogonal_route(
     raw_points.extend(grid_points);
     raw_points.push(target_port.point);
 
-    let mut points: Vec<Point> = Vec::new();
-    for pt in raw_points {
-        let last = points.last();
-        if last.is_none()
-            || (last.unwrap().x - pt.x).abs() > config.epsilon
-            || (last.unwrap().y - pt.y).abs() > config.epsilon
-        {
-            points.push(pt);
-        }
-    }
-
-    let mut simplified_points: Vec<Point> = Vec::new();
-    for i in 0..points.len() {
-        if i == 0 || i == points.len() - 1 {
-            simplified_points.push(points[i]);
-            continue;
-        }
-
-        let prev = simplified_points.last().unwrap();
-        let curr_pt = &points[i];
-        let next = &points[i + 1];
-
-        if is_orthogonal_segment(&Segment { a: *prev, b: *next }, config.epsilon) {
-            let dir1 = get_segment_direction(prev, curr_pt);
-            let dir2 = get_segment_direction(curr_pt, next);
-            if dir1 == dir2 {
-                continue;
-            }
-        }
-
-        simplified_points.push(*curr_pt);
-    }
+    let final_points = crate::edge_routing::special_routes::sanitize_orthogonal_path(
+        &raw_points,
+        source_port,
+        target_port,
+        config.epsilon,
+    );
 
     Some(RoutedPath {
         edge_id: edge_id.to_string(),
-        points: simplified_points,
+        points: final_points,
         source_port: source_port.clone(),
         target_port: target_port.clone(),
     })
@@ -630,7 +605,9 @@ pub fn search_orthogonal_route_cached(
     );
 
     if let Some(cached_res) = ROUTE_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
-        return cached_res;
+        if cached_res.is_some() {
+            return cached_res;
+        }
     }
 
     let result = search_orthogonal_route(
@@ -643,6 +620,8 @@ pub fn search_orthogonal_route_cached(
         options,
     );
 
-    ROUTE_CACHE.with(|cache| cache.borrow_mut().insert(key, result.clone()));
+    if result.is_some() {
+        ROUTE_CACHE.with(|cache| cache.borrow_mut().insert(key, result.clone()));
+    }
     result
 }

@@ -37,11 +37,11 @@ pub(crate) fn build_result(
         list.sort();
     }
 
-    let mut edge_rank_span_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut edge_rank_span_map: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
     for edge in edges {
-        let src_rank = *node_rank_map.get(&edge.source).unwrap_or(&0);
-        let tgt_rank = *node_rank_map.get(&edge.target).unwrap_or(&0);
-        let span = tgt_rank.saturating_sub(src_rank);
+        let src_rank = *node_rank_map.get(&edge.source).unwrap_or(&0) as i32;
+        let tgt_rank = *node_rank_map.get(&edge.target).unwrap_or(&0) as i32;
+        let span = tgt_rank - src_rank;
         edge_rank_span_map.insert(edge.id.clone(), span);
     }
 

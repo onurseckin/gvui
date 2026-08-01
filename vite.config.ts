@@ -28,6 +28,13 @@ export default defineConfig({
     port: 5173,
     watch: {
       usePolling: true,
+      ignored: [
+        "**/crates/**",
+        "**/target/**",
+        "**/scratch/**",
+        "**/.git/**",
+        "**/.tmp/**",
+      ],
     },
   },
   build: {

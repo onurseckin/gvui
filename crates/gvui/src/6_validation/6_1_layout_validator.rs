@@ -226,6 +226,31 @@ pub fn validate_custom_layout(
         }
     }
 
+    for badge in badges {
+        if !badge.rect.x.is_finite()
+            || !badge.rect.y.is_finite()
+            || !badge.rect.width.is_finite()
+            || !badge.rect.height.is_finite()
+            || !is_finite_point(&badge.anchor_point)
+        {
+            add_diagnostic(
+                &mut diagnostics,
+                &mut seen_diagnostic_keys,
+                ExtendedLayoutDiagnostic {
+                    code: "NON_FINITE_COORDINATE".to_string(),
+                    severity: "error".to_string(),
+                    message: format!(
+                        "Badge for edge {} has non-finite coordinates or dimensions",
+                        badge.edge_id
+                    ),
+                    ids: vec![badge.edge_id.clone()],
+                    segment: None,
+                    rect: None,
+                },
+            );
+        }
+    }
+
     // 2. Node-node overlap check
     for i in 0..nodes.len() {
         let n_a = &nodes[i];
@@ -385,6 +410,27 @@ pub fn validate_custom_layout(
                     },
                 );
             }
+        }
+
+        let p_last = edge.points[edge.points.len() - 1];
+        let p_prev = edge.points[edge.points.len() - 2];
+        let arrow_seg_len = (p_last.x - p_prev.x).abs() + (p_last.y - p_prev.y).abs();
+        if arrow_seg_len <= config.epsilon {
+            add_diagnostic(
+                &mut diagnostics,
+                &mut seen_diagnostic_keys,
+                ExtendedLayoutDiagnostic {
+                    code: "ZERO_LENGTH_ARROW_SEGMENT".to_string(),
+                    severity: "error".to_string(),
+                    message: format!(
+                        "Edge {} has zero-length final arrowhead segment",
+                        edge.edge_id
+                    ),
+                    ids: vec![edge.edge_id.clone()],
+                    segment: Some(Segment { a: p_prev, b: p_last }),
+                    rect: None,
+                },
+            );
         }
     }
 
@@ -560,7 +606,69 @@ pub fn validate_custom_layout(
         }
     }
 
-    // 9. Soft Metrics & Crossings
+    // 9. Leader collision check
+    for badge in badges {
+        if let Some(ref leader_points) = badge.leader_points {
+            if leader_points.len() >= 2 {
+                for k in 0..leader_points.len() - 1 {
+                    let leader_seg = Segment {
+                        a: leader_points[k],
+                        b: leader_points[k + 1],
+                    };
+
+                    // Collides with node interior?
+                    for node in nodes {
+                        let Some(n_rect) = node_rect_map.get(&node.id) else {
+                            continue;
+                        };
+                        if segment_intersects_rect_interior(&leader_seg, n_rect, config.epsilon) {
+                            add_diagnostic(
+                                &mut diagnostics,
+                                &mut seen_diagnostic_keys,
+                                ExtendedLayoutDiagnostic {
+                                    code: "LEADER_COLLISION".to_string(),
+                                    severity: "error".to_string(),
+                                    message: format!(
+                                        "Badge leader for edge {} collides with node {}",
+                                        badge.edge_id, node.id
+                                    ),
+                                    ids: vec![badge.edge_id.clone(), node.id.clone()],
+                                    segment: Some(leader_seg.clone()),
+                                    rect: Some(*n_rect),
+                                },
+                            );
+                        }
+                    }
+
+                    // Collides with another badge interior?
+                    for b_other in badges {
+                        if b_other.edge_id == badge.edge_id {
+                            continue;
+                        }
+                        if segment_intersects_rect_interior(&leader_seg, &b_other.rect, config.epsilon) {
+                            add_diagnostic(
+                                &mut diagnostics,
+                                &mut seen_diagnostic_keys,
+                                ExtendedLayoutDiagnostic {
+                                    code: "LEADER_COLLISION".to_string(),
+                                    severity: "error".to_string(),
+                                    message: format!(
+                                        "Badge leader for edge {} collides with badge for edge {}",
+                                        badge.edge_id, b_other.edge_id
+                                    ),
+                                    ids: vec![badge.edge_id.clone(), b_other.edge_id.clone()],
+                                    segment: Some(leader_seg.clone()),
+                                    rect: Some(b_other.rect),
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Soft Metrics & Crossings
     let crossings = detect_edge_crossings(edges, edge_roles, config.epsilon);
     metrics.crossing_count = crossings.len();
 
@@ -608,6 +716,51 @@ pub fn validate_custom_layout(
         }
     }
 
+    // Soft Metrics: Total Area calculation
+    let mut min_x = f64::INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+
+    for node in nodes {
+        min_x = min_x.min(node.x);
+        min_y = min_y.min(node.y);
+        max_x = max_x.max(node.x + node.width);
+        max_y = max_y.max(node.y + node.height);
+    }
+    for edge in edges {
+        for p in &edge.points {
+            min_x = min_x.min(p.x);
+            min_y = min_y.min(p.y);
+            max_x = max_x.max(p.x);
+            max_y = max_y.max(p.y);
+        }
+    }
+    for badge in badges {
+        min_x = min_x.min(badge.rect.x);
+        min_y = min_y.min(badge.rect.y);
+        max_x = max_x.max(badge.rect.x + badge.rect.width);
+        max_y = max_y.max(badge.rect.y + badge.rect.height);
+    }
+
+    if min_x.is_finite() && max_x.is_finite() && max_x >= min_x && max_y >= min_y {
+        metrics.total_area = (max_x - min_x) * (max_y - min_y);
+    } else {
+        metrics.total_area = 0.0;
+    }
+
+    let roles = edge_roles;
+    let leader_metrics = calculate_leader_metrics(badges, roles);
+    metrics.ordinary_leader_count = leader_metrics.ordinary_leader_count;
+    metrics.feedback_leader_count = leader_metrics.feedback_leader_count;
+    metrics.total_leader_length = leader_metrics.total_leader_length;
+
+    let hairpin_metrics = calculate_hairpin_count(edges, roles, config.epsilon);
+    metrics.hairpin_count = hairpin_metrics.total_hairpins;
+    metrics.avoidable_hairpin_count = hairpin_metrics.avoidable_hairpins;
+    metrics.excess_bend_count = calculate_excess_bends(edges, roles);
+    metrics.port_side_imbalance = calculate_port_side_imbalance(nodes, edges);
+
     let has_error = diagnostics.iter().any(|d| d.severity == "error");
     let is_valid = !has_error;
 
@@ -619,18 +772,39 @@ pub fn validate_custom_layout(
     }
 }
 
+/// Checks if a validation result has any aesthetic defects.
+pub fn has_aesthetic_defect(validation: &ExtendedLayoutValidationResult) -> bool {
+    let metrics = &validation.metrics;
+    metrics.badge_node_overlaps > 0
+        || metrics.badge_badge_overlaps > 0
+        || metrics.badge_unrelated_edge_overlaps > 0
+        || metrics.crossing_count > 0
+        || metrics.shared_edge_segment_length > 0.0
+        || metrics.ordinary_leader_count > 0
+        || metrics.avoidable_hairpin_count > 0
+        || metrics.excess_bend_count > 0
+}
+
+/// Resolves the layout status string based on validation result.
+pub fn resolve_layout_status(validation: &ExtendedLayoutValidationResult) -> String {
+    if !validation.is_valid {
+        "invalid_hard_failure".to_string()
+    } else if validation.metrics.unresolved_badge_count > 0 || has_aesthetic_defect(validation) {
+        "unresolved_soft_conflicts".to_string()
+    } else {
+        "success".to_string()
+    }
+}
+
 /// Converts an extended layout validation result into a multi-criteria `LayoutScore` struct.
 pub fn validation_result_to_score(
     res: &ExtendedLayoutValidationResult,
-    nodes: &[PositionedNode],
-    edges: &[RoutedPath],
-    badges: &[BadgePlacement],
-    edge_roles: Option<&HashMap<String, EdgeRole>>,
+    _nodes: &[PositionedNode],
+    _edges: &[RoutedPath],
+    _badges: &[BadgePlacement],
+    _edge_roles: Option<&HashMap<String, EdgeRole>>,
 ) -> LayoutScore {
     let hard_error_count = res.diagnostics.iter().filter(|d| d.severity == "error").count();
-    let edge_role_map: HashMap<String, EdgeRole> = edge_roles.cloned().unwrap_or_default();
-    let leader_metrics = calculate_leader_metrics(badges, edge_role_map.clone());
-    let hairpin_metrics = calculate_hairpin_count(edges, edge_role_map.clone(), 0.001);
 
     LayoutScore {
         hard_error_count: if res.is_valid { hard_error_count } else { 1.max(hard_error_count) },
@@ -643,16 +817,16 @@ pub fn validation_result_to_score(
         badge_badge_overlaps: res.metrics.badge_badge_overlaps,
         badge_unrelated_edge_overlaps: res.metrics.badge_unrelated_edge_overlaps,
         crossing_count: res.metrics.crossing_count,
-        ordinary_leader_count: leader_metrics.ordinary_leader_count,
-        avoidable_hairpin_count: hairpin_metrics.avoidable_hairpins,
-        excess_bend_count: calculate_excess_bends(edges, edge_role_map),
-        hairpin_count: hairpin_metrics.total_hairpins,
+        ordinary_leader_count: res.metrics.ordinary_leader_count,
+        avoidable_hairpin_count: res.metrics.avoidable_hairpin_count,
+        excess_bend_count: res.metrics.excess_bend_count,
+        hairpin_count: res.metrics.hairpin_count,
         bend_count: res.metrics.bend_count,
         direction_deviation_penalty: res.metrics.direction_deviation_penalty,
         total_length: res.metrics.total_length,
-        port_side_imbalance: calculate_port_side_imbalance(nodes, edges),
-        feedback_leader_count: leader_metrics.feedback_leader_count,
-        total_leader_length: leader_metrics.total_leader_length,
+        port_side_imbalance: res.metrics.port_side_imbalance,
+        feedback_leader_count: res.metrics.feedback_leader_count,
+        total_leader_length: res.metrics.total_leader_length,
         total_area: res.metrics.total_area,
         state_hash: String::new(),
     }

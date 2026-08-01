@@ -101,5 +101,6 @@ pub fn optimize_layer_orders_parallel(
         }
     }
 
-    (current_ranks, executed_passes)
+    (current_ranks, executed_passes.max(1))
 }
+

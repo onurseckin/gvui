@@ -63,7 +63,7 @@ pub fn canonicalize_exact_spacing_demands(
             Some(ex) => {
                 if demand.minimum > ex.minimum {
                     true
-                } else if (demand.minimum - ex.minimum).abs() < 1e-9 {
+                } else if demand.minimum == ex.minimum {
                     spacing_demand_representative_key(demand)
                         .cmp(&spacing_demand_representative_key(ex))
                         .is_lt()
@@ -106,6 +106,7 @@ pub fn compute_badge_spacing_demands(
     config: &CustomLayoutConfig,
 ) -> Vec<BadgeSpacingRequest> {
     let mut requests: Vec<BadgeSpacingRequest> = Vec::new();
+    let mut pair_group_keys: Vec<String> = Vec::new();
     let mut pair_groups: HashMap<String, Vec<(&NormalizedEdge, &MeasuredBadge)>> = HashMap::new();
 
     for edge in edges {
@@ -123,12 +124,16 @@ pub fn compute_badge_spacing_demands(
         };
 
         pair_groups
-            .entry(pair_key)
-            .or_default()
+            .entry(pair_key.clone())
+            .or_insert_with(|| {
+                pair_group_keys.push(pair_key);
+                Vec::new()
+            })
             .push((edge, badge));
     }
 
-    for group in pair_groups.values() {
+    for pair_key in &pair_group_keys {
+        let group = &pair_groups[pair_key];
         if group.is_empty() {
             continue;
         }

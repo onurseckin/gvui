@@ -57,7 +57,7 @@ pub fn assign_port_sides_globally(
 ) -> PortSideAssignmentResult {
     let mut side_use_map: HashMap<String, usize> = HashMap::new();
 
-    let side_key = |node_id: &str, side: Side| -> String { format!("{}:{:?}", node_id, side) };
+    let side_key = |node_id: &str, side: Side| -> String { format!("{}:{}", node_id, side.as_str()) };
 
     let get_side_use = |map: &HashMap<String, usize>, node_id: &str, side: Side| -> usize {
         *map.get(&side_key(node_id, side)).unwrap_or(&0)
@@ -106,7 +106,10 @@ pub fn assign_port_sides_globally(
         let regret = second_cost - best_cost;
 
         let meta = edge_meta_map.and_then(|m| m.get(&edge.id));
-        let is_feedback = meta.map_or_else(|| edge.is_cycle.unwrap_or(false), |m| m.is_feedback);
+        let is_feedback = meta.map_or_else(
+            || edge.is_cycle.unwrap_or(false) || edge.layout_role == Some(crate::types::EdgeLayoutHint::Feedback),
+            |m| m.is_feedback,
+        );
         let rank_span = meta.map_or(0, |m| m.rank_span);
         let badge_area = meta.map_or(0.0, |m| m.badge_area);
 
@@ -236,7 +239,7 @@ pub fn distribute_ports(
 ) -> PortDistributionResult {
     let mut side_attachments_map: HashMap<String, Vec<SideAttachment>> = HashMap::new();
 
-    let key = |node_id: &str, side: Side| -> String { format!("{}:{:?}", node_id, side) };
+    let key = |node_id: &str, side: Side| -> String { format!("{}:{}", node_id, side.as_str()) };
 
     for edge in edges {
         let Some(assignment) = side_assignments.get(&edge.id) else {
@@ -248,8 +251,12 @@ pub fn distribute_ports(
         let Some(tgt_node) = node_map.get(&edge.target) else {
             continue;
         };
-        let src_pos = node_positions.get(&edge.source).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
-        let tgt_pos = node_positions.get(&edge.target).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
+        let Some(src_pos) = node_positions.get(&edge.source) else {
+            continue;
+        };
+        let Some(tgt_pos) = node_positions.get(&edge.target) else {
+            continue;
+        };
 
         let src_center = Point {
             x: src_pos.x + src_node.width / 2.0,
@@ -293,24 +300,30 @@ pub fn distribute_ports(
 
     let mut port_refs_map: HashMap<String, PortRef> = HashMap::new();
 
-    for (s_key, mut attachments) in side_attachments_map {
+    let mut sorted_s_keys: Vec<_> = side_attachments_map.keys().cloned().collect();
+    sorted_s_keys.sort();
+
+    for s_key in sorted_s_keys {
+        let mut attachments = side_attachments_map.remove(&s_key).unwrap();
         let parts: Vec<&str> = s_key.split(':').collect();
         if parts.len() < 2 {
             continue;
         }
         let node_id = parts[0];
         let side = match parts[1] {
-            "Top" => Side::Top,
-            "Right" => Side::Right,
-            "Bottom" => Side::Bottom,
-            "Left" => Side::Left,
+            "Top" | "top" => Side::Top,
+            "Right" | "right" => Side::Right,
+            "Bottom" | "bottom" => Side::Bottom,
+            "Left" | "left" => Side::Left,
             _ => continue,
         };
 
         let Some(node) = node_map.get(node_id) else {
             continue;
         };
-        let node_pos = node_positions.get(node_id).cloned().unwrap_or(Point { x: 0.0, y: 0.0 });
+        let Some(node_pos) = node_positions.get(node_id) else {
+            continue;
+        };
         let is_horizontal_side = side == Side::Top || side == Side::Bottom;
         let explicit_order = explicit_port_orders.and_then(|m| m.get(&s_key));
 

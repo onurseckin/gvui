@@ -61,6 +61,8 @@ describe("Public Sample Datasets Quality Gate Suite", () => {
         (e) => e.isCycle || (e.label && e.label.trim().length > 0),
       ).length;
       expect(layoutResult.badges.length).toBe(requiredBadgeCount);
+
+
       expect(layoutResult.validation.metrics.unresolvedBadgeCount).toBe(0);
 
       // Hard Error Metrics Assertions

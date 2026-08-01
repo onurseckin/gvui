@@ -170,16 +170,21 @@ pub fn build_routing_grid(
 
             let mut is_blocked = false;
             for no in &node_obstacles {
-                if point_in_rect_interior(&pt, &no.rect, config.epsilon) {
-                    if let Some(ids) = associated_node_ids {
-                        if !ids.contains(&no.node_id) {
-                            is_blocked = true;
-                            break;
-                        }
-                    } else {
+                if let Some(ids) = associated_node_ids {
+                    // Port points and stubs are only blocked if strictly inside an unexpanded node body
+                    let raw_rect = Rect {
+                        x: no.rect.x + config.obstacle_clearance,
+                        y: no.rect.y + config.obstacle_clearance,
+                        width: (no.rect.width - config.obstacle_clearance * 2.0).max(0.0),
+                        height: (no.rect.height - config.obstacle_clearance * 2.0).max(0.0),
+                    };
+                    if point_in_rect_interior(&pt, &raw_rect, config.epsilon) && !ids.contains(&no.node_id) {
                         is_blocked = true;
                         break;
                     }
+                } else if point_in_rect_interior(&pt, &no.rect, config.epsilon) {
+                    is_blocked = true;
+                    break;
                 }
             }
 
@@ -201,12 +206,22 @@ pub fn build_routing_grid(
         let p2_node_ids = port_stub_node_map.get(&vertex_key(p2));
 
         for no in &node_obstacles {
-            if segment_intersects_rect_interior(segment, &no.rect, config.epsilon) {
-                let p1_belongs = p1_node_ids.is_some_and(|ids| ids.contains(&no.node_id));
-                let p2_belongs = p2_node_ids.is_some_and(|ids| ids.contains(&no.node_id));
-                if !p1_belongs && !p2_belongs {
+            let raw_rect = Rect {
+                x: no.rect.x + config.obstacle_clearance,
+                y: no.rect.y + config.obstacle_clearance,
+                width: (no.rect.width - config.obstacle_clearance * 2.0).max(0.0),
+                height: (no.rect.height - config.obstacle_clearance * 2.0).max(0.0),
+            };
+
+            let p1_belongs = p1_node_ids.is_some_and(|ids| ids.contains(&no.node_id));
+            let p2_belongs = p2_node_ids.is_some_and(|ids| ids.contains(&no.node_id));
+
+            if p1_belongs || p2_belongs {
+                if segment_intersects_rect_interior(segment, &raw_rect, config.epsilon) {
                     return true;
                 }
+            } else if segment_intersects_rect_interior(segment, &no.rect, config.epsilon) {
+                return true;
             }
         }
         false

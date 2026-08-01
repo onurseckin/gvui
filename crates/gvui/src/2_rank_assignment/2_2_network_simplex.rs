@@ -264,12 +264,5 @@ pub fn assign_ranks(
     edges: &[NormalizedEdge],
     edge_role_map: Option<&HashMap<String, EdgeRole>>,
 ) -> RankAssignmentResult {
-    let longest_path_res = assign_ranks_longest_path(nodes, edges, edge_role_map);
-    if let Some(simplex_res) =
-        run_network_simplex(nodes, edges, edge_role_map, &longest_path_res.node_rank_map)
-    {
-        simplex_res
-    } else {
-        longest_path_res
-    }
+    assign_ranks_longest_path(nodes, edges, edge_role_map)
 }

@@ -3,6 +3,7 @@ use crate::config::CustomLayoutConfig;
 use crate::edge_routing::badge_placement::place_edge_badges;
 use crate::types::{NormalizedEdge, Point, PortRef, PositionedNode, RoutedPath, Side};
 
+
 #[test]
 fn test_badge_placement_single_edge() {
     let config = CustomLayoutConfig::default();
@@ -70,3 +71,4 @@ fn test_badge_placement_single_edge() {
     assert_eq!(res.placements[0].edge_id, "e1");
     assert_eq!(res.placements[0].label, "http");
 }
+

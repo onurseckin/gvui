@@ -107,7 +107,7 @@ pub fn count_total_graph_crossings(
     total
 }
 
-/// Evaluates total edge crossing count for a given rank ordering state, accounting for multi-rank spans.
+/// Evaluates total edge crossing count for a given rank ordering state, accounting for multi-rank spans and same-rank edges.
 pub fn calculate_crossing_count(ranks: &[Vec<String>], edges: &[NormalizedEdge]) -> usize {
     let mut pos_map: HashMap<String, (usize, usize)> = HashMap::new();
     for (r_idx, rank) in ranks.iter().enumerate() {
@@ -138,7 +138,7 @@ pub fn calculate_crossing_count(ranks: &[Vec<String>], edges: &[NormalizedEdge])
                 let min_r2 = r2_src.min(r2_tgt);
                 let max_r2 = r2_src.max(r2_tgt);
 
-                if min_r1 < max_r2 && max_r1 > min_r2 {
+                if min_r1 <= max_r2 && max_r1 >= min_r2 {
                     if (r1_src == r2_src && r1_tgt == r2_tgt)
                         || (r1_src == r2_tgt && r1_tgt == r2_src)
                     {
@@ -150,6 +150,22 @@ pub fn calculate_crossing_count(ranks: &[Vec<String>], edges: &[NormalizedEdge])
                         let o1_end = if r1_src < r1_tgt { o1_tgt } else { o1_src };
                         let o2_end = if r2_src < r2_tgt { o2_tgt } else { o2_src };
                         if (o1_src < o2_src && o1_end > o2_end) || (o1_src > o2_src && o1_end < o2_end) {
+                            count += 1;
+                        }
+                    } else if r1_src == r1_tgt && (r2_src == r1_src || r2_tgt == r1_src) {
+                        // e1 is same-rank edge at r1_src
+                        let left_1 = o1_src.min(o1_tgt);
+                        let right_1 = o1_src.max(o1_tgt);
+                        let pos_2 = if r2_src == r1_src { o2_src } else { o2_tgt };
+                        if pos_2 > left_1 && pos_2 < right_1 {
+                            count += 1;
+                        }
+                    } else if r2_src == r2_tgt && (r1_src == r2_src || r1_tgt == r2_src) {
+                        // e2 is same-rank edge at r2_src
+                        let left_2 = o2_src.min(o2_tgt);
+                        let right_2 = o2_src.max(o2_tgt);
+                        let pos_1 = if r1_src == r2_src { o1_src } else { o1_tgt };
+                        if pos_1 > left_2 && pos_1 < right_2 {
                             count += 1;
                         }
                     }
@@ -174,37 +190,51 @@ pub fn on_segment(p: &Point, q: &Point, r: &Point, epsilon: f64) -> bool {
 }
 
 /// Determines whether segment A and segment B cross in 2D space.
-pub fn segments_cross(seg_a: &Segment, seg_b: &Segment, epsilon: f64) -> bool {
-    let p1 = &seg_a.a;
-    let q1 = &seg_a.b;
-    let p2 = &seg_b.a;
-    let q2 = &seg_b.b;
+/// Strictly tests interior intersection of perpendicular orthogonal segments, matching Legacy TS.
+pub fn segments_cross(s1: &Segment, s2: &Segment, epsilon: f64) -> bool {
+    let s1_horiz = (s1.a.y - s1.b.y).abs() <= epsilon;
+    let s1_vert = (s1.a.x - s1.b.x).abs() <= epsilon;
+    let s2_horiz = (s2.a.y - s2.b.y).abs() <= epsilon;
+    let s2_vert = (s2.a.x - s2.b.x).abs() <= epsilon;
 
-    let o1 = orientation(p1, q1, p2);
-    let o2 = orientation(p1, q1, q2);
-    let o3 = orientation(p2, q2, p1);
-    let o4 = orientation(p2, q2, q1);
+    if s1_horiz && s2_vert {
+        let s1_min_x = s1.a.x.min(s1.b.x);
+        let s1_max_x = s1.a.x.max(s1.b.x);
+        let s2_min_y = s2.a.y.min(s2.b.y);
+        let s2_max_y = s2.a.y.max(s2.b.y);
 
-    if (o1 > epsilon && o2 < -epsilon || o1 < -epsilon && o2 > epsilon)
+        let x = s2.a.x;
+        let y = s1.a.y;
+
+        return x > s1_min_x + epsilon
+            && x < s1_max_x - epsilon
+            && y > s2_min_y + epsilon
+            && y < s2_max_y - epsilon;
+    }
+
+    if s1_vert && s2_horiz {
+        let s1_min_y = s1.a.y.min(s1.b.y);
+        let s1_max_y = s1.a.y.max(s1.b.y);
+        let s2_min_x = s2.a.x.min(s2.b.x);
+        let s2_max_x = s2.a.x.max(s2.b.x);
+
+        let x = s1.a.x;
+        let y = s2.a.y;
+
+        return x > s2_min_x + epsilon
+            && x < s2_max_x - epsilon
+            && y > s1_min_y + epsilon
+            && y < s1_max_y - epsilon;
+    }
+
+    // Non-orthogonal diagonal segment fallback for general 2D geometry tests
+    let o1 = orientation(&s1.a, &s1.b, &s2.a);
+    let o2 = orientation(&s1.a, &s1.b, &s2.b);
+    let o3 = orientation(&s2.a, &s2.b, &s1.a);
+    let o4 = orientation(&s2.a, &s2.b, &s1.b);
+
+    (o1 > epsilon && o2 < -epsilon || o1 < -epsilon && o2 > epsilon)
         && (o3 > epsilon && o4 < -epsilon || o3 < -epsilon && o4 > epsilon)
-    {
-        return true;
-    }
-
-    if o1.abs() <= epsilon && on_segment(p1, p2, q1, epsilon) {
-        return true;
-    }
-    if o2.abs() <= epsilon && on_segment(p1, q2, q1, epsilon) {
-        return true;
-    }
-    if o3.abs() <= epsilon && on_segment(p2, p1, q2, epsilon) {
-        return true;
-    }
-    if o4.abs() <= epsilon && on_segment(p2, q1, q2, epsilon) {
-        return true;
-    }
-
-    false
 }
 
 /// Assigns a numerical priority integer to edge roles (higher = higher priority).

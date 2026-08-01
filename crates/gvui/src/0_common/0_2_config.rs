@@ -103,8 +103,9 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     port_endpoint_padding: 16.0,
     obstacle_clearance: 16.0,
     lane_spacing: 12.0,
-    initial_lane_rings: 2,
+    initial_lane_rings: 4,
     max_lane_rings: 8,
+
     bend_penalty: 40.0,
     crossing_penalty: 500.0,
     direction_penalty: 120.0,
@@ -126,8 +127,9 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     max_layout_states: 50,
     max_frontier_size: 50,
     max_neighbors_per_state: 16,
-    max_astar_states_per_route: 2000,
+    max_astar_states_per_route: 8000,
     max_conflict_permutation_size: 6,
+
     max_conflict_permutations: 32,
     max_route_candidates_per_edge: 4,
     max_badge_states: 200,

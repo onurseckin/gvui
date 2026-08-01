@@ -28,22 +28,7 @@ use crate::types::LayerNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Expanded layer graph structure containing ordered layers and predecessor/successor maps.
-#[derive(Debug, Clone)]
-pub struct ExpandedLayerGraph {
-    /// Ordered layers, where each layer is a vector of `LayerNode`s.
-    pub layers: Vec<Vec<LayerNode>>,
-    /// List of real graph nodes.
-    pub real_nodes: Vec<LayerNode>,
-    /// List of virtual (dummy) nodes introduced for long edges.
-    pub virtual_nodes: Vec<LayerNode>,
-    /// Map from node ID to `LayerNode`.
-    pub item_map: HashMap<String, LayerNode>,
-    /// Map from node ID to predecessor node IDs in the upper layer.
-    pub predecessors_map: HashMap<String, Vec<String>>,
-    /// Map from node ID to successor node IDs in the lower layer.
-    pub successors_map: HashMap<String, Vec<String>>,
-}
+pub use crate::types::ExpandedLayerGraph;
 
 /// Result of crossing minimization containing the optimized layer ordering and final crossing count.
 #[derive(Debug, Clone, Serialize, Deserialize)]

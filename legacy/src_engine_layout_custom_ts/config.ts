@@ -53,8 +53,9 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   portEndpointPadding: 16,
   obstacleClearance: 16,
   laneSpacing: 12,
-  initialLaneRings: 2,
+  initialLaneRings: 4,
   maxLaneRings: 8,
+
   bendPenalty: 40,
   crossingPenalty: 500,
   directionPenalty: 120,

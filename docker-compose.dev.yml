@@ -14,6 +14,12 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
       - VITE_USE_POLLING=true
+    healthcheck:
+      test: ["CMD-SHELL", "bun run -e 'fetch(\"http://localhost:5173\").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     develop:
       watch:
         - action: sync
@@ -24,8 +30,12 @@ services:
             - .git/
             - dist/
             - docs/
+            - crates/
+            - target/
+            - src/engine/layout/custom/wasm_pkg/
+            - scratch/
+            - .tmp/
             - "*.tsbuildinfo"
             - "*.log"
-            - .tmp/
         - action: rebuild
           path: package.json

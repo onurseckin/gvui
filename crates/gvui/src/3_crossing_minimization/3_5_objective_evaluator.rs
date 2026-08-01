@@ -126,27 +126,41 @@ pub fn compare_layout_score(a: &LayoutScore, b: &LayoutScore) -> std::cmp::Order
 
 /// Simplifies orthogonal polyline path points by collapsing redundant collinear segments.
 pub fn simplify_orthogonal_path(points: &[Point], epsilon: f64) -> Vec<Point> {
-    if points.len() <= 2 {
+    if points.len() <= 1 {
         return points.to_vec();
     }
 
-    let mut result = vec![points[0]];
+    // Step 1: Filter duplicate adjacent points
+    let mut non_dupes = vec![points[0]];
     for curr in points.iter().skip(1) {
-        let last = result.last().unwrap();
-        if (curr.x - last.x).abs() <= epsilon && (curr.y - last.y).abs() <= epsilon {
-            continue;
+        let prev = non_dupes.last().unwrap();
+        if (curr.x - prev.x).abs() > epsilon || (curr.y - prev.y).abs() > epsilon {
+            non_dupes.push(*curr);
         }
-        if result.len() >= 2 {
-            let prev = &result[result.len() - 2];
-            let is_collinear_h = (prev.y - last.y).abs() <= epsilon && (last.y - curr.y).abs() <= epsilon;
-            let is_collinear_v = (prev.x - last.x).abs() <= epsilon && (last.x - curr.x).abs() <= epsilon;
-            if is_collinear_h || is_collinear_v {
-                result.pop();
-            }
-        }
-        result.push(*curr);
     }
 
+    if non_dupes.len() <= 2 {
+        return non_dupes;
+    }
+
+    // Step 2: Remove collinear middle points
+    let mut result = vec![non_dupes[0]];
+    for i in 1..(non_dupes.len() - 1) {
+        let prev = result.last().unwrap();
+        let curr = &non_dupes[i];
+        let next = &non_dupes[i + 1];
+
+        let is_collinear_x =
+            (prev.x - curr.x).abs() <= epsilon && (curr.x - next.x).abs() <= epsilon;
+        let is_collinear_y =
+            (prev.y - curr.y).abs() <= epsilon && (curr.y - next.y).abs() <= epsilon;
+
+        if !is_collinear_x && !is_collinear_y {
+            result.push(*curr);
+        }
+    }
+
+    result.push(*non_dupes.last().unwrap());
     result
 }
 
