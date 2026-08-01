@@ -23,7 +23,7 @@ describe("wasmLayoutAdapter", () => {
     expect(result).toBeDefined();
     expect(result.nodes.length).toBe(2);
     expect(result.edges.length).toBe(1);
-    expect(result.status).toBe("OPTIMAL_WASM_V2");
+    expect(result.status).toBe("success");
   });
 
   it("computes custom engine graph layout for GraphDataset", async () => {
