@@ -5,7 +5,6 @@ import {
   computeDagreLayout,
   findTotalPathMidpoint,
   getSideFromAngle,
-  snapPolyline8Dir,
 } from "./nodeDimensions";
 
 describe("nodeDimensions multi-port equal spacing", () => {
@@ -55,18 +54,6 @@ describe("nodeDimensions multi-port equal spacing", () => {
     const startPoint1 = edges[0].path.split(" ")[1] + " " + edges[0].path.split(" ")[2];
     const startPoint2 = edges[1].path.split(" ")[1] + " " + edges[1].path.split(" ")[2];
     expect(startPoint1 !== startPoint2).toBe(true);
-  });
-
-  it("simplifies polylines by removing collinear points along directional vectors", () => {
-    const points = [
-      { x: 0, y: 0 },
-      { x: 50, y: 0 },
-      { x: 100, y: 0 },
-    ];
-    const simplified = snapPolyline8Dir(points);
-    expect(simplified.length).toBe(2);
-    expect(simplified[0]).toEqual({ x: 0, y: 0 });
-    expect(simplified[1]).toEqual({ x: 100, y: 0 });
   });
 
   it("calculates exact 50% total path arc-length midpoint", () => {

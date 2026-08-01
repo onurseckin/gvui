@@ -1,7 +1,9 @@
 import type { FC } from "react";
-import { hasBadge } from "../../../engine/layout/custom/badgeMeasurement";
-import { buildLayoutScore } from "../../../engine/layout/custom/layoutObjective";
 import type { CustomLayoutResult, NormalizedEdge } from "../../../engine/layout/custom/types";
+
+function hasBadge(label?: string, isCycle?: boolean): boolean {
+  return Boolean((label && label.trim().length > 0) || isCycle);
+}
 
 interface CustomLayoutMetricsProps {
   layoutResult: CustomLayoutResult;
@@ -40,8 +42,6 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
   const status = layoutResult?.status || "invalid_hard_failure";
   const stats = layoutResult?.optimizationStats;
 
-  const score = layoutResult ? buildLayoutScore(layoutResult, validation) : null;
-
   const getStatusBadge = () => {
     if (status === "success" && isValid) {
       return <span className="status-badge status-valid">✅ Valid</span>;
@@ -72,11 +72,11 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
     metrics.unresolvedBadgeCount ??
     Math.max(0, expectedBadgesCount - (layoutResult?.badges || []).length);
 
-  const ordinaryLeaderCount = metrics.ordinaryLeaderCount ?? score?.ordinaryLeaderCount;
-  const feedbackLeaderCount = metrics.feedbackLeaderCount ?? score?.feedbackLeaderCount;
-  const totalLeaderLength = metrics.totalLeaderLength ?? score?.totalLeaderLength;
-  const hairpinCount = metrics.hairpinCount ?? score?.hairpinCount;
-  const portSideImbalance = metrics.portSideImbalance ?? score?.portSideImbalance;
+  const ordinaryLeaderCount = metrics.ordinaryLeaderCount;
+  const feedbackLeaderCount = metrics.feedbackLeaderCount;
+  const totalLeaderLength = metrics.totalLeaderLength;
+  const hairpinCount = metrics.hairpinCount;
+  const portSideImbalance = metrics.portSideImbalance;
 
   return (
     <div className="custom-layout-metrics-panel">
@@ -157,53 +157,6 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({
           <span className="metric-value">{Math.round(metrics.totalArea).toLocaleString()} px²</span>
         </div>
       </div>
-
-      {score && (
-        <div className="metrics-score-summary" style={{ marginTop: "12px" }}>
-          <div className="diagnostics-title" style={{ color: "#a855f7", marginBottom: "8px" }}>
-            🎯 Aesthetic Score Summary
-          </div>
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <span className="metric-label">Hard Errors</span>
-              <span className={`metric-value ${score.hardErrorCount > 0 ? "has-conflicts" : ""}`}>
-                {score.hardErrorCount}
-              </span>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Node Overlaps</span>
-              <span className={`metric-value ${score.nodeNodeOverlaps > 0 ? "has-conflicts" : ""}`}>
-                {score.nodeNodeOverlaps}
-              </span>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Edge Penetrations</span>
-              <span
-                className={`metric-value ${score.edgeNodePenetrations > 0 ? "has-conflicts" : ""}`}
-              >
-                {score.edgeNodePenetrations}
-              </span>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Badge Overlaps</span>
-              <span
-                className={`metric-value ${
-                  score.badgeNodeOverlaps +
-                    score.badgeBadgeOverlaps +
-                    score.badgeUnrelatedEdgeOverlaps >
-                  0
-                    ? "has-conflicts"
-                    : ""
-                }`}
-              >
-                {score.badgeNodeOverlaps +
-                  score.badgeBadgeOverlaps +
-                  score.badgeUnrelatedEdgeOverlaps}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {stats && (
         <div className="optimization-stats-section" style={{ marginTop: "12px" }}>

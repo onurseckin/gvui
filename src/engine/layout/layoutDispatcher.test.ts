@@ -25,32 +25,6 @@ describe("layoutDispatcher all 4 modes", () => {
     expect(res.nodes[0].y).toBeDefined();
   });
 
-  it("computes positioned nodes and edges for top-down-dagre layout", async () => {
-    const res = await computeGraphLayout(sampleDataset, "top-down-dagre");
-    expect(res.nodes).toHaveLength(3);
-    expect(res.edges).toHaveLength(2);
-    expect(res.nodes[1].y).toBeGreaterThan(res.nodes[0].y);
-  });
-
-  it("computes positioned nodes and edges for left-right layout", async () => {
-    const res = await computeGraphLayout(sampleDataset, "left-right");
-    expect(res.nodes).toHaveLength(3);
-    expect(res.edges).toHaveLength(2);
-    expect(res.nodes[1].x).toBeGreaterThan(res.nodes[0].x);
-  });
-
-  it("computes positioned nodes and edges for force layout", async () => {
-    const res = await computeGraphLayout(sampleDataset, "force");
-    expect(res.nodes).toHaveLength(3);
-    expect(res.edges).toHaveLength(2);
-  });
-
-  it("computes positioned nodes and edges for radial layout", async () => {
-    const res = await computeGraphLayout(sampleDataset, "radial");
-    expect(res.nodes).toHaveLength(3);
-    expect(res.edges).toHaveLength(2);
-  });
-
   it("handles zero-node dataset safely without crashing", async () => {
     const emptyDataset: GraphDataset = { id: "empty", title: "Empty", nodes: [], edges: [] };
     const res = await computeGraphLayout(emptyDataset, "top-down");
@@ -59,7 +33,12 @@ describe("layoutDispatcher all 4 modes", () => {
   });
 
   it("handles single-node dataset safely", async () => {
-    const singleDataset: GraphDataset = { id: "single", title: "Single", nodes: [{ id: "n1", name: "Single" }], edges: [] };
+    const singleDataset: GraphDataset = {
+      id: "single",
+      title: "Single",
+      nodes: [{ id: "n1", name: "Single" }],
+      edges: [],
+    };
     const res = await computeGraphLayout(singleDataset, "top-down");
     expect(res.nodes).toHaveLength(1);
     expect(res.edges).toHaveLength(0);

@@ -1,14 +1,23 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
 import {
-  type ExtendedLayoutDiagnostic,
+  type LayoutDiagnostic,
   type NormalizedEdge,
   type NormalizedNode,
 } from "../../../engine/layout/custom";
-import {
-  pointsToSvgPath,
-  renderPathWithCrossingBridges,
-} from "../../../engine/layout/custom/svgPath";
+
+function pointsToSvgPath(points: Array<{ x: number; y: number }>): string {
+  if (!points || points.length === 0) return "";
+  return points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "").trim();
+}
+
+function renderPathWithCrossingBridges(
+  points: Array<{ x: number; y: number }>,
+  _ownedCrossings?: unknown,
+): string {
+  return pointsToSvgPath(points);
+}
+
 import { Button, Spinner } from "../../../ui";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
@@ -162,7 +171,14 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
           className={error ? "graph-layout-worker-warning" : "graph-layout-worker-loading"}
           role={error ? "alert" : "status"}
           aria-busy={isCalculating}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", minHeight: "300px" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+            minHeight: "300px",
+          }}
         >
           {error ? (
             <>
@@ -192,10 +208,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
           <LayoutErrorBoundary onRetry={recalculate} resultGeneration={resultGeneration}>
             {/* Metrics Summary Panel */}
             <div className="graph-testing-metrics-wrapper">
-              <CustomLayoutMetrics
-                layoutResult={layoutResult}
-                normalizedEdges={normalizedEdges}
-              />
+              <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />
               <CustomLayoutDebugOverlay
                 layoutResult={layoutResult}
                 options={debugOptions}
@@ -212,10 +225,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                     <span>{activeScenario.title}</span>
                   </div>
                   <div className="testing-stat-badge">
-                    Nodes: {(layoutResult.nodes || []).length} | Edges: {(layoutResult.edges || []).length} |
-                    Crossings: {layoutResult.validation?.metrics?.crossingCount ?? 0} |
-                    Hairpins: {layoutResult.validation?.metrics?.hairpinCount ?? 0} |
-                    Leaders:{" "}
+                    Nodes: {(layoutResult.nodes || []).length} | Edges:{" "}
+                    {(layoutResult.edges || []).length} | Crossings:{" "}
+                    {layoutResult.validation?.metrics?.crossingCount ?? 0} | Hairpins:{" "}
+                    {layoutResult.validation?.metrics?.hairpinCount ?? 0} | Leaders:{" "}
                     {(layoutResult.validation?.metrics?.ordinaryLeaderCount ?? 0) +
                       (layoutResult.validation?.metrics?.feedbackLeaderCount ?? 0)}{" "}
                     | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
@@ -240,9 +253,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                         <div className="testing-node-title">
                           {origNode?.name ?? node.label ?? node.id}
                         </div>
-                        {origNode?.desc && (
-                          <div className="testing-node-desc">{origNode.desc}</div>
-                        )}
+                        {origNode?.desc && <div className="testing-node-desc">{origNode.desc}</div>}
                       </div>
                     );
                   })}
@@ -334,7 +345,16 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                     {debugOptions.showDiagnostics &&
                       (
                         layoutResult.validation?.diagnostics as
-                          | ExtendedLayoutDiagnostic[]
+                          | Array<
+                              LayoutDiagnostic & {
+                                rect?: { x: number; y: number; width: number; height: number };
+                                segment?: {
+                                  a: { x: number; y: number };
+                                  b: { x: number; y: number };
+                                };
+                                point?: { x: number; y: number };
+                              }
+                            >
                           | undefined
                       )?.map((diag, i) => (
                         <g key={`diag-geom-${diag.code}-${i}`}>

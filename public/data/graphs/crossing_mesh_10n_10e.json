@@ -3,7 +3,12 @@
   "title": "High-Crossing Intersecting Mesh (10 Nodes / 10 Edges)",
   "directed": true,
   "nodes": [
-    { "id": "node-0", "name": "Node 0 (Ingress)", "type": "gateway", "badges": [{ "label": "Crossed", "variant": "error" }] },
+    {
+      "id": "node-0",
+      "name": "Node 0 (Ingress)",
+      "type": "gateway",
+      "badges": [{ "label": "Crossed", "variant": "error" }]
+    },
     { "id": "node-1", "name": "Node 1 (Auth)", "type": "service" },
     { "id": "node-2", "name": "Node 2 (User)", "type": "service" },
     { "id": "node-3", "name": "Node 3 (Cart)", "type": "service" },

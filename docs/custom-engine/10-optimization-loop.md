@@ -8,11 +8,12 @@ This chapter covers the optimization loop—the beating heart of the custom engi
 
 The Sugiyama pipeline (layering → ordering → positioning → routing) runs once to produce a layout. However, a single pass relies on arbitrary choices. For example: Which side of a node should an edge connect to? What order should the ports be in?
 
-Different choices produce drastically different layouts. Some are beautiful; some are a tangled mess of crossings, overlapping badges, and U-turns. 
+Different choices produce drastically different layouts. Some are beautiful; some are a tangled mess of crossings, overlapping badges, and U-turns.
 
 **Example: Port Assignments Matter**
 
-*Layout 1 (Arbitrary Ports): 3 Crossings*
+_Layout 1 (Arbitrary Ports): 3 Crossings_
+
 ```text
 [Node A]      [Node B]
   (R)           (L)
@@ -26,7 +27,8 @@ Different choices produce drastically different layouts. Some are beautiful; som
 [Node C]      [Node D]
 ```
 
-*Layout 2 (Optimized Ports): 0 Crossings*
+_Layout 2 (Optimized Ports): 0 Crossings_
+
 ```text
 [Node A]      [Node B]
   (B)           (B)
@@ -36,11 +38,12 @@ Different choices produce drastically different layouts. Some are beautiful; som
 [Node C]      [Node D]
 ```
 
-How do we find the optimized version? We can't just guess. We have to *search* for it.
+How do we find the optimized version? We can't just guess. We have to _search_ for it.
 
 ## Molecules: Search States and Scores
 
 To search for the best layout, we define a **search state**. A state encodes all the choices made during a pipeline run:
+
 - Port side assignments (e.g., Node A connects on the Bottom)
 - Port attachment orders
 - Layer node orders
@@ -60,6 +63,7 @@ The score isn't a single number; it's a multi-dimensional vector ordered lexicog
 6. Total edge length (Quality)
 
 Let's compare two states:
+
 - **State A Score**: `[0, 0, 3, 5, 12]` (0 overlaps, 3 crossings, 5 bends...)
 - **State B Score**: `[0, 0, 2, 8, 20]` (0 overlaps, 2 crossings, 8 bends...)
 
@@ -83,19 +87,20 @@ From the current best state, how do we find new layouts? We generate neighbors b
 
 Let's watch the search run on a small graph:
 
-| Iteration | Action | State Evaluated | Score (Overlaps, Crossings, Bends) | Status |
-|-----------|--------|-----------------|-----------------------------------|--------|
-| 1 | Initial State | State 0 | `[0, 3, 4]` | Expand State 0 |
-| 2 | Gen Neighbors | State 1 | `[0, 4, 5]` | Queued |
-| 3 | Gen Neighbors | State 2 | `[0, 1, 6]` | **Best!** Expand State 2 |
-| 4 | Gen Neighbors | State 3 | `[0, 1, 8]` | Queued |
-| 5 | Gen Neighbors | State 4 | `[0, 0, 4]` | **Zero Crossings! Stop.** |
+| Iteration | Action        | State Evaluated | Score (Overlaps, Crossings, Bends) | Status                    |
+| --------- | ------------- | --------------- | ---------------------------------- | ------------------------- |
+| 1         | Initial State | State 0         | `[0, 3, 4]`                        | Expand State 0            |
+| 2         | Gen Neighbors | State 1         | `[0, 4, 5]`                        | Queued                    |
+| 3         | Gen Neighbors | State 2         | `[0, 1, 6]`                        | **Best!** Expand State 2  |
+| 4         | Gen Neighbors | State 3         | `[0, 1, 8]`                        | Queued                    |
+| 5         | Gen Neighbors | State 4         | `[0, 0, 4]`                        | **Zero Crossings! Stop.** |
 
 ### Budget Control and Stop Conditions
 
-Large graphs have astronomically large state spaces. To ensure the engine remains fast, the search is strictly budgeted. Small graphs (≤5 nodes) might get 20+ states to explore, while large graphs (≥10 nodes) get heavily restricted budgets (≤8 states). 
+Large graphs have astronomically large state spaces. To ensure the engine remains fast, the search is strictly budgeted. Small graphs (≤5 nodes) might get 20+ states to explore, while large graphs (≥10 nodes) get heavily restricted budgets (≤8 states).
 
 The search stops when:
+
 1. A perfect layout is found (0 errors, 0 crossings, 0 hairpins).
 2. The frontier queue is exhausted.
 3. The evaluation budget is exceeded.
@@ -103,11 +108,12 @@ The search stops when:
 
 ## Organisms: The Custom Engine Insight
 
-This search loop is the defining insight of the engine. Traditional algorithms build a single pipeline and hope the heuristics work out. This engine treats the pipeline as a fitness function and *searches* over the space of all possible pipeline configurations. 
+This search loop is the defining insight of the engine. Traditional algorithms build a single pipeline and hope the heuristics work out. This engine treats the pipeline as a fitness function and _searches_ over the space of all possible pipeline configurations.
 
 This approach guarantees that if a clean, crossing-free layout exists within the neighborhood of the initial heuristic, the engine will find it.
 
 For implementation details, explore:
+
 - [neighborhoodSearch.ts](../../src/engine/layout/custom/neighborhoodSearch.ts)
 - [layoutOptimizerState.ts](../../src/engine/layout/custom/layoutOptimizerState.ts)
 - [stateEvaluator.ts](../../src/engine/layout/custom/stateEvaluator.ts)

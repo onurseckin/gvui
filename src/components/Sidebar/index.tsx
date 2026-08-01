@@ -84,10 +84,7 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
     void navigate({ to: "/testing" });
   }, [onOpenGraphTesting, navigate]);
 
-  const cleanCurrentFile = useMemo(
-    () => currentFile.replace(/\.json$/, ""),
-    [currentFile],
-  );
+  const cleanCurrentFile = useMemo(() => currentFile.replace(/\.json$/, ""), [currentFile]);
 
   return (
     <aside className="sidebar-container">
@@ -96,8 +93,7 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
           <h3 className="sidebar-section-title">Sample Datasets</h3>
           <ul className="sample-list">
             {SAMPLE_GRAPHS.map((sample) => {
-              const isActive =
-                currentFile === sample.id || cleanCurrentFile === sample.id;
+              const isActive = currentFile === sample.id || cleanCurrentFile === sample.id;
               return (
                 <SampleListItem
                   key={sample.id}
@@ -134,4 +130,3 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
 });
 
 export default Sidebar;
-

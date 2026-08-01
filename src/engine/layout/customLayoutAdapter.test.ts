@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { computeCustomEngineGraphLayout, computeCustomEngineGraphLayoutAsync } from "./customLayoutAdapter";
+import {
+  computeCustomEngineGraphLayout,
+  computeCustomEngineGraphLayoutAsync,
+} from "./customLayoutAdapter";
 import type { GraphDataset } from "../../types/graphData";
 
 describe("computeCustomEngineGraphLayout", () => {

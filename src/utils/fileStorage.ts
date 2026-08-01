@@ -52,10 +52,7 @@ function isSavedFileViewport(obj: unknown): obj is SavedFileViewport {
   if (candidate.selectedNodeId !== null && typeof candidate.selectedNodeId !== "string") {
     return false;
   }
-  if (
-    typeof candidate.layoutMode !== "string" ||
-    !["top-down", "top-down-dagre", "left-right", "force", "radial"].includes(candidate.layoutMode)
-  ) {
+  if (typeof candidate.layoutMode !== "string" || candidate.layoutMode !== "top-down") {
     return false;
   }
   if (

@@ -413,4 +413,3 @@ export type {
   CommandPaletteScope,
   SearchResultNode,
 } from "./CommandPalette.types";
-

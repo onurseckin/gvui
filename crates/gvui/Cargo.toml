@@ -1,0 +1,28 @@
+[package]
+name = "gvui"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance Rust + WebAssembly layout calculation engine for GVUI directed graphs"
+
+
+[lib]
+crate-type = ["cdylib"]
+
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+rayon = "1.10"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Performance"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+

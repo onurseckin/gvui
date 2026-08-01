@@ -42,11 +42,10 @@ describe("GraphCanvas Storage Integration", () => {
 
     saveStoredLayout("top-down", sig, layout);
     const cachedTopDown = loadStoredLayout("top-down", sig);
-    const cachedLeftRight = loadStoredLayout("left-right", sig);
+    const cachedMiss = loadStoredLayout("top-down", "other-sig");
 
     expect(cachedTopDown).not.toBeNull();
     expect(cachedTopDown?.nodes[0].x).toBe(50);
-    expect(cachedLeftRight).toBeNull();
+    expect(cachedMiss).toBeNull();
   });
 });
-

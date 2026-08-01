@@ -4,7 +4,7 @@
 
 Welcome to Chapter 4. In the previous chapter, we learned how to find cycles using Strongly Connected Components (SCCs). Now, we need to deal with them.
 
-Before we can organize our graph into neat horizontal or vertical layers, we need a structure that has a strict hierarchy. If our graph has a cycle, that hierarchy is impossible. 
+Before we can organize our graph into neat horizontal or vertical layers, we need a structure that has a strict hierarchy. If our graph has a cycle, that hierarchy is impossible.
 
 ---
 
@@ -12,9 +12,10 @@ Before we can organize our graph into neat horizontal or vertical layers, we nee
 
 Layered layout (often called Sugiyama layout) assigns every node a **rank** (a vertical or horizontal tier). The fundamental rule of ranking is:
 
-> *If node `A` points to node `B`, then `A` must have a lower rank (appear earlier/higher) than `B`.*
+> _If node `A` points to node `B`, then `A` must have a lower rank (appear earlier/higher) than `B`._
 
 But what if `A` points to `B`, and `B` points to `A`?
+
 - `A` must be above `B`
 - `B` must be above `A`
 
@@ -48,8 +49,8 @@ Our primary goal in cycle breaking is to correctly label the minimal number of e
 
 How do we guess the "natural" direction of a graph when it's tangled in a cycle? We look at the flow of edges through each node.
 
-- **In-Degree**: How many edges point *to* the node.
-- **Out-Degree**: How many edges point *away from* the node.
+- **In-Degree**: How many edges point _to_ the node.
+- **Out-Degree**: How many edges point _away from_ the node.
 - **Net Flow**: `Out-Degree - In-Degree`
 
 A node with a high positive Net Flow has many outgoing edges and few incoming edges. It acts like a source or a starting point.
@@ -61,7 +62,7 @@ If we have to guess the hierarchy, we should put nodes with high Net Flow at the
 
 ## The Eades Greedy Algorithm
 
-To break cycles efficiently while keeping the diagram looking natural, this engine uses a greedy algorithm popularized by Peter Eades. 
+To break cycles efficiently while keeping the diagram looking natural, this engine uses a greedy algorithm popularized by Peter Eades.
 
 Instead of just looking for cycles and picking an edge, Eades algorithm builds a **sequence** of nodes from left to right. Once the sequence is built, any edge that points from right to left (backwards) is marked as a feedback edge and reversed.
 
@@ -75,7 +76,7 @@ Instead of just looking for cycles and picking an edge, Eades algorithm builds a
 3. When removing a node, remove all its connected edges and update the degrees of the remaining nodes.
 4. Repeat until all nodes are removed.
 5. Combine `LeftList` + `RightList` into the final sequence.
-6. For every edge `U → V`, if `U` appears *after* `V` in the sequence, mark it as a **Feedback** edge.
+6. For every edge `U → V`, if `U` appears _after_ `V` in the sequence, mark it as a **Feedback** edge.
 
 ---
 
@@ -84,6 +85,7 @@ Instead of just looking for cycles and picking an edge, Eades algorithm builds a
 Let's watch this algorithm run on a complex graph with multiple overlapping cycles.
 
 **The Graph:**
+
 - `A → B`
 - `B → C`
 - `B → D`
@@ -100,7 +102,7 @@ This forms a single Strongly Connected Component (every node can reach every oth
 We calculate the initial degrees for all nodes:
 
 | Node | In-Degree | Out-Degree | Net Flow (Out - In) |
-|------|-----------|------------|---------------------|
+| ---- | --------- | ---------- | ------------------- |
 | A    | 2 (C, F)  | 1 (B)      | -1                  |
 | B    | 2 (A, E)  | 2 (C, D)   | 0                   |
 | C    | 1 (B)     | 1 (A)      | 0                   |
@@ -121,6 +123,7 @@ We pick **E** and add it to `LeftList`.
 `LeftList` = `[E]`
 
 We remove `E` and its outgoing edges (`E → B`, `E → F`) and incoming edge (`D → E`). We update the degrees of its neighbors:
+
 - `B` loses 1 In-Degree
 - `F` loses 1 In-Degree
 - `D` loses 1 Out-Degree
@@ -129,13 +132,13 @@ We remove `E` and its outgoing edges (`E → B`, `E → F`) and incoming edge (`
 
 Updated State:
 
-| Node | In-Degree | Out-Degree |
-|------|-----------|------------|
-| A    | 2         | 1          |
-| B    | 1 *(was 2)*| 2          |
-| C    | 1         | 1          |
-| D    | 1         | 0 *(was 1)*|
-| F    | 0 *(was 1)*| 1          |
+| Node | In-Degree   | Out-Degree  |
+| ---- | ----------- | ----------- |
+| A    | 2           | 1           |
+| B    | 1 _(was 2)_ | 2           |
+| C    | 1           | 1           |
+| D    | 1           | 0 _(was 1)_ |
+| F    | 0 _(was 1)_ | 1           |
 
 1. **Sink Check**: Yes! Node `D` now has an Out-Degree of 0.
 
@@ -143,18 +146,19 @@ We pick **D** and prepend it to `RightList`.
 `RightList` = `[D]`
 
 We remove `D` and its incoming edge (`B → D`).
+
 - `B` loses 1 Out-Degree.
 
 ### Iteration 3
 
 Updated State:
 
-| Node | In-Degree | Out-Degree |
-|------|-----------|------------|
-| A    | 2         | 1          |
-| B    | 1         | 1 *(was 2)*|
-| C    | 1         | 1          |
-| F    | 0         | 1          |
+| Node | In-Degree | Out-Degree  |
+| ---- | --------- | ----------- |
+| A    | 2         | 1           |
+| B    | 1         | 1 _(was 2)_ |
+| C    | 1         | 1           |
+| F    | 0         | 1           |
 
 1. **Sink Check**: None.
 2. **Source Check**: Yes! Node `F` has an In-Degree of 0.
@@ -163,20 +167,23 @@ We pick **F** and append it to `LeftList`.
 `LeftList` = `[E, F]`
 
 Remove `F` and its edge (`F → A`).
+
 - `A` loses 1 In-Degree.
 
 ### Iteration 4
 
 Updated State for A, B, C:
+
 - `A`: In=1, Out=1 (Net = 0)
 - `B`: In=1, Out=1 (Net = 0)
 - `C`: In=1, Out=1 (Net = 0)
 
 1. Sink? No. Source? No. Max Flow? All are 0.
-We tie-break alphabetically and pick **A**. Append to `LeftList`.
-`LeftList` = `[E, F, A]`
+   We tie-break alphabetically and pick **A**. Append to `LeftList`.
+   `LeftList` = `[E, F, A]`
 
 Remove `A` and edges (`A → B`, `C → A`).
+
 - `B` loses 1 In-Degree (now 0).
 - `C` loses 1 Out-Degree (now 0).
 
@@ -189,7 +196,7 @@ Remove `A` and edges (`A → B`, `C → A`).
 
 We combine the lists:
 **Sequence:** `[E, F, A, B, C, D]`
-*(Positions: E=0, F=1, A=2, B=3, C=4, D=5)*
+_(Positions: E=0, F=1, A=2, B=3, C=4, D=5)_
 
 Now we look at our original edges. If an edge goes from a higher position back to a lower position, it is a Feedback Edge!
 
@@ -210,17 +217,17 @@ By reversing just two edges (`C → A` and `D → E`), we completely eliminated 
 
 When building a graph visualization engine, there are three common ways to break cycles. Here's why this engine uses Eades:
 
-| Approach | How it works | Time Complexity | Quality | Why Rejected/Chosen |
-|----------|--------------|-----------------|---------|---------------------|
-| **DFS Reversal** | Run Depth First Search. If you hit an already visited node, reverse the edge. | **O(V + E)** (Fastest) | Very Poor | The edge chosen depends purely on node iteration order. It creates chaotic, upside-down hierarchies. Rejected. |
-| **Integer Linear Programming (ILP)** | Formulate an equation to mathematically find the absolute minimum number of feedback edges. | **O(2^N)** (NP-Hard) | Perfect | Too slow for interactive web rendering. A graph with 100 nodes could freeze the browser. Rejected. |
-| **Eades Greedy** | The algorithm we just traced. | **O(E)** | Very Good | The sweet spot. It runs instantly in the browser and practically guarantees a minimal or near-minimal number of feedback edges. **Chosen.** |
+| Approach                             | How it works                                                                                | Time Complexity        | Quality   | Why Rejected/Chosen                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DFS Reversal**                     | Run Depth First Search. If you hit an already visited node, reverse the edge.               | **O(V + E)** (Fastest) | Very Poor | The edge chosen depends purely on node iteration order. It creates chaotic, upside-down hierarchies. Rejected.                              |
+| **Integer Linear Programming (ILP)** | Formulate an equation to mathematically find the absolute minimum number of feedback edges. | **O(2^N)** (NP-Hard)   | Perfect   | Too slow for interactive web rendering. A graph with 100 nodes could freeze the browser. Rejected.                                          |
+| **Eades Greedy**                     | The algorithm we just traced.                                                               | **O(E)**               | Very Good | The sweet spot. It runs instantly in the browser and practically guarantees a minimal or near-minimal number of feedback edges. **Chosen.** |
 
 ## Into the Pipeline
 
-Once the `classifyEdgeRoles` function finishes, the layout engine has a guaranteed Directed Acyclic Graph. 
+Once the `classifyEdgeRoles` function finishes, the layout engine has a guaranteed Directed Acyclic Graph.
 
-The original nodes and edges aren't deleted. Instead, the edges are tagged with `{ role: "feedback", reversed: true }`. 
+The original nodes and edges aren't deleted. Instead, the edges are tagged with `{ role: "feedback", reversed: true }`.
 
 In the next step of the pipeline, the ranking algorithm will pretend those feedback edges point forward. But later, during the final visual rendering, the drawing routines will look at that `role: "feedback"` tag, draw the arrow pointing correctly against the flow, and perhaps style it differently to show the user it's a cyclic dependency.
 

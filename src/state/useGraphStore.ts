@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../types/graphData";
+import {
+  DEFAULT_CUSTOM_LAYOUT_CONFIG,
+  type CustomLayoutConfig,
+} from "../engine/layout/custom/config";
 
-export type LayoutMode = "top-down" | "top-down-dagre" | "left-right" | "force" | "radial";
+export type LayoutMode = "top-down";
 export type FilterCategory = "all" | "success" | "error" | "tools";
 
 export interface GraphState {
@@ -13,6 +17,7 @@ export interface GraphState {
   searchQuery: string;
   activeFilter: FilterCategory;
   layoutMode: LayoutMode;
+  layoutConfig: CustomLayoutConfig;
   zoomLevel: number;
   panOffset: { x: number; y: number };
   collapsedNodeIds: Set<string>;
@@ -27,6 +32,10 @@ export interface GraphActions {
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: FilterCategory) => void;
   setLayoutMode: (mode: LayoutMode) => void;
+  setLayoutConfig: (
+    config: Partial<CustomLayoutConfig> | ((prev: CustomLayoutConfig) => CustomLayoutConfig),
+  ) => void;
+  resetLayoutConfig: () => void;
   setZoomLevel: (zoom: number | ((prev: number) => number)) => void;
   setPanOffset: (
     offset:
@@ -52,6 +61,7 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   searchQuery: "",
   activeFilter: "all",
   layoutMode: "top-down",
+  layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG },
   zoomLevel: 1,
   panOffset: initialPanOffset,
   collapsedNodeIds: new Set<string>(),
@@ -64,6 +74,14 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveFilter: (filter) => set({ activeFilter: filter }),
   setLayoutMode: (mode) => set({ layoutMode: mode }),
+  setLayoutConfig: (config) =>
+    set((state) => ({
+      layoutConfig:
+        typeof config === "function"
+          ? config(state.layoutConfig)
+          : { ...state.layoutConfig, ...config },
+    })),
+  resetLayoutConfig: () => set({ layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG } }),
   setZoomLevel: (zoom) =>
     set((state) => ({
       zoomLevel: typeof zoom === "function" ? zoom(state.zoomLevel) : zoom,
@@ -122,8 +140,8 @@ export const useSelectedNodeId = () => useGraphStore((state) => state.selectedNo
 export const useSearchQuery = () => useGraphStore((state) => state.searchQuery);
 export const useActiveFilter = () => useGraphStore((state) => state.activeFilter);
 export const useLayoutMode = () => useGraphStore((state) => state.layoutMode);
+export const useLayoutConfig = () => useGraphStore((state) => state.layoutConfig);
 export const useZoomLevel = () => useGraphStore((state) => state.zoomLevel);
 export const usePanOffset = () => useGraphStore((state) => state.panOffset);
 export const useCollapsedNodeIds = () => useGraphStore((state) => state.collapsedNodeIds);
 export const useShouldAutoFit = () => useGraphStore((state) => state.shouldAutoFit);
-

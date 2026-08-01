@@ -13,7 +13,10 @@ export interface StoredLayoutPayload {
 
 function getLocalStorage(): Storage | null {
   if (typeof window === "undefined") return null;
-  const storage = typeof localStorage !== "undefined" ? localStorage : (globalThis as unknown as { localStorage?: Storage }).localStorage;
+  const storage =
+    typeof localStorage !== "undefined"
+      ? localStorage
+      : (globalThis as unknown as { localStorage?: Storage }).localStorage;
   return storage ?? null;
 }
 
@@ -89,7 +92,10 @@ export function saveStoredLayout(
   try {
     storage.setItem(key, JSON.stringify(payload));
   } catch (err) {
-    if (err instanceof Error && (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED")) {
+    if (
+      err instanceof Error &&
+      (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED")
+    ) {
       purgeOldestCacheEntries(storage);
       try {
         storage.setItem(key, JSON.stringify(payload));

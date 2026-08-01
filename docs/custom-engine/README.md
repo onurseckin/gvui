@@ -1,6 +1,6 @@
 # Custom Engine Architecture
 
-Welcome to the documentation for the **Custom Graph Layout Engine**. 
+Welcome to the documentation for the **Custom Graph Layout Engine**.
 
 This engine is a highly specialized, optimization-driven graph layout system designed specifically for directed dependency graphs (like software architectures, CI/CD pipelines, and state machines).
 
@@ -10,7 +10,7 @@ The engine takes an abstract graph (a list of nodes and edges) and calculates pr
 
 ### A Motivating Example
 
-Imagine you have a complex graph with edge labels (badges). 
+Imagine you have a complex graph with edge labels (badges).
 Traditional layout engines like Dagre will often produce something like this:
 
 ```text
@@ -24,8 +24,9 @@ Traditional layout engines like Dagre will often produce something like this:
 Dagre doesn't understand the physical size of edge labels until it's too late, resulting in text that collides with other lines or nodes. Furthermore, Dagre routes edges as simple splines, which can be messy in dense graphs.
 
 **The Custom Engine solves this by:**
+
 1. Guaranteeing orthogonal (right-angled) edge routing.
-2. Detecting spatial conflicts (overlaps) *after* routing.
+2. Detecting spatial conflicts (overlaps) _after_ routing.
 3. Iteratively expanding gaps and re-running the layout until the graph is perfectly conflict-free.
 
 The result is a clean, orthogonal layout where every label has breathing room, and edges never slice through nodes.
@@ -101,6 +102,7 @@ This tutorial series is designed to take a developer with zero graph theory expe
 ## Code Entry Points
 
 If you want to read the code alongside these docs, start here:
+
 - **Pipeline Entry:** `computeCustomLayout.ts`
 - **Optimization Loop:** `optimizeLayout.ts`
 - **Node Sugiyama Pipeline:** `nodeLayout.ts`

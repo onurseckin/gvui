@@ -11,11 +11,13 @@ export interface LoadingOverlayProps {
   edgeCount?: number;
 }
 
-export const LoadingOverlay: FC<LoadingOverlayProps> = () => {
+export const LoadingOverlay: FC<LoadingOverlayProps> = ({ stageText, detail }) => {
+  const message = detail || stageText;
   return (
     <div className="loading-overlay-backdrop" role="status" aria-busy="true">
       <div className="loading-overlay-content">
         <Spinner size="lg" />
+        {message && <span className="loading-overlay-message">{message}</span>}
       </div>
     </div>
   );

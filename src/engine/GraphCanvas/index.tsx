@@ -17,6 +17,7 @@ export const GraphCanvas: FC = () => {
   const dataset = useGraphStore((state) => state.dataset);
   const currentFile = useGraphStore((state) => state.currentFile);
   const layoutMode = useGraphStore((state) => state.layoutMode);
+  const layoutConfig = useGraphStore((state) => state.layoutConfig);
   const positionedNodes = useGraphStore((state) => state.positionedNodes);
   const positionedEdges = useGraphStore((state) => state.positionedEdges);
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
@@ -39,7 +40,7 @@ export const GraphCanvas: FC = () => {
     (id: string): void => {
       setSelectedNodeId(id);
     },
-    [setSelectedNodeId]
+    [setSelectedNodeId],
   );
 
   const handleDeselectNode = useCallback((): void => {
@@ -50,7 +51,7 @@ export const GraphCanvas: FC = () => {
     (id: string): void => {
       toggleNodeCollapse(id);
     },
-    [toggleNodeCollapse]
+    [toggleNodeCollapse],
   );
 
   useEffect(() => {
@@ -61,13 +62,14 @@ export const GraphCanvas: FC = () => {
     }
 
     let isSubscribed = true;
-    const signature = generateDatasetSignature(dataset);
+    const configHash = `${layoutConfig.nodeGap}_${layoutConfig.rankGap}_${layoutConfig.bendPenalty}_${layoutConfig.directionPenalty}_${layoutConfig.maxGlobalPasses}_${layoutConfig.obstacleClearance}_${layoutConfig.laneSpacing}`;
+    const signature = `${generateDatasetSignature(dataset)}_${configHash}`;
     const stored = loadStoredLayout(layoutMode, signature);
 
     const applyLayoutResult = (nodes: PositionedNode[], edges: PositionedEdge[]) => {
       if (!isSubscribed) return;
       saveStoredLayout(layoutMode, signature, { nodes, edges });
-      
+
       const storeState = useGraphStore.getState();
       let newZoom = storeState.zoomLevel;
       let newPan = storeState.panOffset;
@@ -102,25 +104,20 @@ export const GraphCanvas: FC = () => {
 
     const controller = new AbortController();
 
-    if (layoutMode === "top-down") {
-      computeCustomEngineGraphLayoutAsync(dataset, {
-        signal: controller.signal,
-      })
-        .then(({ nodes, edges }) => {
-          applyLayoutResult(nodes, edges);
-        })
-        .catch((err) => {
-          if (err.name !== "AbortError" && err.name !== "LayoutCancelledError") {
-            void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
-              applyLayoutResult(nodes, edges);
-            });
-          }
-        });
-    } else {
-      void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
+    computeCustomEngineGraphLayoutAsync(dataset, {
+      signal: controller.signal,
+      configPartial: layoutConfig,
+    })
+      .then(({ nodes, edges }) => {
         applyLayoutResult(nodes, edges);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError" && err.name !== "LayoutCancelledError") {
+          void computeGraphLayout(dataset, layoutMode, layoutConfig).then(({ nodes, edges }) => {
+            applyLayoutResult(nodes, edges);
+          });
+        }
       });
-    }
 
     return () => {
       isSubscribed = false;
@@ -129,6 +126,7 @@ export const GraphCanvas: FC = () => {
   }, [
     dataset,
     layoutMode,
+    layoutConfig,
     containerRef,
     setPositionedGraph,
     setZoomLevel,
@@ -218,7 +216,7 @@ export const GraphCanvas: FC = () => {
 
       return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
     },
-    [isFilterActive, activeFilter, searchQuery]
+    [isFilterActive, activeFilter, searchQuery],
   );
 
   const transformStyle: CSSProperties = useMemo(
@@ -226,7 +224,7 @@ export const GraphCanvas: FC = () => {
       transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
       transformOrigin: "0 0",
     }),
-    [panOffset.x, panOffset.y, zoomLevel]
+    [panOffset.x, panOffset.y, zoomLevel],
   );
 
   return (
@@ -303,16 +301,8 @@ export const GraphCanvas: FC = () => {
               return null;
             }
             const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
-            let badgeX = edge.labelX ?? 0;
-            let badgeY = edge.labelY ?? 0;
-            if ((badgeX === 0 && badgeY === 0) && edge.path) {
-              const matches = edge.path.match(/[-+]?\d*\.?\d+/g);
-              if (matches && matches.length >= 4) {
-                const midIdx = Math.floor(matches.length / 4) * 2;
-                badgeX = parseFloat(matches[midIdx]) || 0;
-                badgeY = parseFloat(matches[midIdx + 1]) || 0;
-              }
-            }
+            const badgeX = edge.labelX ?? 0;
+            const badgeY = edge.labelY ?? 0;
 
             return (
               <g key={`badge-${edge.id}`} style={{ pointerEvents: "auto" }}>
@@ -322,6 +312,9 @@ export const GraphCanvas: FC = () => {
                   label={edge.label}
                   isCycle={edge.isCycle}
                   isSelected={isEdgeSelected}
+                  badgeRect={edge.badgeRect}
+                  anchorPoint={edge.anchorPoint}
+                  leaderPoints={edge.leaderPoints}
                 />
               </g>
             );

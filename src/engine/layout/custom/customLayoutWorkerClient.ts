@@ -1,10 +1,7 @@
+import { computeCustomLayout } from "./computeCustomLayout";
 import type { CustomLayoutConfig } from "./config";
 import { resolveCustomLayoutConfig } from "./config";
-import type {
-  CustomLayoutWorkerMessage,
-  CustomLayoutWorkerRequest,
-} from "./customLayoutWorker";
-import { optimizeLayout } from "./optimizeLayout";
+import type { CustomLayoutWorkerMessage, CustomLayoutWorkerRequest } from "./customLayoutWorker";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
 
 export interface ComputeLayoutWorkerOptions {
@@ -48,7 +45,7 @@ export interface ComputeLayoutWorkerDependencies {
   computeSynchronously?: (
     nodes: NormalizedNode[],
     edges: NormalizedEdge[],
-    config: CustomLayoutConfig,
+    configPartial?: Partial<CustomLayoutConfig>,
   ) => Promise<CustomLayoutResult> | CustomLayoutResult;
 }
 
@@ -96,8 +93,7 @@ function getLayoutWorkerEnvironment(): LayoutWorkerEnvironment {
 }
 
 /**
- * Computes in a real browser Worker whenever one is available.  Browser failures are terminal:
- * returning to optimizeLayout on the main thread would turn a timeout into a frozen tab.
+ * Computes in a real browser Worker whenever one is available. Browser failures are terminal.
  */
 export async function computeCustomLayoutAsync(
   options: ComputeLayoutWorkerOptions,
@@ -112,7 +108,7 @@ export async function computeCustomLayoutAsync(
 
   const environment = dependencies.environment ?? getLayoutWorkerEnvironment();
   const runtime = dependencies.runtime ?? environment.runtime;
-  const computeSynchronously = dependencies.computeSynchronously ?? optimizeLayout;
+  const computeSynchronously = dependencies.computeSynchronously ?? computeCustomLayout;
 
   if (!runtime) {
     if (environment.isBrowser) {
@@ -189,4 +185,3 @@ export async function computeCustomLayoutAsync(
     }
   });
 }
-

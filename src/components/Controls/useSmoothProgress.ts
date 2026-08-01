@@ -56,4 +56,3 @@ export function useSmoothProgress(targetPercent: number, isCalculating: boolean)
 
   return displayPercent;
 }
-

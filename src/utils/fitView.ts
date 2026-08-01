@@ -64,9 +64,23 @@ export function calculateFitView(
   const graphWidth = maxX - minX + padding * 2;
   const graphHeight = maxY - minY + padding * 2;
 
-  const wrapper = containerElement || (typeof document !== "undefined" ? document.querySelector(".canvas-wrapper") : null);
-  const viewWidth = wrapper?.clientWidth || (typeof window !== "undefined" ? window.innerWidth * 0.7 : 1000);
-  const viewHeight = wrapper?.clientHeight || (typeof window !== "undefined" ? window.innerHeight * 0.7 : 700);
+  const wrapper =
+    containerElement ||
+    (typeof document !== "undefined" ? document.querySelector(".canvas-wrapper") : null);
+  const viewWidth =
+    wrapper?.clientWidth ||
+    (typeof window !== "undefined" &&
+    typeof window.innerWidth === "number" &&
+    !isNaN(window.innerWidth)
+      ? window.innerWidth * 0.7
+      : 1000);
+  const viewHeight =
+    wrapper?.clientHeight ||
+    (typeof window !== "undefined" &&
+    typeof window.innerHeight === "number" &&
+    !isNaN(window.innerHeight)
+      ? window.innerHeight * 0.7
+      : 700);
 
   const scaleX = viewWidth / graphWidth;
   const scaleY = viewHeight / graphHeight;

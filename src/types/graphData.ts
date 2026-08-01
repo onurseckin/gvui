@@ -51,8 +51,15 @@ export interface PositionedNode extends GraphNodeData {
   height: number;
 }
 
+import type { Point, PortRef, Rect } from "../engine/layout/custom/types";
+
 export interface PositionedEdge extends GraphEdgeData {
   path: string;
   labelX?: number;
   labelY?: number;
+  badgeRect?: Rect;
+  anchorPoint?: Point;
+  leaderPoints?: Point[];
+  sourcePort?: PortRef;
+  targetPort?: PortRef;
 }

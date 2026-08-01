@@ -60,7 +60,7 @@ export const NodeCard: FC<NodeCardProps> = memo(
         e.stopPropagation();
         onSelect(node.id);
       },
-      [node.id, onSelect]
+      [node.id, onSelect],
     );
 
     const handleKeyDown = useCallback(
@@ -70,7 +70,7 @@ export const NodeCard: FC<NodeCardProps> = memo(
           onSelect(node.id);
         }
       },
-      [node.id, onSelect]
+      [node.id, onSelect],
     );
 
     const cardClasses = [
@@ -117,8 +117,7 @@ export const NodeCard: FC<NodeCardProps> = memo(
       </div>
     );
   },
-  areNodeCardPropsEqual
+  areNodeCardPropsEqual,
 );
 
 NodeCard.displayName = "NodeCard";
-

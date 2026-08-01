@@ -1,10 +1,19 @@
 import type { FC } from "react";
 import { useMemo, useState } from "react";
-import {
-  pointsToSvgPath,
-  renderPathWithCrossingBridges,
-} from "../../../engine/layout/custom/svgPath";
 import type { NormalizedEdge, NormalizedNode } from "../../../engine/layout/custom/types";
+
+function pointsToSvgPath(points: Array<{ x: number; y: number }>): string {
+  if (!points || points.length === 0) return "";
+  return points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "").trim();
+}
+
+function renderPathWithCrossingBridges(
+  points: Array<{ x: number; y: number }>,
+  _ownedCrossings?: unknown,
+): string {
+  return pointsToSvgPath(points);
+}
+
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
 import type { TestScenario } from "../types";
@@ -166,14 +175,13 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                       <span>{activeScenario.title}</span>
                     </div>
                     <div className="testing-stat-badge">
-                      Nodes: {layoutResult.nodes.length} | Edges:{" "}
-                      {layoutResult.edges.length} | Crossings:{" "}
-                      {layoutResult.validation.metrics.crossingCount} | Hairpins:{" "}
+                      Nodes: {layoutResult.nodes.length} | Edges: {layoutResult.edges.length} |
+                      Crossings: {layoutResult.validation.metrics.crossingCount} | Hairpins:{" "}
                       {layoutResult.validation.metrics.hairpinCount ?? 0} | Leaders:{" "}
                       {(layoutResult.validation.metrics.ordinaryLeaderCount ?? 0) +
                         (layoutResult.validation.metrics.feedbackLeaderCount ?? 0)}{" "}
-                      | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} |
-                      Status: <strong>{layoutResult.status}</strong>
+                      | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
+                      <strong>{layoutResult.status}</strong>
                     </div>
                   </div>
                   <div className="testing-canvas-container">

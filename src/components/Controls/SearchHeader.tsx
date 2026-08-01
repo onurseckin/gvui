@@ -50,4 +50,3 @@ export const SearchHeader: FC<SearchHeaderProps> = React.memo(function SearchHea
 });
 
 export default SearchHeader;
-

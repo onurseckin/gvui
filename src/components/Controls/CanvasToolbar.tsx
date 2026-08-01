@@ -1,8 +1,5 @@
-import React, { useCallback, useEffect, type FC } from "react";
-import {
-  useGraphStore,
-  type LayoutMode,
-} from "../../state/useGraphStore";
+import React, { useCallback, useEffect, useState, type FC } from "react";
+import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
 import { Button, LayoutSelectDropdown } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
@@ -12,11 +9,16 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
+  const layoutConfig = useLayoutConfig();
 
   const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
   const setLayoutMode = useGraphStore((state) => state.setLayoutMode);
+  const setLayoutConfig = useGraphStore((state) => state.setLayoutConfig);
+  const resetLayoutConfig = useGraphStore((state) => state.resetLayoutConfig);
   const resetViewport = useGraphStore((state) => state.resetViewport);
+
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   const handleZoomIn = useCallback(
     () => setZoomLevel((prev) => Math.min(prev + 0.2, 3.0)),
@@ -129,11 +131,148 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
         <label htmlFor="layout-select" className="layout-label">
           Layout:
         </label>
-        <LayoutSelectDropdown
-          value={layoutMode}
-          onLayoutChange={handleLayoutChange}
+        <LayoutSelectDropdown value={layoutMode} onLayoutChange={handleLayoutChange} size="sm" />
+      </div>
+
+      <div className="layout-config-wrapper">
+        <Button
+          variant="outline"
           size="sm"
-        />
+          onClick={() => setIsConfigOpen((prev) => !prev)}
+          title="WASM Layout Engine Options"
+          className="toolbar-btn"
+        >
+          ⚙ Engine Options
+        </Button>
+
+        {isConfigOpen && (
+          <div className="layout-config-popover">
+            <div className="layout-config-header">
+              <span className="layout-config-title">⚙ WASM Layout Engine Options</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="layout-config-reset-btn"
+                onClick={resetLayoutConfig}
+                title="Reset to defaults"
+              >
+                Reset
+              </Button>
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Node Gap</span>
+                <span className="layout-config-value">{layoutConfig.nodeGap}px</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="200"
+                step="2"
+                value={layoutConfig.nodeGap}
+                onChange={(e) => setLayoutConfig({ nodeGap: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Rank Gap</span>
+                <span className="layout-config-value">{layoutConfig.rankGap}px</span>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="300"
+                step="5"
+                value={layoutConfig.rankGap}
+                onChange={(e) => setLayoutConfig({ rankGap: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Bend Penalty</span>
+                <span className="layout-config-value">{layoutConfig.bendPenalty}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                step="5"
+                value={layoutConfig.bendPenalty}
+                onChange={(e) => setLayoutConfig({ bendPenalty: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Direction Penalty</span>
+                <span className="layout-config-value">{layoutConfig.directionPenalty}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="500"
+                step="10"
+                value={layoutConfig.directionPenalty}
+                onChange={(e) => setLayoutConfig({ directionPenalty: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Max Passes</span>
+                <span className="layout-config-value">{layoutConfig.maxGlobalPasses}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="30"
+                step="1"
+                value={layoutConfig.maxGlobalPasses}
+                onChange={(e) => setLayoutConfig({ maxGlobalPasses: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Obstacle Clearance</span>
+                <span className="layout-config-value">{layoutConfig.obstacleClearance}px</span>
+              </div>
+              <input
+                type="range"
+                min="4"
+                max="50"
+                step="2"
+                value={layoutConfig.obstacleClearance}
+                onChange={(e) => setLayoutConfig({ obstacleClearance: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+
+            <div className="layout-config-item">
+              <div className="layout-config-label-row">
+                <span>Lane Spacing</span>
+                <span className="layout-config-value">{layoutConfig.laneSpacing}px</span>
+              </div>
+              <input
+                type="range"
+                min="4"
+                max="40"
+                step="2"
+                value={layoutConfig.laneSpacing}
+                onChange={(e) => setLayoutConfig({ laneSpacing: Number(e.target.value) })}
+                className="layout-config-slider"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="toolbar-divider" />
@@ -153,4 +292,3 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
 });
 
 export default CanvasToolbar;
-

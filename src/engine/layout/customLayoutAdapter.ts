@@ -1,8 +1,12 @@
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
 import { computeCustomLayout } from "./custom";
-import type { CustomLayoutConfig, CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./custom";
+import type {
+  CustomLayoutConfig,
+  CustomLayoutResult,
+  NormalizedEdge,
+  NormalizedNode,
+} from "./custom";
 import { computeCustomLayoutAsync } from "./custom/customLayoutWorkerClient";
-import { renderPathWithCrossingBridges } from "./custom/svgPath";
 import { calculateNodeDimensions } from "./nodeDimensions";
 
 function mapLayoutResultToPositioned(
@@ -23,7 +27,6 @@ function mapLayoutResultToPositioned(
   });
 
   const badgeMap = new Map(layoutResult.badges.map((b) => [b.edgeId, b]));
-  const crossingPoints = (layoutResult.crossings ?? []).map((c) => c.point);
 
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, idx) => {
     const edgeId = edge.id || `e-${edge.source}-${edge.target}-${idx}`;
@@ -35,7 +38,9 @@ function mapLayoutResultToPositioned(
     let midY = 0;
 
     if (route && route.points.length >= 2) {
-      path = renderPathWithCrossingBridges(route.points, crossingPoints);
+      path = route.points
+        .reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "")
+        .trim();
       const midPointIdx = Math.floor(route.points.length / 2);
       midX = route.points[midPointIdx].x;
       midY = route.points[midPointIdx].y;
@@ -61,6 +66,11 @@ function mapLayoutResultToPositioned(
       path,
       labelX,
       labelY,
+      badgeRect: badge?.rect,
+      anchorPoint: badge?.anchorPoint,
+      leaderPoints: badge?.leaderPoints,
+      sourcePort: route?.sourcePort,
+      targetPort: route?.targetPort,
     };
   });
 
@@ -73,7 +83,10 @@ function mapLayoutResultToPositioned(
  * and maps the resulting node positions, orthogonal edge SVG paths, crossing bridges, and badge locations
  * back to standard PositionedNode and PositionedEdge outputs for rendering on GraphCanvas.
  */
-export async function computeCustomEngineGraphLayout(dataset: GraphDataset): Promise<{
+export async function computeCustomEngineGraphLayout(
+  dataset: GraphDataset,
+  configPartial?: Partial<CustomLayoutConfig>,
+): Promise<{
   nodes: PositionedNode[];
   edges: PositionedEdge[];
 }> {
@@ -99,7 +112,7 @@ export async function computeCustomEngineGraphLayout(dataset: GraphDataset): Pro
     isCycle: edge.isCycle,
   }));
 
-  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges);
+  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges, configPartial);
   return mapLayoutResultToPositioned(dataset, layoutResult);
 }
 
