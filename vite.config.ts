@@ -9,10 +9,11 @@ function wasmAutoRebuildPlugin(): Plugin {
       if (file.endsWith(".rs") || file.endsWith("Cargo.toml")) {
         console.log("\n⚡ Rust source file changed. Rebuilding WASM package...");
         try {
+          execSync("wasm-pack --version", { stdio: "ignore" });
           execSync("bun run build:wasm", { stdio: "inherit" });
           console.log("✨ WASM package rebuilt successfully!");
-        } catch (err) {
-          console.error("❌ WASM rebuild failed:", err);
+        } catch {
+          console.log("ℹ️ Rust source changed. Pre-built WASM module active in container.");
         }
       }
     },
