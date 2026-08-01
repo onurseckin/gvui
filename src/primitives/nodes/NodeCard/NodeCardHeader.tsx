@@ -1,4 +1,5 @@
 import type { FC, MouseEvent } from "react";
+import { memo, useCallback } from "react";
 import type { NodeStatusVariant } from "./NodeCard.types";
 
 export interface NodeCardHeaderProps {
@@ -10,7 +11,7 @@ export interface NodeCardHeaderProps {
   onToggleCollapse: (id: string) => void;
 }
 
-export const NodeCardHeader: FC<NodeCardHeaderProps> = ({
+export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(({
   id,
   name,
   type,
@@ -18,10 +19,10 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
-  const handleToggle = (e: MouseEvent<HTMLButtonElement>): void => {
+  const handleToggle = useCallback((e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     onToggleCollapse(id);
-  };
+  }, [id, onToggleCollapse]);
 
   return (
     <header className="node-card-header">
@@ -43,4 +44,6 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = ({
       </button>
     </header>
   );
-};
+});
+
+NodeCardHeader.displayName = "NodeCardHeader";

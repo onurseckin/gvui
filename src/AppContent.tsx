@@ -7,7 +7,7 @@ import { SearchHeader } from "./components/Controls/SearchHeader";
 import { DeveloperSettings } from "./components/DeveloperSettings";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
-import { useGraphStore } from "./state/useGraphStore";
+import { useCurrentFile, useGraphStore } from "./state/useGraphStore";
 import type { GraphDataset } from "./types/graphData";
 import { Button } from "./ui";
 import { generateDatasetSignature, loadStoredViewport } from "./utils/fileStorage";
@@ -20,7 +20,7 @@ export const AppContent: FC = () => {
   const searchParams = useSearch({ strict: false }) as { node?: string };
   const initialNodeId = searchParams.node ?? null;
 
-  const currentFile = useGraphStore((state) => state.currentFile);
+  const currentFile = useCurrentFile();
   const centerNodeOnCanvas = useGraphStore((state) => state.centerNodeOnCanvas);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
@@ -111,14 +111,17 @@ export const AppContent: FC = () => {
     void loadGraphFile(fileIdFromRoute, initialNodeId);
   }, [fileIdFromRoute, initialNodeId, loadGraphFile]);
 
-  const handleSelectSample = (selectedFileId: string) => {
-    void navigate({
-      to: "/graphs/$fileId",
-      params: { fileId: selectedFileId },
-    });
-  };
+  const handleSelectSample = useCallback(
+    (selectedFileId: string) => {
+      void navigate({
+        to: "/graphs/$fileId",
+        params: { fileId: selectedFileId },
+      });
+    },
+    [navigate],
+  );
 
-  const handleCustomUpload = (dataset: GraphDataset) => {
+  const handleCustomUpload = useCallback((dataset: GraphDataset) => {
     const fileId = dataset.id ? dataset.id.replace(/\.json$/, "") : "custom";
     const signature = generateDatasetSignature(dataset);
     const stored = loadStoredViewport(fileId, signature);
@@ -144,7 +147,31 @@ export const AppContent: FC = () => {
         shouldAutoFit: true,
       });
     }
-  };
+  }, []);
+
+  const handleOpenDeveloperSettings = useCallback(() => {
+    setIsDeveloperSettingsOpen(true);
+  }, []);
+
+  const handleCloseDeveloperSettings = useCallback(() => {
+    setIsDeveloperSettingsOpen(false);
+  }, []);
+
+  const handleOpenGraphTesting = useCallback(() => {
+    void navigate({ to: "/testing" });
+  }, [navigate]);
+
+  const handleOpenCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(true);
+  }, []);
+
+  const handleCloseCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false);
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
 
   return (
     <div className="app-container">
@@ -153,7 +180,7 @@ export const AppContent: FC = () => {
           <Button
             variant="icon"
             size="sm"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            onClick={handleToggleSidebar}
             className="sidebar-toggle-btn"
             title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -164,7 +191,7 @@ export const AppContent: FC = () => {
         </div>
         <div className="navbar-right">
           <CanvasToolbar />
-          <SearchHeader onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
+          <SearchHeader onOpenCommandPalette={handleOpenCommandPalette} />
         </div>
       </header>
       <div className="app-body">
@@ -173,10 +200,8 @@ export const AppContent: FC = () => {
             currentFile={currentFile || fileIdFromRoute}
             onSelectSample={handleSelectSample}
             onCustomUpload={handleCustomUpload}
-            onOpenDeveloperSettings={() => setIsDeveloperSettingsOpen(true)}
-            onOpenGraphTesting={() => {
-              void navigate({ to: "/testing" });
-            }}
+            onOpenDeveloperSettings={handleOpenDeveloperSettings}
+            onOpenGraphTesting={handleOpenGraphTesting}
           />
         )}
         <main className="app-main">
@@ -187,13 +212,13 @@ export const AppContent: FC = () => {
       </div>
       <CommandPalette
         isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
+        onClose={handleCloseCommandPalette}
         currentFile={currentFile || fileIdFromRoute}
         onNavigateNode={handleNavigateNode}
       />
       <DeveloperSettings
         isOpen={isDeveloperSettingsOpen}
-        onClose={() => setIsDeveloperSettingsOpen(false)}
+        onClose={handleCloseDeveloperSettings}
         onClearStorage={handleClearStorage}
       />
     </div>

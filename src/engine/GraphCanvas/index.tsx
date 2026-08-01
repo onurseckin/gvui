@@ -1,10 +1,10 @@
 import type { CSSProperties, FC } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoadingOverlay } from "../../components/Controls/LoadingOverlay";
 import { EdgeBadgeOverlay, EdgeMarkerDefs, GraphEdge } from "../../primitives/edges/GraphEdge";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
 import { useGraphStore } from "../../state/useGraphStore";
-import type { PositionedNode } from "../../types/graphData";
+import type { PositionedEdge, PositionedNode } from "../../types/graphData";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { calculateFitView } from "../../utils/fitView";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
@@ -35,6 +35,24 @@ export const GraphCanvas: FC = () => {
 
   const [isCalculating, setIsCalculating] = useState(false);
 
+  const handleSelectNode = useCallback(
+    (id: string): void => {
+      setSelectedNodeId(id);
+    },
+    [setSelectedNodeId]
+  );
+
+  const handleDeselectNode = useCallback((): void => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
+
+  const handleToggleCollapseNode = useCallback(
+    (id: string): void => {
+      toggleNodeCollapse(id);
+    },
+    [toggleNodeCollapse]
+  );
+
   useEffect(() => {
     if (!dataset) {
       setPositionedGraph([], []);
@@ -42,18 +60,39 @@ export const GraphCanvas: FC = () => {
       return;
     }
 
+    let isSubscribed = true;
     const signature = generateDatasetSignature(dataset);
     const stored = loadStoredLayout(layoutMode, signature);
 
-    if (stored) {
-      setPositionedGraph(stored.nodes, stored.edges);
-      if (useGraphStore.getState().shouldAutoFit) {
-        const fitResult = calculateFitView(stored.nodes, stored.edges, containerRef.current?.parentElement);
-        setZoomLevel(fitResult.zoomLevel);
-        setPanOffset(fitResult.panOffset);
-        setShouldAutoFit(false);
+    const applyLayoutResult = (nodes: PositionedNode[], edges: PositionedEdge[]) => {
+      if (!isSubscribed) return;
+      saveStoredLayout(layoutMode, signature, { nodes, edges });
+      
+      const storeState = useGraphStore.getState();
+      let newZoom = storeState.zoomLevel;
+      let newPan = storeState.panOffset;
+      let newAutoFit = storeState.shouldAutoFit;
+
+      if (storeState.shouldAutoFit) {
+        const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
+        newZoom = fitResult.zoomLevel;
+        newPan = fitResult.panOffset;
+        newAutoFit = false;
       }
+
+      useGraphStore.setState({
+        positionedNodes: nodes,
+        positionedEdges: edges,
+        zoomLevel: newZoom,
+        panOffset: newPan,
+        shouldAutoFit: newAutoFit,
+      });
+
       setIsCalculating(false);
+    };
+
+    if (stored) {
+      applyLayoutResult(stored.nodes, stored.edges);
       return;
     }
 
@@ -62,54 +101,24 @@ export const GraphCanvas: FC = () => {
     setIsCalculating(true);
 
     const controller = new AbortController();
-    let isSubscribed = true;
 
     if (layoutMode === "top-down") {
       computeCustomEngineGraphLayoutAsync(dataset, {
         signal: controller.signal,
       })
         .then(({ nodes, edges }) => {
-          if (!isSubscribed) return;
-          saveStoredLayout(layoutMode, signature, { nodes, edges });
-          setPositionedGraph(nodes, edges);
-          if (useGraphStore.getState().shouldAutoFit) {
-            const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
-            setZoomLevel(fitResult.zoomLevel);
-            setPanOffset(fitResult.panOffset);
-            setShouldAutoFit(false);
-          }
-          setIsCalculating(false);
+          applyLayoutResult(nodes, edges);
         })
         .catch((err) => {
           if (err.name !== "AbortError" && err.name !== "LayoutCancelledError") {
             void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
-              if (isSubscribed) {
-                saveStoredLayout(layoutMode, signature, { nodes, edges });
-                setPositionedGraph(nodes, edges);
-                if (useGraphStore.getState().shouldAutoFit) {
-                  const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
-                  setZoomLevel(fitResult.zoomLevel);
-                  setPanOffset(fitResult.panOffset);
-                  setShouldAutoFit(false);
-                }
-                setIsCalculating(false);
-              }
+              applyLayoutResult(nodes, edges);
             });
           }
         });
     } else {
       void computeGraphLayout(dataset, layoutMode).then(({ nodes, edges }) => {
-        if (isSubscribed) {
-          saveStoredLayout(layoutMode, signature, { nodes, edges });
-          setPositionedGraph(nodes, edges);
-          if (useGraphStore.getState().shouldAutoFit) {
-            const fitResult = calculateFitView(nodes, edges, containerRef.current?.parentElement);
-            setZoomLevel(fitResult.zoomLevel);
-            setPanOffset(fitResult.panOffset);
-            setShouldAutoFit(false);
-          }
-          setIsCalculating(false);
-        }
+        applyLayoutResult(nodes, edges);
       });
     }
 
@@ -174,52 +183,58 @@ export const GraphCanvas: FC = () => {
 
   const isFilterActive = activeFilter !== "all" || searchQuery.trim() !== "";
 
-  const isNodeMatching = (node: PositionedNode): boolean => {
-    if (!isFilterActive) return true;
+  const isNodeMatching = useCallback(
+    (node: PositionedNode): boolean => {
+      if (!isFilterActive) return true;
 
-    if (activeFilter === "success") {
-      const statusBadge = node.badges?.find((b) => b.variant);
-      const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-      const isSuccess =
-        statusBadge?.variant === "success" ||
-        statusStr.includes("complete") ||
-        statusStr.includes("success");
-      if (!isSuccess) return false;
-    } else if (activeFilter === "error") {
-      const statusBadge = node.badges?.find((b) => b.variant);
-      const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-      const isError =
-        statusBadge?.variant === "error" ||
-        statusStr.includes("error") ||
-        statusStr.includes("fail");
-      if (!isError) return false;
-    } else if (activeFilter === "tools") {
-      if (!node.tools || node.tools.length === 0) return false;
-    }
+      if (activeFilter === "success") {
+        const statusBadge = node.badges?.find((b) => b.variant);
+        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
+        const isSuccess =
+          statusBadge?.variant === "success" ||
+          statusStr.includes("complete") ||
+          statusStr.includes("success");
+        if (!isSuccess) return false;
+      } else if (activeFilter === "error") {
+        const statusBadge = node.badges?.find((b) => b.variant);
+        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
+        const isError =
+          statusBadge?.variant === "error" ||
+          statusStr.includes("error") ||
+          statusStr.includes("fail");
+        if (!isError) return false;
+      } else if (activeFilter === "tools") {
+        if (!node.tools || node.tools.length === 0) return false;
+      }
 
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return true;
+      const query = searchQuery.trim().toLowerCase();
+      if (!query) return true;
 
-    const nameMatch = node.name.toLowerCase().includes(query);
-    const idMatch = node.id.toLowerCase().includes(query);
-    const typeMatch = Boolean(node.type?.toLowerCase().includes(query));
-    const descMatch = Boolean(node.description?.toLowerCase().includes(query));
-    const modelMatch = Boolean(node.model?.toLowerCase().includes(query));
+      const nameMatch = node.name.toLowerCase().includes(query);
+      const idMatch = node.id.toLowerCase().includes(query);
+      const typeMatch = Boolean(node.type?.toLowerCase().includes(query));
+      const descMatch = Boolean(node.description?.toLowerCase().includes(query));
+      const modelMatch = Boolean(node.model?.toLowerCase().includes(query));
 
-    return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
-  };
+      return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
+    },
+    [isFilterActive, activeFilter, searchQuery]
+  );
 
-  const transformStyle: CSSProperties = {
-    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-    transformOrigin: "0 0",
-  };
+  const transformStyle: CSSProperties = useMemo(
+    () => ({
+      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+      transformOrigin: "0 0",
+    }),
+    [panOffset.x, panOffset.y, zoomLevel]
+  );
 
   return (
     <div
       ref={containerRef}
       className={`graph-canvas-viewport ${isDragging ? "is-dragging" : ""}`}
       onMouseDown={handleMouseDown}
-      onClick={() => setSelectedNodeId(null)}
+      onClick={handleDeselectNode}
     >
       {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
@@ -265,8 +280,8 @@ export const GraphCanvas: FC = () => {
                   isSelected={isSelected}
                   isFiltered={isFiltered}
                   isCollapsed={isCollapsed}
-                  onSelect={(id) => setSelectedNodeId(id)}
-                  onToggleCollapse={(id) => toggleNodeCollapse(id)}
+                  onSelect={handleSelectNode}
+                  onToggleCollapse={handleToggleCollapseNode}
                 />
               </div>
             );

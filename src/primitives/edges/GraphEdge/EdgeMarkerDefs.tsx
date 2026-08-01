@@ -1,10 +1,11 @@
 import type { FC } from "react";
+import { memo } from "react";
 
 export interface EdgeMarkerDefsProps {
   idPrefix?: string;
 }
 
-export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
+export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) => {
   const getMarkerId = (id: string): string => (idPrefix ? `${idPrefix}-${id}` : id);
 
   return (
@@ -120,4 +121,6 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = ({ idPrefix = "" }) => {
       </linearGradient>
     </defs>
   );
-};
+});
+
+EdgeMarkerDefs.displayName = "EdgeMarkerDefs";

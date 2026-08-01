@@ -582,6 +582,27 @@ export function searchOrthogonalRoute(
   const indexedOcc = new IndexedOccupancy(combinedOccupancy, config.epsilon);
   const forbiddenRects = options?.forbiddenRects ?? [];
 
+  // Adaptive Bounded Window Optimization:
+  // Dynamically restrict A* search to localized bounding box on dense grids
+  const isWindowFiltered = !options?.skipBoundingWindowFilter && grid.vertices.size > 20;
+  let minXWin = -Infinity;
+  let maxXWin = Infinity;
+  let minYWin = -Infinity;
+  let maxYWin = Infinity;
+
+  if (isWindowFiltered) {
+    const endpointDist = Math.abs(srcStubPt.x - tgtStubPt.x) + Math.abs(srcStubPt.y - tgtStubPt.y);
+    const pad = Math.max(450, endpointDist * 0.7);
+    minXWin = Math.min(srcStubPt.x, tgtStubPt.x) - pad;
+    maxXWin = Math.max(srcStubPt.x, tgtStubPt.x) + pad;
+    minYWin = Math.min(srcStubPt.y, tgtStubPt.y) - pad;
+    maxYWin = Math.max(srcStubPt.y, tgtStubPt.y) + pad;
+    if (reqX !== undefined) {
+      minXWin = Math.min(minXWin, reqX - pad);
+      maxXWin = Math.max(maxXWin, reqX + pad);
+    }
+  }
+
   while (openHeap.size > 0) {
     if (expandedStates >= maxIterations) {
       stopReason = "max_iterations";
@@ -609,6 +630,16 @@ export function searchOrthogonalRoute(
 
     for (const neighbor of neighbors) {
       const nextPt = grid.vertices.get(neighbor.targetId)!;
+
+      // Skip grid vertices outside adaptive local window during fast pass
+      if (
+        isWindowFiltered &&
+        neighbor.targetId !== tgtStubId &&
+        (nextPt.x < minXWin || nextPt.x > maxXWin || nextPt.y < minYWin || nextPt.y > maxYWin)
+      ) {
+        continue;
+      }
+
       const nextVIdx = vertexIndexMap.get(neighbor.targetId)!;
       const seg: Segment = { a: currentPt, b: nextPt };
       const moveDir = getSegmentDirection(currentPt, nextPt);
@@ -698,6 +729,18 @@ export function searchOrthogonalRoute(
   };
 
   if (!bestGoalNode) {
+    if (isWindowFiltered) {
+      // Fallback pass: retry full grid search if localized window was blocked
+      return searchOrthogonalRoute(
+        edgeId,
+        sourcePort,
+        targetPort,
+        grid,
+        occupancy,
+        config,
+        { ...options, skipBoundingWindowFilter: true },
+      );
+    }
     return stopReason === "max_iterations" && options?.allowDoglegFallback
       ? findGridDoglegRoute(
           edgeId,

@@ -56,6 +56,12 @@ export function getCurrentLayoutError(
   return snapshot?.inputKey === inputKey ? snapshot.error : null;
 }
 
+interface WorkerState {
+  snapshot: LayoutResultSnapshot | null;
+  errorSnapshot: LayoutErrorSnapshot | null;
+  isCalculating: boolean;
+}
+
 export function useCustomLayoutWorker(
   {
     nodes,
@@ -67,9 +73,11 @@ export function useCustomLayoutWorker(
   }: UseCustomLayoutWorkerOptions,
   dependencies: UseCustomLayoutWorkerDependencies = {},
 ): UseCustomLayoutWorkerState {
-  const [snapshot, setSnapshot] = useState<LayoutResultSnapshot | null>(null);
-  const [isCalculating, setIsCalculating] = useState<boolean>(false);
-  const [errorSnapshot, setErrorSnapshot] = useState<LayoutErrorSnapshot | null>(null);
+  const [workerState, setWorkerState] = useState<WorkerState>({
+    snapshot: null,
+    errorSnapshot: null,
+    isCalculating: false,
+  });
   const [retryGeneration, setRetryGeneration] = useState<number>(0);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -83,9 +91,7 @@ export function useCustomLayoutWorker(
 
   useEffect(() => {
     if (!enabled || nodes.length === 0) {
-      setSnapshot(null);
-      setIsCalculating(false);
-      setErrorSnapshot(null);
+      setWorkerState({ snapshot: null, errorSnapshot: null, isCalculating: false });
       return;
     }
 
@@ -96,8 +102,11 @@ export function useCustomLayoutWorker(
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    setIsCalculating(true);
-    setErrorSnapshot(null);
+    setWorkerState((prev) => ({
+      snapshot: prev.snapshot,
+      errorSnapshot: null,
+      isCalculating: true,
+    }));
 
     computeLayout({
       nodes,
@@ -108,17 +117,23 @@ export function useCustomLayoutWorker(
     })
       .then((res) => {
         if (!controller.signal.aborted) {
-          setSnapshot({ inputKey, result: res, generation: requestGeneration });
-          setIsCalculating(false);
+          setWorkerState({
+            snapshot: { inputKey, result: res, generation: requestGeneration },
+            errorSnapshot: null,
+            isCalculating: false,
+          });
         }
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
-          setErrorSnapshot({
-            inputKey,
-            error: err instanceof Error ? err : new Error(String(err)),
-          });
-          setIsCalculating(false);
+          setWorkerState((prev) => ({
+            snapshot: prev.snapshot,
+            errorSnapshot: {
+              inputKey,
+              error: err instanceof Error ? err : new Error(String(err)),
+            },
+            isCalculating: false,
+          }));
         }
       });
 
@@ -128,11 +143,11 @@ export function useCustomLayoutWorker(
   }, [nodes, edges, configPartial, timeoutMs, enabled, inputKey, requestGeneration, computeLayout]);
 
   return {
-    result: getCurrentLayoutResult(snapshot, inputKey),
-    snapshot,
-    isCalculating,
-    error: getCurrentLayoutError(errorSnapshot, inputKey),
+    result: getCurrentLayoutResult(workerState.snapshot, inputKey),
+    snapshot: workerState.snapshot,
+    isCalculating: workerState.isCalculating,
+    error: getCurrentLayoutError(workerState.errorSnapshot, inputKey),
     recalculate,
-    resultGeneration: snapshot?.generation ?? null,
+    resultGeneration: workerState.snapshot?.generation ?? null,
   };
 }

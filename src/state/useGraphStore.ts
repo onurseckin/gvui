@@ -112,3 +112,18 @@ export const useGraphStore = create<GraphStore>()((set) => ({
     }),
   setShouldAutoFit: (shouldAutoFit) => set({ shouldAutoFit }),
 }));
+
+// Granular state selector hooks for re-render optimization
+export const useDataset = () => useGraphStore((state) => state.dataset);
+export const useCurrentFile = () => useGraphStore((state) => state.currentFile);
+export const usePositionedNodes = () => useGraphStore((state) => state.positionedNodes);
+export const usePositionedEdges = () => useGraphStore((state) => state.positionedEdges);
+export const useSelectedNodeId = () => useGraphStore((state) => state.selectedNodeId);
+export const useSearchQuery = () => useGraphStore((state) => state.searchQuery);
+export const useActiveFilter = () => useGraphStore((state) => state.activeFilter);
+export const useLayoutMode = () => useGraphStore((state) => state.layoutMode);
+export const useZoomLevel = () => useGraphStore((state) => state.zoomLevel);
+export const usePanOffset = () => useGraphStore((state) => state.panOffset);
+export const useCollapsedNodeIds = () => useGraphStore((state) => state.collapsedNodeIds);
+export const useShouldAutoFit = () => useGraphStore((state) => state.shouldAutoFit);
+

@@ -1,26 +1,34 @@
-import { useCallback, useEffect, type FC } from "react";
-import { useGraphStore } from "../../state/useGraphStore";
+import React, { useCallback, useEffect, type FC } from "react";
+import {
+  useGraphStore,
+  type LayoutMode,
+} from "../../state/useGraphStore";
 import { Button, LayoutSelectDropdown } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import "./Controls.css";
 
-export const CanvasToolbar: FC = () => {
+export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
-  const positionedNodes = useGraphStore((state) => state.positionedNodes);
-  const positionedEdges = useGraphStore((state) => state.positionedEdges);
 
   const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
   const setLayoutMode = useGraphStore((state) => state.setLayoutMode);
   const resetViewport = useGraphStore((state) => state.resetViewport);
 
-  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.2, 3.0));
-  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.2, 0.25));
+  const handleZoomIn = useCallback(
+    () => setZoomLevel((prev) => Math.min(prev + 0.2, 3.0)),
+    [setZoomLevel],
+  );
+  const handleZoomOut = useCallback(
+    () => setZoomLevel((prev) => Math.max(prev - 0.2, 0.25)),
+    [setZoomLevel],
+  );
 
   const handleFitView = useCallback(() => {
+    const { positionedNodes, positionedEdges } = useGraphStore.getState();
     if (positionedNodes.length === 0) {
       resetViewport();
       return;
@@ -29,7 +37,7 @@ export const CanvasToolbar: FC = () => {
     setZoomLevel(fitResult.zoomLevel);
     setPanOffset(fitResult.panOffset);
     useGraphStore.setState({ collapsedNodeIds: new Set<string>() });
-  }, [positionedNodes, positionedEdges, resetViewport, setPanOffset, setZoomLevel]);
+  }, [resetViewport, setPanOffset, setZoomLevel]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,11 +63,19 @@ export const CanvasToolbar: FC = () => {
     };
   }, [handleFitView, resetViewport]);
 
-  const handleExportHtml = () => {
+  const handleExportHtml = useCallback(() => {
+    const dataset = useGraphStore.getState().dataset;
     if (dataset) {
       exportGraphAsHTML(dataset);
     }
-  };
+  }, []);
+
+  const handleLayoutChange = useCallback(
+    (mode: LayoutMode) => {
+      setLayoutMode(mode);
+    },
+    [setLayoutMode],
+  );
 
   return (
     <div className="canvas-toolbar">
@@ -115,7 +131,7 @@ export const CanvasToolbar: FC = () => {
         </label>
         <LayoutSelectDropdown
           value={layoutMode}
-          onLayoutChange={(mode) => setLayoutMode(mode)}
+          onLayoutChange={handleLayoutChange}
           size="sm"
         />
       </div>
@@ -134,6 +150,7 @@ export const CanvasToolbar: FC = () => {
       </Button>
     </div>
   );
-};
+});
 
 export default CanvasToolbar;
+

@@ -1,4 +1,5 @@
 import type { FC, MouseEvent } from "react";
+import { memo, useCallback } from "react";
 import type { PositionedNode } from "../../../types/graphData";
 import { NodeCardBadges } from "./NodeCardBadges";
 
@@ -39,67 +40,85 @@ function deriveStatusVariant(node: PositionedNode): NodeStatusVariant {
   return "info";
 }
 
-export const NodeCard: FC<NodeCardProps> = ({
-  node,
-  isSelected,
-  isFiltered,
-  isCollapsed,
-  onSelect,
-  onToggleCollapse,
-}) => {
-  const statusVariant = deriveStatusVariant(node);
-
-  const handleClick = (e: MouseEvent<HTMLDivElement>): void => {
-    e.stopPropagation();
-    onSelect(node.id);
-  };
-
-  const cardClasses = [
-    "node-card",
-    isSelected ? "selected" : "",
-    isFiltered ? "filtered" : "",
-    `status-${statusVariant}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
+const areNodeCardPropsEqual = (prevProps: NodeCardProps, nextProps: NodeCardProps): boolean => {
   return (
-    <div
-      className={cardClasses}
-      style={{
-        width: node.width ? `${node.width}px` : undefined,
-        height: node.height ? `${node.height}px` : undefined,
-      }}
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isFiltered === nextProps.isFiltered &&
+    prevProps.isCollapsed === nextProps.isCollapsed &&
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onToggleCollapse === nextProps.onToggleCollapse &&
+    prevProps.node === nextProps.node
+  );
+};
+
+export const NodeCard: FC<NodeCardProps> = memo(
+  ({ node, isSelected, isFiltered, isCollapsed, onSelect, onToggleCollapse }) => {
+    const statusVariant = deriveStatusVariant(node);
+
+    const handleClick = useCallback(
+      (e: MouseEvent<HTMLDivElement>): void => {
+        e.stopPropagation();
+        onSelect(node.id);
+      },
+      [node.id, onSelect]
+    );
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLDivElement>): void => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onSelect(node.id);
         }
-      }}
-    >
-      <NodeCardHeader
-        id={node.id}
-        name={node.name}
-        type={node.type}
-        statusVariant={statusVariant}
-        isCollapsed={isCollapsed}
-        onToggleCollapse={onToggleCollapse}
-      />
-      {!isCollapsed ? (
-        <>
-          <NodeCardBadges badges={node.badges} />
-          <NodeCardTools tools={node.tools} />
-          <NodeCardContext context={node.context} metadata={node.metadata} />
-          <NodeCardDetails
-            details={node.metadata}
-            prompt={typeof node.metadata?.prompt === "string" ? node.metadata.prompt : undefined}
-            logs={typeof node.metadata?.logs === "string" ? node.metadata.logs : undefined}
-          />
-        </>
-      ) : null}
-    </div>
-  );
-};
+      },
+      [node.id, onSelect]
+    );
+
+    const cardClasses = [
+      "node-card",
+      isSelected ? "selected" : "",
+      isFiltered ? "filtered" : "",
+      `status-${statusVariant}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return (
+      <div
+        className={cardClasses}
+        style={{
+          width: node.width ? `${node.width}px` : undefined,
+          height: node.height ? `${node.height}px` : undefined,
+        }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
+        <NodeCardHeader
+          id={node.id}
+          name={node.name}
+          type={node.type}
+          statusVariant={statusVariant}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={onToggleCollapse}
+        />
+        {!isCollapsed ? (
+          <>
+            <NodeCardBadges badges={node.badges} />
+            <NodeCardTools tools={node.tools} />
+            <NodeCardContext context={node.context} metadata={node.metadata} />
+            <NodeCardDetails
+              details={node.metadata}
+              prompt={typeof node.metadata?.prompt === "string" ? node.metadata.prompt : undefined}
+              logs={typeof node.metadata?.logs === "string" ? node.metadata.logs : undefined}
+            />
+          </>
+        ) : null}
+      </div>
+    );
+  },
+  areNodeCardPropsEqual
+);
+
+NodeCard.displayName = "NodeCard";
+

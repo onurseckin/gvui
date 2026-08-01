@@ -1,11 +1,12 @@
 import type { FC } from "react";
+import { memo } from "react";
 import type { NodeBadge } from "../../../types/graphData";
 
 export interface NodeCardBadgesProps {
   badges?: NodeBadge[];
 }
 
-export const NodeCardBadges: FC<NodeCardBadgesProps> = ({ badges }) => {
+export const NodeCardBadges: FC<NodeCardBadgesProps> = memo(({ badges }) => {
   if (!badges || badges.length === 0) {
     return null;
   }
@@ -22,4 +23,6 @@ export const NodeCardBadges: FC<NodeCardBadgesProps> = ({ badges }) => {
       })}
     </div>
   );
-};
+});
+
+NodeCardBadges.displayName = "NodeCardBadges";

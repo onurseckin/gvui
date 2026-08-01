@@ -1,4 +1,5 @@
-import type { FC, MouseEvent } from "react";
+import type { FC, MouseEvent, ChangeEvent } from "react";
+import React, { useCallback } from "react";
 import { useGraphStore } from "../../state/useGraphStore";
 import { SearchInput } from "../../ui";
 import "./Controls.css";
@@ -7,22 +8,38 @@ export interface SearchHeaderProps {
   onOpenCommandPalette?: () => void;
 }
 
-export const SearchHeader: FC<SearchHeaderProps> = ({ onOpenCommandPalette }) => {
+export const SearchHeader: FC<SearchHeaderProps> = React.memo(function SearchHeader({
+  onOpenCommandPalette,
+}) {
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const setSearchQuery = useGraphStore((state) => state.setSearchQuery);
 
-  const handleClick = (e: MouseEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onOpenCommandPalette?.();
-  };
+  const handleClick = useCallback(
+    (e: MouseEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenCommandPalette?.();
+    },
+    [onOpenCommandPalette],
+  );
+
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(e.target.value);
+    },
+    [setSearchQuery],
+  );
+
+  const handleClear = useCallback(() => {
+    setSearchQuery("");
+  }, [setSearchQuery]);
 
   return (
     <div className="search-header-container">
       <SearchInput
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        onClear={() => setSearchQuery("")}
+        onChange={handleChange}
+        onClear={handleClear}
         onClick={handleClick}
         readOnly
         placeholder="Search nodes..."
@@ -30,6 +47,7 @@ export const SearchHeader: FC<SearchHeaderProps> = ({ onOpenCommandPalette }) =>
       />
     </div>
   );
-};
+});
 
 export default SearchHeader;
+

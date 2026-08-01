@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { memo } from "react";
 import type { NodeTool } from "../../../types/graphData";
 
 export interface NodeCardToolsProps {
@@ -27,7 +28,7 @@ function resolveToolIcon(name: string): string {
   return "🛠️";
 }
 
-export const NodeCardTools: FC<NodeCardToolsProps> = ({ tools }) => {
+export const NodeCardTools: FC<NodeCardToolsProps> = memo(({ tools }) => {
   if (!tools || tools.length === 0) {
     return null;
   }
@@ -45,4 +46,6 @@ export const NodeCardTools: FC<NodeCardToolsProps> = ({ tools }) => {
       })}
     </div>
   );
-};
+});
+
+NodeCardTools.displayName = "NodeCardTools";

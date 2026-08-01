@@ -1,4 +1,5 @@
-import { type FC, useState } from "react";
+import type { FC, MouseEvent } from "react";
+import { memo, useCallback, useState } from "react";
 
 export interface NodeCardDetailsProps {
   details?: Record<string, unknown>;
@@ -6,10 +7,16 @@ export interface NodeCardDetailsProps {
   logs?: string;
 }
 
-export const NodeCardDetails: FC<NodeCardDetailsProps> = ({ details, prompt, logs }) => {
+export const NodeCardDetails: FC<NodeCardDetailsProps> = memo(({ details, prompt, logs }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const hasPayload = Boolean(details && Object.keys(details).length > 0);
+
+  const handleToggleOpen = useCallback((e: MouseEvent<HTMLButtonElement>): void => {
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  }, []);
+
   if (!prompt && !logs && !hasPayload) {
     return null;
   }
@@ -33,10 +40,7 @@ export const NodeCardDetails: FC<NodeCardDetailsProps> = ({ details, prompt, log
       <button
         type="button"
         className="node-card-details-toggle"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen((prev) => !prev);
-        }}
+        onClick={handleToggleOpen}
         aria-expanded={isOpen}
       >
         <span className="toggle-icon">{isOpen ? "▼" : "►"}</span>
@@ -49,4 +53,6 @@ export const NodeCardDetails: FC<NodeCardDetailsProps> = ({ details, prompt, log
       ) : null}
     </div>
   );
-};
+});
+
+NodeCardDetails.displayName = "NodeCardDetails";

@@ -1,4 +1,5 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
+import { memo, useCallback } from "react";
 
 import {
   getBadgeDisplayText,
@@ -19,7 +20,7 @@ export interface EdgeBadgeOverlayProps {
   onClick?: (e: MouseEvent<SVGGElement>) => void;
 }
 
-export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
+export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(({
   x,
   y,
   label,
@@ -29,6 +30,18 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
   anchorPoint,
   onClick,
 }) => {
+  const handleClick = useCallback((e: MouseEvent<SVGGElement>): void => {
+    e.stopPropagation();
+    onClick?.(e);
+  }, [onClick]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent<SVGGElement>): void => {
+    if ((e.key === "Enter" || e.key === " ") && onClick) {
+      e.preventDefault();
+      onClick(e as unknown as MouseEvent<SVGGElement>);
+    }
+  }, [onClick]);
+
   if (!hasBadge(label, isCycle)) {
     return null;
   }
@@ -37,18 +50,6 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
   const rect = measureBadgeRect(label ?? "", undefined, isCycle);
   const width = rect.width;
   const height = rect.height;
-
-  const handleClick = (e: MouseEvent<SVGGElement>): void => {
-    e.stopPropagation();
-    onClick?.(e);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<SVGGElement>): void => {
-    if ((e.key === "Enter" || e.key === " ") && onClick) {
-      e.preventDefault();
-      onClick(e as unknown as MouseEvent<SVGGElement>);
-    }
-  };
 
   const hasLeaderPoints = Boolean(leaderPoints && leaderPoints.length >= 2);
   const hasLeaderLine =
@@ -114,4 +115,6 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = ({
       </text>
     </g>
   );
-};
+});
+
+EdgeBadgeOverlay.displayName = "EdgeBadgeOverlay";

@@ -18,22 +18,80 @@ const PRESET_FILES = [
   "cyclic_mesh",
   "distributed_saga_workflow",
   "kubernetes_cluster_topology",
+  "clean_ring_10n_10e",
+  "crossing_mesh_10n_10e",
+  "dense_kubernetes_mesh",
 ];
 
-export const CommandPalette: FC<CommandPaletteProps> = ({
+interface CommandPaletteItemProps {
+  node: SearchResultNode;
+  index: number;
+  isSelected: boolean;
+  onSelect: (node: SearchResultNode) => void;
+  onHover: (index: number) => void;
+}
+
+const CommandPaletteItem = React.memo<CommandPaletteItemProps>(function CommandPaletteItem({
+  node,
+  index,
+  isSelected,
+  onSelect,
+  onHover,
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(node);
+  }, [onSelect, node]);
+
+  const handleMouseEnter = useCallback(() => {
+    onHover(index);
+  }, [onHover, index]);
+
+  return (
+    <div
+      role="option"
+      aria-selected={isSelected}
+      className={`command-palette-item ${isSelected ? "command-palette-item--selected" : ""}`}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+    >
+      <div className="command-palette-item-main">
+        <span className="command-palette-item-name">{node.name}</span>
+        {node.description && (
+          <span className="command-palette-item-description">{node.description}</span>
+        )}
+      </div>
+      <span className="command-palette-source-badge">{node.sourceFileName}</span>
+    </div>
+  );
+});
+
+export const CommandPalette: FC<CommandPaletteProps> = React.memo(function CommandPalette({
   isOpen,
   onClose,
   currentFile,
   onNavigateNode,
-}) => {
+}) {
   const navigate = useNavigate();
   const [scope, setScope] = useState<CommandPaletteScope>("current");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [datasetCache, setDatasetCache] = useState<Map<string, GraphDataset>>(new Map());
 
   const activeDataset = useGraphStore((state) => state.dataset);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce input value changes to prevent main thread blocking during fast typing
+  useEffect(() => {
+    if (!searchQuery) {
+      setDebouncedQuery("");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Pre-fetch graph datasets
   useEffect(() => {
@@ -65,6 +123,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
+      setDebouncedQuery("");
       setSelectedIndex(0);
       setScope("current");
       const timer = setTimeout(() => {
@@ -134,9 +193,9 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
     return nodes;
   }, [scope, currentFile, activeDataset, datasetCache]);
 
-  // Filter and sort nodes alphabetically
+  // Filter and sort nodes using debounced query
   const filteredResults = useMemo<SearchResultNode[]>(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = debouncedQuery.trim().toLowerCase();
     if (!query) {
       // When query is empty: Shows top 10 nodes ordered alphabetically by name
       const sorted = [...allAvailableNodes].sort((a, b) => a.name.localeCompare(b.name));
@@ -146,12 +205,12 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
     return allAvailableNodes
       .filter((node) => node.name.toLowerCase().includes(query))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allAvailableNodes, searchQuery]);
+  }, [allAvailableNodes, debouncedQuery]);
 
   // Reset selected index when query or scope changes
   useEffect(() => {
     setSelectedIndex(0);
-  }, [searchQuery, scope]);
+  }, [debouncedQuery, scope]);
 
   const handleSelectItem = useCallback(
     (node: SearchResultNode) => {
@@ -166,45 +225,64 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
     [onNavigateNode, navigate, onClose],
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.altKey && (e.key.toLowerCase() === "c" || e.code === "KeyC")) {
-      e.preventDefault();
-      setScope("current");
-      return;
-    }
-    if (e.altKey && (e.key.toLowerCase() === "a" || e.code === "KeyA")) {
-      e.preventDefault();
-      setScope("all");
-      return;
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) =>
-        filteredResults.length > 0 ? (prev + 1) % filteredResults.length : 0,
-      );
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex((prev) =>
-        filteredResults.length > 0
-          ? (prev - 1 + filteredResults.length) % filteredResults.length
-          : 0,
-      );
-      return;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (filteredResults[selectedIndex]) {
-        handleSelectItem(filteredResults[selectedIndex]);
+  const handleItemHover = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.altKey && (e.key.toLowerCase() === "c" || e.code === "KeyC")) {
+        e.preventDefault();
+        setScope("current");
+        return;
       }
-    }
-  };
+      if (e.altKey && (e.key.toLowerCase() === "a" || e.code === "KeyA")) {
+        e.preventDefault();
+        setScope("all");
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          filteredResults.length > 0 ? (prev + 1) % filteredResults.length : 0,
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          filteredResults.length > 0
+            ? (prev - 1 + filteredResults.length) % filteredResults.length
+            : 0,
+        );
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (filteredResults[selectedIndex]) {
+          handleSelectItem(filteredResults[selectedIndex]);
+        }
+      }
+    },
+    [filteredResults, selectedIndex, handleSelectItem, onClose],
+  );
+
+  const handleClearQuery = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
+  const handleSelectCurrentScope = useCallback(() => {
+    setScope("current");
+  }, []);
+
+  const handleSelectAllScope = useCallback(() => {
+    setScope("all");
+  }, []);
 
   return (
     <Dialog.Root
@@ -252,7 +330,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
                 variant="ghost"
                 size="sm"
                 className="command-palette-search-clear"
-                onClick={() => setSearchQuery("")}
+                onClick={handleClearQuery}
                 title="Clear search"
               >
                 <svg
@@ -276,7 +354,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               role="tab"
               aria-selected={scope === "current"}
               className="command-palette-tab"
-              onClick={() => setScope("current")}
+              onClick={handleSelectCurrentScope}
             >
               <span>Current File</span>
               <kbd className="command-palette-key">⌥+C</kbd>
@@ -287,7 +365,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               role="tab"
               aria-selected={scope === "all"}
               className="command-palette-tab"
-              onClick={() => setScope("all")}
+              onClick={handleSelectAllScope}
             >
               <span>All Files</span>
               <kbd className="command-palette-key">⌥+A</kbd>
@@ -298,27 +376,16 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
             {filteredResults.length === 0 ? (
               <div className="command-palette-empty">No matching nodes found</div>
             ) : (
-              filteredResults.map((node, index) => {
-                const isSelected = index === selectedIndex;
-                return (
-                  <div
-                    key={`${node.fileId}-${node.id}-${index}`}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={`command-palette-item ${isSelected ? "command-palette-item--selected" : ""}`}
-                    onClick={() => handleSelectItem(node)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                  >
-                    <div className="command-palette-item-main">
-                      <span className="command-palette-item-name">{node.name}</span>
-                      {node.description && (
-                        <span className="command-palette-item-description">{node.description}</span>
-                      )}
-                    </div>
-                    <span className="command-palette-source-badge">{node.sourceFileName}</span>
-                  </div>
-                );
-              })
+              filteredResults.map((node, index) => (
+                <CommandPaletteItem
+                  key={`${node.fileId}-${node.id}-${index}`}
+                  node={node}
+                  index={index}
+                  isSelected={index === selectedIndex}
+                  onSelect={handleSelectItem}
+                  onHover={handleItemHover}
+                />
+              ))
             )}
           </div>
 
@@ -338,7 +405,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
       </Dialog.Portal>
     </Dialog.Root>
   );
-};
+});
 
 export default CommandPalette;
 export type {
@@ -346,3 +413,4 @@ export type {
   CommandPaletteScope,
   SearchResultNode,
 } from "./CommandPalette.types";
+

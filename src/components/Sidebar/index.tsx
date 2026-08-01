@@ -1,16 +1,55 @@
 import type { FC } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { GraphDataset } from "../../types/graphData";
 import { Button, FileUploadButton } from "../../ui";
 import "./Sidebar.css";
 
-const SAMPLE_GRAPHS = [
+interface SampleGraph {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+const SAMPLE_GRAPHS: SampleGraph[] = [
   { id: "ai_agent_trace", name: "AI Agent Trace", icon: "🤖" },
   { id: "decision_tree", name: "Decision Tree", icon: "🌲" },
   { id: "cyclic_mesh", name: "Cyclic Mesh", icon: "🔄" },
   { id: "distributed_saga_workflow", name: "Saga Workflow", icon: "⚡" },
   { id: "kubernetes_cluster_topology", name: "K8s Topology", icon: "☸️" },
+  { id: "clean_ring_10n_10e", name: "Planar Ring (10N)", icon: "⭕" },
+  { id: "crossing_mesh_10n_10e", name: "Crossing Mesh (10N)", icon: "🔀" },
+  { id: "dense_kubernetes_mesh", name: "Dense Mesh (30N)", icon: "🕸️" },
 ];
+
+interface SampleListItemProps {
+  sample: SampleGraph;
+  isActive: boolean;
+  onSelect: (fileId: string) => void;
+}
+
+const SampleListItem = React.memo<SampleListItemProps>(function SampleListItem({
+  sample,
+  isActive,
+  onSelect,
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(sample.id);
+  }, [onSelect, sample.id]);
+
+  return (
+    <li>
+      <Button
+        variant={isActive ? "primary" : "ghost"}
+        className={`sample-btn ${isActive ? "active" : ""}`}
+        onClick={handleClick}
+      >
+        <span className="sample-icon">{sample.icon}</span>
+        <span className="sample-label">{sample.name}</span>
+      </Button>
+    </li>
+  );
+});
 
 interface SidebarProps {
   currentFile: string;
@@ -20,27 +59,35 @@ interface SidebarProps {
   onOpenGraphTesting?: () => void;
 }
 
-export const Sidebar: FC<SidebarProps> = ({
+export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
   currentFile,
   onSelectSample,
   onCustomUpload,
   onOpenDeveloperSettings,
   onOpenGraphTesting,
-}) => {
+}) {
   const navigate = useNavigate();
 
-  const handleSelectSample = (fileId: string) => {
-    onSelectSample(fileId);
-    void navigate({
-      to: "/graphs/$fileId",
-      params: { fileId },
-    });
-  };
+  const handleSelectSample = useCallback(
+    (fileId: string) => {
+      onSelectSample(fileId);
+      void navigate({
+        to: "/graphs/$fileId",
+        params: { fileId },
+      });
+    },
+    [onSelectSample, navigate],
+  );
 
-  const handleOpenGraphTesting = () => {
+  const handleOpenGraphTesting = useCallback(() => {
     onOpenGraphTesting?.();
     void navigate({ to: "/testing" });
-  };
+  }, [onOpenGraphTesting, navigate]);
+
+  const cleanCurrentFile = useMemo(
+    () => currentFile.replace(/\.json$/, ""),
+    [currentFile],
+  );
 
   return (
     <aside className="sidebar-container">
@@ -50,18 +97,14 @@ export const Sidebar: FC<SidebarProps> = ({
           <ul className="sample-list">
             {SAMPLE_GRAPHS.map((sample) => {
               const isActive =
-                currentFile === sample.id || currentFile.replace(/\.json$/, "") === sample.id;
+                currentFile === sample.id || cleanCurrentFile === sample.id;
               return (
-                <li key={sample.id}>
-                  <Button
-                    variant={isActive ? "primary" : "ghost"}
-                    className={`sample-btn ${isActive ? "active" : ""}`}
-                    onClick={() => handleSelectSample(sample.id)}
-                  >
-                    <span className="sample-icon">{sample.icon}</span>
-                    <span className="sample-label">{sample.name}</span>
-                  </Button>
-                </li>
+                <SampleListItem
+                  key={sample.id}
+                  sample={sample}
+                  isActive={isActive}
+                  onSelect={handleSelectSample}
+                />
               );
             })}
           </ul>
@@ -88,6 +131,7 @@ export const Sidebar: FC<SidebarProps> = ({
       </div>
     </aside>
   );
-};
+});
 
 export default Sidebar;
+

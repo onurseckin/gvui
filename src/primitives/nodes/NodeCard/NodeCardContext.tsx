@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { memo } from "react";
 import type { NodeContext } from "../../../types/graphData";
 
 export interface NodeCardContextProps {
@@ -6,7 +7,7 @@ export interface NodeCardContextProps {
   metadata?: Record<string, unknown>;
 }
 
-export const NodeCardContext: FC<NodeCardContextProps> = ({ context, metadata }) => {
+export const NodeCardContext: FC<NodeCardContextProps> = memo(({ context, metadata }) => {
   const rows: Array<{ key: string; value: string }> = [];
 
   if (context?.repoPath) {
@@ -48,4 +49,6 @@ export const NodeCardContext: FC<NodeCardContextProps> = ({ context, metadata })
       ))}
     </div>
   );
-};
+});
+
+NodeCardContext.displayName = "NodeCardContext";
