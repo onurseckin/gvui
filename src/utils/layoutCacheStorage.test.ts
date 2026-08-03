@@ -24,7 +24,7 @@ if (typeof window === "undefined") {
   (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
 
-describe("layoutCacheStorage mode isolation & LRU eviction", () => {
+describe("layoutCacheStorage SQLite DB isolation", () => {
   beforeEach(() => {
     clearStoredLayoutCache();
   });
@@ -51,32 +51,27 @@ describe("layoutCacheStorage mode isolation & LRU eviction", () => {
     expect(cachedMiss).toBeNull();
   });
 
-  it("evicts oldest half of entries on QuotaExceededError", () => {
+  it("clears cached layouts cleanly", () => {
     const node: PositionedNode = { id: "n1", name: "Node 1", x: 10, y: 20, width: 100, height: 50 };
     saveStoredLayout("top-down", "sig1", { nodes: [node], edges: [] });
-    saveStoredLayout("top-down", "sig2", { nodes: [node], edges: [] });
-    saveStoredLayout("top-down", "sig3", { nodes: [node], edges: [] });
-    saveStoredLayout("top-down", "sig4", { nodes: [node], edges: [] });
+    expect(loadStoredLayout("top-down", "sig1")).not.toBeNull();
 
-    const originalSetItem = localStorage.setItem;
-    let throwOnce = true;
-    localStorage.setItem = (key: string, value: string) => {
-      if (throwOnce) {
-        throwOnce = false;
-        const err = new Error("Quota exceeded");
-        err.name = "QuotaExceededError";
-        throw err;
-      }
-      originalSetItem.call(localStorage, key, value);
-    };
-
-    saveStoredLayout("top-down", "sig5", { nodes: [node], edges: [] });
-    localStorage.setItem = originalSetItem;
-
+    clearStoredLayoutCache();
     expect(loadStoredLayout("top-down", "sig1")).toBeNull();
-    expect(loadStoredLayout("top-down", "sig2")).toBeNull();
-    expect(loadStoredLayout("top-down", "sig3")).not.toBeNull();
-    expect(loadStoredLayout("top-down", "sig4")).not.toBeNull();
-    expect(loadStoredLayout("top-down", "sig5")).not.toBeNull();
+  });
+
+  it("verifies zero localStorage key duplication for legacy prefix entries", () => {
+    const node: PositionedNode = { id: "n1", name: "Node 1", x: 10, y: 20, width: 100, height: 50 };
+    saveStoredLayout("top-down", "sig_dup_check", { nodes: [node], edges: [] });
+    expect(loadStoredLayout("top-down", "sig_dup_check")).not.toBeNull();
+
+    let legacyCount = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("gvui_layout_cache_v3_")) {
+        legacyCount++;
+      }
+    }
+    expect(legacyCount).toBe(0);
   });
 });

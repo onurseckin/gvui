@@ -21,12 +21,12 @@
   right: 0;
   margin: auto;
   z-index: 10000;
-  width: 50vw;
-  min-width: 540px;
-  max-width: 880px;
-  height: 60vh;
-  max-height: 650px;
-  min-height: 420px;
+  width: 90vw;
+  min-width: 800px;
+  max-width: 90vw;
+  height: 90vh;
+  max-height: 90vh;
+  min-height: 500px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -76,7 +76,7 @@
 
 .developer-settings-description {
   font-size: 12px;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.7);
   margin: 0;
 }
 
@@ -90,10 +90,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #ffffff;
-}
-
-.developer-settings-close-btn {
   color: #ffffff;
 }
 
@@ -123,10 +119,19 @@
   gap: 16px;
 }
 
-.developer-settings-footer {
-  margin-top: auto;
-  border-top: 1px solid #27272a;
-  padding: 12px 16px;
+/* Toast Banner */
+.developer-settings-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background-color: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: #4ade80;
+  font-size: 13px;
+  font-weight: 500;
+  animation: developerSettingsFadeIn 0.2s ease;
 }
 
 /* Local Storage Toolbar */
@@ -135,6 +140,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .developer-settings-info {
@@ -165,13 +171,13 @@
   animation: developerSettingsFadeIn 0.2s ease;
 }
 
-/* Red Clear Action Button */
+/* Clear Buttons */
 .developer-settings-clear-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #ffffff;
   background-color: #dc2626;
@@ -184,10 +190,6 @@
 .developer-settings-clear-btn:hover {
   background-color: #b91c1c;
   border-color: #dc2626;
-}
-
-.developer-settings-clear-btn:active {
-  transform: scale(0.98);
 }
 
 .developer-settings-clear-btn:disabled {
@@ -204,7 +206,7 @@
   border-radius: 8px;
   padding: 16px;
   overflow: auto;
-  max-height: 380px;
+  max-height: 400px;
 }
 
 .developer-settings-json-code {
@@ -238,23 +240,223 @@
   color: #94a3b8;
 }
 
-/* Keyframe Animations */
+/* Database Viewer Container & Components */
+.db-viewer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.db-table-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #181920;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.db-selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.db-table-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.db-table-btn {
+  font-size: 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+}
+
+.db-table-name {
+  color: #60a5fa;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+}
+
+.db-pk-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background-color: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+}
+
+.db-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.db-action-btn {
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+/* JSON Editor Card */
+.db-json-editor-card {
+  background-color: #0b0c10;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: developerSettingsFadeIn 0.15s ease;
+}
+
+.db-json-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 500;
+  color: #93c5fd;
+}
+
+.db-json-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #050505;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 10px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 12px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.db-json-textarea:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px #60a5fa;
+}
+
+.db-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 12px;
+}
+
+.db-json-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Database Data Table */
+.db-table-wrapper {
+  background-color: #08090d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow-x: auto;
+  max-height: 340px;
+}
+
+.db-empty-state {
+  padding: 32px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+}
+
+.db-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.db-th {
+  padding: 10px 14px;
+  background-color: #14151c;
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  white-space: nowrap;
+}
+
+.db-th-actions-left {
+  text-align: left;
+  width: 70px;
+  min-width: 70px;
+}
+
+.db-tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.1s ease;
+}
+
+.db-tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.db-td {
+  padding: 8px 14px;
+  color: #cbd5e1;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+}
+
+.db-td-actions-left {
+  text-align: left;
+  white-space: nowrap;
+  width: 70px;
+  min-width: 70px;
+}
+
+.db-row-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+}
+
+.db-row-edit-icon {
+  color: #60a5fa;
+}
+
+.db-row-edit-icon:hover {
+  color: #93c5fd;
+  background-color: rgba(96, 165, 250, 0.2);
+}
+
+.db-row-delete-icon {
+  color: #f87171;
+}
+
+.db-row-delete-icon:hover {
+  color: #fca5a5;
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Animations */
 @keyframes developerSettingsFadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes developerSettingsScaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }

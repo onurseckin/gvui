@@ -13,6 +13,11 @@ import { computeGraphLayout } from "../layout/layoutDispatcher";
 import "./GraphCanvas.css";
 import { usePanZoom } from "./usePanZoom";
 
+const inFlightLayoutRequests = new Map<
+  string,
+  Promise<{ nodes: PositionedNode[]; edges: PositionedEdge[] }>
+>();
+
 export const GraphCanvas: FC = () => {
   const dataset = useGraphStore((state) => state.dataset);
   const currentFile = useGraphStore((state) => state.currentFile);
@@ -64,11 +69,13 @@ export const GraphCanvas: FC = () => {
     let isSubscribed = true;
     const configHash = `${layoutConfig.nodeGap}_${layoutConfig.rankGap}_${layoutConfig.bendPenalty}_${layoutConfig.directionPenalty}_${layoutConfig.maxGlobalPasses}_${layoutConfig.obstacleClearance}_${layoutConfig.laneSpacing}`;
     const signature = `${generateDatasetSignature(dataset)}_${configHash}`;
+    const cacheKey = `${layoutMode}_${signature}`;
     const stored = loadStoredLayout(layoutMode, signature);
 
-    const applyLayoutResult = (nodes: PositionedNode[], edges: PositionedEdge[]) => {
-      if (!isSubscribed) return;
+    const handleLayoutCompletion = (nodes: PositionedNode[], edges: PositionedEdge[]) => {
       saveStoredLayout(layoutMode, signature, { nodes, edges });
+
+      if (!isSubscribed) return;
 
       const storeState = useGraphStore.getState();
       let newZoom = storeState.zoomLevel;
@@ -94,7 +101,7 @@ export const GraphCanvas: FC = () => {
     };
 
     if (stored) {
-      applyLayoutResult(stored.nodes, stored.edges);
+      handleLayoutCompletion(stored.nodes, stored.edges);
       return;
     }
 
@@ -102,27 +109,26 @@ export const GraphCanvas: FC = () => {
     setPositionedGraph([], []);
     setIsCalculating(true);
 
-    const controller = new AbortController();
-
-    computeCustomEngineGraphLayoutAsync(dataset, {
-      signal: controller.signal,
-      configPartial: layoutConfig,
-      mode: layoutMode,
-    })
-      .then(({ nodes, edges }) => {
-        applyLayoutResult(nodes, edges);
+    let layoutPromise = inFlightLayoutRequests.get(cacheKey);
+    if (!layoutPromise) {
+      layoutPromise = computeCustomEngineGraphLayoutAsync(dataset, {
+        configPartial: layoutConfig,
+        mode: layoutMode,
+        timeoutMs: 30000,
       })
-      .catch((err) => {
-        if (err.name !== "AbortError" && err.name !== "LayoutCancelledError") {
-          void computeGraphLayout(dataset, layoutMode, layoutConfig).then(({ nodes, edges }) => {
-            applyLayoutResult(nodes, edges);
-          });
-        }
-      });
+        .catch(() => computeGraphLayout(dataset, layoutMode, layoutConfig))
+        .finally(() => {
+          inFlightLayoutRequests.delete(cacheKey);
+        });
+      inFlightLayoutRequests.set(cacheKey, layoutPromise);
+    }
+
+    void layoutPromise.then(({ nodes, edges }) => {
+      handleLayoutCompletion(nodes, edges);
+    });
 
     return () => {
       isSubscribed = false;
-      controller.abort();
     };
   }, [
     dataset,

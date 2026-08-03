@@ -2,7 +2,6 @@ node_modules
 dist
 target
 crates/gvui/target
-legacy
 .git
 .gitignore
 README.md

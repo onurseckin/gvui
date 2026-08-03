@@ -1,4 +1,4 @@
-export type DeveloperSettingsTab = "local-storage";
+export type DeveloperSettingsTab = "local-storage" | "sqlite-db" | "database";
 
 export interface DeveloperSettingsProps {
   isOpen: boolean;
