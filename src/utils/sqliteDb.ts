@@ -116,25 +116,14 @@ export class SqliteDatabase {
       key,
       index,
       timestamp: typeof row.timestamp === "number" ? row.timestamp : 0,
-      mode: typeof row.layout_mode === "string" ? row.layout_mode : "",
-      signature: typeof row.file_signature === "string" ? row.file_signature : "",
     }));
 
     entries.sort((a, b) => a.timestamp - b.timestamp || a.index - b.index);
     const toRemoveCount = Math.floor(entries.length / 2);
-    const storage = getLocalStorage();
 
     for (let i = 0; i < toRemoveCount; i++) {
       const entry = entries[i];
       delete layoutsTable[entry.key];
-      if (storage) {
-        try {
-          storage.removeItem(`gvui_layout_cache_v3_${entry.mode}_${entry.signature}`);
-          storage.removeItem(`gvui_layout_cache_v3_${entry.key}`);
-        } catch {
-          // Ignore removal error
-        }
-      }
     }
   }
 
