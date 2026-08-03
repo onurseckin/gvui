@@ -113,7 +113,11 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
       </div>
 
       <div className="sidebar-footer">
-        <Button variant="ghost" className="sidebar-settings-btn" onClick={onOpenDeveloperSettings}>
+        <Button
+          variant="ghost"
+          className="sidebar-settings-btn"
+          onClick={() => onOpenDeveloperSettings?.()}
+        >
           ⚙️ Developer Settings
         </Button>
         <Button

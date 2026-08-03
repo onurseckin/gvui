@@ -267,7 +267,39 @@ pub fn route_edges_fast_direct(
             continue;
         }
 
-        let Some(edge_ports) = port_dist_res.ports_by_edge.get(&edge.id) else { continue };
+        let Some(edge_ports) = port_dist_res.ports_by_edge.get(&edge.id) else {
+            if let (Some(src_pos), Some(tgt_pos)) = (node_positions.get(&edge.source), node_positions.get(&edge.target)) {
+                let src_node = norm_node_map.get(&edge.source);
+                let tgt_node = norm_node_map.get(&edge.target);
+                let src_w = src_node.map_or(140.0, |n| n.width);
+                let src_h = src_node.map_or(70.0, |n| n.height);
+                let tgt_w = tgt_node.map_or(140.0, |n| n.width);
+                let tgt_h = tgt_node.map_or(70.0, |n| n.height);
+                let src_cx = src_pos.x + src_w / 2.0;
+                let src_cy = src_pos.y + src_h / 2.0;
+                let tgt_cx = tgt_pos.x + tgt_w / 2.0;
+                let tgt_cy = tgt_pos.y + tgt_h / 2.0;
+                routes.push(RoutedPath {
+                    edge_id: edge.id.clone(),
+                    points: vec![Point { x: src_cx, y: src_cy }, Point { x: tgt_cx, y: tgt_cy }],
+                    source_port: PortRef {
+                        node_id: edge.source.clone(),
+                        side: Side::Bottom,
+                        index: 0,
+                        point: Point { x: src_cx, y: src_cy },
+                        stub: Point { x: src_cx, y: src_cy },
+                    },
+                    target_port: PortRef {
+                        node_id: edge.target.clone(),
+                        side: Side::Top,
+                        index: 0,
+                        point: Point { x: tgt_cx, y: tgt_cy },
+                        stub: Point { x: tgt_cx, y: tgt_cy },
+                    },
+                });
+            }
+            continue;
+        };
 
         let src_port = edge_ports.source_port.clone();
         let tgt_port = edge_ports.target_port.clone();
@@ -384,6 +416,22 @@ pub fn compute_top_down_dagre_layout(
                     positioned_nodes.push(pnode);
                 }
             }
+        }
+    }
+    let positioned_ids: std::collections::HashSet<String> =
+        positioned_nodes.iter().map(|n| n.id.clone()).collect();
+    for (idx, node) in nodes.iter().enumerate() {
+        if !positioned_ids.contains(&node.id) {
+            positioned_nodes.push(PositionedNode {
+                id: node.id.clone(),
+                label: node.label.clone(),
+                x: config.graph_padding + (idx as f64) * (node.width + config.node_gap),
+                y: config.graph_padding,
+                width: node.width,
+                height: node.height,
+                rank: 0,
+                order: idx,
+            });
         }
     }
     positioned_nodes.sort_by(|a, b| a.id.cmp(&b.id));

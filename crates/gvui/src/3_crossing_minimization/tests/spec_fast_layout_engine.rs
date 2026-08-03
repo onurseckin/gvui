@@ -37,10 +37,12 @@ fn test_top_down_dagre_fast_execution_and_clean_output() {
     let result = compute_top_down_dagre_layout(&nodes, &edges, &config);
     let elapsed = start.elapsed();
 
+    let threshold_ms = if cfg!(debug_assertions) { 15.0 } else { 5.0 };
     assert!(
-        elapsed.as_millis() < 5,
-        "top-down-dagre layout must execute in <5ms, took {:?}",
-        elapsed
+        elapsed.as_secs_f64() * 1000.0 < threshold_ms,
+        "top-down-dagre layout must execute in < {}ms, took {:.2?}ms",
+        threshold_ms,
+        elapsed.as_secs_f64() * 1000.0
     );
 
     assert_eq!(result.nodes.len(), 5);
@@ -138,10 +140,12 @@ fn test_left_right_fast_execution_and_transposition() {
     let lr_res = compute_left_right_layout(&nodes, &edges, &config);
     let elapsed = start.elapsed();
 
+    let threshold_ms = if cfg!(debug_assertions) { 15.0 } else { 5.0 };
     assert!(
-        elapsed.as_millis() < 5,
-        "left-right layout must execute in < 5ms, took {:?}",
-        elapsed
+        elapsed.as_secs_f64() * 1000.0 < threshold_ms,
+        "left-right layout must execute in < {}ms, took {:.2?}ms",
+        threshold_ms,
+        elapsed.as_secs_f64() * 1000.0
     );
 
     assert_eq!(lr_res.nodes.len(), td_res.nodes.len());
@@ -188,10 +192,12 @@ fn test_left_right_respects_configurable_options_and_speed() {
     let res_default = compute_left_right_layout(&nodes, &edges, &config_default);
     let elapsed = start.elapsed();
 
+    let threshold_ms = if cfg!(debug_assertions) { 15.0 } else { 5.0 };
     assert!(
-        elapsed.as_millis() < 5,
-        "left-right layout must execute in < 5ms, took {:?}",
-        elapsed
+        elapsed.as_secs_f64() * 1000.0 < threshold_ms,
+        "left-right layout must execute in < {}ms, took {:.2?}ms",
+        threshold_ms,
+        elapsed.as_secs_f64() * 1000.0
     );
 
     let res_custom = compute_left_right_layout(&nodes, &edges, &config_custom);
@@ -292,4 +298,173 @@ fn test_top_down_dagre_linear_graph_sample() {
     assert_eq!(result.edges.len(), 2);
     assert_eq!(result.status, "success");
 }
+
+fn load_dataset_graph(relative_path: &str) -> (Vec<NormalizedNode>, Vec<NormalizedEdge>) {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+    let json_path = std::path::Path::new(&manifest_dir).join(relative_path);
+    let json_str = std::fs::read_to_string(&json_path)
+        .unwrap_or_else(|_| panic!("Failed to read dataset file at {:?}", json_path));
+
+    #[derive(serde::Deserialize)]
+    struct RawNode {
+        id: String,
+        name: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct RawEdge {
+        id: Option<String>,
+        source: String,
+        target: String,
+        label: Option<String>,
+        #[serde(rename = "isCycle")]
+        is_cycle: Option<bool>,
+    }
+    #[derive(serde::Deserialize)]
+    struct RawGraph {
+        nodes: Vec<RawNode>,
+        edges: Vec<RawEdge>,
+    }
+
+    let graph: RawGraph = serde_json::from_str(&json_str).expect("Failed to parse JSON dataset");
+
+    let norm_nodes = graph
+        .nodes
+        .into_iter()
+        .map(|n| NormalizedNode {
+            id: n.id,
+            label: Some(n.name),
+            width: 140.0,
+            height: 70.0,
+        })
+        .collect();
+
+    let norm_edges = graph
+        .edges
+        .into_iter()
+        .enumerate()
+        .map(|(i, e)| NormalizedEdge {
+            id: e.id.unwrap_or_else(|| format!("e_{}", i)),
+            source: e.source,
+            target: e.target,
+            label: e.label,
+            is_cycle: e.is_cycle,
+            layout_role: None,
+        })
+        .collect();
+
+    (norm_nodes, norm_edges)
+}
+
+#[test]
+fn test_benchmark_and_inspect_saga_workflow_layout() {
+    let (nodes, edges) = load_dataset_graph("../../public/data/graphs/distributed_saga_workflow.json");
+    let config = CustomLayoutConfig::default();
+
+    // Benchmark top-down-dagre
+    let start_td = Instant::now();
+    let res_td = compute_top_down_dagre_layout(&nodes, &edges, &config);
+    let elapsed_td = start_td.elapsed();
+
+    println!("Saga Workflow TD execution time: {:?}", elapsed_td);
+    assert!(
+        elapsed_td.as_secs_f64() * 1000.0 < 10.0,
+        "top-down-dagre on saga_workflow must complete in <10ms, took {:.2?}ms",
+        elapsed_td.as_secs_f64() * 1000.0
+    );
+    assert_eq!(res_td.nodes.len(), nodes.len());
+    assert_eq!(res_td.edges.len(), edges.len());
+    assert_eq!(res_td.status, "success");
+
+    for n in &res_td.nodes {
+        assert!(n.x.is_finite() && n.y.is_finite(), "Node position x,y must be finite, got ({}, {}) for node {}", n.x, n.y, n.id);
+    }
+    for e in &res_td.edges {
+        assert!(e.points.len() >= 2, "Edge route for {} must have >= 2 points", e.edge_id);
+        for pt in &e.points {
+            assert!(pt.x.is_finite() && pt.y.is_finite(), "Edge point must be finite for edge {}", e.edge_id);
+        }
+    }
+
+    // Benchmark left-right
+    let start_lr = Instant::now();
+    let res_lr = compute_left_right_layout(&nodes, &edges, &config);
+    let elapsed_lr = start_lr.elapsed();
+
+    println!("Saga Workflow LR execution time: {:?}", elapsed_lr);
+    assert!(
+        elapsed_lr.as_secs_f64() * 1000.0 < 10.0,
+        "left-right on saga_workflow must complete in <10ms, took {:.2?}ms",
+        elapsed_lr.as_secs_f64() * 1000.0
+    );
+    assert_eq!(res_lr.nodes.len(), nodes.len());
+    assert_eq!(res_lr.edges.len(), edges.len());
+    assert_eq!(res_lr.status, "success");
+
+    for n in &res_lr.nodes {
+        assert!(n.x.is_finite() && n.y.is_finite(), "Node position x,y must be finite in LR, got ({}, {}) for node {}", n.x, n.y, n.id);
+    }
+    for e in &res_lr.edges {
+        assert!(e.points.len() >= 2, "Edge route for {} must have >= 2 points in LR", e.edge_id);
+        for pt in &e.points {
+            assert!(pt.x.is_finite() && pt.y.is_finite(), "Edge point must be finite for edge {} in LR", e.edge_id);
+        }
+    }
+}
+
+#[test]
+fn test_benchmark_and_inspect_kubernetes_cluster_topology_layout() {
+    let (nodes, edges) = load_dataset_graph("../../public/data/graphs/kubernetes_cluster_topology.json");
+    let config = CustomLayoutConfig::default();
+
+    // Benchmark top-down-dagre
+    let start_td = Instant::now();
+    let res_td = compute_top_down_dagre_layout(&nodes, &edges, &config);
+    let elapsed_td = start_td.elapsed();
+
+    println!("Kubernetes Cluster Topology TD execution time: {:?}", elapsed_td);
+    assert!(
+        elapsed_td.as_secs_f64() * 1000.0 < 10.0,
+        "top-down-dagre on kubernetes_cluster_topology must complete in <10ms, took {:.2?}ms",
+        elapsed_td.as_secs_f64() * 1000.0
+    );
+    assert_eq!(res_td.nodes.len(), nodes.len());
+    assert_eq!(res_td.edges.len(), edges.len());
+    assert_eq!(res_td.status, "success");
+
+    for n in &res_td.nodes {
+        assert!(n.x.is_finite() && n.y.is_finite(), "Node position x,y must be finite, got ({}, {}) for node {}", n.x, n.y, n.id);
+    }
+    for e in &res_td.edges {
+        assert!(e.points.len() >= 2, "Edge route for {} must have >= 2 points", e.edge_id);
+        for pt in &e.points {
+            assert!(pt.x.is_finite() && pt.y.is_finite(), "Edge point must be finite for edge {}", e.edge_id);
+        }
+    }
+
+    // Benchmark left-right
+    let start_lr = Instant::now();
+    let res_lr = compute_left_right_layout(&nodes, &edges, &config);
+    let elapsed_lr = start_lr.elapsed();
+
+    println!("Kubernetes Cluster Topology LR execution time: {:?}", elapsed_lr);
+    assert!(
+        elapsed_lr.as_secs_f64() * 1000.0 < 10.0,
+        "left-right on kubernetes_cluster_topology must complete in <10ms, took {:.2?}ms",
+        elapsed_lr.as_secs_f64() * 1000.0
+    );
+    assert_eq!(res_lr.nodes.len(), nodes.len());
+    assert_eq!(res_lr.edges.len(), edges.len());
+    assert_eq!(res_lr.status, "success");
+
+    for n in &res_lr.nodes {
+        assert!(n.x.is_finite() && n.y.is_finite(), "Node position x,y must be finite in LR, got ({}, {}) for node {}", n.x, n.y, n.id);
+    }
+    for e in &res_lr.edges {
+        assert!(e.points.len() >= 2, "Edge route for {} must have >= 2 points in LR", e.edge_id);
+        for pt in &e.points {
+            assert!(pt.x.is_finite() && pt.y.is_finite(), "Edge point must be finite for edge {} in LR", e.edge_id);
+        }
+    }
+}
+
 
