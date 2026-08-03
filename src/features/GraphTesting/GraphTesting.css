@@ -510,3 +510,135 @@
   color: inherit;
   cursor: pointer;
 }
+
+/* Engine Options Staged Configuration Panel */
+.engine-options-panel-container {
+  margin: 12px 24px 0 24px;
+  background-color: #121318;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.engine-options-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background-color: #18181b;
+}
+
+.engine-options-toggle-btn {
+  background: none;
+  border: none;
+  color: #f4f4f5;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unapplied-badge {
+  background-color: #eab308;
+  color: #000000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.engine-options-action-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.apply-options-btn {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-options-btn.dirty {
+  background-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
+  animation: pulse-glow 1.5s infinite alternate;
+}
+
+.apply-options-btn.dirty:hover {
+  background-color: #0369a1;
+}
+
+.apply-options-btn.applied {
+  background-color: #27272a;
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+.reset-options-btn {
+  background: transparent;
+  border: 1px solid #3f3f46;
+  color: #d4d4d8;
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.reset-options-btn:hover {
+  background-color: #27272a;
+}
+
+.engine-options-dropdown-content {
+  padding: 16px;
+  border-top: 1px solid #27272a;
+  background-color: #09090b;
+}
+
+.engine-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.options-group-title {
+  margin: 0 0 12px 0;
+  font-size: 0.85rem;
+  color: #38bdf8;
+  border-bottom: 1px solid #27272a;
+  padding-bottom: 6px;
+}
+
+.option-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.option-field label {
+  font-size: 0.75rem;
+  color: #a1a1aa;
+}
+
+.option-field input[type="range"] {
+  accent-color: #0284c7;
+  cursor: pointer;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 4px rgba(2, 132, 199, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(2, 132, 199, 0.8);
+  }
+}

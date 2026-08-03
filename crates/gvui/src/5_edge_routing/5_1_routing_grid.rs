@@ -47,6 +47,8 @@ pub struct AdjEdge {
 pub struct RoutingGrid {
     /// Lookup table mapping vertex string keys to 2D coordinates.
     pub vertices: HashMap<String, Point>,
+    /// Pre-indexed vertex positions mapping string key to numeric index.
+    pub vertex_index_map: HashMap<String, usize>,
     /// Flattened list of all grid edges.
     pub edges: Vec<GridEdge>,
     /// Adjacency mapping from vertex key to connected edges.
@@ -302,8 +304,14 @@ pub fn build_routing_grid(
         }
     }
 
+    let mut vertex_index_map = HashMap::new();
+    for (v_idx, v_id) in vertices.keys().enumerate() {
+        vertex_index_map.insert(v_id.clone(), v_idx);
+    }
+
     RoutingGrid {
         vertices,
+        vertex_index_map,
         edges,
         adj,
         obstacles,

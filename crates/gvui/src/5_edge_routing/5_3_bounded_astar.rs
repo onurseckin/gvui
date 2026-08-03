@@ -258,13 +258,8 @@ pub fn search_orthogonal_route(
     }
 
 
-    let mut vertex_index_map: HashMap<String, usize> = HashMap::new();
-    for (v_idx_counter, v_id) in grid.vertices.keys().enumerate() {
-        vertex_index_map.insert(v_id.clone(), v_idx_counter);
-    }
-
-    let src_stub_idx = *vertex_index_map.get(&src_stub_id)?;
-    let tgt_stub_idx = *vertex_index_map.get(&tgt_stub_id)?;
+    let src_stub_idx = *grid.vertex_index_map.get(&src_stub_id)?;
+    let tgt_stub_idx = *grid.vertex_index_map.get(&tgt_stub_id)?;
 
     let initial_dir = side_to_outward_dir(source_port.side);
     let initial_dir_code = dir_to_code(initial_dir);
@@ -338,7 +333,7 @@ pub fn search_orthogonal_route(
 
     let mut best_goal_node_idx: Option<usize> = None;
     let endpoint_dist = (src_stub_pt.x - tgt_stub_pt.x).abs() + (src_stub_pt.y - tgt_stub_pt.y).abs();
-    let adaptive_max_states = (config.max_astar_states_per_route * 4).max((endpoint_dist * 10.0) as usize);
+    let adaptive_max_states = (config.max_astar_states_per_route * 4).max((endpoint_dist * 8.0) as usize);
     let max_iterations = options
         .max_iterations
         .unwrap_or(adaptive_max_states);
@@ -358,7 +353,7 @@ pub fn search_orthogonal_route(
     if is_window_filtered {
         let endpoint_dist =
             (src_stub_pt.x - tgt_stub_pt.x).abs() + (src_stub_pt.y - tgt_stub_pt.y).abs();
-        let pad = 450.0f64.max(endpoint_dist * 0.7);
+        let pad = 1200.0f64.max(endpoint_dist * 2.0);
         min_x_win = src_stub_pt.x.min(tgt_stub_pt.x) - pad;
         max_x_win = src_stub_pt.x.max(tgt_stub_pt.x) + pad;
         min_y_win = src_stub_pt.y.min(tgt_stub_pt.y) - pad;
@@ -418,7 +413,7 @@ pub fn search_orthogonal_route(
                 continue;
             }
 
-            let next_v_idx = *vertex_index_map.get(&neighbor.target_id).unwrap();
+            let next_v_idx = *grid.vertex_index_map.get(&neighbor.target_id).unwrap();
             let seg = Segment {
                 a: *curr_pt,
                 b: *next_pt,

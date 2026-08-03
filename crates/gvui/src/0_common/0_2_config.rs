@@ -103,7 +103,7 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     port_endpoint_padding: 16.0,
     obstacle_clearance: 16.0,
     lane_spacing: 12.0,
-    initial_lane_rings: 4,
+    initial_lane_rings: 2,
     max_lane_rings: 8,
 
     bend_penalty: 40.0,

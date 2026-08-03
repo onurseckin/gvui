@@ -19,6 +19,11 @@ import { CustomLayoutDebugOverlay, type DebugOptions } from "./CustomLayoutDebug
 import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
 import { LayoutErrorBoundary } from "./LayoutErrorBoundary";
 import { useCustomLayoutWorker } from "../hooks/useCustomLayoutWorker";
+import { EngineOptionsPanel } from "./EngineOptionsPanel";
+import {
+  DEFAULT_CUSTOM_LAYOUT_CONFIG,
+  type CustomLayoutConfig,
+} from "../../../engine/layout/custom/config";
 
 import { useNavigate } from "@tanstack/react-router";
 
@@ -30,6 +35,9 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   const navigate = useNavigate();
   // Default to Scenario #20 (Full DevOps Microservice Mesh)
   const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
+  const [appliedEngineConfig, setAppliedEngineConfig] = useState<CustomLayoutConfig>(
+    DEFAULT_CUSTOM_LAYOUT_CONFIG,
+  );
   const [debugOptions, setDebugOptions] = useState<DebugOptions>({
     showPorts: true,
     showBadges: true,
@@ -62,6 +70,11 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
     return { normalizedNodes: nodes, normalizedEdges: edges };
   }, [activeScenario]);
 
+  const configSignature = useMemo(
+    () => JSON.stringify(appliedEngineConfig),
+    [appliedEngineConfig],
+  );
+
   const {
     result: layoutResult,
     isCalculating,
@@ -71,7 +84,8 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   } = useCustomLayoutWorker({
     nodes: normalizedNodes,
     edges: normalizedEdges,
-    inputKey: `scenario-${activeScenario.id}`,
+    inputKey: `scenario-${activeScenario.id}:${configSignature}`,
+    configPartial: appliedEngineConfig,
     timeoutMs: 30_000,
   });
 
@@ -199,6 +213,13 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
             </div>
           )}
           <LayoutErrorBoundary onRetry={recalculate} resultGeneration={resultGeneration}>
+            {/* Engine Options Staged Configuration Panel */}
+            <EngineOptionsPanel
+              appliedConfig={appliedEngineConfig}
+              onApplyConfig={setAppliedEngineConfig}
+              onResetConfig={() => setAppliedEngineConfig(DEFAULT_CUSTOM_LAYOUT_CONFIG)}
+            />
+
             {/* Metrics Summary Panel */}
             <div className="graph-testing-metrics-wrapper">
               <CustomLayoutMetrics layoutResult={layoutResult} normalizedEdges={normalizedEdges} />

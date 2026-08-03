@@ -366,8 +366,12 @@ pub fn find_grid_dogleg_route(
         }
         tracks.push(src_coord);
         tracks.push(tgt_coord);
-        tracks.extend(nearest);
-        tracks.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        tracks.push(midpoint - 12.0);
+        tracks.push(midpoint + 12.0);
+        for &t in &nearest {
+            tracks.push(t);
+        }
+        tracks.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         tracks.dedup_by(|a, b| (*a - *b).abs() <= 1e-9);
         tracks
     };
@@ -386,7 +390,7 @@ pub fn find_grid_dogleg_route(
 
     let mut best_route: Option<(usize, usize, f64, RoutedPath)> = None;
 
-    for allow_collinear in [false, true] {
+    for allow_collinear in [false] {
         if best_route.is_some() {
             break;
         }

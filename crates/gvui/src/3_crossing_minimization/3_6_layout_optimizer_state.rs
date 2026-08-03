@@ -25,7 +25,7 @@ use crate::validation::layout_validator::{
 
 use super::barycenter_median_ordering::minimize_crossings;
 use super::objective_evaluator::build_layout_score;
-use super::objective_evaluator::compare_layout_score;
+use super::objective_evaluator::{compare_layout_score, compare_layout_score_with_config};
 use super::rayon_parallel_search::optimize_layer_orders_parallel;
 use super::trial_state_generator::{
     compute_state_hash, generate_aesthetic_trial_states, generate_crossing_completion_states,
@@ -73,12 +73,12 @@ pub fn derive_search_state_budgets(
     let node_count = nodes.len();
     let edge_count = edges.len();
 
-    let max_layout_states = if node_count >= 25 || edge_count >= 35 {
-        25
-    } else if node_count >= 15 || edge_count >= 20 {
-        40
+    let max_layout_states = if node_count >= 20 || edge_count >= 25 {
+        4
+    } else if node_count >= 10 || edge_count >= 12 {
+        6
     } else {
-        config.max_layout_states.max(60)
+        config.max_layout_states.min(8)
     };
 
     SearchStateBudgets {
@@ -376,10 +376,10 @@ pub fn search_best_layout_state(
             break;
         }
 
-        frontier.sort_by(|a, b| compare_layout_score(&a.1.score, &b.1.score));
+        frontier.sort_by(|a, b| compare_layout_score_with_config(&a.1.score, &b.1.score, config));
         let (curr_state, curr_eval) = frontier.remove(0);
 
-        if compare_layout_score(&curr_eval.score, &best_eval.score) == std::cmp::Ordering::Less {
+        if compare_layout_score_with_config(&curr_eval.score, &best_eval.score, config) == std::cmp::Ordering::Less {
             best_state = curr_state.clone();
             best_eval = curr_eval.clone();
         }
@@ -416,7 +416,7 @@ pub fn search_best_layout_state(
             evaluated_states += 1;
             let next_eval = evaluate_search_state(nodes, edges, &next_state, config);
 
-            if compare_layout_score(&next_eval.score, &best_eval.score) == std::cmp::Ordering::Less {
+            if compare_layout_score_with_config(&next_eval.score, &best_eval.score, config) == std::cmp::Ordering::Less {
                 best_state = next_state.clone();
                 best_eval = next_eval.clone();
             }
@@ -424,7 +424,7 @@ pub fn search_best_layout_state(
             frontier.push((next_state, next_eval));
 
             if frontier.len() > max_frontier {
-                frontier.sort_by(|a, b| compare_layout_score(&a.1.score, &b.1.score));
+                frontier.sort_by(|a, b| compare_layout_score_with_config(&a.1.score, &b.1.score, config));
                 frontier.truncate(max_frontier);
             }
         }

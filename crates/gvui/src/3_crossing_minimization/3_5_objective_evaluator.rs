@@ -68,6 +68,52 @@ pub static ORDER: &[&str] = &[
     "totalArea",
 ];
 
+/// Compares two `LayoutScore` instances using user-configured penalty weights for aesthetic tie-breakers.
+pub fn compare_layout_score_with_config(
+    a: &LayoutScore,
+    b: &LayoutScore,
+    config: &crate::config::CustomLayoutConfig,
+) -> std::cmp::Ordering {
+    let cmp = a
+        .hard_error_count
+        .cmp(&b.hard_error_count)
+        .then_with(|| a.unresolved_route_count.cmp(&b.unresolved_route_count))
+        .then_with(|| a.node_node_overlaps.cmp(&b.node_node_overlaps))
+        .then_with(|| a.edge_node_penetrations.cmp(&b.edge_node_penetrations))
+        .then_with(|| {
+            a.shared_edge_segment_length
+                .partial_cmp(&b.shared_edge_segment_length)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .then_with(|| a.unresolved_badge_count.cmp(&b.unresolved_badge_count))
+        .then_with(|| a.badge_node_overlaps.cmp(&b.badge_node_overlaps))
+        .then_with(|| a.badge_badge_overlaps.cmp(&b.badge_badge_overlaps))
+        .then_with(|| a.badge_unrelated_edge_overlaps.cmp(&b.badge_unrelated_edge_overlaps));
+
+    if cmp != std::cmp::Ordering::Equal {
+        return cmp;
+    }
+
+    // Compute weighted aesthetic score penalty using user configured penalties
+    let score_a = (a.crossing_count as f64) * config.crossing_penalty
+        + (a.bend_count as f64) * config.bend_penalty
+        + a.direction_deviation_penalty * config.direction_penalty
+        + a.port_side_imbalance * config.side_reuse_penalty
+        + (a.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0;
+
+    let score_b = (b.crossing_count as f64) * config.crossing_penalty
+        + (b.bend_count as f64) * config.bend_penalty
+        + b.direction_deviation_penalty * config.direction_penalty
+        + b.port_side_imbalance * config.side_reuse_penalty
+        + (b.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0;
+
+    if (score_a - score_b).abs() > config.epsilon {
+        return score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal);
+    }
+
+    compare_layout_score(a, b)
+}
+
 /// Compares two `LayoutScore` instances lexicographically across all 21 priority levels.
 pub fn compare_layout_score(a: &LayoutScore, b: &LayoutScore) -> std::cmp::Ordering {
     let cmp = a
