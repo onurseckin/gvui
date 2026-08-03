@@ -68,7 +68,6 @@ pub static ORDER: &[&str] = &[
     "totalArea",
 ];
 
-/// Compares two `LayoutScore` instances using user-configured penalty weights for aesthetic tie-breakers.
 pub fn compare_layout_score_with_config(
     a: &LayoutScore,
     b: &LayoutScore,
@@ -94,18 +93,40 @@ pub fn compare_layout_score_with_config(
         return cmp;
     }
 
-    // Compute weighted aesthetic score penalty using user configured penalties
+    if a.crossing_count != b.crossing_count {
+        if config.crossing_penalty < 100.0 {
+            let score_a = (a.crossing_count as f64) * config.crossing_penalty
+                + (a.bend_count as f64) * config.bend_penalty
+                + a.direction_deviation_penalty * config.direction_penalty
+                + a.port_side_imbalance * config.side_reuse_penalty
+                + (a.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0
+                + a.total_length;
+            let score_b = (b.crossing_count as f64) * config.crossing_penalty
+                + (b.bend_count as f64) * config.bend_penalty
+                + b.direction_deviation_penalty * config.direction_penalty
+                + b.port_side_imbalance * config.side_reuse_penalty
+                + (b.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0
+                + b.total_length;
+            if (score_a - score_b).abs() > config.epsilon {
+                return score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal);
+            }
+        }
+        return a.crossing_count.cmp(&b.crossing_count);
+    }
+
     let score_a = (a.crossing_count as f64) * config.crossing_penalty
         + (a.bend_count as f64) * config.bend_penalty
         + a.direction_deviation_penalty * config.direction_penalty
         + a.port_side_imbalance * config.side_reuse_penalty
-        + (a.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0;
+        + (a.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0
+        + a.total_length;
 
     let score_b = (b.crossing_count as f64) * config.crossing_penalty
         + (b.bend_count as f64) * config.bend_penalty
         + b.direction_deviation_penalty * config.direction_penalty
         + b.port_side_imbalance * config.side_reuse_penalty
-        + (b.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0;
+        + (b.avoidable_hairpin_count as f64) * config.bend_penalty * 4.0
+        + b.total_length;
 
     if (score_a - score_b).abs() > config.epsilon {
         return score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal);

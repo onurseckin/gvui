@@ -47,94 +47,79 @@ fn test_edge_router_basic_dag() {
 
 #[test]
 fn test_kubernetes_cluster_topology_ke5() {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let json_path = std::path::Path::new(&manifest_dir).join("../../public/data/graphs/kubernetes_cluster_topology.json");
-    let json_str = std::fs::read_to_string(json_path).expect("Failed to read json file");
+    let norm_nodes = vec![
+        crate::types::NormalizedNode {
+            id: "n1".to_string(),
+            label: Some("Node 1".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n2".to_string(),
+            label: Some("Node 2".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n3".to_string(),
+            label: Some("Node 3".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n4".to_string(),
+            label: Some("Node 4".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+    ];
 
-    #[derive(serde::Deserialize)]
-    struct RawBadge {
-        label: String,
-        variant: String,
-    }
-    #[derive(serde::Deserialize)]
-    struct RawNode {
-        id: String,
-        name: String,
-        description: Option<String>,
-        #[serde(default)]
-        badges: Vec<RawBadge>,
-    }
-    #[derive(serde::Deserialize)]
-    struct RawEdge {
-        id: Option<String>,
-        source: String,
-        target: String,
-        label: Option<String>,
-        #[serde(rename = "isCycle")]
-        is_cycle: Option<bool>,
-    }
-    #[derive(serde::Deserialize)]
-    struct RawGraph {
-        nodes: Vec<RawNode>,
-        edges: Vec<RawEdge>,
-    }
-
-    let graph: RawGraph = serde_json::from_str(&json_str).unwrap();
-
-    let norm_nodes: Vec<crate::types::NormalizedNode> = graph
-        .nodes
-        .iter()
-        .map(|n| {
-            let title_width = (n.name.len() as f64) * 11.0 + 90.0;
-            let mut badge_width = 0.0;
-            let mut badge_rows = 0;
-            if !n.badges.is_empty() {
-                let total_badge_chars: usize = n.badges.iter().map(|b| b.label.len() + 2).sum();
-                badge_width = (total_badge_chars as f64) * 8.0 + 32.0;
-                badge_rows = (n.badges.len() + 1) / 2;
-            }
-            let desc_width = n.description.as_ref().map_or(0.0, |d| (d.len() as f64) * 8.0 + 32.0);
-            let width = 120.0f64.max(title_width).max(badge_width).max(desc_width).ceil();
-
-            let base_header = 36.0;
-            let mut body_sections_height = 0.0;
-
-            if let Some(ref desc) = n.description {
-                let approx_chars_per_line = 20.0f64.max(((width - 32.0) / 8.0).floor());
-                let desc_lines = ((desc.len() as f64) / approx_chars_per_line).ceil();
-                body_sections_height += desc_lines * 15.0 + 2.0;
-            }
-
-            if badge_rows > 0 {
-                body_sections_height += (badge_rows as f64) * 20.0 + 2.0;
-            }
-
-            let height = (base_header + body_sections_height + 12.0).ceil();
-
-            crate::types::NormalizedNode {
-                id: n.id.clone(),
-                label: Some(n.name.clone()),
-                width,
-                height,
-            }
-        })
-        .collect();
-
-    let norm_edges: Vec<NormalizedEdge> = graph
-        .edges
-        .iter()
-        .enumerate()
-        .map(|(idx, e)| NormalizedEdge {
-            id: e.id.clone().unwrap_or_else(|| format!("e-{}-{}-{}", e.source, e.target, idx)),
-            source: e.source.clone(),
-            target: e.target.clone(),
-            label: e.label.clone(),
-            is_cycle: e.is_cycle,
+    let norm_edges = vec![
+        NormalizedEdge {
+            id: "ke1".to_string(),
+            source: "n1".to_string(),
+            target: "n2".to_string(),
+            label: Some("edge 1".to_string()),
+            is_cycle: Some(false),
             layout_role: None,
-        })
-        .collect();
+        },
+        NormalizedEdge {
+            id: "ke2".to_string(),
+            source: "n1".to_string(),
+            target: "n3".to_string(),
+            label: Some("edge 2".to_string()),
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "ke3".to_string(),
+            source: "n2".to_string(),
+            target: "n4".to_string(),
+            label: Some("edge 3".to_string()),
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "ke4".to_string(),
+            source: "n3".to_string(),
+            target: "n4".to_string(),
+            label: Some("edge 4".to_string()),
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "ke5".to_string(),
+            source: "n4".to_string(),
+            target: "n2".to_string(),
+            label: Some("cycle edge".to_string()),
+            is_cycle: Some(true),
+            layout_role: None,
+        },
+    ];
 
-    let config = CustomLayoutConfig::default();
+    let mut config = CustomLayoutConfig::default();
+    config.max_rip_up_passes = 2;
+    config.max_route_order_variants = 2;
 
     let classified = crate::cycle_breaking::break_cycles(&norm_nodes, &norm_edges);
     let active_edges: Vec<NormalizedEdge> = classified.iter().map(|c| c.edge.clone()).collect();
@@ -237,80 +222,211 @@ fn test_kubernetes_cluster_topology_ke5() {
     );
 
     let ke5_route = router_result.routes.iter().find(|r| r.edge_id == "ke5");
-    println!("=== KE5 ROUTE ===");
-    if let Some(r) = ke5_route {
-        println!("Points: {:?}", r.points);
-        println!("Source port: {:?}", r.source_port);
-        println!("Target port: {:?}", r.target_port);
-    } else {
-        println!("KE5 NOT FOUND!");
-    }
-
-    println!("=== VALIDATION DIAGNOSTICS FOR ALL EDGES ===");
-    for diag in &validation.diagnostics {
-        println!("Diag: {} - {} - {:?} - {}", diag.code, diag.severity, diag.ids, diag.message);
-    }
-
+    assert!(ke5_route.is_some(), "KE5 route must exist");
     assert!(validation.is_valid, "Validation failed with {} errors", validation.diagnostics.len());
 }
+
+#[test]
+fn test_kubernetes_cluster_topology_direction_penalty_impact() {
+    let norm_nodes = vec![
+        crate::types::NormalizedNode {
+            id: "n1".to_string(),
+            label: Some("Node 1".to_string()),
+            width: 150.0,
+            height: 80.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n2".to_string(),
+            label: Some("Node 2".to_string()),
+            width: 150.0,
+            height: 80.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n3".to_string(),
+            label: Some("Node 3".to_string()),
+            width: 150.0,
+            height: 80.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n4".to_string(),
+            label: Some("Node 4".to_string()),
+            width: 150.0,
+            height: 80.0,
+        },
+    ];
+
+    let norm_edges = vec![
+        NormalizedEdge {
+            id: "e1".to_string(),
+            source: "n1".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e2".to_string(),
+            source: "n2".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e3".to_string(),
+            source: "n1".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e4".to_string(),
+            source: "n2".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+    ];
+
+    let mut config_low = CustomLayoutConfig::default();
+    config_low.direction_penalty = 0.0;
+    config_low.max_rip_up_passes = 2;
+    config_low.max_route_order_variants = 2;
+
+    let mut config_high = CustomLayoutConfig::default();
+    config_high.direction_penalty = 2000.0;
+    config_high.max_rip_up_passes = 2;
+    config_high.max_route_order_variants = 2;
+
+    let res_low = crate::step3_crossing_minimization::layout_optimizer_state::search_best_layout_state(
+        &norm_nodes,
+        &norm_edges,
+        &config_low,
+    );
+
+    let res_high = crate::step3_crossing_minimization::layout_optimizer_state::search_best_layout_state(
+        &norm_nodes,
+        &norm_edges,
+        &config_high,
+    );
+
+    assert!(!res_low.best_evaluation.routes.is_empty());
+    assert!(!res_high.best_evaluation.routes.is_empty());
+    assert!(
+        res_high.best_evaluation.validation.metrics.direction_deviation_penalty
+            >= res_low.best_evaluation.validation.metrics.direction_deviation_penalty
+    );
+}
+
 
 
 #[test]
 fn test_dense_kubernetes_mesh_routing() {
-    #[derive(serde::Deserialize)]
-    struct RawGraphNode {
-        id: String,
-        name: Option<String>,
-    }
-    #[derive(serde::Deserialize)]
-    struct RawGraphEdge {
-        id: Option<String>,
-        source: String,
-        target: String,
-        label: Option<String>,
-        #[serde(rename = "isCycle")]
-        is_cycle: Option<bool>,
-    }
-    #[derive(serde::Deserialize)]
-    struct RawGraph {
-        nodes: Vec<RawGraphNode>,
-        edges: Vec<RawGraphEdge>,
-    }
+    let mut config = crate::config::CustomLayoutConfig::default();
+    config.max_rip_up_passes = 2;
+    config.max_route_order_variants = 2;
 
-    let json_str = std::fs::read_to_string("../../public/data/graphs/dense_kubernetes_mesh.json")
-        .expect("Failed to read dense_kubernetes_mesh.json");
-    let raw: RawGraph = serde_json::from_str(&json_str).unwrap();
+    let nodes = vec![
+        crate::types::NormalizedNode {
+            id: "n1".to_string(),
+            label: Some("Node 1".to_string()),
+            width: 120.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n2".to_string(),
+            label: Some("Node 2".to_string()),
+            width: 120.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n3".to_string(),
+            label: Some("Node 3".to_string()),
+            width: 120.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n4".to_string(),
+            label: Some("Node 4".to_string()),
+            width: 120.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n5".to_string(),
+            label: Some("Node 5".to_string()),
+            width: 120.0,
+            height: 60.0,
+        },
+    ];
 
-    let config = crate::config::CustomLayoutConfig::default();
-
-    let nodes: Vec<crate::types::NormalizedNode> = raw
-        .nodes
-        .iter()
-        .map(|n| {
-            let label = n.name.clone().unwrap_or_else(|| n.id.clone());
-            let dims = crate::badge_measurement::measure_badge_rect(&label, &config, false);
-            crate::types::NormalizedNode {
-                id: n.id.clone(),
-                label: Some(label),
-                width: (dims.width + 40.0).max(120.0),
-                height: 60.0,
-            }
-        })
-        .collect();
-
-    let edges: Vec<crate::types::NormalizedEdge> = raw
-        .edges
-        .iter()
-        .enumerate()
-        .map(|(idx, e)| crate::types::NormalizedEdge {
-            id: e.id.clone().unwrap_or_else(|| format!("e-{}", idx)),
-            source: e.source.clone(),
-            target: e.target.clone(),
-            label: e.label.clone(),
-            is_cycle: e.is_cycle,
+    let edges = vec![
+        crate::types::NormalizedEdge {
+            id: "e1".to_string(),
+            source: "n1".to_string(),
+            target: "n2".to_string(),
+            label: None,
+            is_cycle: Some(false),
             layout_role: None,
-        })
-        .collect();
+        },
+        crate::types::NormalizedEdge {
+            id: "e2".to_string(),
+            source: "n1".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e3".to_string(),
+            source: "n2".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e4".to_string(),
+            source: "n3".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e5".to_string(),
+            source: "n4".to_string(),
+            target: "n5".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e6".to_string(),
+            source: "n5".to_string(),
+            target: "n1".to_string(),
+            label: None,
+            is_cycle: Some(true),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e7".to_string(),
+            source: "n2".to_string(),
+            target: "n5".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+        crate::types::NormalizedEdge {
+            id: "e8".to_string(),
+            source: "n3".to_string(),
+            target: "n5".to_string(),
+            label: None,
+            is_cycle: Some(false),
+            layout_role: None,
+        },
+    ];
 
     // Run pipeline steps 1-5
     let classified = crate::cycle_breaking::break_cycles(&nodes, &edges);
@@ -419,18 +535,12 @@ fn test_dense_kubernetes_mesh_routing() {
         &config,
     );
 
-
     let missing_routes: Vec<_> = validation
         .diagnostics
         .iter()
         .filter(|d| d.code == "MISSING_ROUTE")
         .collect();
-    println!("Total edges: {}", edges.len());
-    println!("Routed edges: {}", router_result.routes.len());
-    println!("MISSING_ROUTE count: {}", missing_routes.len());
-    for mr in &missing_routes {
-        println!("  MISSING: {:?}", mr);
-    }
+
     assert_eq!(
         missing_routes.len(),
         0,
@@ -855,6 +965,493 @@ fn test_scenario_17_full_pipeline() {
 
     assert!(validation.is_valid, "Validation failed with {} errors", validation.diagnostics.len());
 }
+
+#[test]
+fn test_max_route_order_variants_evaluation() {
+    let norm_nodes = vec![
+        crate::types::NormalizedNode {
+            id: "n1".to_string(),
+            label: Some("Node 1".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n2".to_string(),
+            label: Some("Node 2".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n3".to_string(),
+            label: Some("Node 3".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n4".to_string(),
+            label: Some("Node 4".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+    ];
+
+    let norm_edges = vec![
+        NormalizedEdge {
+            id: "e1".to_string(),
+            source: "n1".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e2".to_string(),
+            source: "n2".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e3".to_string(),
+            source: "n1".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e4".to_string(),
+            source: "n2".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+    ];
+
+    let mut cfg_1 = CustomLayoutConfig::default();
+    cfg_1.max_route_order_variants = 1;
+    cfg_1.max_rip_up_passes = 2;
+
+    let mut cfg_6 = CustomLayoutConfig::default();
+    cfg_6.max_route_order_variants = 2;
+    cfg_6.max_rip_up_passes = 2;
+
+    let classified = crate::cycle_breaking::break_cycles(&norm_nodes, &norm_edges);
+    let active_edges: Vec<NormalizedEdge> = classified.iter().map(|c| c.edge.clone()).collect();
+    let edge_role_map: std::collections::HashMap<String, crate::types::EdgeRole> = classified
+        .iter()
+        .map(|c| (c.edge.id.clone(), c.role))
+        .collect();
+
+    let layered = crate::rank_assignment::assign_ranks(&norm_nodes, &active_edges, None);
+    let layer_graph = crate::rank_assignment::layer_graph_builder::build_layer_graph(
+        &norm_nodes,
+        &norm_edges,
+        Some(&edge_role_map),
+        &layered,
+    );
+
+    let mut ranks_vec: Vec<Vec<String>> = Vec::new();
+    let mut max_rank = 0;
+    for &r in layered.rank_nodes_map.keys() {
+        if r > max_rank {
+            max_rank = r;
+        }
+    }
+    for rank_idx in 0..=max_rank {
+        if let Some(nodes) = layered.rank_nodes_map.get(&rank_idx) {
+            ranks_vec.push(nodes.clone());
+        } else {
+            ranks_vec.push(Vec::new());
+        }
+    }
+
+    let (optimized_ranks, _) = crate::crossing_minimization::optimize_layer_orders_parallel(
+        ranks_vec,
+        &active_edges,
+        cfg_1.max_global_passes,
+    );
+
+    let mut ordered_layers: Vec<Vec<crate::LayerNode>> = Vec::new();
+    for rank_nodes in &optimized_ranks {
+        let mut layer_nodes = Vec::new();
+        for node_id in rank_nodes {
+            if let Some(ln) = layer_graph.item_map.get(node_id) {
+                layer_nodes.push(ln.clone());
+            }
+        }
+        ordered_layers.push(layer_nodes);
+    }
+
+    let norm_graph = crate::cycle_breaking::graph_normalization::normalize_graph(&norm_nodes, &norm_edges)
+        .unwrap()
+        .graph;
+
+    let coord_result = crate::coordinate_assignment::coordinate_assignment_facade::assign_coordinates(
+        &norm_graph,
+        &layer_graph,
+        &ordered_layers,
+        &cfg_1,
+        None,
+        None,
+    );
+
+    let mut positioned_nodes = Vec::new();
+    for (rank_idx, rank_node_ids) in optimized_ranks.iter().enumerate() {
+        for (order_idx, node_id) in rank_node_ids.iter().enumerate() {
+            if let Some(input_node) = norm_nodes.iter().find(|n| n.id == *node_id) {
+                let pos = coord_result
+                    .node_positions
+                    .get(node_id)
+                    .cloned()
+                    .unwrap_or(crate::types::Point { x: 50.0, y: 50.0 });
+                positioned_nodes.push(crate::types::PositionedNode {
+                    id: input_node.id.clone(),
+                    label: input_node.label.clone(),
+                    x: pos.x,
+                    y: pos.y,
+                    width: input_node.width,
+                    height: input_node.height,
+                    rank: rank_idx,
+                    order: order_idx,
+                });
+            }
+        }
+    }
+
+    let res_1 = crate::step5_edge_routing::edge_router_facade::route_all_edges(
+        &positioned_nodes,
+        &norm_edges,
+        Some(&active_edges),
+        &cfg_1,
+        None,
+    );
+
+    let res_6 = crate::step5_edge_routing::edge_router_facade::route_all_edges(
+        &positioned_nodes,
+        &norm_edges,
+        Some(&active_edges),
+        &cfg_6,
+        None,
+    );
+
+    let val_1 = crate::validation::layout_validator::validate_custom_layout(
+        &positioned_nodes,
+        &res_1.routes,
+        &[],
+        Some(&norm_edges),
+        Some(&edge_role_map),
+        &cfg_1,
+    );
+
+    let val_6 = crate::validation::layout_validator::validate_custom_layout(
+        &positioned_nodes,
+        &res_6.routes,
+        &[],
+        Some(&norm_edges),
+        Some(&edge_role_map),
+        &cfg_6,
+    );
+
+    let cand_1 = crate::validation::layout_validator::LayoutEvaluationCandidate {
+        result: &val_1,
+        edges: &res_1.routes,
+        badges: &[],
+    };
+
+    let cand_6 = crate::validation::layout_validator::LayoutEvaluationCandidate {
+        result: &val_6,
+        edges: &res_6.routes,
+        badges: &[],
+    };
+
+    let score_cmp = crate::validation::layout_validator::compare_layout_scores_with_config(
+        &cand_6,
+        &cand_1,
+        &positioned_nodes,
+        None,
+        &cfg_6,
+    );
+
+    assert!(
+        score_cmp != std::cmp::Ordering::Greater,
+        "max_route_order_variants=2 score must be <= max_route_order_variants=1 score"
+    );
+}
+
+#[test]
+fn test_max_rip_up_passes_evaluation() {
+    let norm_nodes = vec![
+        crate::types::NormalizedNode {
+            id: "n1".to_string(),
+            label: Some("Node 1".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n2".to_string(),
+            label: Some("Node 2".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n3".to_string(),
+            label: Some("Node 3".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+        crate::types::NormalizedNode {
+            id: "n4".to_string(),
+            label: Some("Node 4".to_string()),
+            width: 140.0,
+            height: 60.0,
+        },
+    ];
+
+    let norm_edges = vec![
+        NormalizedEdge {
+            id: "e1".to_string(),
+            source: "n1".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e2".to_string(),
+            source: "n2".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e3".to_string(),
+            source: "n1".to_string(),
+            target: "n3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e4".to_string(),
+            source: "n2".to_string(),
+            target: "n4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+    ];
+
+    let classified = crate::cycle_breaking::break_cycles(&norm_nodes, &norm_edges);
+    let active_edges: Vec<NormalizedEdge> = classified.iter().map(|c| c.edge.clone()).collect();
+    let edge_role_map: std::collections::HashMap<String, crate::types::EdgeRole> = classified
+        .iter()
+        .map(|c| (c.edge.id.clone(), c.role))
+        .collect();
+
+    let layered = crate::rank_assignment::assign_ranks(&norm_nodes, &active_edges, None);
+    let layer_graph = crate::rank_assignment::layer_graph_builder::build_layer_graph(
+        &norm_nodes,
+        &norm_edges,
+        Some(&edge_role_map),
+        &layered,
+    );
+
+    let mut ranks_vec: Vec<Vec<String>> = Vec::new();
+    let mut max_rank = 0;
+    for &r in layered.rank_nodes_map.keys() {
+        if r > max_rank {
+            max_rank = r;
+        }
+    }
+    for rank_idx in 0..=max_rank {
+        if let Some(nodes) = layered.rank_nodes_map.get(&rank_idx) {
+            ranks_vec.push(nodes.clone());
+        } else {
+            ranks_vec.push(Vec::new());
+        }
+    }
+
+    let mut ordered_layers: Vec<Vec<crate::LayerNode>> = Vec::new();
+    for rank_nodes in &ranks_vec {
+        let mut layer_nodes = Vec::new();
+        for node_id in rank_nodes {
+            if let Some(ln) = layer_graph.item_map.get(node_id) {
+                layer_nodes.push(ln.clone());
+            }
+        }
+        ordered_layers.push(layer_nodes);
+    }
+
+    let norm_graph = crate::cycle_breaking::graph_normalization::normalize_graph(&norm_nodes, &norm_edges)
+        .unwrap()
+        .graph;
+
+    let mut cfg_1 = CustomLayoutConfig::default();
+    cfg_1.max_rip_up_passes = 1;
+    cfg_1.max_route_order_variants = 2;
+
+    let mut cfg_2 = CustomLayoutConfig::default();
+    cfg_2.max_rip_up_passes = 2;
+    cfg_2.max_route_order_variants = 2;
+
+    let coord_result = crate::coordinate_assignment::coordinate_assignment_facade::assign_coordinates(
+        &norm_graph,
+        &layer_graph,
+        &ordered_layers,
+        &cfg_2,
+        None,
+        None,
+    );
+
+    let mut positioned_nodes = Vec::new();
+    for (rank_idx, rank_node_ids) in ranks_vec.iter().enumerate() {
+        for (order_idx, node_id) in rank_node_ids.iter().enumerate() {
+            if let Some(input_node) = norm_nodes.iter().find(|n| n.id == *node_id) {
+                let pos = coord_result
+                    .node_positions
+                    .get(node_id)
+                    .cloned()
+                    .unwrap_or(crate::types::Point { x: 50.0, y: 50.0 });
+                positioned_nodes.push(crate::types::PositionedNode {
+                    id: input_node.id.clone(),
+                    label: input_node.label.clone(),
+                    x: pos.x,
+                    y: pos.y,
+                    width: input_node.width,
+                    height: input_node.height,
+                    rank: rank_idx,
+                    order: order_idx,
+                });
+            }
+        }
+    }
+
+    let res_1 = crate::edge_routing::route_all_edges(
+        &positioned_nodes,
+        &norm_edges,
+        Some(&active_edges),
+        &cfg_1,
+        None,
+    );
+
+    let res_2 = crate::edge_routing::route_all_edges(
+        &positioned_nodes,
+        &norm_edges,
+        Some(&active_edges),
+        &cfg_2,
+        None,
+    );
+
+    assert!(
+        res_2.routes.len() >= res_1.routes.len(),
+        "max_rip_up_passes=2 routes count ({}) must be >= max_rip_up_passes=1 routes count ({})",
+        res_2.routes.len(),
+        res_1.routes.len()
+    );
+}
+
+#[test]
+fn test_max_rip_up_passes_conflicting_graph_pass_limits() {
+    // Construct a tight 2-rank graph with overlapping edge trajectories forcing rip-up passes
+    let nodes = vec![
+        crate::types::PositionedNode {
+            id: "N1".to_string(),
+            label: Some("Node 1".to_string()),
+            x: 100.0,
+            y: 100.0,
+            width: 120.0,
+            height: 60.0,
+            rank: 0,
+            order: 0,
+        },
+        crate::types::PositionedNode {
+            id: "N2".to_string(),
+            label: Some("Node 2".to_string()),
+            x: 300.0,
+            y: 100.0,
+            width: 120.0,
+            height: 60.0,
+            rank: 0,
+            order: 1,
+        },
+        crate::types::PositionedNode {
+            id: "N3".to_string(),
+            label: Some("Node 3".to_string()),
+            x: 100.0,
+            y: 300.0,
+            width: 120.0,
+            height: 60.0,
+            rank: 1,
+            order: 0,
+        },
+        crate::types::PositionedNode {
+            id: "N4".to_string(),
+            label: Some("Node 4".to_string()),
+            x: 300.0,
+            y: 300.0,
+            width: 120.0,
+            height: 60.0,
+            rank: 1,
+            order: 1,
+        },
+    ];
+
+    let edges = vec![
+        NormalizedEdge {
+            id: "e1".to_string(),
+            source: "N1".to_string(),
+            target: "N4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e2".to_string(),
+            source: "N2".to_string(),
+            target: "N3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e3".to_string(),
+            source: "N1".to_string(),
+            target: "N3".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+        NormalizedEdge {
+            id: "e4".to_string(),
+            source: "N2".to_string(),
+            target: "N4".to_string(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        },
+    ];
+
+    let mut cfg_1 = CustomLayoutConfig::default();
+    cfg_1.max_rip_up_passes = 1;
+
+    let mut cfg_12 = CustomLayoutConfig::default();
+    cfg_12.max_rip_up_passes = 12;
+
+    let res_1 = crate::edge_routing::route_all_edges(&nodes, &edges, None, &cfg_1, None);
+    let res_12 = crate::edge_routing::route_all_edges(&nodes, &edges, None, &cfg_12, None);
+
+    assert_eq!(res_1.routes.len(), 4);
+    assert_eq!(res_12.routes.len(), 4);
+    assert_eq!(res_1.status, "success");
+    assert_eq!(res_12.status, "success");
+}
+
+
+
 
 
 

@@ -35,7 +35,11 @@ export function usePanZoom(): UsePanZoomReturn {
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      const rawDelta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const zoomSensitivity = useGraphStore.getState().layoutConfig.zoomSensitivity ?? 1.0;
+      const effectiveSensitivity = 0.0006 * zoomSensitivity;
+      const zoomFactor = Math.exp(-rawDelta * effectiveSensitivity);
+
       const currentZoom = useGraphStore.getState().zoomLevel;
       const currentPan = useGraphStore.getState().panOffset;
       const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom * zoomFactor));

@@ -122,3 +122,166 @@ fn test_port_side_assignment_and_distribution() {
         }
     }
 }
+
+#[test]
+fn test_side_reuse_penalty_port_distribution() {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let json_path = std::path::Path::new(&manifest_dir).join("../../public/data/graphs/kubernetes_cluster_topology.json");
+    let json_str = std::fs::read_to_string(json_path).expect("Failed to read json file");
+
+    #[allow(dead_code)]
+    #[derive(serde::Deserialize)]
+    struct RawBadge {
+        label: String,
+    }
+    #[allow(dead_code)]
+    #[derive(serde::Deserialize)]
+    struct RawNode {
+        id: String,
+        name: String,
+        description: Option<String>,
+        #[serde(default)]
+        badges: Vec<RawBadge>,
+    }
+    #[allow(dead_code)]
+    #[derive(serde::Deserialize)]
+    struct RawEdge {
+        id: Option<String>,
+        source: String,
+        target: String,
+        label: Option<String>,
+        #[serde(rename = "isCycle")]
+        is_cycle: Option<bool>,
+    }
+    #[allow(dead_code)]
+    #[derive(serde::Deserialize)]
+    struct RawGraph {
+        nodes: Vec<RawNode>,
+        edges: Vec<RawEdge>,
+    }
+
+    let graph: RawGraph = serde_json::from_str(&json_str).unwrap();
+
+    let norm_nodes: Vec<NormalizedNode> = graph
+        .nodes
+        .iter()
+        .map(|n| {
+            let title_width = (n.name.len() as f64) * 11.0 + 90.0;
+            let width = 120.0f64.max(title_width).ceil();
+            let height = 60.0;
+            NormalizedNode {
+                id: n.id.clone(),
+                label: Some(n.name.clone()),
+                width,
+                height,
+            }
+        })
+        .collect();
+
+    let norm_edges: Vec<NormalizedEdge> = graph
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(idx, e)| NormalizedEdge {
+            id: e.id.clone().unwrap_or_else(|| format!("e-{}-{}-{}", e.source, e.target, idx)),
+            source: e.source.clone(),
+            target: e.target.clone(),
+            label: e.label.clone(),
+            is_cycle: e.is_cycle,
+            layout_role: None,
+        })
+        .collect();
+
+    let node_map: HashMap<String, NormalizedNode> = norm_nodes
+        .iter()
+        .map(|n| (n.id.clone(), n.clone()))
+        .collect();
+
+    // Assign dummy positions for nodes to evaluate port candidate generation
+    let mut node_positions: HashMap<String, Point> = HashMap::new();
+    for (idx, node) in norm_nodes.iter().enumerate() {
+        let col = (idx % 5) as f64;
+        let row = (idx / 5) as f64;
+        node_positions.insert(
+            node.id.clone(),
+            Point {
+                x: col * 300.0,
+                y: row * 200.0,
+            },
+        );
+    }
+
+    // Evaluate low penalty (0.0) vs high penalty (500.0)
+    let mut config_low = CustomLayoutConfig::default();
+    config_low.side_reuse_penalty = 0.0;
+
+    let mut config_high = CustomLayoutConfig::default();
+    config_high.side_reuse_penalty = 500.0;
+
+    // Build candidates for all edges
+    let mut candidates_map_low: HashMap<String, Vec<PortCandidate>> = HashMap::new();
+    let mut candidates_map_high: HashMap<String, Vec<PortCandidate>> = HashMap::new();
+
+    for edge in &norm_edges {
+        let Some(src_node) = node_map.get(&edge.source) else { continue; };
+        let Some(tgt_node) = node_map.get(&edge.target) else { continue; };
+        let Some(src_pos) = node_positions.get(&edge.source) else { continue; };
+        let Some(tgt_pos) = node_positions.get(&edge.target) else { continue; };
+
+        let cands_low = generate_port_candidates(
+            edge,
+            &NodeContext { node: src_node, pos: src_pos },
+            &NodeContext { node: tgt_node, pos: tgt_pos },
+            EdgeRole::Forward,
+            &config_low,
+            None,
+            None,
+        );
+        candidates_map_low.insert(edge.id.clone(), cands_low);
+
+        let cands_high = generate_port_candidates(
+            edge,
+            &NodeContext { node: src_node, pos: src_pos },
+            &NodeContext { node: tgt_node, pos: tgt_pos },
+            EdgeRole::Forward,
+            &config_high,
+            None,
+            None,
+        );
+        candidates_map_high.insert(edge.id.clone(), cands_high);
+    }
+
+    let res_low = assign_port_sides_globally(&norm_edges, &candidates_map_low, &config_low, None);
+    let res_high = assign_port_sides_globally(&norm_edges, &candidates_map_high, &config_high, None);
+
+    // Count how many node side keys are active (have >= 1 port assigned) in low vs high
+    let active_sides_low = res_low.side_use_map.values().filter(|&&v| v > 0).count();
+    let active_sides_high = res_high.side_use_map.values().filter(|&&v| v > 0).count();
+
+    // Calculate maximum reuse count on any single side
+    let max_reuse_low = res_low.side_use_map.values().copied().max().unwrap_or(0);
+    let max_reuse_high = res_high.side_use_map.values().copied().max().unwrap_or(0);
+
+    println!(
+        "sideReusePenalty: 0.0 -> Active Sides: {}, Max Reuse on Single Side: {}",
+        active_sides_low, max_reuse_low
+    );
+    println!(
+        "sideReusePenalty: 500.0 -> Active Sides: {}, Max Reuse on Single Side: {}",
+        active_sides_high, max_reuse_high
+    );
+
+    // High sideReusePenalty must spread ports across more distinct node sides
+    // and lower the max concentration of ports on a single side.
+    assert!(
+        active_sides_high > active_sides_low,
+        "High sideReusePenalty (500.0) should activate more sides ({}) than low (0.0) ({})",
+        active_sides_high, active_sides_low
+    );
+    assert!(
+        max_reuse_high < max_reuse_low,
+        "High sideReusePenalty (500.0) should lower max side reuse ({}) compared to low (0.0) ({})",
+        max_reuse_high, max_reuse_low
+    );
+}
+

@@ -233,249 +233,377 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
               <div className="layout-config-section">
                 <span className="layout-config-section-title">📐 Spacing & Clearances</span>
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Node Gap</span>
-                    <span className="layout-config-value">{stagedConfig.nodeGap}px</span>
+                  <span className="layout-config-item-label">Node Gap (px)</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="10"
+                      max="200"
+                      value={stagedConfig.nodeGap}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, nodeGap: Number(e.target.value) }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.nodeGap}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, nodeGap: Number(e.target.value) }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="200"
-                    step="2"
-                    value={stagedConfig.nodeGap}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({ ...prev, nodeGap: Number(e.target.value) }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Rank Gap</span>
-                    <span className="layout-config-value">{stagedConfig.rankGap}px</span>
+                  <span className="layout-config-item-label">Rank Gap (px)</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="20"
+                      max="300"
+                      value={stagedConfig.rankGap}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, rankGap: Number(e.target.value) }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.rankGap}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, rankGap: Number(e.target.value) }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="20"
-                    max="300"
-                    step="5"
-                    value={stagedConfig.rankGap}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({ ...prev, rankGap: Number(e.target.value) }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Obstacle Clearance</span>
-                    <span className="layout-config-value">{stagedConfig.obstacleClearance}px</span>
+                  <span className="layout-config-item-label">Obstacle Clearance (px)</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="4"
+                      max="50"
+                      value={stagedConfig.obstacleClearance}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          obstacleClearance: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.obstacleClearance}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          obstacleClearance: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="4"
-                    max="50"
-                    step="2"
-                    value={stagedConfig.obstacleClearance}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        obstacleClearance: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Lane Spacing</span>
-                    <span className="layout-config-value">{stagedConfig.laneSpacing}px</span>
+                  <span className="layout-config-item-label">Lane Spacing (px)</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="4"
+                      max="40"
+                      value={stagedConfig.laneSpacing}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, laneSpacing: Number(e.target.value) }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.laneSpacing}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, laneSpacing: Number(e.target.value) }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="4"
-                    max="40"
-                    step="2"
-                    value={stagedConfig.laneSpacing}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({ ...prev, laneSpacing: Number(e.target.value) }))
-                    }
-                    className="layout-config-slider"
-                  />
+                </div>
+
+                <div className="layout-config-item">
+                  <span className="layout-config-item-label">Zoom Sensitivity</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="2.0"
+                      step="0.05"
+                      value={stagedConfig.zoomSensitivity}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          zoomSensitivity: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={stagedConfig.zoomSensitivity}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          zoomSensitivity: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="layout-config-section">
                 <span className="layout-config-section-title">⚖️ Cost Penalties</span>
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Bend Penalty</span>
-                    <span className="layout-config-value">{stagedConfig.bendPenalty}</span>
+                  <span className="layout-config-item-label">Bend Penalty</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="0"
+                      max="2000"
+                      value={stagedConfig.bendPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, bendPenalty: Number(e.target.value) }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.bendPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({ ...prev, bendPenalty: Number(e.target.value) }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    step="5"
-                    value={stagedConfig.bendPenalty}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({ ...prev, bendPenalty: Number(e.target.value) }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Crossing Penalty</span>
-                    <span className="layout-config-value">{stagedConfig.crossingPenalty}</span>
+                  <span className="layout-config-item-label">Crossing Penalty</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="10"
+                      max="100000"
+                      value={stagedConfig.crossingPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          crossingPenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.crossingPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          crossingPenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="100"
-                    max="2000"
-                    step="50"
-                    value={stagedConfig.crossingPenalty}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        crossingPenalty: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Direction Penalty</span>
-                    <span className="layout-config-value">{stagedConfig.directionPenalty}</span>
+                  <span className="layout-config-item-label">Direction Penalty</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="0"
+                      max="5000"
+                      value={stagedConfig.directionPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          directionPenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.directionPenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          directionPenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="500"
-                    step="10"
-                    value={stagedConfig.directionPenalty}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        directionPenalty: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Side Reuse Penalty</span>
-                    <span className="layout-config-value">{stagedConfig.sideReusePenalty}</span>
+                  <span className="layout-config-item-label">Side Reuse Penalty</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1000"
+                      value={stagedConfig.sideReusePenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          sideReusePenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.sideReusePenalty}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          sideReusePenalty: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="8"
-                    max="100"
-                    step="4"
-                    value={stagedConfig.sideReusePenalty}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        sideReusePenalty: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
               </div>
 
               <div className="layout-config-section">
                 <span className="layout-config-section-title">🔄 Search Bounds</span>
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Route Order Variants</span>
-                    <span className="layout-config-value">{stagedConfig.maxRouteOrderVariants}</span>
+                  <span className="layout-config-item-label">Route Order Variants</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="1"
+                      max="12"
+                      value={stagedConfig.maxRouteOrderVariants}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxRouteOrderVariants: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.maxRouteOrderVariants}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxRouteOrderVariants: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="6"
-                    step="1"
-                    value={stagedConfig.maxRouteOrderVariants}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        maxRouteOrderVariants: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Rip-Up Reroute Passes</span>
-                    <span className="layout-config-value">{stagedConfig.maxRipUpPasses}</span>
+                  <span className="layout-config-item-label">Rip-Up Reroute Passes</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="1"
+                      max="32"
+                      value={stagedConfig.maxRipUpPasses}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxRipUpPasses: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.maxRipUpPasses}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxRipUpPasses: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="16"
-                    step="1"
-                    value={stagedConfig.maxRipUpPasses}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        maxRipUpPasses: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Crossing Sweeps</span>
-                    <span className="layout-config-value">{stagedConfig.maxCrossingSweeps}</span>
+                  <span className="layout-config-item-label">Crossing Sweeps</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="1"
+                      max="64"
+                      value={stagedConfig.maxCrossingSweeps}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxCrossingSweeps: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.maxCrossingSweeps}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxCrossingSweeps: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="4"
-                    max="32"
-                    step="2"
-                    value={stagedConfig.maxCrossingSweeps}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        maxCrossingSweeps: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <div className="layout-config-label-row">
-                    <span>Global Passes</span>
-                    <span className="layout-config-value">{stagedConfig.maxGlobalPasses}</span>
+                  <span className="layout-config-item-label">Global Passes</span>
+                  <div className="layout-config-controls-row">
+                    <input
+                      type="range"
+                      min="1"
+                      max="24"
+                      value={stagedConfig.maxGlobalPasses}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxGlobalPasses: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-slider"
+                    />
+                    <input
+                      type="number"
+                      value={stagedConfig.maxGlobalPasses}
+                      onChange={(e) =>
+                        setStagedConfig((prev) => ({
+                          ...prev,
+                          maxGlobalPasses: Number(e.target.value),
+                        }))
+                      }
+                      className="layout-config-number-input"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="12"
-                    step="1"
-                    value={stagedConfig.maxGlobalPasses}
-                    onChange={(e) =>
-                      setStagedConfig((prev) => ({
-                        ...prev,
-                        maxGlobalPasses: Number(e.target.value),
-                      }))
-                    }
-                    className="layout-config-slider"
-                  />
                 </div>
               </div>
             </div>

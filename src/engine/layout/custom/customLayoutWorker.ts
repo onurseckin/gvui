@@ -7,6 +7,7 @@ export interface CustomLayoutWorkerRequest {
   nodes: NormalizedNode[];
   edges: NormalizedEdge[];
   configPartial?: Partial<CustomLayoutConfig>;
+  mode?: string;
 }
 
 export interface CustomLayoutWorkerResponse {
@@ -29,7 +30,7 @@ async function ensureWasmInitialized(): Promise<void> {
 
 if (typeof self !== "undefined" && typeof self.postMessage === "function") {
   self.onmessage = async (event: MessageEvent<CustomLayoutWorkerRequest>) => {
-    const { id, nodes, edges, configPartial } = event.data;
+    const { id, nodes, edges, configPartial, mode } = event.data;
     try {
       await ensureWasmInitialized();
       const input = {
@@ -47,6 +48,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function") {
           isCycle: e.isCycle,
         })),
         options: configPartial,
+        mode,
       };
       const result = compute_custom_layout_wasm(input) as CustomLayoutResult;
       const response: CustomLayoutWorkerResponse = {

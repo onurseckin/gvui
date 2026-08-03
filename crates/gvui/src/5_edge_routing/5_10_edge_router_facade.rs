@@ -411,7 +411,10 @@ pub fn route_all_edges(
 
     let mut order_variants: Vec<Vec<NormalizedEdge>> = Vec::new();
     let mut seen_signatures = HashSet::new();
-    let max_variants = if options.and_then(|o| o.side_assignments.as_ref()).is_some() {
+    let max_variants = if options
+        .and_then(|o| o.side_assignments.as_ref())
+        .is_some_and(|sa| !sa.is_empty())
+    {
         1
     } else {
         config.max_route_order_variants
@@ -660,8 +663,9 @@ pub fn route_all_edges(
                     let trial_val = evaluate_current_validation(&trial_routes_map);
                     let update_best = best_perm_validation.as_ref().is_none_or(|best_val| {
                         let trial_routes = trial_routes_map.values().cloned().collect::<Vec<_>>();
+                        let best_routes = best_perm_routes.as_ref().unwrap().values().cloned().collect::<Vec<_>>();
                         let cand_a = LayoutEvaluationCandidate { result: &trial_val, edges: &trial_routes, badges: &[] };
-                        let cand_b = LayoutEvaluationCandidate { result: best_val, edges: &trial_routes, badges: &[] };
+                        let cand_b = LayoutEvaluationCandidate { result: best_val, edges: &best_routes, badges: &[] };
                         compare_layout_scores(&cand_a, &cand_b, nodes, None) == std::cmp::Ordering::Less
                     });
 
@@ -747,7 +751,6 @@ pub fn route_all_edges(
                 }
                 curr_validation = evaluate_current_validation(&routes_map);
             }
-
             let curr_routes = routes_map.values().cloned().collect::<Vec<_>>();
             let variant_routes = variant_best_routes_map.values().cloned().collect::<Vec<_>>();
             let cand_curr = LayoutEvaluationCandidate { result: &curr_validation, edges: &curr_routes, badges: &[] };

@@ -137,3 +137,166 @@ fn test_bridge_owner_priority() {
     );
     assert_eq!(owner, "edge_fb");
 }
+
+#[test]
+fn test_max_crossing_sweeps_impact_kubernetes_topology() {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let json_path = std::path::Path::new(&manifest_dir).join("../../public/data/graphs/kubernetes_cluster_topology.json");
+    let json_str = std::fs::read_to_string(json_path).expect("Failed to read json file");
+
+    #[derive(serde::Deserialize)]
+    struct RawNode {
+        id: String,
+        name: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct RawEdge {
+        id: Option<String>,
+        source: String,
+        target: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct RawGraph {
+        nodes: Vec<RawNode>,
+        edges: Vec<RawEdge>,
+    }
+
+    let raw_graph: RawGraph = serde_json::from_str(&json_str).unwrap();
+
+    let norm_nodes: Vec<crate::types::NormalizedNode> = raw_graph
+        .nodes
+        .iter()
+        .map(|n| crate::types::NormalizedNode {
+            id: n.id.clone(),
+            label: Some(n.name.clone()),
+            width: 120.0,
+            height: 60.0,
+        })
+        .collect();
+
+    let norm_edges: Vec<crate::types::NormalizedEdge> = raw_graph
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(idx, e)| crate::types::NormalizedEdge {
+            id: e.id.clone().unwrap_or_else(|| format!("e{}", idx)),
+            source: e.source.clone(),
+            target: e.target.clone(),
+            label: None,
+            is_cycle: None,
+            layout_role: None,
+        })
+        .collect();
+
+    let classified = crate::cycle_breaking::cycle_breaking_facade::break_cycles(&norm_nodes, &norm_edges);
+    let active_edges: Vec<crate::types::NormalizedEdge> = classified.iter().map(|c| c.edge.clone()).collect();
+    let edge_role_map: HashMap<String, EdgeRole> = classified.iter().map(|c| (c.edge.id.clone(), c.role)).collect();
+
+    let layered = crate::rank_assignment::assign_ranks(&norm_nodes, &active_edges, None);
+    let layer_graph = crate::rank_assignment::layer_graph_builder::build_layer_graph(
+        &norm_nodes,
+        &norm_edges,
+        Some(&edge_role_map),
+        &layered,
+    );
+
+    let res_1 = minimize_crossings(&layer_graph, 1, None);
+    let res_24 = minimize_crossings(&layer_graph, 24, None);
+
+    assert_eq!(res_1.crossing_count, 0);
+    assert_eq!(res_24.crossing_count, 0);
+}
+
+#[test]
+fn test_max_crossing_sweeps_dense_graph_sweeps_difference() {
+    let make_node = |id: &str, rank: usize| LayerNode {
+        id: id.to_string(),
+        rank,
+        is_virtual: false,
+        original_node_id: None,
+        source_edge_id: None,
+        width: 100.0,
+        height: 40.0,
+        x: None,
+        y: None,
+    };
+
+    // 4 ranks graph to test multi-sweep information propagation
+    let a0 = make_node("A0", 0);
+    let a1 = make_node("A1", 0);
+    let a2 = make_node("A2", 0);
+
+    let b0 = make_node("B0", 1);
+    let b1 = make_node("B1", 1);
+    let b2 = make_node("B2", 1);
+
+    let c0 = make_node("C0", 2);
+    let c1 = make_node("C1", 2);
+    let c2 = make_node("C2", 2);
+
+    let d0 = make_node("D0", 3);
+    let d1 = make_node("D1", 3);
+    let d2 = make_node("D2", 3);
+
+    let mut item_map = HashMap::new();
+    for node in [&a0, &a1, &a2, &b0, &b1, &b2, &c0, &c1, &c2, &d0, &d1, &d2] {
+        item_map.insert(node.id.clone(), node.clone());
+    }
+
+    let mut preds: HashMap<String, Vec<String>> = HashMap::new();
+    let mut succs: HashMap<String, Vec<String>> = HashMap::new();
+
+    let add_edge = |s: &str, t: &str, succs: &mut HashMap<String, Vec<String>>, preds: &mut HashMap<String, Vec<String>>| {
+        succs.entry(s.to_string()).or_default().push(t.to_string());
+        preds.entry(t.to_string()).or_default().push(s.to_string());
+    };
+
+    // Complex interconnected edges requiring multiple sweeps
+    add_edge("A0", "B2", &mut succs, &mut preds);
+    add_edge("A1", "B0", &mut succs, &mut preds);
+    add_edge("A2", "B1", &mut succs, &mut preds);
+
+    add_edge("B0", "C1", &mut succs, &mut preds);
+    add_edge("B1", "C2", &mut succs, &mut preds);
+    add_edge("B2", "C0", &mut succs, &mut preds);
+
+    add_edge("C0", "D2", &mut succs, &mut preds);
+    add_edge("C1", "D0", &mut succs, &mut preds);
+    add_edge("C2", "D1", &mut succs, &mut preds);
+
+    // Cross-rank feedback-like forward connections
+    add_edge("A0", "C1", &mut succs, &mut preds);
+    add_edge("A2", "C0", &mut succs, &mut preds);
+    add_edge("B0", "D2", &mut succs, &mut preds);
+    add_edge("B2", "D0", &mut succs, &mut preds);
+
+    let graph = ExpandedLayerGraph {
+        layers: vec![
+            vec![a0, a1, a2],
+            vec![b0, b1, b2],
+            vec![c0, c1, c2],
+            vec![d0, d1, d2],
+        ],
+        real_nodes: vec![],
+        virtual_nodes: vec![],
+        item_map,
+        predecessors_map: preds,
+        successors_map: succs,
+    };
+
+    let res_1 = minimize_crossings(&graph, 1, None);
+    let res_24 = minimize_crossings(&graph, 24, None);
+
+    let order_1: Vec<Vec<String>> = res_1.ordered_layers.iter().map(|l| l.iter().map(|n| n.id.clone()).collect()).collect();
+    let order_24: Vec<Vec<String>> = res_24.ordered_layers.iter().map(|l| l.iter().map(|n| n.id.clone()).collect()).collect();
+
+    println!("Multi-sweep test: res_1 crossings = {}, res_24 crossings = {}", res_1.crossing_count, res_24.crossing_count);
+    println!("Order 1: {:?}", order_1);
+    println!("Order 24: {:?}", order_24);
+
+    assert!(
+        order_1 != order_24 || res_24.crossing_count < res_1.crossing_count,
+        "maxCrossingSweeps: 24 should alter ordering or decrease crossing count compared to 1 sweep on multi-layer graph"
+    );
+}
+

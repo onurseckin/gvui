@@ -91,6 +91,8 @@ pub struct CustomLayoutConfig {
     pub max_route_candidates_per_edge: usize,
     /// Maximum badge placement states evaluated (must be > 0).
     pub max_badge_states: usize,
+    /// Zoom sensitivity factor for viewport wheel/touchpad gestures (must be > 0).
+    pub zoom_sensitivity: f64,
 }
 
 /// Default standard layout configuration instance with tuned defaults.
@@ -133,6 +135,7 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     max_conflict_permutations: 32,
     max_route_candidates_per_edge: 4,
     max_badge_states: 200,
+    zoom_sensitivity: 1.0,
 };
 
 impl Default for CustomLayoutConfig {
@@ -181,6 +184,7 @@ pub struct PartialCustomLayoutConfig {
     pub max_conflict_permutations: Option<usize>,
     pub max_route_candidates_per_edge: Option<usize>,
     pub max_badge_states: Option<usize>,
+    pub zoom_sensitivity: Option<f64>,
 }
 
 impl CustomLayoutConfig {
@@ -312,6 +316,7 @@ pub fn resolve_custom_layout_config(
         if let Some(val) = p.max_conflict_permutations { merged.max_conflict_permutations = val; }
         if let Some(val) = p.max_route_candidates_per_edge { merged.max_route_candidates_per_edge = val; }
         if let Some(val) = p.max_badge_states { merged.max_badge_states = val; }
+        if let Some(val) = p.zoom_sensitivity { merged.zoom_sensitivity = val; }
     }
 
     merged.validate()?;

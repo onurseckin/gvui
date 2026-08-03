@@ -107,6 +107,7 @@ export const GraphCanvas: FC = () => {
     computeCustomEngineGraphLayoutAsync(dataset, {
       signal: controller.signal,
       configPartial: layoutConfig,
+      mode: layoutMode,
     })
       .then(({ nodes, edges }) => {
         applyLayoutResult(nodes, edges);

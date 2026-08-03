@@ -183,3 +183,51 @@ fn test_unpositioned_node_skips_phantom_obstacle() {
     // Should generate all 16 valid candidates without phantom leg conflicts at (0,0)
     assert_eq!(cands.len(), 16);
 }
+
+#[test]
+fn test_direction_penalty_alters_port_candidate_costs() {
+    let mut config_low = CustomLayoutConfig::default();
+    config_low.direction_penalty = 0.0;
+
+    let mut config_high = CustomLayoutConfig::default();
+    config_high.direction_penalty = 2000.0;
+
+    let src_node = NormalizedNode { id: "s".into(), label: None, width: 50.0, height: 50.0 };
+    let tgt_node = NormalizedNode { id: "t".into(), label: None, width: 50.0, height: 50.0 };
+    let src_pos = Point { x: 0.0, y: 0.0 };
+    let tgt_pos = Point { x: 200.0, y: 0.0 };
+    let edge = NormalizedEdge { id: "e".into(), source: "s".into(), target: "t".into(), label: None, is_cycle: None, layout_role: None };
+
+    let cands_low = generate_port_candidates(
+        &edge,
+        &NodeContext { node: &src_node, pos: &src_pos },
+        &NodeContext { node: &tgt_node, pos: &tgt_pos },
+        EdgeRole::Forward,
+        &config_low,
+        None,
+        None,
+    );
+
+    let cands_high = generate_port_candidates(
+        &edge,
+        &NodeContext { node: &src_node, pos: &src_pos },
+        &NodeContext { node: &tgt_node, pos: &tgt_pos },
+        EdgeRole::Forward,
+        &config_high,
+        None,
+        None,
+    );
+
+    assert_eq!(cands_low.len(), cands_high.len());
+
+    let misaligned_low = cands_low.iter().find(|c| c.src_side == Side::Top && c.tgt_side == Side::Top).unwrap();
+    let misaligned_high = cands_high.iter().find(|c| c.src_side == Side::Top && c.tgt_side == Side::Top).unwrap();
+
+    assert!(misaligned_high.base_cost > misaligned_low.base_cost + 1000.0);
+
+    let aligned_low = cands_low.iter().find(|c| c.src_side == Side::Right && c.tgt_side == Side::Left).unwrap();
+    let aligned_high = cands_high.iter().find(|c| c.src_side == Side::Right && c.tgt_side == Side::Left).unwrap();
+
+    assert!((aligned_high.base_cost - aligned_low.base_cost).abs() < 1e-6);
+}
+

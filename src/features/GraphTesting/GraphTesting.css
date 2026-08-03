@@ -617,21 +617,34 @@
   padding-bottom: 6px;
 }
 
-.option-field {
+.option-controls-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 10px;
 }
 
-.option-field label {
-  font-size: 0.75rem;
-  color: #a1a1aa;
-}
-
-.option-field input[type="range"] {
+.option-controls-row input[type="range"] {
+  flex: 1;
   accent-color: #0284c7;
   cursor: pointer;
+}
+
+.option-custom-input {
+  width: 70px;
+  background-color: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 4px;
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 6px;
+  text-align: right;
+}
+
+.option-custom-input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.4);
 }
 
 @keyframes pulse-glow {

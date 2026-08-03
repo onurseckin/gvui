@@ -9,6 +9,8 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - cargo-cache:/root/.cargo
+      - cargo-target:/app/crates/gvui/target
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
@@ -30,12 +32,14 @@ services:
             - .git/
             - dist/
             - docs/
-            - crates/
             - target/
-            - src/engine/layout/custom/wasm_pkg/
             - scratch/
             - .tmp/
             - "*.tsbuildinfo"
             - "*.log"
         - action: rebuild
           path: package.json
+
+volumes:
+  cargo-cache:
+  cargo-target:

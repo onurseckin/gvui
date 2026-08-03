@@ -118,6 +118,35 @@ pub struct RouteCost {
     pub near_obstacle_penalty: f64,
 }
 
+impl RouteCost {
+    pub fn weighted_penalty(&self, config: &CustomLayoutConfig) -> f64 {
+        (self.crossings as f64) * config.crossing_penalty
+            + (self.hairpins as f64) * config.bend_penalty * 4.0
+            + (self.bends as f64) * config.bend_penalty
+            + self.direction_deviation
+            + self.near_obstacle_penalty
+    }
+
+    pub fn weighted_cost(&self, config: &CustomLayoutConfig) -> f64 {
+        self.weighted_penalty(config) + self.length
+    }
+}
+
+/// Lexicographical & weighted cost comparison of two route costs using user configuration penalties.
+pub fn compare_route_cost_with_config(a: &RouteCost, b: &RouteCost, config: &CustomLayoutConfig) -> Ordering {
+    let diff_crossings = (a.crossings as isize) - (b.crossings as isize);
+    if diff_crossings != 0 {
+        let cost_a = (a.crossings as f64) * config.crossing_penalty + (a.bends as f64) * config.bend_penalty;
+        let cost_b = (b.crossings as f64) * config.crossing_penalty + (b.bends as f64) * config.bend_penalty;
+        if (cost_a - cost_b).abs() > config.epsilon {
+            return cost_a.partial_cmp(&cost_b).unwrap_or(Ordering::Equal);
+        }
+        return if diff_crossings < 0 { Ordering::Less } else { Ordering::Greater };
+    }
+
+    compare_route_cost(a, b, config.epsilon)
+}
+
 /// Lexicographical comparison of two route costs with floating point epsilon tolerance.
 pub fn compare_route_cost(a: &RouteCost, b: &RouteCost, epsilon: f64) -> Ordering {
     let diff_crossings = (a.crossings as isize) - (b.crossings as isize);
@@ -148,16 +177,16 @@ pub fn compare_route_cost(a: &RouteCost, b: &RouteCost, epsilon: f64) -> Orderin
         return a
             .direction_deviation
             .partial_cmp(&b.direction_deviation)
-            .unwrap();
+            .unwrap_or(Ordering::Equal);
     }
     if (a.length - b.length).abs() > epsilon {
-        return a.length.partial_cmp(&b.length).unwrap();
+        return a.length.partial_cmp(&b.length).unwrap_or(Ordering::Equal);
     }
     if (a.near_obstacle_penalty - b.near_obstacle_penalty).abs() > epsilon {
         return a
             .near_obstacle_penalty
             .partial_cmp(&b.near_obstacle_penalty)
-            .unwrap();
+            .unwrap_or(Ordering::Equal);
     }
     Ordering::Equal
 }
@@ -203,7 +232,7 @@ impl Ord for HeapNode {
             return self
                 .h_length
                 .partial_cmp(&other.h_length)
-                .unwrap()
+                .unwrap_or(Ordering::Equal)
                 .reverse();
         }
         if self.state_key_num != other.state_key_num {
@@ -589,23 +618,7 @@ pub fn search_orthogonal_route_cached(
     config: &CustomLayoutConfig,
     options: &RouteSearchOptions,
 ) -> Option<RoutedPath> {
-    let key = format!(
-        "{}:{:.3},{:.3}:{:.3},{:.3}:{}",
-        edge_id,
-        source_port.stub.x,
-        source_port.stub.y,
-        target_port.stub.x,
-        target_port.stub.y,
-        occupancy.len()
-    );
-
-    if let Some(cached_res) = ROUTE_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
-        if cached_res.is_some() {
-            return cached_res;
-        }
-    }
-
-    let result = search_orthogonal_route(
+    search_orthogonal_route(
         edge_id,
         source_port,
         target_port,
@@ -613,10 +626,5 @@ pub fn search_orthogonal_route_cached(
         occupancy,
         config,
         options,
-    );
-
-    if result.is_some() {
-        ROUTE_CACHE.with(|cache| cache.borrow_mut().insert(key, result.clone()));
-    }
-    result
+    )
 }

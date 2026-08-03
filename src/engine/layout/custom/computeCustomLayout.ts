@@ -16,6 +16,7 @@ export async function computeCustomLayout(
   nodes: NormalizedNode[],
   edges: NormalizedEdge[],
   configPartial?: Partial<CustomLayoutConfig>,
+  mode?: string,
 ): Promise<CustomLayoutResult> {
   await ensureWasmInitialized();
   const input = {
@@ -33,6 +34,7 @@ export async function computeCustomLayout(
       isCycle: e.isCycle,
     })),
     options: configPartial,
+    mode,
   };
 
   return compute_custom_layout_wasm(input) as CustomLayoutResult;

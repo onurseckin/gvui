@@ -21,12 +21,17 @@ pub mod objective_evaluator;
 #[path = "3_6_layout_optimizer_state.rs"]
 pub mod layout_optimizer_state;
 
+#[path = "3_7_fast_layout_engine.rs"]
+pub mod fast_layout_engine;
+
 #[cfg(test)]
 pub mod tests;
 
 pub use barycenter_median_ordering::*;
 pub use crossing_counting::*;
+pub use fast_layout_engine::*;
 pub use layout_optimizer_state::*;
 pub use objective_evaluator::*;
 pub use rayon_parallel_search::*;
 pub use trial_state_generator::*;
+

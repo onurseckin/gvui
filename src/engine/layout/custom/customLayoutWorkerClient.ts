@@ -8,6 +8,7 @@ export interface ComputeLayoutWorkerOptions {
   nodes: NormalizedNode[];
   edges: NormalizedEdge[];
   configPartial?: Partial<CustomLayoutConfig>;
+  mode?: string;
   timeoutMs?: number;
   signal?: AbortSignal;
 }
@@ -116,7 +117,7 @@ export async function computeCustomLayoutAsync(
     }
 
     // A true SSR/Node environment has no interactive main thread to freeze.
-    return await computeSynchronously(nodes, edges, config);
+    return await computeSynchronously(nodes, edges, config, options.mode);
   }
 
   const reqId = `req_${++requestIdCounter}_${Date.now()}`;
@@ -175,7 +176,7 @@ export async function computeCustomLayoutAsync(
         () => settle({ error: new LayoutTimeoutError(timeoutMs) }),
         timeoutMs,
       );
-      worker.postMessage({ id: reqId, nodes, edges, configPartial: config });
+      worker.postMessage({ id: reqId, nodes, edges, configPartial: config, mode: options.mode });
     } catch (error) {
       settle({
         error: new LayoutWorkerError("Unable to start layout worker", {

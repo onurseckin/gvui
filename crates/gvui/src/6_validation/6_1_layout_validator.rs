@@ -35,7 +35,7 @@ use crate::geometry::{
 use crate::step3_crossing_minimization::crossing_counting::detect_edge_crossings;
 use crate::step3_crossing_minimization::objective_evaluator::{
     calculate_excess_bends, calculate_hairpin_count, calculate_leader_metrics,
-    calculate_port_side_imbalance, compare_layout_score,
+    calculate_port_side_imbalance, compare_layout_score, compare_layout_score_with_config,
 };
 use crate::types::{
     BadgePlacement, EdgeCrossing, EdgeRole, LayoutMetrics, LayoutScore,
@@ -848,4 +848,17 @@ pub fn compare_layout_scores(
     let score_a = validation_result_to_score(a.result, nodes, a.edges, a.badges, edge_roles);
     let score_b = validation_result_to_score(b.result, nodes, b.edges, b.badges, edge_roles);
     compare_layout_score(&score_a, &score_b)
+}
+
+/// Compares two layout validation results using user configured penalty weights.
+pub fn compare_layout_scores_with_config(
+    a: &LayoutEvaluationCandidate,
+    b: &LayoutEvaluationCandidate,
+    nodes: &[PositionedNode],
+    edge_roles: Option<&HashMap<String, EdgeRole>>,
+    config: &crate::config::CustomLayoutConfig,
+) -> std::cmp::Ordering {
+    let score_a = validation_result_to_score(a.result, nodes, a.edges, a.badges, edge_roles);
+    let score_b = validation_result_to_score(b.result, nodes, b.edges, b.badges, edge_roles);
+    compare_layout_score_with_config(&score_a, &score_b, config)
 }

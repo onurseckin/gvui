@@ -47,6 +47,7 @@ pub struct StateEvaluationResult {
     pub exact_demands: Vec<ExactSpacingDemand>,
     pub classified_edges: Vec<ClassifiedEdge>,
     pub reset_side_assignments: bool,
+    pub executed_passes: usize,
 }
 
 /// Result of full layout search optimization.
@@ -121,7 +122,7 @@ pub fn evaluate_search_state(
         .map(|layer| layer.iter().map(|n| n.id.clone()).collect())
         .collect();
 
-    let (optimized_ranks, _) =
+    let (optimized_ranks, executed_passes) =
         optimize_layer_orders_parallel(initial_ranks, edges, config.max_global_passes);
 
     let mut ordered_layers: Vec<Vec<LayerNode>> = Vec::new();
@@ -263,6 +264,7 @@ pub fn evaluate_search_state(
         exact_demands: current_demands,
         classified_edges: classified,
         reset_side_assignments: false,
+        executed_passes,
     }
 }
 
@@ -358,6 +360,7 @@ pub fn search_best_layout_state(
     let mut best_state = start_state.clone();
     let mut best_eval = start_eval.clone();
     let mut evaluated_states = 1;
+    let mut max_executed_passes = start_eval.executed_passes;
 
     let mut frontier = vec![(start_state.clone(), start_eval)];
     let mut visited_hashes = HashSet::new();
@@ -371,6 +374,7 @@ pub fn search_best_layout_state(
         if is_primary_clean_evaluation(&best_eval) && has_remaining_aesthetic_defect(&best_eval) {
             let (aesthetic_state, aesthetic_eval) =
                 run_bounded_aesthetic_search(nodes, edges, &best_state, &best_eval, config);
+            max_executed_passes = max_executed_passes.max(aesthetic_eval.executed_passes);
             best_state = aesthetic_state;
             best_eval = aesthetic_eval;
             break;
@@ -415,6 +419,7 @@ pub fn search_best_layout_state(
 
             evaluated_states += 1;
             let next_eval = evaluate_search_state(nodes, edges, &next_state, config);
+            max_executed_passes = max_executed_passes.max(next_eval.executed_passes);
 
             if compare_layout_score_with_config(&next_eval.score, &best_eval.score, config) == std::cmp::Ordering::Less {
                 best_state = next_state.clone();
@@ -434,7 +439,7 @@ pub fn search_best_layout_state(
         best_state,
         best_evaluation: best_eval,
         stats: OptimizationStats {
-            global_passes: 1,
+            global_passes: max_executed_passes,
             evaluated_port_states: evaluated_states,
             spacing_expansions: 0,
             duration_ms: 0.0,

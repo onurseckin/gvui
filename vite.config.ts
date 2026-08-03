@@ -5,15 +5,16 @@ import react from "@vitejs/plugin-react";
 function wasmAutoRebuildPlugin(): Plugin {
   return {
     name: "wasm-auto-rebuild",
-    handleHotUpdate({ file }) {
-      if (file.endsWith(".rs") || file.endsWith("Cargo.toml")) {
+    handleHotUpdate({ file, server }) {
+      if (file.endsWith(".rs") || file.endsWith("Cargo.toml") || file.includes("/crates/")) {
         console.log("\n⚡ Rust source file changed. Rebuilding WASM package...");
         try {
-          execSync("wasm-pack --version", { stdio: "ignore" });
           execSync("bun run build:wasm", { stdio: "inherit" });
-          console.log("✨ WASM package rebuilt successfully!");
-        } catch {
-          console.log("ℹ️ Rust source changed. Pre-built WASM module active in container.");
+          console.log("✨ WASM package rebuilt successfully! Triggering browser reload...");
+          server.ws.send({ type: "full-reload" });
+          return [];
+        } catch (error) {
+          console.error("❌ WASM rebuild failed:", error);
         }
       }
     },
@@ -29,7 +30,6 @@ export default defineConfig({
     watch: {
       usePolling: true,
       ignored: [
-        "**/crates/**",
         "**/target/**",
         "**/scratch/**",
         "**/.git/**",

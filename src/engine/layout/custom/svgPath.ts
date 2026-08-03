@@ -16,6 +16,9 @@ function roundNum(n: number): string {
 
 export function pointsToSvgPath(points: Point[]): string {
   if (points.length === 0) return "";
+  if (points.length === 3) {
+    return `M ${roundNum(points[0].x)} ${roundNum(points[0].y)} Q ${roundNum(points[1].x)} ${roundNum(points[1].y)} ${roundNum(points[2].x)} ${roundNum(points[2].y)}`;
+  }
   const simplified = simplifyOrthogonalPath(points);
   if (simplified.length === 0) return "";
   if (simplified.length === 1) {

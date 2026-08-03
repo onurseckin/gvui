@@ -82,7 +82,7 @@ pub struct Rect {
 }
 
 /// Directed or undirected line segment connecting two endpoints.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Segment {
     /// Start point of segment.
     pub a: Point,
@@ -91,7 +91,7 @@ pub struct Segment {
 }
 
 /// Reference descriptor for an edge port attachment site on a node boundary.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PortRef {
     /// Identifier of the target node owning this port.
     #[serde(rename = "nodeId")]
@@ -112,6 +112,7 @@ pub struct NormalizedNode {
     /// Unique node identifier.
     pub id: String,
     /// Optional human-readable display label.
+    #[serde(default)]
     pub label: Option<String>,
     /// Outer width of node bounding box in pixels.
     pub width: f64,
@@ -129,12 +130,13 @@ pub struct NormalizedEdge {
     /// Target node identifier.
     pub target: String,
     /// Optional text label attached to edge.
+    #[serde(default)]
     pub label: Option<String>,
     /// Flag indicating whether edge was explicitly flagged as cyclic by user.
-    #[serde(rename = "isCycle")]
+    #[serde(default, rename = "isCycle", alias = "is_cycle")]
     pub is_cycle: Option<bool>,
     /// Explicit layout role hint specified by user.
-    #[serde(rename = "layoutRole")]
+    #[serde(default, rename = "layoutRole", alias = "layout_role")]
     pub layout_role: Option<EdgeLayoutHint>,
 }
 
@@ -292,7 +294,7 @@ pub struct PositionedNode {
 }
 
 /// Fully routed orthogonal polyline path for an edge.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutedPath {
     /// Unique edge identifier.
     #[serde(rename = "edgeId")]
@@ -718,4 +720,21 @@ pub struct SpacingOverrides {
     pub global_node_gap: Option<f64>,
     pub global_rank_gap: Option<f64>,
     pub outer_padding: Option<f64>,
+}
+
+/// Helper function to retrieve high-resolution millisecond timestamps cross-platform (WASM and native).
+pub fn get_now_ms() -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window()
+            .and_then(|w| w.performance())
+            .map(|p| p.now())
+            .unwrap_or(0.0)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        let start = START.get_or_init(std::time::Instant::now);
+        start.elapsed().as_secs_f64() * 1000.0
+    }
 }

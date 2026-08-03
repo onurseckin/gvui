@@ -38,9 +38,15 @@ function mapLayoutResultToPositioned(
     let midY = 0;
 
     if (route && route.points.length >= 2) {
-      path = route.points
-        .reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "")
-        .trim();
+      if (
+        (layoutResult.optimizationStats?.stopReason ?? (layoutResult.optimizationStats as { stop_reason?: string })?.stop_reason) === "radial_layout_complete"
+      ) {
+        path = `M ${route.points[0].x} ${route.points[0].y} Q ${route.points[1].x} ${route.points[1].y} ${route.points[2].x} ${route.points[2].y}`;
+      } else {
+        path = route.points
+          .reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "")
+          .trim();
+      }
       const midPointIdx = Math.floor(route.points.length / 2);
       midX = route.points[midPointIdx].x;
       midY = route.points[midPointIdx].y;
@@ -83,9 +89,12 @@ function mapLayoutResultToPositioned(
  * and maps the resulting node positions, orthogonal edge SVG paths, crossing bridges, and badge locations
  * back to standard PositionedNode and PositionedEdge outputs for rendering on GraphCanvas.
  */
+import type { LayoutMode } from "../../state/useGraphStore";
+
 export async function computeCustomEngineGraphLayout(
   dataset: GraphDataset,
   configPartial?: Partial<CustomLayoutConfig>,
+  mode?: LayoutMode,
 ): Promise<{
   nodes: PositionedNode[];
   edges: PositionedEdge[];
@@ -112,7 +121,7 @@ export async function computeCustomEngineGraphLayout(
     isCycle: edge.isCycle,
   }));
 
-  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges, configPartial);
+  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges, configPartial, mode);
   return mapLayoutResultToPositioned(dataset, layoutResult);
 }
 
@@ -124,6 +133,7 @@ export interface ComputeEngineLayoutOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   configPartial?: Partial<CustomLayoutConfig>;
+  mode?: LayoutMode;
 }
 
 export async function computeCustomEngineGraphLayoutAsync(
@@ -156,6 +166,7 @@ export async function computeCustomEngineGraphLayoutAsync(
     nodes: normalizedNodes,
     edges: normalizedEdges,
     configPartial: options?.configPartial,
+    mode: options?.mode,
     timeoutMs: options?.timeoutMs,
     signal: options?.signal,
   });

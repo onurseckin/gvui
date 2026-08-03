@@ -25,6 +25,20 @@ describe("layoutDispatcher all 4 modes", () => {
     expect(res.nodes[0].y).toBeDefined();
   });
 
+  it("computes positioned nodes and edges for top-down-dagre layout", async () => {
+    try {
+      const res = await computeGraphLayout(sampleDataset, "top-down-dagre");
+      expect(res.nodes).toHaveLength(3);
+      expect(res.edges).toHaveLength(2);
+      expect(typeof res.nodes[0].x).toBe("number");
+      expect(typeof res.nodes[0].y).toBe("number");
+      expect(res.edges[0].path).toContain("M");
+    } catch (e) {
+      console.error("TOP-DOWN-DAGRE ERROR:", e);
+      throw e;
+    }
+  });
+
   it("handles zero-node dataset safely without crashing", async () => {
     const emptyDataset: GraphDataset = { id: "empty", title: "Empty", nodes: [], edges: [] };
     const res = await computeGraphLayout(emptyDataset, "top-down");

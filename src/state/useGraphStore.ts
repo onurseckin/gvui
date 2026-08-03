@@ -5,7 +5,7 @@ import {
   type CustomLayoutConfig,
 } from "../engine/layout/custom/config";
 
-export type LayoutMode = "top-down";
+export type LayoutMode = "top-down" | "top-down-dagre" | "left-right" | "force" | "radial";
 export type FilterCategory = "all" | "success" | "error" | "tools";
 
 export interface GraphState {

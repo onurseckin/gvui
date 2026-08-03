@@ -3,6 +3,15 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
+# Install system dependencies, Rust, and wasm-pack for live compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl build-essential ca-certificates \
+ && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+ && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # Copy package manifests
 COPY package.json bun.lock* ./
 

@@ -108,50 +108,101 @@ export const EngineOptionsPanel: FC<EngineOptionsPanelProps> = ({
             <div className="options-group">
               <h4 className="options-group-title">📐 Spacing & Clearances</h4>
               <div className="option-field">
-                <label htmlFor="cfg-nodeGap">Node Gap ({stagedConfig.nodeGap}px)</label>
-                <input
-                  id="cfg-nodeGap"
-                  type="range"
-                  min={20}
-                  max={160}
-                  value={stagedConfig.nodeGap}
-                  onChange={(e) => handleChange("nodeGap", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-nodeGap">Node Gap (px)</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-nodeGap"
+                    type="range"
+                    min={20}
+                    max={160}
+                    value={stagedConfig.nodeGap}
+                    onChange={(e) => handleChange("nodeGap", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.nodeGap}
+                    onChange={(e) => handleChange("nodeGap", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-rankGap">Rank Gap ({stagedConfig.rankGap}px)</label>
-                <input
-                  id="cfg-rankGap"
-                  type="range"
-                  min={40}
-                  max={240}
-                  value={stagedConfig.rankGap}
-                  onChange={(e) => handleChange("rankGap", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-rankGap">Rank Gap (px)</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-rankGap"
+                    type="range"
+                    min={40}
+                    max={240}
+                    value={stagedConfig.rankGap}
+                    onChange={(e) => handleChange("rankGap", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.rankGap}
+                    onChange={(e) => handleChange("rankGap", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-obstacleClearance">
-                  Obstacle Clearance ({stagedConfig.obstacleClearance}px)
-                </label>
-                <input
-                  id="cfg-obstacleClearance"
-                  type="range"
-                  min={8}
-                  max={48}
-                  value={stagedConfig.obstacleClearance}
-                  onChange={(e) => handleChange("obstacleClearance", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-obstacleClearance">Obstacle Clearance (px)</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-obstacleClearance"
+                    type="range"
+                    min={8}
+                    max={48}
+                    value={stagedConfig.obstacleClearance}
+                    onChange={(e) => handleChange("obstacleClearance", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.obstacleClearance}
+                    onChange={(e) => handleChange("obstacleClearance", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-laneSpacing">Lane Spacing ({stagedConfig.laneSpacing}px)</label>
-                <input
-                  id="cfg-laneSpacing"
-                  type="range"
-                  min={4}
-                  max={32}
-                  value={stagedConfig.laneSpacing}
-                  onChange={(e) => handleChange("laneSpacing", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-laneSpacing">Lane Spacing (px)</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-laneSpacing"
+                    type="range"
+                    min={4}
+                    max={32}
+                    value={stagedConfig.laneSpacing}
+                    onChange={(e) => handleChange("laneSpacing", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.laneSpacing}
+                    onChange={(e) => handleChange("laneSpacing", Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="option-field">
+                <label htmlFor="cfg-zoomSensitivity">Zoom Sensitivity</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-zoomSensitivity"
+                    type="range"
+                    min={0.1}
+                    max={2.0}
+                    step={0.05}
+                    value={stagedConfig.zoomSensitivity}
+                    onChange={(e) => handleChange("zoomSensitivity", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    step={0.05}
+                    className="option-custom-input"
+                    value={stagedConfig.zoomSensitivity}
+                    onChange={(e) => handleChange("zoomSensitivity", Number(e.target.value))}
+                  />
+                </div>
               </div>
             </div>
 
@@ -159,54 +210,80 @@ export const EngineOptionsPanel: FC<EngineOptionsPanelProps> = ({
             <div className="options-group">
               <h4 className="options-group-title">⚖️ Cost Penalties</h4>
               <div className="option-field">
-                <label htmlFor="cfg-bendPenalty">Bend Penalty ({stagedConfig.bendPenalty})</label>
-                <input
-                  id="cfg-bendPenalty"
-                  type="range"
-                  min={10}
-                  max={200}
-                  value={stagedConfig.bendPenalty}
-                  onChange={(e) => handleChange("bendPenalty", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-bendPenalty">Bend Penalty</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-bendPenalty"
+                    type="range"
+                    min={10}
+                    max={2000}
+                    value={stagedConfig.bendPenalty}
+                    onChange={(e) => handleChange("bendPenalty", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.bendPenalty}
+                    onChange={(e) => handleChange("bendPenalty", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-crossingPenalty">
-                  Crossing Penalty ({stagedConfig.crossingPenalty})
-                </label>
-                <input
-                  id="cfg-crossingPenalty"
-                  type="range"
-                  min={100}
-                  max={2000}
-                  value={stagedConfig.crossingPenalty}
-                  onChange={(e) => handleChange("crossingPenalty", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-crossingPenalty">Crossing Penalty</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-crossingPenalty"
+                    type="range"
+                    min={10}
+                    max={100000}
+                    value={stagedConfig.crossingPenalty}
+                    onChange={(e) => handleChange("crossingPenalty", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.crossingPenalty}
+                    onChange={(e) => handleChange("crossingPenalty", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-directionPenalty">
-                  Direction Penalty ({stagedConfig.directionPenalty})
-                </label>
-                <input
-                  id="cfg-directionPenalty"
-                  type="range"
-                  min={20}
-                  max={500}
-                  value={stagedConfig.directionPenalty}
-                  onChange={(e) => handleChange("directionPenalty", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-directionPenalty">Direction Penalty</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-directionPenalty"
+                    type="range"
+                    min={0}
+                    max={5000}
+                    value={stagedConfig.directionPenalty}
+                    onChange={(e) => handleChange("directionPenalty", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.directionPenalty}
+                    onChange={(e) => handleChange("directionPenalty", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-sideReusePenalty">
-                  Side Reuse Penalty ({stagedConfig.sideReusePenalty})
-                </label>
-                <input
-                  id="cfg-sideReusePenalty"
-                  type="range"
-                  min={8}
-                  max={100}
-                  value={stagedConfig.sideReusePenalty}
-                  onChange={(e) => handleChange("sideReusePenalty", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-sideReusePenalty">Side Reuse Penalty</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-sideReusePenalty"
+                    type="range"
+                    min={0}
+                    max={1000}
+                    value={stagedConfig.sideReusePenalty}
+                    onChange={(e) => handleChange("sideReusePenalty", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.sideReusePenalty}
+                    onChange={(e) => handleChange("sideReusePenalty", Number(e.target.value))}
+                  />
+                </div>
               </div>
             </div>
 
@@ -214,56 +291,80 @@ export const EngineOptionsPanel: FC<EngineOptionsPanelProps> = ({
             <div className="options-group">
               <h4 className="options-group-title">🔄 Search Bounds</h4>
               <div className="option-field">
-                <label htmlFor="cfg-maxRouteOrderVariants">
-                  Route Order Variants ({stagedConfig.maxRouteOrderVariants})
-                </label>
-                <input
-                  id="cfg-maxRouteOrderVariants"
-                  type="range"
-                  min={1}
-                  max={6}
-                  value={stagedConfig.maxRouteOrderVariants}
-                  onChange={(e) => handleChange("maxRouteOrderVariants", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-maxRouteOrderVariants">Route Order Variants</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-maxRouteOrderVariants"
+                    type="range"
+                    min={1}
+                    max={12}
+                    value={stagedConfig.maxRouteOrderVariants}
+                    onChange={(e) => handleChange("maxRouteOrderVariants", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.maxRouteOrderVariants}
+                    onChange={(e) => handleChange("maxRouteOrderVariants", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-maxRipUpPasses">
-                  Rip-Up Reroute Passes ({stagedConfig.maxRipUpPasses})
-                </label>
-                <input
-                  id="cfg-maxRipUpPasses"
-                  type="range"
-                  min={1}
-                  max={16}
-                  value={stagedConfig.maxRipUpPasses}
-                  onChange={(e) => handleChange("maxRipUpPasses", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-maxRipUpPasses">Rip-Up Reroute Passes</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-maxRipUpPasses"
+                    type="range"
+                    min={1}
+                    max={32}
+                    value={stagedConfig.maxRipUpPasses}
+                    onChange={(e) => handleChange("maxRipUpPasses", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.maxRipUpPasses}
+                    onChange={(e) => handleChange("maxRipUpPasses", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-maxCrossingSweeps">
-                  Crossing Sweeps ({stagedConfig.maxCrossingSweeps})
-                </label>
-                <input
-                  id="cfg-maxCrossingSweeps"
-                  type="range"
-                  min={4}
-                  max={32}
-                  value={stagedConfig.maxCrossingSweeps}
-                  onChange={(e) => handleChange("maxCrossingSweeps", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-maxCrossingSweeps">Crossing Sweeps</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-maxCrossingSweeps"
+                    type="range"
+                    min={1}
+                    max={64}
+                    value={stagedConfig.maxCrossingSweeps}
+                    onChange={(e) => handleChange("maxCrossingSweeps", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.maxCrossingSweeps}
+                    onChange={(e) => handleChange("maxCrossingSweeps", Number(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="option-field">
-                <label htmlFor="cfg-maxGlobalPasses">
-                  Global Passes ({stagedConfig.maxGlobalPasses})
-                </label>
-                <input
-                  id="cfg-maxGlobalPasses"
-                  type="range"
-                  min={1}
-                  max={12}
-                  value={stagedConfig.maxGlobalPasses}
-                  onChange={(e) => handleChange("maxGlobalPasses", Number(e.target.value))}
-                />
+                <label htmlFor="cfg-maxGlobalPasses">Global Passes</label>
+                <div className="option-controls-row">
+                  <input
+                    id="cfg-maxGlobalPasses"
+                    type="range"
+                    min={1}
+                    max={24}
+                    value={stagedConfig.maxGlobalPasses}
+                    onChange={(e) => handleChange("maxGlobalPasses", Number(e.target.value))}
+                  />
+                  <input
+                    type="number"
+                    className="option-custom-input"
+                    value={stagedConfig.maxGlobalPasses}
+                    onChange={(e) => handleChange("maxGlobalPasses", Number(e.target.value))}
+                  />
+                </div>
               </div>
             </div>
           </div>

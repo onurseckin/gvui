@@ -1,4 +1,5 @@
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../../types/graphData";
+import type { LayoutMode } from "../../../state/useGraphStore";
 import { calculateNodeDimensions } from "../nodeDimensions";
 import initWasm, { compute_custom_layout_wasm } from "./wasm_pkg/gvui";
 import type { CustomLayoutConfig } from "./config";
@@ -25,6 +26,8 @@ export async function computeCustomLayoutWasm(
 
 export async function computeCustomEngineGraphLayoutWasm(
   dataset: GraphDataset,
+  configPartial?: Partial<CustomLayoutConfig>,
+  mode: LayoutMode = "top-down",
 ): Promise<{ nodes: PositionedNode[]; edges: PositionedEdge[] }> {
   await ensureWasmInitialized();
 
@@ -45,6 +48,8 @@ export async function computeCustomEngineGraphLayoutWasm(
       label: e.label,
       isCycle: e.isCycle,
     })),
+    options: configPartial,
+    mode,
   };
 
   const res = compute_custom_layout_wasm(input) as {

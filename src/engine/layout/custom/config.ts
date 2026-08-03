@@ -42,6 +42,7 @@ export interface CustomLayoutConfig {
   maxConflictPermutations: number;
   maxRouteCandidatesPerEdge: number;
   maxBadgeStates: number;
+  zoomSensitivity: number;
 }
 
 export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object.freeze({
@@ -81,6 +82,7 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   maxConflictPermutations: 32,
   maxRouteCandidatesPerEdge: 4,
   maxBadgeStates: 200,
+  zoomSensitivity: 1,
 });
 
 export function resolveCustomLayoutConfig(
