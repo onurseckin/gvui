@@ -97,9 +97,11 @@ describe("GraphCanvas WebWorker Async Offloading", () => {
     // Simulate background worker completing after unmount
     let isSubscribed = true;
     const signature = "ds_sig_123_config_hash_456";
-    const layoutMode = "top-down";
+    const layoutMode = "layered";
     const computedNodes = [{ id: "n1", name: "Node 1", x: 10, y: 20, width: 100, height: 50 }];
-    const computedEdges = [{ id: "e1", source: "n1", target: "n2", path: "M 0 0 L 10 10", labelX: 5, labelY: 5 }];
+    const computedEdges = [
+      { id: "e1", source: "n1", target: "n2", path: "M 0 0 L 10 10", labelX: 5, labelY: 5 },
+    ];
 
     const simulateBackgroundCompletion = async () => {
       // Simulate async background calculation delay

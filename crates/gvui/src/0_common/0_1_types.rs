@@ -1,10 +1,28 @@
-use std::collections::HashMap;
+//! # Step 0.1: Shared Types
+//!
+//! Three layers live here:
+//!
+//! 1. **Wire input** — [`NormalizedNode`], [`NormalizedEdge`]. Deserialized from the host.
+//! 2. **Internal IR** — [`GraphIr`], [`Layered`], [`RoutingDemand`]. Dense `u32` indices and CSR
+//!    adjacency; no `String` keys in any hot path.
+//! 3. **Wire output** — [`CustomLayoutResult`] and friends. Consumed by the renderer.
+//!
+//! The pipeline converts wire input to IR exactly once (Phase 0) and back exactly once (Phase 9).
+
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::Range;
 
-pub use super::config::CustomLayoutConfig;
+pub use super::config::{
+    BkAlign, Compaction, Coordinator, CustomLayoutConfig, Direction, EdgeStyle, EngineMode,
+    LabelPlacement, OrderingHeuristic, Ranker,
+};
 
-/// Represents one of the four cardinal sides of a rectangular node boundary.
-/// Used for port placement and edge attachment routing.
+// =============================================================================================
+// Geometric primitives
+// =============================================================================================
+
+/// One of the four cardinal sides of a rectangular node boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Side {
@@ -23,491 +41,739 @@ impl Side {
             Side::Left => "left",
         }
     }
+
+    /// Outward unit normal.
+    pub fn normal(self) -> Point {
+        match self {
+            Side::Top => Point { x: 0.0, y: -1.0 },
+            Side::Right => Point { x: 1.0, y: 0.0 },
+            Side::Bottom => Point { x: 0.0, y: 1.0 },
+            Side::Left => Point { x: -1.0, y: 0.0 },
+        }
+    }
+
+    pub fn opposite(self) -> Side {
+        match self {
+            Side::Top => Side::Bottom,
+            Side::Bottom => Side::Top,
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+
+    /// Rotates a side for the `LeftRight` transposition (Top<->Left, Bottom<->Right).
+    pub fn transposed(self) -> Side {
+        match self {
+            Side::Top => Side::Left,
+            Side::Left => Side::Top,
+            Side::Bottom => Side::Right,
+            Side::Right => Side::Bottom,
+        }
+    }
 }
 
+/// 2D point. Origin top-left, x rightward, y downward.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
+}
 
-/// User-provided or inferred layout hints for edge role classification during cycle breaking.
+/// Axis-aligned rectangle anchored at its top-left corner.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Rect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+impl Rect {
+    pub fn center(&self) -> Point {
+        Point {
+            x: self.x + self.width / 2.0,
+            y: self.y + self.height / 2.0,
+        }
+    }
+    pub fn right(&self) -> f64 {
+        self.x + self.width
+    }
+    pub fn bottom(&self) -> f64 {
+        self.y + self.height
+    }
+}
+
+/// Line segment.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct Segment {
+    pub a: Point,
+    pub b: Point,
+}
+
+/// An edge endpoint attached to a node boundary.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PortRef {
+    #[serde(rename = "nodeId")]
+    pub node_id: String,
+    pub side: Side,
+    /// 0-based position along the side, left-to-right / top-to-bottom.
+    pub index: usize,
+    /// Exact point on the node boundary.
+    pub point: Point,
+    /// Point one `port_stub_length` outward from `point`.
+    pub stub: Point,
+}
+
+// =============================================================================================
+// Edge roles
+// =============================================================================================
+
+/// Caller-supplied hint overriding automatic role classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EdgeLayoutHint {
-    /// Automatic role determination using graph algorithms (Tarjan SCC, Eades FAS, Auto-Cross).
     Auto,
-    /// Edge follows top-to-bottom / left-to-right rank flow.
     Forward,
-    /// Edge connects nodes on the same rank or non-hierarchical lateral branches.
     Cross,
-    /// Edge creates a cycle and flows backwards in rank order.
     Feedback,
 }
 
-/// Final classified structural role of an edge in the layout hierarchy.
+/// Structural role assigned during Phase 2.
+///
+/// A `Feedback` edge is **reversed, not removed**: it participates in ranking, layering, ordering
+/// and routing exactly like a `Forward` edge, and only its arrowhead is flipped back at emit time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EdgeRole {
-    /// Standard downward or forward edge in the DAG.
+    /// Follows rank order.
     Forward,
-    /// Lateral edge connecting nodes at the same rank level.
+    /// Endpoints landed on the same rank.
     Cross,
-    /// Reversed edge breaking a cycle in the original graph.
+    /// Closes a cycle; stored reversed.
     Feedback,
-    /// Self-loop edge attached to a single node.
     #[serde(rename = "self")]
     SelfRole,
-    /// Alias for self-loop edge.
     #[serde(rename = "self_loop")]
     SelfLoop,
 }
 
-/// 2D Cartesian coordinate point in continuous float space.
-/// Origin (0,0) is at top-left, x increases rightward, y increases downward.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Point {
-    /// Horizontal coordinate in pixels/units.
-    pub x: f64,
-    /// Vertical coordinate in pixels/units.
-    pub y: f64,
+impl EdgeRole {
+    pub fn is_self_loop(self) -> bool {
+        matches!(self, EdgeRole::SelfRole | EdgeRole::SelfLoop)
+    }
 }
 
-/// Axis-aligned bounding rectangle defined by top-left origin and dimensions.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Rect {
-    /// Top-left corner x coordinate.
-    pub x: f64,
-    /// Top-left corner y coordinate.
-    pub y: f64,
-    /// Width of rectangle (must be positive).
-    pub width: f64,
-    /// Height of rectangle (must be positive).
-    pub height: f64,
-}
+// =============================================================================================
+// Wire input
+// =============================================================================================
 
-/// Directed or undirected line segment connecting two endpoints.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Segment {
-    /// Start point of segment.
-    pub a: Point,
-    /// End point of segment.
-    pub b: Point,
-}
-
-/// Reference descriptor for an edge port attachment site on a node boundary.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PortRef {
-    /// Identifier of the target node owning this port.
-    #[serde(rename = "nodeId")]
-    pub node_id: String,
-    /// Cardinal side of the node boundary where the port is located.
-    pub side: Side,
-    /// 0-based index of this port along the specified side.
-    pub index: usize,
-    /// Exact 2D coordinate of the port on the node boundary.
-    pub point: Point,
-    /// Stub offset point extending outside the node for orthogonal routing clearance.
-    pub stub: Point,
-}
-
-/// Validated and normalized representation of an input graph node.
+/// A node as received from the host. `width`/`height` are already measured by the host's
+/// `MeasurementProvider`; the engine never sees text.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NormalizedNode {
-    /// Unique node identifier.
     pub id: String,
-    /// Optional human-readable display label.
     #[serde(default)]
     pub label: Option<String>,
-    /// Outer width of node bounding box in pixels.
     pub width: f64,
-    /// Outer height of node bounding box in pixels.
+    pub height: f64,
+    /// Pins the node to a rank. Disables rank balancing for the whole graph when any node sets it.
+    #[serde(default)]
+    pub rank: Option<usize>,
+    /// Reserved for future cluster support; carried through untouched.
+    #[serde(default)]
+    pub group: Option<String>,
+}
+
+/// An edge as received from the host.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NormalizedEdge {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default, rename = "isCycle", alias = "is_cycle")]
+    pub is_cycle: Option<bool>,
+    #[serde(default, rename = "layoutRole", alias = "layout_role")]
+    pub layout_role: Option<EdgeLayoutHint>,
+    /// Ranking and ordering priority. Defaults to 1.0.
+    #[serde(default)]
+    pub weight: Option<f64>,
+    /// Forces a minimum rank span. Defaults to 1, or 2 when the edge carries a label.
+    #[serde(default, rename = "minLen", alias = "min_len")]
+    pub min_len: Option<usize>,
+    /// Host-measured badge width. When absent the engine falls back to character estimation.
+    #[serde(default, rename = "labelWidth", alias = "label_width")]
+    pub label_width: Option<f64>,
+    /// Host-measured badge height.
+    #[serde(default, rename = "labelHeight", alias = "label_height")]
+    pub label_height: Option<f64>,
+}
+
+// =============================================================================================
+// Internal IR — Phase 0 output
+// =============================================================================================
+
+/// Compressed sparse row adjacency over dense `u32` node indices.
+///
+/// Neighbours of `n` are `targets[offsets[n] .. offsets[n + 1]]`, with the originating edge index
+/// at the same position in `edges`.
+#[derive(Debug, Clone, Default)]
+pub struct Csr {
+    pub offsets: Vec<u32>,
+    pub targets: Vec<u32>,
+    pub edges: Vec<u32>,
+}
+
+impl Csr {
+    /// Builds a CSR from `(from, to, edge)` triples over `node_count` nodes.
+    /// Entries are grouped by `from` and stable within a group.
+    pub fn build(node_count: usize, arcs: &[(u32, u32, u32)]) -> Csr {
+        let mut counts = vec![0u32; node_count + 1];
+        for &(from, _, _) in arcs {
+            counts[from as usize + 1] += 1;
+        }
+        for i in 0..node_count {
+            counts[i + 1] += counts[i];
+        }
+        let offsets = counts.clone();
+        let mut cursor = counts;
+        let mut targets = vec![0u32; arcs.len()];
+        let mut edges = vec![0u32; arcs.len()];
+        for &(from, to, e) in arcs {
+            let slot = cursor[from as usize] as usize;
+            targets[slot] = to;
+            edges[slot] = e;
+            cursor[from as usize] += 1;
+        }
+        Csr {
+            offsets,
+            targets,
+            edges,
+        }
+    }
+
+    #[inline]
+    pub fn range(&self, n: u32) -> Range<usize> {
+        self.offsets[n as usize] as usize..self.offsets[n as usize + 1] as usize
+    }
+
+    #[inline]
+    pub fn neighbours(&self, n: u32) -> &[u32] {
+        &self.targets[self.range(n)]
+    }
+
+    #[inline]
+    pub fn degree(&self, n: u32) -> usize {
+        self.range(n).len()
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.offsets.len().saturating_sub(1)
+    }
+}
+
+/// Measured badge box.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LabelBox {
+    pub width: f64,
     pub height: f64,
 }
 
-/// Validated and normalized representation of an input graph edge.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NormalizedEdge {
-    /// Unique edge identifier.
-    pub id: String,
-    /// Source node identifier.
-    pub source: String,
-    /// Target node identifier.
-    pub target: String,
-    /// Optional text label attached to edge.
-    #[serde(default)]
-    pub label: Option<String>,
-    /// Flag indicating whether edge was explicitly flagged as cyclic by user.
-    #[serde(default, rename = "isCycle", alias = "is_cycle")]
-    pub is_cycle: Option<bool>,
-    /// Explicit layout role hint specified by user.
-    #[serde(default, rename = "layoutRole", alias = "layout_role")]
-    pub layout_role: Option<EdgeLayoutHint>,
+/// A node in the IR.
+#[derive(Debug, Clone)]
+pub struct IrNode {
+    /// Index into `GraphIr::node_names`.
+    pub name: u32,
+    pub width: f64,
+    pub height: f64,
+    pub pinned_rank: Option<u16>,
+    /// `in_degree + out_degree`, used for port-pitch driven width growth.
+    pub degree: u32,
 }
 
-/// Wrapper around `NormalizedEdge` with assigned structural `EdgeRole` and reversal state.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClassifiedEdge {
-    /// Underlying normalized edge.
-    pub edge: NormalizedEdge,
-    /// Determined structural role (Forward, Cross, Feedback, SelfLoop).
-    pub role: EdgeRole,
-    /// True if edge direction was reversed during cycle breaking to form a DAG.
-    pub reversed: bool,
+/// An edge in the IR.
+#[derive(Debug, Clone)]
+pub struct IrEdge {
+    /// Index into `GraphIr::edge_names`.
+    pub name: u32,
+    pub source: u32,
+    pub target: u32,
+    pub label: Option<LabelBox>,
+    pub weight: f64,
+    pub min_len: u16,
+    pub hint: Option<EdgeLayoutHint>,
+    /// Set when this edge is part of a parallel-edge bundle.
+    pub bundle: Option<u32>,
 }
 
-impl std::ops::Deref for ClassifiedEdge {
-    type Target = NormalizedEdge;
-    fn deref(&self) -> &Self::Target {
-        &self.edge
-    }
+/// A group of parallel edges between the same unordered node pair.
+#[derive(Debug, Clone)]
+pub struct Bundle {
+    pub a: u32,
+    pub b: u32,
+    pub edges: Vec<u32>,
 }
 
-impl ClassifiedEdge {
-    /// Returns the edge identifier.
-    pub fn id(&self) -> &str {
-        &self.edge.id
-    }
-    /// Returns the source node identifier.
-    pub fn source(&self) -> &str {
-        &self.edge.source
-    }
-    /// Returns the target node identifier.
-    pub fn target(&self) -> &str {
-        &self.edge.target
-    }
-    /// Returns whether this edge forms a cycle.
-    pub fn is_cycle(&self) -> bool {
-        self.edge.is_cycle.unwrap_or(false)
-    }
-}
-
-/// Normalized directed graph structure containing deterministic collections and fast map lookups.
+/// Phase 0 output. Everything downstream indexes into this.
 #[derive(Debug, Clone, Default)]
-pub struct NormalizedGraph {
-    /// Sorted list of normalized nodes.
-    pub nodes: Vec<NormalizedNode>,
-    /// Sorted list of normalized edges.
-    pub edges: Vec<NormalizedEdge>,
-    /// Map of node ID to NormalizedNode.
-    pub node_map: HashMap<String, NormalizedNode>,
-    /// Map of edge ID to NormalizedEdge.
-    pub edge_map: HashMap<String, NormalizedEdge>,
-    /// Map of node ID to outgoing NormalizedEdges sorted by edge ID.
-    pub outgoing_map: HashMap<String, Vec<NormalizedEdge>>,
-    /// Map of node ID to incoming NormalizedEdges sorted by edge ID.
-    pub incoming_map: HashMap<String, Vec<NormalizedEdge>>,
+pub struct GraphIr {
+    pub node_names: Vec<String>,
+    pub edge_names: Vec<String>,
+    pub node_labels: Vec<Option<String>>,
+    pub nodes: Vec<IrNode>,
+    pub edges: Vec<IrEdge>,
+    /// Successors, keyed by source.
+    pub out_csr: Csr,
+    /// Predecessors, keyed by target.
+    pub in_csr: Csr,
+    pub bundles: Vec<Bundle>,
+    /// Weakly connected components, each a sorted list of node indices.
+    pub components: Vec<Vec<u32>>,
+    /// True when at least one node carries an explicit `rank`.
+    pub has_pinned_ranks: bool,
+    /// Diagnostics raised during ingest (unknown endpoints, dropped edges).
+    pub diagnostics: Vec<LayoutDiagnostic>,
 }
 
-/// Output wrapper containing the normalized graph and its weakly connected components.
-#[derive(Debug, Clone)]
-pub struct NormalizedGraphResult {
-    /// Normalized graph structure.
-    pub graph: NormalizedGraph,
-    /// Partitioned weakly-connected component node ID lists, sorted deterministically.
-    pub components: Vec<Vec<String>>,
-}
-
-impl std::ops::Deref for NormalizedGraphResult {
-    type Target = NormalizedGraph;
-    fn deref(&self) -> &Self::Target {
-        &self.graph
+impl GraphIr {
+    #[inline]
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+    #[inline]
+    pub fn edge_count(&self) -> usize {
+        self.edges.len()
+    }
+    #[inline]
+    pub fn node_name(&self, n: u32) -> &str {
+        &self.node_names[n as usize]
+    }
+    #[inline]
+    pub fn edge_name(&self, e: u32) -> &str {
+        &self.edge_names[e as usize]
     }
 }
 
-/// Detailed result structure from Tarjan's Strongly Connected Components algorithm.
-#[derive(Debug, Clone)]
-pub struct DetailedSCCResult {
-    /// List of SCCs, each represented as a vector of node IDs.
-    pub components: Vec<Vec<String>>,
-    /// Lookup mapping each node ID to its comma-joined SCC identifier.
-    pub component_by_node_id: HashMap<String, String>,
-    /// Set of SCC identifiers that contain cycles (size > 1 or single node self-loops).
-    pub cyclic_component_ids: std::collections::HashSet<String>,
-    /// Condensation DAG adjacency map mapping SCC ID to successor SCC IDs.
-    pub condensation_outgoing: HashMap<String, std::collections::HashSet<String>>,
-}
+// =============================================================================================
+// Internal IR — Phase 2 output
+// =============================================================================================
 
-/// Result of the cycle breaking phase containing classified edges and DAG verification flag.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CycleBreakingResult {
-    /// List of classified edges with assigned roles and reversal status.
-    pub classified_edges: Vec<ClassifiedEdge>,
-    /// Map of edge ID to assigned EdgeRole.
-    pub edge_role_map: HashMap<String, EdgeRole>,
-    /// Identifiers of edges classified as feedback edges.
-    pub feedback_edge_ids: Vec<String>,
-    /// Flag indicating whether the remaining forward edges form a valid DAG.
+/// Phase 2 output: per-edge structural role plus the reversal flag.
+#[derive(Debug, Clone, Default)]
+pub struct StructureResult {
+    /// Indexed by edge.
+    pub roles: Vec<EdgeRole>,
+    /// Indexed by edge. When true, `(source, target)` is stored flipped for the rest of the pipeline.
+    pub reversed: Vec<bool>,
+    /// Edge indices that are self-loops; excluded from ranking, layering and ordering.
+    pub self_loops: Vec<u32>,
+    /// True when the non-self, non-reversed edge set forms a DAG.
     pub is_dag: bool,
 }
 
-/// Assigned cardinal side configuration for source and target ports of an edge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PortSideAssignment {
-    /// Source node side assignment.
-    pub src_side: Side,
-    /// Target node side assignment.
-    pub tgt_side: Side,
+impl StructureResult {
+    /// Directed endpoints after reversal has been applied.
+    #[inline]
+    pub fn arc(&self, ir: &GraphIr, e: u32) -> (u32, u32) {
+        let edge = &ir.edges[e as usize];
+        if self.reversed[e as usize] {
+            (edge.target, edge.source)
+        } else {
+            (edge.source, edge.target)
+        }
+    }
 }
 
-/// Node representation within a rank layer, supporting virtual dummy nodes for multi-rank edges.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LayerNode {
-    /// Node identifier (original or virtual dummy ID).
-    pub id: String,
-    /// True if node is a virtual bend point inserted for long span edge.
-    #[serde(rename = "isVirtual", default)]
-    pub is_virtual: bool,
-    /// Original node ID if real, or original source node for virtual node.
-    #[serde(rename = "originalNodeId")]
-    pub original_node_id: Option<String>,
-    /// ID of long-span edge associated with virtual dummy node.
-    #[serde(rename = "sourceEdgeId")]
-    pub source_edge_id: Option<String>,
-    /// 0-based rank index.
-    pub rank: usize,
-    /// Bounding width.
+// =============================================================================================
+// Internal IR — Phase 3 output
+// =============================================================================================
+
+/// Phase 3 output.
+#[derive(Debug, Clone, Default)]
+pub struct RankResult {
+    /// Indexed by node.
+    pub rank_of: Vec<u16>,
+    pub max_rank: u16,
+    /// Node indices per rank, in arbitrary order at this stage.
+    pub rank_members: Vec<Vec<u32>>,
+}
+
+// =============================================================================================
+// Internal IR — Phase 4/5: the layered graph
+// =============================================================================================
+
+/// What an [`Item`] represents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemKind {
+    /// An input node.
+    Real(u32),
+    /// A bend point of a long edge.
+    Dummy { edge: u32, seq: u16 },
+    /// An edge badge occupying reserved area. This is what makes badge space allocation
+    /// correct by construction — see `docs/planning/layout-engine-v2/02-algorithms.md`.
+    Label(u32),
+}
+
+impl ItemKind {
+    pub fn is_real(&self) -> bool {
+        matches!(self, ItemKind::Real(_))
+    }
+    pub fn is_dummy(&self) -> bool {
+        matches!(self, ItemKind::Dummy { .. })
+    }
+    pub fn is_label(&self) -> bool {
+        matches!(self, ItemKind::Label(_))
+    }
+    /// The edge this item belongs to, for dummy and label items.
+    pub fn edge(&self) -> Option<u32> {
+        match self {
+            ItemKind::Dummy { edge, .. } | ItemKind::Label(edge) => Some(*edge),
+            ItemKind::Real(_) => None,
+        }
+    }
+}
+
+/// One entry in a rank. Real nodes, dummies and labels are the same type on purpose: every
+/// downstream phase treats a label exactly like a node, so no phase needs label special-casing.
+#[derive(Debug, Clone, Copy)]
+pub struct Item {
+    pub kind: ItemKind,
+    pub rank: u16,
+    /// Position within the rank. The sole output of Phase 5.
+    pub order: u16,
     pub width: f64,
-    /// Bounding height.
     pub height: f64,
-    /// Assigned X coordinate.
-    pub x: Option<f64>,
-    /// Assigned Y coordinate.
-    pub y: Option<f64>,
+    /// Top-left corner. Filled by Phase 7.
+    pub x: f64,
+    pub y: f64,
 }
 
-/// Fully positioned node with concrete canvas coordinates, rank, and ordering index.
+impl Item {
+    pub fn center_x(&self) -> f64 {
+        self.x + self.width / 2.0
+    }
+    pub fn center_y(&self) -> f64 {
+        self.y + self.height / 2.0
+    }
+    pub fn rect(&self) -> Rect {
+        Rect {
+            x: self.x,
+            y: self.y,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+/// The chain of items an edge traverses, source-first.
+#[derive(Debug, Clone)]
+pub struct EdgeChain {
+    pub edge: u32,
+    /// True when Phase 2 reversed this edge; the arrowhead is flipped back at emit time.
+    pub reversed: bool,
+    pub role: EdgeRole,
+    /// `[source_real, dummy.., label?, dummy.., target_real]` as item indices.
+    pub items: Vec<u32>,
+    /// Position within `items` of the `Label` item, when the edge has a badge.
+    pub label_at: Option<usize>,
+}
+
+impl EdgeChain {
+    /// Number of adjacent-rank links.
+    pub fn link_count(&self) -> usize {
+        self.items.len().saturating_sub(1)
+    }
+}
+
+/// An edge whose endpoints landed on the same rank.
+#[derive(Debug, Clone)]
+pub struct FlatEdge {
+    pub edge: u32,
+    pub rank: u16,
+    /// Item index of the source node.
+    pub from_item: u32,
+    /// Item index of the target node.
+    pub to_item: u32,
+    pub label: Option<LabelBox>,
+}
+
+/// Phase 4 output. Items are stored rank-major so a rank is a contiguous slice and `order` is an
+/// index into it; Phase 5 permutes slices in place.
+#[derive(Debug, Clone, Default)]
+pub struct Layered {
+    pub items: Vec<Item>,
+    /// `rank_ranges[r]` slices `items` for rank `r`.
+    pub rank_ranges: Vec<Range<u32>>,
+    /// Predecessor adjacency over items, restricted to rank `r-1`.
+    pub up: Csr,
+    /// Successor adjacency over items, restricted to rank `r+1`.
+    pub down: Csr,
+    pub chains: Vec<EdgeChain>,
+    pub flat_edges: Vec<FlatEdge>,
+    /// Edge indices of self-loops, routed directly in Phase 8.
+    pub self_loops: Vec<u32>,
+    /// Item index of each real node, indexed by node.
+    pub item_of_node: Vec<u32>,
+}
+
+impl Layered {
+    pub fn rank_count(&self) -> usize {
+        self.rank_ranges.len()
+    }
+
+    #[inline]
+    pub fn rank_slice(&self, r: u16) -> &[Item] {
+        let range = &self.rank_ranges[r as usize];
+        &self.items[range.start as usize..range.end as usize]
+    }
+
+    #[inline]
+    pub fn rank_slice_mut(&mut self, r: u16) -> &mut [Item] {
+        let range = self.rank_ranges[r as usize].clone();
+        &mut self.items[range.start as usize..range.end as usize]
+    }
+
+    /// Global item index of the item at `order` within `rank`.
+    #[inline]
+    pub fn item_index(&self, rank: u16, order: u16) -> u32 {
+        self.rank_ranges[rank as usize].start + order as u32
+    }
+
+    pub fn rank_width(&self, r: u16) -> usize {
+        self.rank_ranges[r as usize].len()
+    }
+}
+
+// =============================================================================================
+// Internal IR — Phase 6: routing demand
+// =============================================================================================
+
+/// A horizontal segment crossing the channel between rank `rank` and `rank + 1`.
+#[derive(Debug, Clone, Copy)]
+pub struct ChannelSeg {
+    pub edge: u32,
+    /// Index of the link within the owning chain.
+    pub link: u32,
+    pub rank: u16,
+    /// Order interval spanned in the channel, inclusive.
+    pub lo_order: u16,
+    pub hi_order: u16,
+    /// Assigned lane, `0 .. channel_lanes[rank]`.
+    pub lane: u16,
+}
+
+/// A vertical segment running through the corridor between orders `after_order` and
+/// `after_order + 1` of rank `rank`.
+#[derive(Debug, Clone, Copy)]
+pub struct CorridorSeg {
+    pub edge: u32,
+    pub rank: u16,
+    pub after_order: u16,
+    pub lane: u16,
+}
+
+/// Phase 6 output. Lane counts are exact minimum colourings of interval graphs, so the
+/// separations they imply are exactly sufficient — no routing can fail afterwards.
+#[derive(Debug, Clone, Default)]
+pub struct RoutingDemand {
+    pub channel_segs: Vec<ChannelSeg>,
+    /// Lanes needed in the channel below rank `r`. Length `rank_count`.
+    pub channel_lanes: Vec<u16>,
+    pub corridor_segs: Vec<CorridorSeg>,
+    /// Lanes needed in the corridor after `(rank, order)`.
+    pub corridor_lanes: HashMap<(u16, u16), u16>,
+    /// Minimum gap below rank `r`, derived from `channel_lanes`. Length `rank_count`.
+    pub rank_gap_min: Vec<f64>,
+    /// Minimum separation between the items at `(rank, order)` and `(rank, order + 1)`.
+    pub separation_min: HashMap<(u16, u16), f64>,
+    /// Lane index per `(edge, link)` for fast lookup in Phase 8.
+    pub lane_of_link: HashMap<(u32, u32), u16>,
+}
+
+// =============================================================================================
+// Wire output
+// =============================================================================================
+
+/// A positioned input node.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PositionedNode {
-    /// Unique node identifier.
     pub id: String,
-    /// Display label.
     pub label: Option<String>,
-    /// Top-left canvas X coordinate.
     pub x: f64,
-    /// Top-left canvas Y coordinate.
     pub y: f64,
-    /// Node bounding width.
     pub width: f64,
-    /// Node bounding height.
     pub height: f64,
-    /// Rank index.
     pub rank: usize,
-    /// Order index within rank.
     pub order: usize,
 }
 
-/// Fully routed orthogonal polyline path for an edge.
+/// A fully routed edge.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RoutedPath {
-    /// Unique edge identifier.
     #[serde(rename = "edgeId")]
     pub edge_id: String,
-    /// Polyline waypoint points along the orthogonal path.
     pub points: Vec<Point>,
-    /// Detailed source port reference.
     #[serde(rename = "sourcePort")]
     pub source_port: PortRef,
-    /// Detailed target port reference.
     #[serde(rename = "targetPort")]
     pub target_port: PortRef,
 }
 
-/// Computed placement and bounding geometry for an edge label badge.
+/// A placed edge badge.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BadgePlacement {
-    /// Target edge identifier.
     #[serde(rename = "edgeId")]
     pub edge_id: String,
-    /// Display text of badge.
     pub label: String,
-    /// Bounding rectangle of badge container.
     pub rect: Rect,
-    /// Anchor point on the edge path.
     #[serde(rename = "anchorPoint")]
     pub anchor_point: Point,
-    /// Leader line points connecting badge to anchor point if offset.
     #[serde(rename = "leaderPoints")]
     pub leader_points: Option<Vec<Point>>,
 }
 
-/// Descriptor recording an intersection crossing point between two routed edges.
+/// An intersection between two routed edges.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeCrossing {
-    /// ID of first crossing edge.
     #[serde(rename = "edgeIdA")]
     pub edge_id_a: String,
-    /// ID of second crossing edge.
     #[serde(rename = "edgeIdB")]
     pub edge_id_b: String,
-    /// Exact 2D coordinate of intersection point.
     pub point: Point,
-    /// Edge ID assigned to render bridge arc over crossing, if applicable.
     #[serde(rename = "bridgeOwnerEdgeId")]
     pub bridge_owner_edge_id: Option<String>,
 }
 
-/// Diagnostic warning or error message emitted during layout optimization.
+/// A warning or error emitted during layout.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayoutDiagnostic {
-    /// Diagnostic code.
     pub code: String,
-    /// Severity level (error, warning, info).
+    /// `"error"` | `"warning"` | `"info"`.
     pub severity: String,
-    /// Human-readable message.
     pub message: String,
-    /// Optional affected node/edge identifiers.
     pub ids: Option<Vec<String>>,
 }
 
-/// Transient state vector evaluated during local neighborhood search optimization.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
-pub struct LayoutSearchState {
-    /// Map of edge ID to port side assignment.
-    pub side_assignments: HashMap<String, PortSideAssignment>,
-    /// Map of node ID to ordered list of port IDs per side.
-    pub port_orders: HashMap<String, Vec<String>>,
-    /// Map of rank index to ordered list of node IDs.
-    pub layer_orders: HashMap<usize, Vec<String>>,
-    /// Map of rank index to Y shift offset.
-    pub layer_shifts: HashMap<usize, f64>,
-    /// Active exact spacing demands.
-    pub exact_demands: Vec<ExactSpacingDemand>,
+impl LayoutDiagnostic {
+    pub fn error(code: &str, message: String, ids: Vec<String>) -> Self {
+        LayoutDiagnostic {
+            code: code.to_string(),
+            severity: "error".to_string(),
+            message,
+            ids: Some(ids),
+        }
+    }
+    pub fn warning(code: &str, message: String, ids: Vec<String>) -> Self {
+        LayoutDiagnostic {
+            code: code.to_string(),
+            severity: "warning".to_string(),
+            message,
+            ids: Some(ids),
+        }
+    }
+    pub fn info(code: &str, message: String) -> Self {
+        LayoutDiagnostic {
+            code: code.to_string(),
+            severity: "info".to_string(),
+            message,
+            ids: None,
+        }
+    }
 }
 
-
-/// Comprehensive aesthetic and topological metrics computed for a layout state.
+/// Quality metrics. These are **reported, never optimized** — the v1 lexicographic score is gone.
+///
+/// `crossings` comes from Phase 5's combinatorial count; `geometric_crossings` is measured from
+/// the emitted polylines. A large gap between them means routing introduced crossings the ordering
+/// had already resolved, which is a bug rather than a tuning opportunity.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct LayoutMetrics {
-    /// Number of node-node overlap violations.
-    #[serde(rename = "nodeNodeOverlaps")]
-    pub node_node_overlaps: usize,
-    /// Number of edge-node penetration violations.
-    #[serde(rename = "edgeNodePenetrations")]
-    pub edge_node_penetrations: usize,
-    /// Cumulative length of collinear shared edge segments.
-    #[serde(rename = "sharedEdgeSegmentLength")]
-    pub shared_edge_segment_length: f64,
-    /// Total count of edge-edge crossings.
-    #[serde(rename = "crossingCount")]
-    pub crossing_count: usize,
-    /// Total count of 90-degree orthogonal bends across all edges.
-    #[serde(rename = "bendCount")]
+    pub crossings: usize,
+    pub geometric_crossings: usize,
     pub bend_count: usize,
-    /// Sum of all routed edge lengths.
-    #[serde(rename = "totalLength")]
     pub total_length: f64,
-    /// Number of edges that failed orthogonal route search.
-    #[serde(rename = "unresolvedRouteCount", default)]
-    pub unresolved_route_count: usize,
-    /// Number of badges that failed collision-free placement.
-    #[serde(rename = "unresolvedBadgeCount", default)]
-    pub unresolved_badge_count: usize,
-    /// Number of badge-node overlaps.
-    #[serde(rename = "badgeNodeOverlaps", default)]
-    pub badge_node_overlaps: usize,
-    /// Number of badge-badge overlaps.
-    #[serde(rename = "badgeBadgeOverlaps", default)]
-    pub badge_badge_overlaps: usize,
-    /// Number of badge overlaps with unrelated edges.
-    #[serde(rename = "badgeUnrelatedEdgeOverlaps", default)]
-    pub badge_unrelated_edge_overlaps: usize,
-    /// Count of ordinary leader lines drawn.
-    #[serde(rename = "ordinaryLeaderCount", default)]
-    pub ordinary_leader_count: usize,
-    /// Count of avoidable hairpin turns in routes.
-    #[serde(rename = "avoidableHairpinCount", default)]
-    pub avoidable_hairpin_count: usize,
-    /// Count of excess bends beyond minimal routing path.
-    #[serde(rename = "excessBendCount", default)]
-    pub excess_bend_count: usize,
-    /// Total hairpin turn count.
-    #[serde(rename = "hairpinCount", default)]
-    pub hairpin_count: usize,
-    /// Penalty score for edge flow direction deviations.
-    #[serde(rename = "directionDeviationPenalty", default)]
-    pub direction_deviation_penalty: f64,
-    /// Penalty score for side reuse on crowded node faces.
-    #[serde(rename = "portSideReusePenalty", default)]
-    pub port_side_reuse_penalty: f64,
-    /// Imbalance penalty across opposite node sides.
-    #[serde(rename = "portSideImbalance", default)]
-    pub port_side_imbalance: f64,
-    /// Leader line count for feedback edges.
-    #[serde(rename = "feedbackLeaderCount", default)]
-    pub feedback_leader_count: usize,
-    /// Total length of leader lines.
-    #[serde(rename = "totalLeaderLength", default)]
-    pub total_leader_length: f64,
-    /// Total bounding box area of layout.
-    #[serde(rename = "totalArea", default)]
-    pub total_area: f64,
-}
-
-/// Weighted composite objective evaluation score for layout optimization state ordering.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LayoutScore {
-    pub hard_error_count: usize,
-    pub unresolved_route_count: usize,
+    /// Fraction of dummy chains that are perfectly straight. Best single proxy for "looks designed".
+    pub straight_chain_ratio: f64,
+    pub area: f64,
+    pub aspect_ratio: f64,
+    /// Widest routing channel. Large values mean the ordering is fighting the topology.
+    pub lane_depth_max: usize,
+    pub port_side_balance: f64,
+    /// Badges that needed a leader line. Should be ~0; nonzero means a reservation was defeated.
+    pub leader_count: usize,
+    pub labels_truncated: usize,
+    pub node_count: usize,
+    pub edge_count: usize,
+    pub rank_count: usize,
+    pub dummy_count: usize,
+    // ---- constraint counters; any nonzero value is a bug, not a score ----
     pub node_node_overlaps: usize,
     pub edge_node_penetrations: usize,
-    pub shared_edge_segment_length: f64,
-    pub unresolved_badge_count: usize,
     pub badge_node_overlaps: usize,
     pub badge_badge_overlaps: usize,
-    pub badge_unrelated_edge_overlaps: usize,
-    pub crossing_count: usize,
-    pub ordinary_leader_count: usize,
-    pub avoidable_hairpin_count: usize,
-    pub excess_bend_count: usize,
-    pub hairpin_count: usize,
-    pub bend_count: usize,
-    pub direction_deviation_penalty: f64,
-    pub total_length: f64,
-    pub port_side_imbalance: f64,
-    pub feedback_leader_count: usize,
-    pub total_leader_length: f64,
-    pub total_area: f64,
-    pub state_hash: String,
+    pub unresolved_route_count: usize,
+    pub unresolved_badge_count: usize,
 }
 
-/// Comprehensive layout validation verdict with metrics, crossings, and diagnostics.
+/// Per-phase timings, in milliseconds.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PhaseTimings {
+    pub ingest: f64,
+    pub structure: f64,
+    pub rank: f64,
+    pub layer: f64,
+    pub order: f64,
+    pub demand: f64,
+    pub coordinates: f64,
+    pub route: f64,
+    pub emit: f64,
+    pub total: f64,
+}
+
+/// Constraint verification verdict.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayoutValidationResult {
-    /// True if layout satisfies all hard constraints.
     #[serde(rename = "isValid")]
     pub is_valid: bool,
-    /// Quantitative layout metrics.
     pub metrics: LayoutMetrics,
-    /// Detected edge crossing list.
     pub crossings: Vec<EdgeCrossing>,
-    /// Warnings or error diagnostics.
     #[serde(default)]
     pub diagnostics: Vec<LayoutDiagnostic>,
 }
 
-/// Optimization pass execution metadata.
+/// Execution metadata. Field names preserved for renderer compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OptimizationStats {
-    /// Total number of global optimization passes completed.
-    #[serde(rename = "globalPasses")]
+    /// Ordering sweeps actually executed.
     pub global_passes: usize,
-    /// Total number of evaluated port states.
-    #[serde(rename = "evaluatedPortStates", default = "default_one")]
+    /// Ordering seeds evaluated.
     pub evaluated_port_states: usize,
-    /// Total number of spacing expansion iterations.
-    #[serde(rename = "spacingExpansions", default)]
+    /// Always 0 in v2; spacing is exact, never expanded by retry.
     pub spacing_expansions: usize,
-    /// Total execution duration in milliseconds.
-    #[serde(rename = "durationMs")]
     pub duration_ms: f64,
-    /// Reason string describing optimization termination.
-    #[serde(rename = "stopReason")]
     pub stop_reason: String,
+    #[serde(default)]
+    pub timings: PhaseTimings,
 }
 
-fn default_one() -> usize {
-    1
+impl Default for OptimizationStats {
+    fn default() -> Self {
+        OptimizationStats {
+            global_passes: 0,
+            evaluated_port_states: 0,
+            spacing_expansions: 0,
+            duration_ms: 0.0,
+            stop_reason: "ok".to_string(),
+            timings: PhaseTimings::default(),
+        }
+    }
 }
 
-/// Final layout payload produced for WebAssembly or renderer consumption.
+/// Final payload handed to the renderer.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomLayoutResult {
     pub nodes: Vec<PositionedNode>,
@@ -515,221 +781,44 @@ pub struct CustomLayoutResult {
     pub badges: Vec<BadgePlacement>,
     pub crossings: Vec<EdgeCrossing>,
     pub validation: LayoutValidationResult,
+    /// `"success"` | `"unresolved_soft_conflicts"` | `"invalid_hard_failure"`.
     pub status: String,
     #[serde(rename = "optimizationStats")]
     pub optimization_stats: OptimizationStats,
 }
 
-/// Result structure of rank assignment step.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RankAssignmentResult {
-    /// Map of node ID to assigned rank index.
-    pub node_rank_map: HashMap<String, usize>,
-    /// Map of rank index to list of node IDs assigned to that rank.
-    pub rank_nodes_map: HashMap<usize, Vec<String>>,
-    /// Highest rank index assigned in the graph.
-    pub max_rank: usize,
-    /// Map of edge ID to rank span distance (target_rank - source_rank).
-    pub edge_rank_span_map: HashMap<String, i32>,
-}
-
-/// Vertical band region occupied by a layout rank layer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RankBand {
-    /// Top boundary Y coordinate of the rank band.
-    pub top_y: f64,
-    /// Vertical height of the rank band.
-    pub height: f64,
-    /// Center Y coordinate of the rank band.
-    pub center_y: f64,
-}
-
-/// Layered graph hierarchy including real and virtual dummy nodes.
-#[derive(Debug, Clone, Default)]
-pub struct ExpandedLayerGraph {
-    /// Ordered layers, each containing a list of `LayerNode` items.
-    pub layers: Vec<Vec<LayerNode>>,
-    /// List of real (non-virtual) layer nodes.
-    pub real_nodes: Vec<LayerNode>,
-    /// List of virtual dummy nodes inserted for multi-rank edges.
-    pub virtual_nodes: Vec<LayerNode>,
-    /// Map of node ID to `LayerNode`.
-    pub item_map: HashMap<String, LayerNode>,
-    /// Map of node ID to predecessor node IDs in adjacent upper rank.
-    pub predecessors_map: HashMap<String, Vec<String>>,
-    /// Map of node ID to successor node IDs in adjacent lower rank.
-    pub successors_map: HashMap<String, Vec<String>>,
-}
-
-/// Category kind of exact spacing demand.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum DemandKind {
-    RankGap,
-    NodeGap,
-    LaneX,
-    LaneY,
-    GraphPadding,
-}
-
-impl DemandKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            DemandKind::RankGap => "rank-gap",
-            DemandKind::NodeGap => "node-gap",
-            DemandKind::LaneX => "lane-x",
-            DemandKind::LaneY => "lane-y",
-            DemandKind::GraphPadding => "graph-padding",
+impl CustomLayoutResult {
+    /// An empty but well-formed result.
+    pub fn empty(stop_reason: &str) -> Self {
+        CustomLayoutResult {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            badges: Vec::new(),
+            crossings: Vec::new(),
+            validation: LayoutValidationResult {
+                is_valid: true,
+                metrics: LayoutMetrics::default(),
+                crossings: Vec::new(),
+                diagnostics: Vec::new(),
+            },
+            status: "success".to_string(),
+            optimization_stats: OptimizationStats {
+                stop_reason: stop_reason.to_string(),
+                ..Default::default()
+            },
         }
     }
 }
 
-impl std::fmt::Display for DemandKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
+// =============================================================================================
+// Misc
+// =============================================================================================
 
-/// Rationale explaining why a specific spacing demand was instantiated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum DemandReason {
-    SameRankLabel,
-    ParallelLabels,
-    BlockedDirectBadge,
-    EndpointFanOut,
-    CrossingChannel,
-    NodeOverlap,
-}
-
-impl DemandReason {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            DemandReason::SameRankLabel => "same-rank-label",
-            DemandReason::ParallelLabels => "parallel-labels",
-            DemandReason::BlockedDirectBadge => "blocked-direct-badge",
-            DemandReason::EndpointFanOut => "endpoint-fan-out",
-            DemandReason::CrossingChannel => "crossing-channel",
-            DemandReason::NodeOverlap => "node-overlap",
-        }
-    }
-}
-
-impl std::fmt::Display for DemandReason {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-/// Geometric spacing constraint demand enforced during coordinate assignment.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExactSpacingDemand {
-    pub kind: DemandKind,
-    pub rank: Option<usize>,
-    #[serde(rename = "afterNodeId")]
-    pub after_node_id: Option<String>,
-    #[serde(rename = "affectedEdgeIds")]
-    pub affected_edge_ids: Vec<String>,
-    pub minimum: f64,
-    pub reason: DemandReason,
-}
-
-/// Category kind for badge placement spacing requests.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum BadgeRequestKind {
-    RankGap,
-    NodeGap,
-    GraphPadding,
-}
-
-impl BadgeRequestKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            BadgeRequestKind::RankGap => "rank-gap",
-            BadgeRequestKind::NodeGap => "node-gap",
-            BadgeRequestKind::GraphPadding => "graph-padding",
-        }
-    }
-}
-
-impl std::fmt::Display for BadgeRequestKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-/// Reason explaining why a badge spacing expansion was requested.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum BadgeRequestReason {
-    SameRankLabel,
-    ParallelLabels,
-    BlockedDirectBadge,
-}
-
-impl BadgeRequestReason {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            BadgeRequestReason::SameRankLabel => "same-rank-label",
-            BadgeRequestReason::ParallelLabels => "parallel-labels",
-            BadgeRequestReason::BlockedDirectBadge => "blocked-direct-badge",
-        }
-    }
-}
-
-impl std::fmt::Display for BadgeRequestReason {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-/// Request for additional spacing clearance to accommodate edge label badges.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BadgeSpacingRequest {
-    #[serde(rename = "edgeId")]
-    pub edge_id: String,
-    pub kind: BadgeRequestKind,
-    pub rank: Option<usize>,
-    #[serde(rename = "afterNodeId")]
-    pub after_node_id: Option<String>,
-    pub minimum: f64,
-    pub reason: BadgeRequestReason,
-}
-
-/// Dimension metrics of a measured edge badge text element.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct MeasuredBadge {
-    pub width: f64,
-    pub height: f64,
-}
-
-/// User or heuristic override values for layout element spacing gaps.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SpacingOverrides {
-    pub rank_gaps: Option<HashMap<usize, f64>>,
-    pub node_gaps: Option<HashMap<String, f64>>,
-    pub node_gap_by_rank: Option<HashMap<usize, f64>>,
-    pub rank_gap_after_rank: Option<HashMap<usize, f64>>,
-    pub node_gap_after_node_id: Option<HashMap<String, f64>>,
-    pub global_node_gap: Option<f64>,
-    pub global_rank_gap: Option<f64>,
-    pub outer_padding: Option<f64>,
-}
-
-/// Helper function to retrieve high-resolution millisecond timestamps cross-platform (WASM and native).
+/// Cross-platform monotonic milliseconds.
 pub fn get_now_ms() -> f64 {
     #[cfg(target_arch = "wasm32")]
     {
-        web_sys::window()
-            .and_then(|w| w.performance())
-            .map(|p| p.now())
-            .unwrap_or(0.0)
+        js_sys::Date::now()
     }
     #[cfg(not(target_arch = "wasm32"))]
     {

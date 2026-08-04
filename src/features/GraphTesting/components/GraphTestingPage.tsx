@@ -4,7 +4,8 @@ import {
   type LayoutDiagnostic,
   type NormalizedEdge,
   type NormalizedNode,
-} from "../../../engine/layout/custom";
+} from "../../../engine/layout/custom/types";
+import { getDefaultMeasurer } from "../../../engine/layout/measurement";
 
 import {
   pointsToSvgPath,
@@ -20,10 +21,8 @@ import { CustomLayoutMetrics } from "./CustomLayoutMetrics";
 import { LayoutErrorBoundary } from "./LayoutErrorBoundary";
 import { useCustomLayoutWorker } from "../hooks/useCustomLayoutWorker";
 import { EngineOptionsPanel } from "./EngineOptionsPanel";
-import {
-  DEFAULT_CUSTOM_LAYOUT_CONFIG,
-  type CustomLayoutConfig,
-} from "../../../engine/layout/custom/config";
+import { type CustomLayoutConfig } from "../../../engine/layout/custom/config";
+import { useLayoutConfig } from "../../../state/useGraphStore";
 
 import { useNavigate } from "@tanstack/react-router";
 
@@ -35,9 +34,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   const navigate = useNavigate();
   // Default to Scenario #20 (Full DevOps Microservice Mesh)
   const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
-  const [appliedEngineConfig, setAppliedEngineConfig] = useState<CustomLayoutConfig>(
-    DEFAULT_CUSTOM_LAYOUT_CONFIG,
-  );
+  // Read from the store rather than holding a local copy: `EngineOptionsPanel` writes straight to
+  // the store, so a local mirror here would silently ignore every settings change made on this
+  // page.
+  const appliedEngineConfig: CustomLayoutConfig = useLayoutConfig();
   const [debugOptions, setDebugOptions] = useState<DebugOptions>({
     showPorts: true,
     showBadges: true,
@@ -53,27 +53,42 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
   }, [selectedScenarioId]);
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
+    // Scenarios provide an explicit `w`/`h` per node — that's the "skips measurement" input path
+    // documented in docs/planning/layout-engine-v2/02-algorithms.md Phase 0, so node sizing is
+    // passed straight through. Edge labels have no such explicit box, so they go through the same
+    // `MeasurementProvider` the production path uses (see `customLayoutAdapter.ts`'s
+    // `buildEngineInputs`), keeping the playground's badge placement honest about the real font
+    // metrics instead of leaving `labelWidth`/`labelHeight` undefined and letting the engine fall
+    // back to a character-count estimate.
     const nodes: NormalizedNode[] = (activeScenario.nodes || []).map((n) => ({
       id: n.id,
       label: n.name,
       width: n.w,
       height: n.h,
     }));
-    const edges: NormalizedEdge[] = (activeScenario.edges || []).map((e, idx) => ({
-      id: `e-${e.source}-${e.target}-${idx}`,
-      source: e.source,
-      target: e.target,
-      label: e.label,
-      isCycle: e.isCycle,
-      layoutRole: e.layoutRole,
-    }));
+    const measurer = getDefaultMeasurer();
+    const edges: NormalizedEdge[] = (activeScenario.edges || []).map((e, idx) => {
+      const labelBox = e.label
+        ? measurer.measureLabel(e.label, {
+            maxWidth: appliedEngineConfig.maxLabelWidth,
+            maxLines: appliedEngineConfig.maxLabelLines,
+          })
+        : null;
+      return {
+        id: `e-${e.source}-${e.target}-${idx}`,
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        isCycle: e.isCycle,
+        layoutRole: e.layoutRole,
+        labelWidth: labelBox?.width,
+        labelHeight: labelBox?.height,
+      };
+    });
     return { normalizedNodes: nodes, normalizedEdges: edges };
-  }, [activeScenario]);
+  }, [activeScenario, appliedEngineConfig.maxLabelWidth, appliedEngineConfig.maxLabelLines]);
 
-  const configSignature = useMemo(
-    () => JSON.stringify(appliedEngineConfig),
-    [appliedEngineConfig],
-  );
+  const configSignature = useMemo(() => JSON.stringify(appliedEngineConfig), [appliedEngineConfig]);
 
   const {
     result: layoutResult,
@@ -213,12 +228,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
             </div>
           )}
           <LayoutErrorBoundary onRetry={recalculate} resultGeneration={resultGeneration}>
-            {/* Engine Options Staged Configuration Panel */}
-            <EngineOptionsPanel
-              appliedConfig={appliedEngineConfig}
-              onApplyConfig={setAppliedEngineConfig}
-              onResetConfig={() => setAppliedEngineConfig(DEFAULT_CUSTOM_LAYOUT_CONFIG)}
-            />
+            {/* Engine settings. The panel now reads and writes `useGraphStore` directly — there
+                is no staged-then-applied copy, because v2 layout is fast enough (~2 ms) to
+                recompute on every change. */}
+            <EngineOptionsPanel />
 
             {/* Metrics Summary Panel */}
             <div className="graph-testing-metrics-wrapper">
@@ -241,11 +254,10 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                   <div className="testing-stat-badge">
                     Nodes: {(layoutResult.nodes || []).length} | Edges:{" "}
                     {(layoutResult.edges || []).length} | Crossings:{" "}
-                    {layoutResult.validation?.metrics?.crossingCount ?? 0} | Hairpins:{" "}
-                    {layoutResult.validation?.metrics?.hairpinCount ?? 0} | Leaders:{" "}
-                    {(layoutResult.validation?.metrics?.ordinaryLeaderCount ?? 0) +
-                      (layoutResult.validation?.metrics?.feedbackLeaderCount ?? 0)}{" "}
-                    | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
+                    {layoutResult.validation?.metrics?.crossings ?? 0} | Bends:{" "}
+                    {layoutResult.validation?.metrics?.bendCount ?? 0} | Leaders:{" "}
+                    {layoutResult.validation?.metrics?.leaderCount ?? 0} | Passes:{" "}
+                    {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
                     <strong>{layoutResult.status}</strong>
                   </div>
                 </div>

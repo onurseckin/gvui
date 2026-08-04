@@ -1,19 +1,90 @@
+/**
+ * Bridges `GraphDataset` (the app's node/edge model) and the Rust/WASM v2 layout engine's wire
+ * format, in both directions: normalizing dataset nodes/edges into engine input, and mapping the
+ * engine's `CustomLayoutResult` back into `PositionedNode`/`PositionedEdge` for `GraphCanvas`.
+ */
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
-import { computeCustomLayout } from "./custom";
+import type { LayoutMode } from "../../state/useGraphStore";
+import { getDefaultMeasurer } from "./measurement";
+import { computeCustomLayout } from "./custom/computeCustomLayout";
+import { computeCustomLayoutAsync } from "./custom/customLayoutWorkerClient";
+import { resolveCustomLayoutConfig, type CustomLayoutConfig } from "./custom/config";
+import { buildEdgePath } from "./custom/edgePath";
+import { pointAtPathRatio } from "./custom/geometry";
 import type {
-  CustomLayoutConfig,
   CustomLayoutResult,
   NormalizedEdge,
   NormalizedNode,
-} from "./custom";
-import { computeCustomLayoutAsync } from "./custom/customLayoutWorkerClient";
-import { calculateNodeDimensions } from "./nodeDimensions";
+  Point,
+  RoutedPath,
+} from "./custom/types";
 
+/**
+ * Converts dataset nodes/edges into the engine's wire input. Node sizes and edge label boxes are
+ * measured once, up front — the same `MeasurementProvider` used by the renderer's node cards —
+ * so the Rust side never sees text and reserves *exact* space for every badge (Phase 1 of the v2
+ * pipeline; see docs/planning/layout-engine-v2/02-algorithms.md).
+ */
+function buildEngineInputs(
+  dataset: GraphDataset,
+  config: CustomLayoutConfig,
+): { nodes: NormalizedNode[]; edges: NormalizedEdge[] } {
+  const measurer = getDefaultMeasurer();
+  const nodeSizes = measurer.measureNodes(dataset.nodes);
+
+  const nodes: NormalizedNode[] = dataset.nodes.map((node, index) => {
+    const size = nodeSizes[index] ?? { width: config.minNodeWidth, height: 0 };
+    return {
+      id: node.id,
+      label: node.name,
+      width: size.width,
+      height: size.height,
+      rank: node.rank,
+      group: node.group,
+    };
+  });
+
+  const edges: NormalizedEdge[] = dataset.edges.map((edge, index) => {
+    const id = edge.id || `e-${edge.source}-${edge.target}-${index}`;
+    const labelBox = edge.label
+      ? measurer.measureLabel(edge.label, {
+          maxWidth: config.maxLabelWidth,
+          maxLines: config.maxLabelLines,
+        })
+      : null;
+
+    return {
+      id,
+      source: edge.source,
+      target: edge.target,
+      label: edge.label,
+      isCycle: edge.isCycle,
+      layoutRole: edge.layoutRole,
+      weight: edge.weight,
+      minLen: edge.minLen,
+      labelWidth: labelBox?.width,
+      labelHeight: labelBox?.height,
+    };
+  });
+
+  return { nodes, edges };
+}
+
+/**
+ * Maps the engine's `CustomLayoutResult` back onto `PositionedNode`/`PositionedEdge`.
+ *
+ * Builds `routeMap`/`badgeMap` once up front (O(E)) rather than the v1 pattern of calling
+ * `layoutResult.edges.find(...)` inside `dataset.edges.map(...)`, which was O(E^2) — quadratic in
+ * edge count for no reason, since every route is looked up by `edgeId` exactly once.
+ */
 function mapLayoutResultToPositioned(
   dataset: GraphDataset,
   layoutResult: CustomLayoutResult,
+  config: CustomLayoutConfig,
 ): { nodes: PositionedNode[]; edges: PositionedEdge[] } {
   const nodePosMap = new Map(layoutResult.nodes.map((n) => [n.id, n]));
+  const routeMap = new Map<string, RoutedPath>(layoutResult.edges.map((r) => [r.edgeId, r]));
+  const badgeMap = new Map(layoutResult.badges.map((b) => [b.edgeId, b]));
 
   const positionedNodes: PositionedNode[] = dataset.nodes.map((node) => {
     const pos = nodePosMap.get(node.id) ?? { x: 0, y: 0, width: 120, height: 60 };
@@ -26,50 +97,36 @@ function mapLayoutResultToPositioned(
     };
   });
 
-  const badgeMap = new Map(layoutResult.badges.map((b) => [b.edgeId, b]));
-
   const positionedEdges: PositionedEdge[] = dataset.edges.map((edge, idx) => {
     const edgeId = edge.id || `e-${edge.source}-${edge.target}-${idx}`;
-    const route = layoutResult.edges.find((r) => r.edgeId === edgeId);
+    const route = routeMap.get(edgeId);
     const badge = badgeMap.get(edgeId);
 
-    let path = "";
-    let midX = 0;
-    let midY = 0;
-
-    if (route && route.points.length >= 2) {
-      if (
-        (layoutResult.optimizationStats?.stopReason ?? (layoutResult.optimizationStats as { stop_reason?: string })?.stop_reason) === "radial_layout_complete"
-      ) {
-        path = `M ${route.points[0].x} ${route.points[0].y} Q ${route.points[1].x} ${route.points[1].y} ${route.points[2].x} ${route.points[2].y}`;
-      } else {
-        path = route.points
-          .reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "")
-          .trim();
-      }
-      const midPointIdx = Math.floor(route.points.length / 2);
-      midX = route.points[midPointIdx].x;
-      midY = route.points[midPointIdx].y;
-    } else {
+    let points: Point[] = route && route.points.length >= 2 ? route.points : [];
+    if (points.length === 0) {
       const srcNode = nodePosMap.get(edge.source);
       const tgtNode = nodePosMap.get(edge.target);
       if (srcNode && tgtNode) {
-        const srcCx = srcNode.x + srcNode.width / 2;
-        const srcCy = srcNode.y + srcNode.height / 2;
-        const tgtCx = tgtNode.x + tgtNode.width / 2;
-        const tgtCy = tgtNode.y + tgtNode.height / 2;
-        path = `M ${srcCx} ${srcCy} L ${tgtCx} ${tgtCy}`;
-        midX = (srcCx + tgtCx) / 2;
-        midY = (srcCy + tgtCy) / 2;
+        points = [
+          { x: srcNode.x + srcNode.width / 2, y: srcNode.y + srcNode.height / 2 },
+          { x: tgtNode.x + tgtNode.width / 2, y: tgtNode.y + tgtNode.height / 2 },
+        ];
       }
     }
 
-    const labelX = badge ? badge.rect.x + badge.rect.width / 2 : midX;
-    const labelY = badge ? badge.rect.y + badge.rect.height / 2 : midY;
+    // Built via `buildEdgePath`, never string-concatenated here — see edgePath.ts for why
+    // cornerRadius/edgeStyle rendering is a client-side concern independent of the route itself.
+    const path = buildEdgePath(points, config.edgeStyle, config.cornerRadius);
+    const mid = points.length > 0 ? pointAtPathRatio(points, 0.5) : { x: 0, y: 0 };
+
+    const labelX = badge ? badge.rect.x + badge.rect.width / 2 : mid.x;
+    const labelY = badge ? badge.rect.y + badge.rect.height / 2 : mid.y;
 
     return {
       ...edge,
+      id: edgeId,
       path,
+      points,
       labelX,
       labelY,
       badgeRect: badge?.rect,
@@ -84,13 +141,12 @@ function mapLayoutResultToPositioned(
 }
 
 /**
- * Computes graph layout coordinates using the custom directed layout and orthogonal routing engine.
- * Converts GraphDataset nodes and edges into normalized engine inputs, runs state-space optimization,
- * and maps the resulting node positions, orthogonal edge SVG paths, crossing bridges, and badge locations
- * back to standard PositionedNode and PositionedEdge outputs for rendering on GraphCanvas.
+ * Computes graph layout coordinates using the v2 layout engine, running synchronously on
+ * whichever thread calls it (main thread in tests/SSR, or already inside a worker). Converts
+ * `GraphDataset` nodes/edges into normalized engine inputs, runs the Rust/WASM pipeline, and maps
+ * the resulting node positions, edge polylines, crossings, and badge placements back to
+ * `PositionedNode`/`PositionedEdge` for rendering on `GraphCanvas`.
  */
-import type { LayoutMode } from "../../state/useGraphStore";
-
 export async function computeCustomEngineGraphLayout(
   dataset: GraphDataset,
   configPartial?: Partial<CustomLayoutConfig>,
@@ -103,31 +159,16 @@ export async function computeCustomEngineGraphLayout(
     return { nodes: [], edges: [] };
   }
 
-  const normalizedNodes: NormalizedNode[] = dataset.nodes.map((node) => {
-    const dims = calculateNodeDimensions(node);
-    return {
-      id: node.id,
-      label: node.name,
-      width: dims.width,
-      height: dims.height,
-    };
-  });
-
-  const normalizedEdges: NormalizedEdge[] = dataset.edges.map((edge, idx) => ({
-    id: edge.id || `e-${edge.source}-${edge.target}-${idx}`,
-    source: edge.source,
-    target: edge.target,
-    label: edge.label,
-    isCycle: edge.isCycle,
-  }));
-
-  const layoutResult = await computeCustomLayout(normalizedNodes, normalizedEdges, configPartial, mode);
-  return mapLayoutResultToPositioned(dataset, layoutResult);
+  const config = resolveCustomLayoutConfig(configPartial);
+  const { nodes, edges } = buildEngineInputs(dataset, config);
+  const layoutResult = await computeCustomLayout(nodes, edges, config, mode);
+  return mapLayoutResultToPositioned(dataset, layoutResult, config);
 }
 
 /**
  * Offloads graph layout calculation to a background Web Worker when running in the browser,
- * returning PositionedNode[] and PositionedEdge[] asynchronously without blocking the UI main thread.
+ * returning `PositionedNode[]`/`PositionedEdge[]` asynchronously without blocking the UI main
+ * thread.
  */
 export interface ComputeEngineLayoutOptions {
   signal?: AbortSignal;
@@ -144,31 +185,16 @@ export async function computeCustomEngineGraphLayoutAsync(
     return { nodes: [], edges: [] };
   }
 
-  const normalizedNodes: NormalizedNode[] = dataset.nodes.map((node) => {
-    const dims = calculateNodeDimensions(node);
-    return {
-      id: node.id,
-      label: node.name,
-      width: dims.width,
-      height: dims.height,
-    };
-  });
-
-  const normalizedEdges: NormalizedEdge[] = dataset.edges.map((edge, idx) => ({
-    id: edge.id || `e-${edge.source}-${edge.target}-${idx}`,
-    source: edge.source,
-    target: edge.target,
-    label: edge.label,
-    isCycle: edge.isCycle,
-  }));
+  const config = resolveCustomLayoutConfig(options?.configPartial);
+  const { nodes, edges } = buildEngineInputs(dataset, config);
 
   const layoutResult = await computeCustomLayoutAsync({
-    nodes: normalizedNodes,
-    edges: normalizedEdges,
-    configPartial: options?.configPartial,
+    nodes,
+    edges,
+    configPartial: config,
     mode: options?.mode,
     timeoutMs: options?.timeoutMs,
     signal: options?.signal,
   });
-  return mapLayoutResultToPositioned(dataset, layoutResult);
+  return mapLayoutResultToPositioned(dataset, layoutResult, config);
 }

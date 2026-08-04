@@ -1,6 +1,6 @@
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../../types/graphData";
 import type { LayoutMode } from "../../../state/useGraphStore";
-import { calculateNodeDimensions } from "../nodeDimensions";
+import { getDefaultMeasurer } from "../measurement";
 import initWasm, { compute_custom_layout_wasm } from "./wasm_pkg/gvui";
 import type { CustomLayoutConfig } from "./config";
 import type { CustomLayoutResult, NormalizedEdge, NormalizedNode } from "./types";
@@ -27,13 +27,17 @@ export async function computeCustomLayoutWasm(
 export async function computeCustomEngineGraphLayoutWasm(
   dataset: GraphDataset,
   configPartial?: Partial<CustomLayoutConfig>,
-  mode: LayoutMode = "top-down",
+  mode: LayoutMode = "layered",
 ): Promise<{ nodes: PositionedNode[]; edges: PositionedEdge[] }> {
   await ensureWasmInitialized();
 
+  // Sizes come from the measurement provider, so the engine only ever receives boxes. Measuring
+  // the whole batch once also lets the provider's cache do its job.
+  const nodeSizes = getDefaultMeasurer().measureNodes(dataset.nodes);
+
   const input = {
-    nodes: dataset.nodes.map((n) => {
-      const dims = calculateNodeDimensions(n);
+    nodes: dataset.nodes.map((n, i) => {
+      const dims = nodeSizes[i] ?? { width: 120, height: 60 };
       return {
         id: n.id,
         label: n.name,

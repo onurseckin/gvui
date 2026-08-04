@@ -1,3 +1,7 @@
+//! # Step 0: Shared Foundations
+//!
+//! Types, configuration, geometry helpers, fallback badge measurement, and Phase 0 ingest.
+
 #[path = "0_1_types.rs"]
 pub mod types;
 
@@ -10,10 +14,7 @@ pub mod geometry;
 #[path = "0_4_badge_measurement.rs"]
 pub mod badge_measurement;
 
-#[cfg(test)]
-#[path = "tests/spec_common_types.rs"]
-mod spec_common_types;
+#[path = "0_5_ingest.rs"]
+pub mod ingest;
 
-#[cfg(test)]
-#[path = "tests/spec_config.rs"]
-mod spec_config;
+pub use ingest::build_graph_ir;

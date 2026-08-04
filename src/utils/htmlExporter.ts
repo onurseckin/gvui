@@ -1,4 +1,7 @@
+import { resolveCustomLayoutConfig, type CustomLayoutConfig } from "../engine/layout/custom/config";
+import { buildEdgePath } from "../engine/layout/custom/edgePath";
 import { computeGraphLayout } from "../engine/layout/layoutDispatcher";
+import type { LayoutMode } from "../state/useGraphStore";
 import type { GraphDataset, GraphNodeData, NodeBadge, NodeTool } from "../types/graphData";
 
 function escapeHtml(str: string): string {
@@ -153,10 +156,22 @@ function generateNodeHtml(node: GraphNodeData, x: number, y: number, width: numb
   `;
 }
 
-export async function exportGraphAsHTML(dataset: GraphDataset): Promise<void> {
+export interface ExportGraphAsHTMLOptions {
+  /** Defaults to `"layered"` — the v2 name for the old `"top-down"` mode this used to hardcode. */
+  mode?: LayoutMode | string;
+  /** The live editor config, so the export matches whatever the user has tuned on-screen. */
+  configPartial?: Partial<CustomLayoutConfig>;
+}
+
+export async function exportGraphAsHTML(
+  dataset: GraphDataset,
+  options?: ExportGraphAsHTMLOptions,
+): Promise<void> {
   if (!dataset) return;
 
-  const { nodes, edges } = await computeGraphLayout(dataset, "top-down");
+  const mode = options?.mode ?? "layered";
+  const config = resolveCustomLayoutConfig(options?.configPartial);
+  const { nodes, edges } = await computeGraphLayout(dataset, mode, options?.configPartial);
 
   let minX = Infinity;
   let maxX = -Infinity;
@@ -187,6 +202,16 @@ export async function exportGraphAsHTML(dataset: GraphDataset): Promise<void> {
       const labelX = (edge.labelX ?? 0) + offsetX;
       const labelY = (edge.labelY ?? 0) + offsetY;
 
+      // Rebuilt from the routed waypoints rather than trusting `edge.path` verbatim: GraphCanvas's
+      // own edge-style pass (see `custom/edgePath.ts`) re-derives `path` from `points` on every
+      // render because `cornerRadius`/`edgeStyle` are pure client-side rendering decisions, not
+      // part of the layout. Doing the same here is what makes a corner-rounding tweak the user made
+      // on-screen actually show up in the exported file.
+      const path =
+        edge.points && edge.points.length > 0
+          ? buildEdgePath(edge.points, config.edgeStyle, config.cornerRadius)
+          : edge.path;
+
       let badgeOverlayHtml = "";
       if (edge.label || edge.isCycle) {
         const displayText = edge.isCycle
@@ -211,8 +236,8 @@ export async function exportGraphAsHTML(dataset: GraphDataset): Promise<void> {
 
       return `
         <g class="graph-edge-group" data-edge-id="${escapeHtml(edge.id)}" data-source="${escapeHtml(edge.source)}" data-target="${escapeHtml(edge.target)}">
-          <path d="${edge.path}" class="edge-backdrop" />
-          <path d="${edge.path}" class="graph-edge-path ${edge.isCycle ? "cycle" : ""}" marker-end="${edge.directed !== false ? markerId : ""}" />
+          <path d="${path}" class="edge-backdrop" />
+          <path d="${path}" class="graph-edge-path ${edge.isCycle ? "cycle" : ""}" marker-end="${edge.directed !== false ? markerId : ""}" />
           ${badgeOverlayHtml}
         </g>
       `;

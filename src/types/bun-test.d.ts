@@ -22,6 +22,18 @@ declare module "bun:test" {
       toBe(expected: unknown): void;
       toEqual(expected: unknown): void;
       toBeNull(): void;
+      toContain(expected: unknown): void;
     };
   };
+
+  /** Minimal shape of a `bun:test` spy: a callable wrapper exposing recorded call arguments. */
+  export interface Mock<Fn extends (...args: never[]) => unknown = (...args: never[]) => unknown> {
+    (...args: Parameters<Fn>): ReturnType<Fn>;
+    mock: { calls: Array<Parameters<Fn>> };
+  }
+
+  export function spyOn<T extends object, K extends keyof T>(
+    object: T,
+    method: K,
+  ): T[K] extends (...args: never[]) => unknown ? Mock<T[K]> : never;
 }

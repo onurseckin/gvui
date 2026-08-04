@@ -1,7 +1,18 @@
-use std::fmt;
-use serde::{Deserialize, Serialize};
+//! # Step 0.2: Layout Engine Configuration
+//!
+//! Three tiers:
+//! - **Tier 1 — Aesthetics**: knobs with a monotone, predictable effect. These are what users tune.
+//! - **Tier 2 — Algorithm selection**: swap the algorithm used by a phase (for A/B and debugging).
+//! - **Tier 3 — Budgets**: safety rails, not quality dials.
+//!
+//! Every field is optional over the wire (`PartialCustomLayoutConfig`) and merges over
+//! [`DEFAULT_CUSTOM_LAYOUT_CONFIG`]. Unknown incoming fields are ignored, so older clients that
+//! still send the removed v1 search-budget knobs keep working.
 
-/// Error indicating invalid layout configuration parameters passed to validation.
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+/// Error indicating invalid layout configuration parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LayoutConfigurationError {
     pub message: String,
@@ -15,126 +26,320 @@ impl fmt::Display for LayoutConfigurationError {
 
 impl std::error::Error for LayoutConfigurationError {}
 
-/// Configuration parameters controlling layout gaps, routing penalties, pass limits, and algorithm bounds.
+// ---------------------------------------------------------------------------------------------
+// Enumerations
+// ---------------------------------------------------------------------------------------------
+
+/// Primary flow direction of a layered layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Direction {
+    /// Ranks increase downward (default).
+    #[default]
+    TopDown,
+    /// Ranks increase upward.
+    BottomUp,
+    /// Ranks increase rightward.
+    LeftRight,
+    /// Ranks increase leftward.
+    RightLeft,
+}
+
+impl Direction {
+    /// True when the rank axis is horizontal, meaning boxes are transposed before layering
+    /// and coordinates are transposed on the way out.
+    pub fn is_horizontal(self) -> bool {
+        matches!(self, Direction::LeftRight | Direction::RightLeft)
+    }
+
+    /// True when the final coordinates must be mirrored along the rank axis.
+    pub fn is_reversed(self) -> bool {
+        matches!(self, Direction::BottomUp | Direction::RightLeft)
+    }
+}
+
+/// How edge polylines are rendered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum EdgeStyle {
+    /// Axis-aligned polyline with sharp corners.
+    Orthogonal,
+    /// Axis-aligned polyline with corners rounded to `corner_radius` (default).
+    #[default]
+    Rounded,
+    /// Smooth cubic spline through the chain waypoints.
+    Spline,
+    /// Direct source-to-target line, clipped to node boundaries.
+    Straight,
+}
+
+/// Where an edge badge sits relative to its edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum LabelPlacement {
+    /// Badge centered on the edge; the edge passes behind it.
+    OnEdge,
+    /// Badge offset to the right of the edge; the edge passes along its left face (default).
+    #[default]
+    BesideEdge,
+    /// Badge offset above the edge's horizontal run.
+    AboveEdge,
+}
+
+/// Rank assignment algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Ranker {
+    /// Gansner et al. network simplex: optimal for the weighted edge-length objective (default).
+    #[default]
+    NetworkSimplex,
+    /// Longest-path layering: fast, maximally tall.
+    LongestPath,
+    /// Tight spanning tree without simplex pivots.
+    TightTree,
+}
+
+/// Two-layer ordering heuristic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum OrderingHeuristic {
+    /// Median ordering; bounded at 3x optimal for the two-layer problem (default).
+    #[default]
+    Median,
+    /// Barycenter (mean) ordering; no bound, occasionally smoother on regular graphs.
+    Barycenter,
+}
+
+/// Horizontal coordinate assignment algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Coordinator {
+    /// Brandes-Koepf: <=2 bends per edge, straight dummy chains, O(V+E) (default).
+    #[default]
+    BrandesKopf,
+    /// Rank-centered packing. Debug aid; produces no alignment guarantees.
+    Simple,
+}
+
+/// Which of the four Brandes-Koepf candidate assignments to emit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum BkAlign {
+    /// Average of the two innermost of the four candidates (default).
+    #[default]
+    Median,
+    /// Minimum-width candidate.
+    Leftmost,
+    /// Maximum-width candidate.
+    Rightmost,
+    UpLeft,
+    UpRight,
+    DownLeft,
+    DownRight,
+}
+
+/// Preset over the spacing family.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Compaction {
+    /// Multiplies gaps by 0.65.
+    Tight,
+    /// Gaps used as configured (default).
+    #[default]
+    Balanced,
+    /// Multiplies gaps by 1.45.
+    Airy,
+}
+
+impl Compaction {
+    pub fn gap_scale(self) -> f64 {
+        match self {
+            Compaction::Tight => 0.65,
+            Compaction::Balanced => 1.0,
+            Compaction::Airy => 1.45,
+        }
+    }
+}
+
+/// Which layout engine runs. Selected by the `mode` field of the WASM entry point; this enum is
+/// the canonical internal form.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum EngineMode {
+    /// Full layered pipeline with orthogonal lane routing (default).
+    #[default]
+    Layered,
+    /// Layered pipeline, spline edges.
+    LayeredSpline,
+    /// Stress majorization by SGD plus overlap removal.
+    Organic,
+    /// Concentric BFS rings with proportional wedge allocation.
+    Radial,
+    /// Deterministic row-major grid.
+    Grid,
+}
+
+impl EngineMode {
+    /// Resolves the legacy `mode` strings accepted by the WASM entry point.
+    pub fn from_mode_str(s: &str) -> (EngineMode, Option<Direction>) {
+        match s {
+            "top-down" | "layered" | "top-down-dagre" => (EngineMode::Layered, Some(Direction::TopDown)),
+            "bottom-up" => (EngineMode::Layered, Some(Direction::BottomUp)),
+            "left-right" => (EngineMode::Layered, Some(Direction::LeftRight)),
+            "right-left" => (EngineMode::Layered, Some(Direction::RightLeft)),
+            "layered-spline" => (EngineMode::LayeredSpline, Some(Direction::TopDown)),
+            "force" | "organic" | "stress" => (EngineMode::Organic, None),
+            "radial" => (EngineMode::Radial, None),
+            "grid" => (EngineMode::Grid, None),
+            _ => (EngineMode::Layered, Some(Direction::TopDown)),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------------------------
+
+/// Resolved, validated layout configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomLayoutConfig {
-    /// Minimum horizontal spacing between adjacent nodes in the same rank (must be > 0).
+    // ---- Tier 1: aesthetics -------------------------------------------------------------------
+    /// Primary flow direction.
+    pub direction: Direction,
+    /// Minimum horizontal separation between adjacent items in a rank (> 0).
     pub node_gap: f64,
-    /// Minimum vertical spacing between adjacent rank layers (must be > 0).
+    /// Minimum vertical separation between rank bands; routing channels may raise it (> 0).
     pub rank_gap: f64,
-    /// Minimum spacing between disconnected weakly connected subgraphs (must be > 0).
+    /// Minimum separation between disconnected components (> 0).
     pub component_gap: f64,
-    /// Outer margin surrounding the total graph bounding box (must be > 0).
+    /// Outer margin around the whole drawing (> 0).
     pub graph_padding: f64,
-    /// Length of straight port stub segment exiting node boundary before turn (must be > 0).
-    pub port_stub_length: f64,
-    /// Clearance distance between port endpoint and node corner (must be >= 0).
-    pub port_endpoint_padding: f64,
-    /// Clearance margin required between routed edge segments and node obstacles (must be > 0).
-    pub obstacle_clearance: f64,
-    /// Spacing between parallel routing channels/lanes (must be > 0).
+    /// Distance between parallel routing lanes inside a channel or corridor (> 0).
     pub lane_spacing: f64,
-    /// Initial ring count searched around node bounding box during routing grid creation (must be > 0).
-    pub initial_lane_rings: usize,
-    /// Maximum ring expansion count for routing grid creation (must be > 0).
-    pub max_lane_rings: usize,
-    /// Cost penalty assigned to each 90-degree orthogonal bend during A* edge routing (must be >= 0).
-    pub bend_penalty: f64,
-    /// Cost penalty assigned to each edge-edge crossing during route optimization (must be >= 0).
-    pub crossing_penalty: f64,
-    /// Cost penalty for routing edge segments against default rank flow direction (must be >= 0).
-    pub direction_penalty: f64,
-    /// Cost penalty for assigning multiple ports to the same node side (must be >= 0).
-    pub side_reuse_penalty: f64,
-    /// Cost penalty for routing edge segments adjacent to node obstacle boundaries (must be >= 0).
-    pub near_obstacle_penalty: f64,
-    /// Clearance gap maintained around edge label badges (must be > 0).
+    /// Minimum spacing between two ports on the same node side (> 0).
+    pub port_pitch: f64,
+    /// Straight run leaving a port before the first bend (> 0).
+    pub port_stub_length: f64,
+    /// Clearance between the outermost port and a node corner (>= 0).
+    pub port_endpoint_padding: f64,
+    /// Bend rounding radius; `0.0` yields sharp corners (>= 0).
+    pub corner_radius: f64,
+    /// Edge rendering style.
+    pub edge_style: EdgeStyle,
+    /// Badge position relative to its edge.
+    pub label_placement: LabelPlacement,
+    /// Padding reserved around a badge box (> 0).
     pub badge_clearance: f64,
-    /// Maximum candidate badge positions evaluated per edge (must be > 0).
-    pub max_badge_candidates_per_edge: usize,
-    /// Maximum backtrack steps allowed during badge placement (must be > 0).
-    pub max_badge_backtrack_steps: usize,
-    /// Maximum crossing minimization sweep passes (must be > 0).
-    pub max_crossing_sweeps: usize,
-    /// Maximum port assignment improvement passes (must be > 0).
-    pub max_port_improvement_passes: usize,
-    /// Maximum rip-up and reroute passes for conflicting edges (must be > 0).
-    pub max_rip_up_passes: usize,
-    /// Maximum global layout optimization passes (must be > 0).
-    pub max_global_passes: usize,
-    /// Numerical floating point epsilon tolerance for coordinate comparisons (must be > 0).
+    /// Wrap width for edge labels, in pixels (> 0).
+    pub max_label_width: f64,
+    /// Maximum wrapped lines before ellipsis (> 0).
+    pub max_label_lines: usize,
+    /// Lower clamp for measured node width (> 0).
+    pub min_node_width: f64,
+    /// Upper clamp for measured node width; must exceed `min_node_width`.
+    pub max_node_width: f64,
+    /// Width:height target used by rank balancing and component packing (> 0).
+    pub target_aspect_ratio: f64,
+    /// Hard cap on items per rank. `0` derives it from `target_aspect_ratio`.
+    pub max_nodes_per_rank: usize,
+    /// Whether rank balancing runs at all.
+    pub balance_ranks: bool,
+    /// Route parallel edges between the same node pair as one bus.
+    pub bundle_parallel_edges: bool,
+    /// Spacing preset multiplier.
+    pub compaction: Compaction,
+
+    // ---- Tier 2: algorithm selection ----------------------------------------------------------
+    /// Rank assignment algorithm.
+    pub ranker: Ranker,
+    /// Two-layer ordering heuristic.
+    pub ordering: OrderingHeuristic,
+    /// Down/up sweep count in the ordering phase (> 0).
+    pub ordering_sweeps: usize,
+    /// Independent ordering seeds; the best result wins (> 0).
+    pub ordering_seeds: usize,
+    /// Horizontal coordinate algorithm.
+    pub coordinator: Coordinator,
+    /// Brandes-Koepf candidate selection.
+    pub bk_align: BkAlign,
+    /// Keep dummy chains straight by making dummies reluctant to move during ordering.
+    pub dummy_priority: bool,
+
+    // ---- Tier 2b: organic (stress) mode --------------------------------------------------------
+    /// SGD epochs for organic mode (> 0).
+    pub stress_iterations: usize,
+    /// Desired pixel length of one graph-distance unit (> 0).
+    pub stress_ideal_edge_length: f64,
+    /// Overlap-removal passes after stress convergence (>= 0).
+    pub overlap_removal_passes: usize,
+
+    // ---- Tier 2c: radial mode ------------------------------------------------------------------
+    /// Gap between concentric rings (> 0).
+    pub radial_ring_gap: f64,
+    /// Explicit root node id for radial mode; empty selects the highest-degree node.
+    pub radial_root: String,
+
+    // ---- Tier 3: budgets -----------------------------------------------------------------------
+    /// Soft wall-clock budget in milliseconds; ordering stops sweeping when exceeded (> 0).
+    pub time_budget_ms: f64,
+    /// Guard against pathological rank spans (> 0).
+    pub max_dummy_chain_length: usize,
+    /// Run the Phase 9 invariant checks even in release builds.
+    pub assert_constraints: bool,
+    /// Floating point comparison tolerance (> 0).
     pub epsilon: f64,
-    /// Maximum aesthetic fine-tuning improvement passes (must be > 0).
-    pub max_aesthetic_passes: usize,
-    /// Maximum port states evaluated per pass (must be > 0).
-    pub max_port_states_per_pass: usize,
-    /// Maximum alternative port choices per edge (must be > 0).
-    pub max_port_alternatives_per_edge: usize,
-    /// Maximum route ordering permutations evaluated (must be > 0).
-    pub max_route_order_variants: usize,
-    /// Limit on coordinate assignment alignment sweep iterations (must be > 0).
-    pub coordinate_sweep_limit: usize,
-    /// Maximum layout states stored in local search history (must be > 0).
-    pub max_layout_states: usize,
-    /// Maximum size of frontier queue in layout optimization (must be > 0).
-    pub max_frontier_size: usize,
-    /// Maximum neighbor states generated per search step (must be > 0).
-    pub max_neighbors_per_state: usize,
-    /// Maximum A* path search state explorations per edge route (must be > 0).
-    pub max_astar_states_per_route: usize,
-    /// Maximum number of conflicting edges in a single permutation set (must be > 0).
-    pub max_conflict_permutation_size: usize,
-    /// Maximum conflict permutations generated per pass (must be > 0).
-    pub max_conflict_permutations: usize,
-    /// Maximum route candidates saved per edge (must be > 0).
-    pub max_route_candidates_per_edge: usize,
-    /// Maximum badge placement states evaluated (must be > 0).
-    pub max_badge_states: usize,
-    /// Zoom sensitivity factor for viewport wheel/touchpad gestures (must be > 0).
+
+    // ---- UI passthrough (not used by layout) ---------------------------------------------------
+    /// Viewport wheel/pinch sensitivity. Carried for the renderer's convenience.
     pub zoom_sensitivity: f64,
 }
 
-/// Default standard layout configuration instance with tuned defaults.
+/// Tuned defaults.
 pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig {
+    direction: Direction::TopDown,
     node_gap: 56.0,
     rank_gap: 120.0,
     component_gap: 160.0,
     graph_padding: 80.0,
+    lane_spacing: 12.0,
+    port_pitch: 18.0,
     port_stub_length: 20.0,
     port_endpoint_padding: 16.0,
-    obstacle_clearance: 16.0,
-    lane_spacing: 12.0,
-    initial_lane_rings: 2,
-    max_lane_rings: 8,
-
-    bend_penalty: 40.0,
-    crossing_penalty: 500.0,
-    direction_penalty: 120.0,
-    side_reuse_penalty: 32.0,
-    near_obstacle_penalty: 8.0,
+    corner_radius: 8.0,
+    edge_style: EdgeStyle::Rounded,
+    label_placement: LabelPlacement::BesideEdge,
     badge_clearance: 10.0,
-    max_badge_candidates_per_edge: 48,
-    max_badge_backtrack_steps: 1000,
-    max_crossing_sweeps: 24,
-    max_port_improvement_passes: 12,
-    max_rip_up_passes: 12,
-    max_global_passes: 8,
-    epsilon: 0.001,
-    max_aesthetic_passes: 12,
-    max_port_states_per_pass: 8,
-    max_port_alternatives_per_edge: 4,
-    max_route_order_variants: 4,
-    coordinate_sweep_limit: 16,
-    max_layout_states: 50,
-    max_frontier_size: 50,
-    max_neighbors_per_state: 16,
-    max_astar_states_per_route: 8000,
-    max_conflict_permutation_size: 6,
+    max_label_width: 220.0,
+    max_label_lines: 3,
+    min_node_width: 120.0,
+    max_node_width: 420.0,
+    target_aspect_ratio: 1.6,
+    max_nodes_per_rank: 0,
+    balance_ranks: true,
+    bundle_parallel_edges: true,
+    compaction: Compaction::Balanced,
 
-    max_conflict_permutations: 32,
-    max_route_candidates_per_edge: 4,
-    max_badge_states: 200,
+    ranker: Ranker::NetworkSimplex,
+    ordering: OrderingHeuristic::Median,
+    ordering_sweeps: 16,
+    ordering_seeds: 4,
+    coordinator: Coordinator::BrandesKopf,
+    bk_align: BkAlign::Median,
+    dummy_priority: true,
+
+    stress_iterations: 30,
+    stress_ideal_edge_length: 180.0,
+    overlap_removal_passes: 6,
+
+    radial_ring_gap: 140.0,
+    radial_root: String::new(),
+
+    time_budget_ms: 250.0,
+    max_dummy_chain_length: 64,
+    assert_constraints: false,
+    epsilon: 0.001,
+
     zoom_sensitivity: 1.0,
 };
 
@@ -144,181 +349,234 @@ impl Default for CustomLayoutConfig {
     }
 }
 
-/// Partial option struct for user configuration overrides.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PartialCustomLayoutConfig {
-    pub node_gap: Option<f64>,
-    pub rank_gap: Option<f64>,
-    pub component_gap: Option<f64>,
-    pub graph_padding: Option<f64>,
-    pub port_stub_length: Option<f64>,
-    pub port_endpoint_padding: Option<f64>,
-    pub obstacle_clearance: Option<f64>,
-    pub lane_spacing: Option<f64>,
-    pub initial_lane_rings: Option<usize>,
-    pub max_lane_rings: Option<usize>,
-    pub bend_penalty: Option<f64>,
-    pub crossing_penalty: Option<f64>,
-    pub direction_penalty: Option<f64>,
-    pub side_reuse_penalty: Option<f64>,
-    pub near_obstacle_penalty: Option<f64>,
-    pub badge_clearance: Option<f64>,
-    pub max_badge_candidates_per_edge: Option<usize>,
-    pub max_badge_backtrack_steps: Option<usize>,
-    pub max_crossing_sweeps: Option<usize>,
-    pub max_port_improvement_passes: Option<usize>,
-    pub max_rip_up_passes: Option<usize>,
-    pub max_global_passes: Option<usize>,
-    pub epsilon: Option<f64>,
-    pub max_aesthetic_passes: Option<usize>,
-    pub max_port_states_per_pass: Option<usize>,
-    pub max_port_alternatives_per_edge: Option<usize>,
-    pub max_route_order_variants: Option<usize>,
-    pub coordinate_sweep_limit: Option<usize>,
-    pub max_layout_states: Option<usize>,
-    pub max_frontier_size: Option<usize>,
-    pub max_neighbors_per_state: Option<usize>,
-    pub max_astar_states_per_route: Option<usize>,
-    pub max_conflict_permutation_size: Option<usize>,
-    pub max_conflict_permutations: Option<usize>,
-    pub max_route_candidates_per_edge: Option<usize>,
-    pub max_badge_states: Option<usize>,
-    pub zoom_sensitivity: Option<f64>,
-}
-
 impl CustomLayoutConfig {
-    /// Validates all configuration parameters against required numerical bounds.
-    /// Positive fields must be > 0 and finite. Non-negative fields must be >= 0 and finite.
+    /// Effective node gap after applying the compaction preset.
+    pub fn effective_node_gap(&self) -> f64 {
+        self.node_gap * self.compaction.gap_scale()
+    }
+
+    /// Effective rank gap after applying the compaction preset.
+    pub fn effective_rank_gap(&self) -> f64 {
+        self.rank_gap * self.compaction.gap_scale()
+    }
+
+    /// Effective lane spacing after applying the compaction preset.
+    pub fn effective_lane_spacing(&self) -> f64 {
+        self.lane_spacing * self.compaction.gap_scale()
+    }
+
+    /// Resolved cap on items per rank. Derives from `target_aspect_ratio` when
+    /// `max_nodes_per_rank` is 0.
+    ///
+    /// The derivation treats the drawing as `node_count` boxes of average aspect
+    /// `avg_w / avg_h`; a rank width of `sqrt(node_count * aspect_of_box / target)` produces a
+    /// drawing whose overall aspect approaches `target_aspect_ratio`.
+    pub fn resolved_max_nodes_per_rank(&self, node_count: usize, avg_w: f64, avg_h: f64) -> usize {
+        if self.max_nodes_per_rank > 0 {
+            return self.max_nodes_per_rank;
+        }
+        if node_count == 0 {
+            return 1;
+        }
+        let box_aspect = if avg_h > 0.0 { avg_w / avg_h } else { 1.0 };
+        let denom = (box_aspect / self.target_aspect_ratio.max(0.05)).max(0.05);
+        let derived = ((node_count as f64) / denom).sqrt().ceil() as usize;
+        derived.max(1)
+    }
+
+    /// Validates every numeric bound. Returns the first violation encountered.
     pub fn validate(&self) -> Result<(), LayoutConfigurationError> {
-        let positive_f64_fields: &[(&str, f64)] = &[
+        let positive_f64: &[(&str, f64)] = &[
             ("nodeGap", self.node_gap),
             ("rankGap", self.rank_gap),
             ("componentGap", self.component_gap),
             ("graphPadding", self.graph_padding),
-            ("portStubLength", self.port_stub_length),
-            ("obstacleClearance", self.obstacle_clearance),
             ("laneSpacing", self.lane_spacing),
+            ("portPitch", self.port_pitch),
+            ("portStubLength", self.port_stub_length),
             ("badgeClearance", self.badge_clearance),
+            ("maxLabelWidth", self.max_label_width),
+            ("minNodeWidth", self.min_node_width),
+            ("maxNodeWidth", self.max_node_width),
+            ("targetAspectRatio", self.target_aspect_ratio),
+            ("stressIdealEdgeLength", self.stress_ideal_edge_length),
+            ("radialRingGap", self.radial_ring_gap),
+            ("timeBudgetMs", self.time_budget_ms),
             ("epsilon", self.epsilon),
+            ("zoomSensitivity", self.zoom_sensitivity),
         ];
-
-        for &(name, val) in positive_f64_fields {
-            if val <= 0.0 || val.is_nan() {
+        for &(name, v) in positive_f64 {
+            if !v.is_finite() || v <= 0.0 {
                 return Err(LayoutConfigurationError {
                     message: format!(
-                        "Configuration property '{}' must be a positive number, got {}",
-                        name, val
+                        "Configuration property '{}' must be a positive finite number, got {}",
+                        name, v
                     ),
                 });
             }
         }
 
-        let positive_usize_fields: &[(&str, usize)] = &[
-            ("initialLaneRings", self.initial_lane_rings),
-            ("maxLaneRings", self.max_lane_rings),
-            ("maxBadgeCandidatesPerEdge", self.max_badge_candidates_per_edge),
-            ("maxBadgeBacktrackSteps", self.max_badge_backtrack_steps),
-            ("maxCrossingSweeps", self.max_crossing_sweeps),
-            ("maxPortImprovementPasses", self.max_port_improvement_passes),
-            ("maxRipUpPasses", self.max_rip_up_passes),
-            ("maxGlobalPasses", self.max_global_passes),
-            ("maxAestheticPasses", self.max_aesthetic_passes),
-            ("maxPortStatesPerPass", self.max_port_states_per_pass),
-            ("maxPortAlternativesPerEdge", self.max_port_alternatives_per_edge),
-            ("maxRouteOrderVariants", self.max_route_order_variants),
-            ("coordinateSweepLimit", self.coordinate_sweep_limit),
-            ("maxLayoutStates", self.max_layout_states),
-            ("maxFrontierSize", self.max_frontier_size),
-            ("maxNeighborsPerState", self.max_neighbors_per_state),
-            ("maxAStarStatesPerRoute", self.max_astar_states_per_route),
-            ("maxConflictPermutationSize", self.max_conflict_permutation_size),
-            ("maxConflictPermutations", self.max_conflict_permutations),
-            ("maxRouteCandidatesPerEdge", self.max_route_candidates_per_edge),
-            ("maxBadgeStates", self.max_badge_states),
-        ];
-
-        for &(name, val) in positive_usize_fields {
-            if val == 0 {
-                return Err(LayoutConfigurationError {
-                    message: format!(
-                        "Configuration property '{}' must be a positive number, got {}",
-                        name, val
-                    ),
-                });
-            }
-        }
-
-        let non_negative_f64_fields: &[(&str, f64)] = &[
+        let non_negative_f64: &[(&str, f64)] = &[
             ("portEndpointPadding", self.port_endpoint_padding),
-            ("bendPenalty", self.bend_penalty),
-            ("crossingPenalty", self.crossing_penalty),
-            ("directionPenalty", self.direction_penalty),
-            ("sideReusePenalty", self.side_reuse_penalty),
-            ("nearObstaclePenalty", self.near_obstacle_penalty),
+            ("cornerRadius", self.corner_radius),
         ];
-
-        for &(name, val) in non_negative_f64_fields {
-            if val < 0.0 || val.is_nan() {
+        for &(name, v) in non_negative_f64 {
+            if !v.is_finite() || v < 0.0 {
                 return Err(LayoutConfigurationError {
                     message: format!(
-                        "Configuration property '{}' must be a non-negative number, got {}",
-                        name, val
+                        "Configuration property '{}' must be a non-negative finite number, got {}",
+                        name, v
                     ),
                 });
             }
+        }
+
+        let positive_usize: &[(&str, usize)] = &[
+            ("maxLabelLines", self.max_label_lines),
+            ("orderingSweeps", self.ordering_sweeps),
+            ("orderingSeeds", self.ordering_seeds),
+            ("stressIterations", self.stress_iterations),
+            ("maxDummyChainLength", self.max_dummy_chain_length),
+        ];
+        for &(name, v) in positive_usize {
+            if v == 0 {
+                return Err(LayoutConfigurationError {
+                    message: format!("Configuration property '{}' must be greater than 0", name),
+                });
+            }
+        }
+
+        if self.max_node_width < self.min_node_width {
+            return Err(LayoutConfigurationError {
+                message: format!(
+                    "Configuration property 'maxNodeWidth' ({}) must be >= 'minNodeWidth' ({})",
+                    self.max_node_width, self.min_node_width
+                ),
+            });
         }
 
         Ok(())
     }
 }
 
-/// Resolves user-provided partial configuration options against defaults and validates final bounds.
+// ---------------------------------------------------------------------------------------------
+// Partial / merge
+// ---------------------------------------------------------------------------------------------
+
+/// Wire-format partial override. Unknown fields are ignored, so clients still sending the removed
+/// v1 search-budget knobs continue to work.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PartialCustomLayoutConfig {
+    pub direction: Option<Direction>,
+    pub node_gap: Option<f64>,
+    pub rank_gap: Option<f64>,
+    pub component_gap: Option<f64>,
+    pub graph_padding: Option<f64>,
+    pub lane_spacing: Option<f64>,
+    pub port_pitch: Option<f64>,
+    pub port_stub_length: Option<f64>,
+    pub port_endpoint_padding: Option<f64>,
+    pub corner_radius: Option<f64>,
+    pub edge_style: Option<EdgeStyle>,
+    pub label_placement: Option<LabelPlacement>,
+    pub badge_clearance: Option<f64>,
+    pub max_label_width: Option<f64>,
+    pub max_label_lines: Option<usize>,
+    pub min_node_width: Option<f64>,
+    pub max_node_width: Option<f64>,
+    pub target_aspect_ratio: Option<f64>,
+    pub max_nodes_per_rank: Option<usize>,
+    pub balance_ranks: Option<bool>,
+    pub bundle_parallel_edges: Option<bool>,
+    pub compaction: Option<Compaction>,
+
+    pub ranker: Option<Ranker>,
+    pub ordering: Option<OrderingHeuristic>,
+    pub ordering_sweeps: Option<usize>,
+    pub ordering_seeds: Option<usize>,
+    pub coordinator: Option<Coordinator>,
+    pub bk_align: Option<BkAlign>,
+    pub dummy_priority: Option<bool>,
+
+    pub stress_iterations: Option<usize>,
+    pub stress_ideal_edge_length: Option<f64>,
+    pub overlap_removal_passes: Option<usize>,
+
+    pub radial_ring_gap: Option<f64>,
+    pub radial_root: Option<String>,
+
+    pub time_budget_ms: Option<f64>,
+    pub max_dummy_chain_length: Option<usize>,
+    pub assert_constraints: Option<bool>,
+    pub epsilon: Option<f64>,
+
+    pub zoom_sensitivity: Option<f64>,
+}
+
+/// Merges a partial override over the defaults and validates the result.
 pub fn resolve_custom_layout_config(
     partial: Option<&PartialCustomLayoutConfig>,
 ) -> Result<CustomLayoutConfig, LayoutConfigurationError> {
-    let mut merged = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+    let mut c = DEFAULT_CUSTOM_LAYOUT_CONFIG;
 
     if let Some(p) = partial {
-        if let Some(val) = p.node_gap { merged.node_gap = val; }
-        if let Some(val) = p.rank_gap { merged.rank_gap = val; }
-        if let Some(val) = p.component_gap { merged.component_gap = val; }
-        if let Some(val) = p.graph_padding { merged.graph_padding = val; }
-        if let Some(val) = p.port_stub_length { merged.port_stub_length = val; }
-        if let Some(val) = p.port_endpoint_padding { merged.port_endpoint_padding = val; }
-        if let Some(val) = p.obstacle_clearance { merged.obstacle_clearance = val; }
-        if let Some(val) = p.lane_spacing { merged.lane_spacing = val; }
-        if let Some(val) = p.initial_lane_rings { merged.initial_lane_rings = val; }
-        if let Some(val) = p.max_lane_rings { merged.max_lane_rings = val; }
-        if let Some(val) = p.bend_penalty { merged.bend_penalty = val; }
-        if let Some(val) = p.crossing_penalty { merged.crossing_penalty = val; }
-        if let Some(val) = p.direction_penalty { merged.direction_penalty = val; }
-        if let Some(val) = p.side_reuse_penalty { merged.side_reuse_penalty = val; }
-        if let Some(val) = p.near_obstacle_penalty { merged.near_obstacle_penalty = val; }
-        if let Some(val) = p.badge_clearance { merged.badge_clearance = val; }
-        if let Some(val) = p.max_badge_candidates_per_edge { merged.max_badge_candidates_per_edge = val; }
-        if let Some(val) = p.max_badge_backtrack_steps { merged.max_badge_backtrack_steps = val; }
-        if let Some(val) = p.max_crossing_sweeps { merged.max_crossing_sweeps = val; }
-        if let Some(val) = p.max_port_improvement_passes { merged.max_port_improvement_passes = val; }
-        if let Some(val) = p.max_rip_up_passes { merged.max_rip_up_passes = val; }
-        if let Some(val) = p.max_global_passes { merged.max_global_passes = val; }
-        if let Some(val) = p.epsilon { merged.epsilon = val; }
-        if let Some(val) = p.max_aesthetic_passes { merged.max_aesthetic_passes = val; }
-        if let Some(val) = p.max_port_states_per_pass { merged.max_port_states_per_pass = val; }
-        if let Some(val) = p.max_port_alternatives_per_edge { merged.max_port_alternatives_per_edge = val; }
-        if let Some(val) = p.max_route_order_variants { merged.max_route_order_variants = val; }
-        if let Some(val) = p.coordinate_sweep_limit { merged.coordinate_sweep_limit = val; }
-        if let Some(val) = p.max_layout_states { merged.max_layout_states = val; }
-        if let Some(val) = p.max_frontier_size { merged.max_frontier_size = val; }
-        if let Some(val) = p.max_neighbors_per_state { merged.max_neighbors_per_state = val; }
-        if let Some(val) = p.max_astar_states_per_route { merged.max_astar_states_per_route = val; }
-        if let Some(val) = p.max_conflict_permutation_size { merged.max_conflict_permutation_size = val; }
-        if let Some(val) = p.max_conflict_permutations { merged.max_conflict_permutations = val; }
-        if let Some(val) = p.max_route_candidates_per_edge { merged.max_route_candidates_per_edge = val; }
-        if let Some(val) = p.max_badge_states { merged.max_badge_states = val; }
-        if let Some(val) = p.zoom_sensitivity { merged.zoom_sensitivity = val; }
+        macro_rules! take {
+            ($field:ident) => {
+                if let Some(v) = p.$field {
+                    c.$field = v;
+                }
+            };
+        }
+
+        take!(direction);
+        take!(node_gap);
+        take!(rank_gap);
+        take!(component_gap);
+        take!(graph_padding);
+        take!(lane_spacing);
+        take!(port_pitch);
+        take!(port_stub_length);
+        take!(port_endpoint_padding);
+        take!(corner_radius);
+        take!(edge_style);
+        take!(label_placement);
+        take!(badge_clearance);
+        take!(max_label_width);
+        take!(max_label_lines);
+        take!(min_node_width);
+        take!(max_node_width);
+        take!(target_aspect_ratio);
+        take!(max_nodes_per_rank);
+        take!(balance_ranks);
+        take!(bundle_parallel_edges);
+        take!(compaction);
+
+        take!(ranker);
+        take!(ordering);
+        take!(ordering_sweeps);
+        take!(ordering_seeds);
+        take!(coordinator);
+        take!(bk_align);
+        take!(dummy_priority);
+
+        take!(stress_iterations);
+        take!(stress_ideal_edge_length);
+        take!(overlap_removal_passes);
+
+        take!(radial_ring_gap);
+        take!(time_budget_ms);
+
+        take!(max_dummy_chain_length);
+        take!(assert_constraints);
+        take!(epsilon);
+        take!(zoom_sensitivity);
+
+        if let Some(ref v) = p.radial_root {
+            c.radial_root = v.clone();
+        }
     }
 
-    merged.validate()?;
-    Ok(merged)
+    c.validate()?;
+    Ok(c)
 }

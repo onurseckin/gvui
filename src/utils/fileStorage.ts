@@ -1,4 +1,4 @@
-import type { LayoutMode } from "../state/useGraphStore";
+import { normalizeLayoutMode, type LayoutMode } from "../state/useGraphStore";
 import type { GraphDataset } from "../types/graphData";
 
 export interface SavedFileViewport {
@@ -32,7 +32,16 @@ export function generateDatasetSignature(dataset: GraphDataset): string {
   return (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16);
 }
 
-function isSavedFileViewport(obj: unknown): obj is SavedFileViewport {
+/**
+ * Shape-only check on the raw parsed JSON. `layoutMode` is intentionally accepted as any string
+ * here, not narrowed to `LayoutMode` — a viewport saved by a pre-v2 client legitimately carries a
+ * retired value like `"top-down"` or `"force"`, and rejecting the whole record over a stale mode
+ * name would throw away the user's zoom/pan/selection along with it. `loadStoredViewport` maps the
+ * mode forward via `normalizeLayoutMode` once the shape check passes.
+ */
+function isStoredViewportShape(
+  obj: unknown,
+): obj is Omit<SavedFileViewport, "layoutMode"> & { layoutMode: string } {
   if (typeof obj !== "object" || obj === null) {
     return false;
   }
@@ -52,7 +61,7 @@ function isSavedFileViewport(obj: unknown): obj is SavedFileViewport {
   if (candidate.selectedNodeId !== null && typeof candidate.selectedNodeId !== "string") {
     return false;
   }
-  if (typeof candidate.layoutMode !== "string" || candidate.layoutMode !== "top-down") {
+  if (typeof candidate.layoutMode !== "string") {
     return false;
   }
   if (
@@ -83,8 +92,8 @@ export function loadStoredViewport(
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSavedFileViewport(parsed) && parsed.signature === currentSignature) {
-      return parsed;
+    if (isStoredViewportShape(parsed) && parsed.signature === currentSignature) {
+      return { ...parsed, layoutMode: normalizeLayoutMode(parsed.layoutMode) };
     }
   } catch {
     // Parsing error or corrupt JSON

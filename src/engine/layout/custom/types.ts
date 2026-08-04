@@ -58,6 +58,10 @@ export interface NormalizedNode {
   label?: string;
   width: number;
   height: number;
+  /** Pins the node to a rank. Disables rank balancing for the whole graph when any node sets it. */
+  rank?: number;
+  /** Reserved for future cluster support; carried through untouched by the layout engine. */
+  group?: string;
 }
 
 export interface NormalizedEdge {
@@ -67,6 +71,14 @@ export interface NormalizedEdge {
   label?: string;
   isCycle?: boolean;
   layoutRole?: EdgeLayoutHint;
+  /** Ranking and ordering priority. Rust default is 1.0 when omitted. */
+  weight?: number;
+  /** Forces a minimum rank span. Rust default is 1, or 2 when the edge carries a label. */
+  minLen?: number;
+  /** Host-measured badge width; when absent the Rust side falls back to character estimation. */
+  labelWidth?: number;
+  /** Host-measured badge height. */
+  labelHeight?: number;
 }
 
 export interface NormalizedGraph {
@@ -225,62 +237,85 @@ export interface ExactSpacingDemand {
     | "node-overlap";
 }
 
+/**
+ * Why the v2 pipeline stopped. There is no state-space search any more, so the v1 budget-exhaustion
+ * reasons are gone: the only things that can end a run are convergence, the ordering time budget,
+ * an empty graph, or a degenerate stop in a non-layered engine.
+ */
 export type SearchStopReason =
-  | "objective-target"
-  | "bounded-local-optimum"
-  | "frontier-exhausted"
-  | "aesthetic-state-budget"
-  | "layout-state-budget"
-  | "route-state-budget"
-  | "badge-state-budget"
-  | "conflict-permutation-budget"
-  | "deadline-exceeded"
-  | "cancelled"
-  | "repeated-logical-state"
-  | "hard-failure";
+  | "ordering-converged"
+  | "local-optimum"
+  | "time-budget"
+  | "empty_graph"
+  | "ok";
 
+/**
+ * Mirrors Rust's `LayoutMetrics` (crates/gvui/src/0_common/0_1_types.rs).
+ *
+ * These are **reported, never optimized** — v1's 21-field lexicographic `LayoutScore` is gone.
+ * The constraint counters at the bottom are guaranteed zero by construction in v2, so a non-zero
+ * value is a bug report rather than a tuning signal.
+ */
 export interface LayoutMetrics {
-  unresolvedRouteCount?: number;
-  unresolvedBadgeCount?: number;
-  nodeNodeOverlaps: number;
-  edgeNodePenetrations: number;
-  sharedEdgeSegmentLength: number;
-  badgeNodeOverlaps: number;
-  badgeBadgeOverlaps: number;
-  badgeUnrelatedEdgeOverlaps: number;
-  crossingCount: number;
+  /** Combinatorial crossings after ordering (Phase 5). */
+  crossings: number;
+  /**
+   * Crossings measured from the emitted polylines. Runs somewhat above `crossings` by design —
+   * lane routing also crosses where a vertical run meets another edge's horizontal run in the
+   * same channel, which the combinatorial count does not model. Watch the ratio, not the equality.
+   */
+  geometricCrossings: number;
   bendCount: number;
   totalLength: number;
-  directionDeviationPenalty: number;
-  portSideReusePenalty: number;
-  totalArea: number;
-  ordinaryLeaderCount?: number;
-  feedbackLeaderCount?: number;
-  totalLeaderLength?: number;
-  hairpinCount?: number;
-  portSideImbalance?: number;
-  avoidableHairpinCount?: number;
-  excessBendCount?: number;
-  maximumOrdinaryEdgeBends?: number;
-  maximumFeedbackEdgeBends?: number;
+  /** Fraction of dummy chains that are perfectly straight. Best single proxy for "looks designed". */
+  straightChainRatio: number;
+  area: number;
+  aspectRatio: number;
+  /** Widest routing channel. A large value means ordering is fighting the topology. */
+  laneDepthMax: number;
+  portSideBalance: number;
+  /** Badges that needed a leader line. Should be ~0; non-zero means a reservation was defeated. */
+  leaderCount: number;
+  labelsTruncated: number;
+  nodeCount: number;
+  edgeCount: number;
+  rankCount: number;
+  dummyCount: number;
+
+  // ---- constraint counters; any non-zero value is a bug, not a score ----
+  nodeNodeOverlaps: number;
+  edgeNodePenetrations: number;
+  badgeNodeOverlaps: number;
+  badgeBadgeOverlaps: number;
+  unresolvedRouteCount: number;
+  unresolvedBadgeCount: number;
 }
 
+/** Per-phase wall-clock in milliseconds. Mirrors Rust's `PhaseTimings`. */
+export interface PhaseTimings {
+  ingest: number;
+  structure: number;
+  rank: number;
+  layer: number;
+  order: number;
+  demand: number;
+  coordinates: number;
+  route: number;
+  emit: number;
+  total: number;
+}
+
+/** Mirrors Rust's `OptimizationStats`. Field names kept for renderer compatibility. */
 export interface OptimizationStats {
+  /** Ordering sweeps actually executed. */
   globalPasses: number;
+  /** Ordering seeds evaluated. */
   evaluatedPortStates: number;
+  /** Always 0 in v2 — spacing is exact and is never expanded by retry. */
   spacingExpansions: number;
-  repeatedStateStop: boolean;
-  totalPasses?: number;
-  totalEvaluatedStates?: number;
-  visitedStateHashes?: number;
   durationMs?: number;
-  evaluatedLayoutStates?: number;
-  generatedNeighborStates?: number;
-  routeSearchCalls?: number;
-  aStarExpandedStates?: number;
-  routeCacheHits?: number;
-  stateCacheHits?: number;
   stopReason?: SearchStopReason;
+  timings?: PhaseTimings;
 }
 
 export interface RouteCost {

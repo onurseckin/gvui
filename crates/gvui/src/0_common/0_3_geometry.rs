@@ -280,6 +280,259 @@ pub fn point_at_path_ratio(points: &[Point], ratio: f64) -> Point {
     points[points.len() - 1]
 }
 
+/// Orthogonal-aware strict crossing test for two axis-aligned segments. Mirrors the pairing logic
+/// of [`segments_cross`] (one segment must be horizontal, the other vertical) but returns the
+/// actual intersection point instead of a boolean, for callers that need to record a crossing.
+pub fn orthogonal_crossing_point(s1: &Segment, s2: &Segment, epsilon: f64) -> Option<Point> {
+    let s1_horiz = (s1.a.y - s1.b.y).abs() <= epsilon;
+    let s1_vert = (s1.a.x - s1.b.x).abs() <= epsilon;
+    let s2_horiz = (s2.a.y - s2.b.y).abs() <= epsilon;
+    let s2_vert = (s2.a.x - s2.b.x).abs() <= epsilon;
+
+    if s1_horiz && s2_vert {
+        let s1_min_x = s1.a.x.min(s1.b.x);
+        let s1_max_x = s1.a.x.max(s1.b.x);
+        let s2_min_y = s2.a.y.min(s2.b.y);
+        let s2_max_y = s2.a.y.max(s2.b.y);
+
+        let x = s2.a.x;
+        let y = s1.a.y;
+
+        if x > s1_min_x + epsilon
+            && x < s1_max_x - epsilon
+            && y > s2_min_y + epsilon
+            && y < s2_max_y - epsilon
+        {
+            return Some(Point { x, y });
+        }
+        return None;
+    }
+
+    if s1_vert && s2_horiz {
+        let s1_min_y = s1.a.y.min(s1.b.y);
+        let s1_max_y = s1.a.y.max(s1.b.y);
+        let s2_min_x = s2.a.x.min(s2.b.x);
+        let s2_max_x = s2.a.x.max(s2.b.x);
+
+        let x = s1.a.x;
+        let y = s2.a.y;
+
+        if x > s2_min_x + epsilon
+            && x < s2_max_x - epsilon
+            && y > s1_min_y + epsilon
+            && y < s1_max_y - epsilon
+        {
+            return Some(Point { x, y });
+        }
+        return None;
+    }
+
+    None
+}
+
+/// Nearest point on a polyline to `p`, plus the index of the segment (`points[i]..points[i+1]`)
+/// that contains it. Ties (equal distance on two adjacent segments, i.e. `p` nearest a shared
+/// vertex) resolve to the lower segment index, since segments are scanned in order and a later
+/// segment only replaces the result on a strictly smaller distance.
+pub fn nearest_point_on_polyline(points: &[Point], p: &Point) -> (Point, usize) {
+    if points.is_empty() {
+        return (Point { x: 0.0, y: 0.0 }, 0);
+    }
+    if points.len() == 1 {
+        return (points[0], 0);
+    }
+
+    let mut best_point = points[0];
+    let mut best_seg = 0usize;
+    let mut best_dist = f64::INFINITY;
+
+    for i in 0..points.len() - 1 {
+        let a = &points[i];
+        let b = &points[i + 1];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let len_sq = dx * dx + dy * dy;
+
+        let t = if len_sq > 0.0 {
+            (((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        let candidate = Point {
+            x: a.x + t * dx,
+            y: a.y + t * dy,
+        };
+        let ddx = candidate.x - p.x;
+        let ddy = candidate.y - p.y;
+        let dist = ddx * ddx + ddy * ddy;
+
+        if dist < best_dist {
+            best_dist = dist;
+            best_point = candidate;
+            best_seg = i;
+        }
+    }
+
+    (best_point, best_seg)
+}
+
+/// Axis-aligned bounding box of a point set. `None` for an empty slice, since there is no
+/// meaningful rectangle to return.
+pub fn bounding_box_of_points(points: &[Point]) -> Option<Rect> {
+    let first = points.first()?;
+    let mut min_x = first.x;
+    let mut max_x = first.x;
+    let mut min_y = first.y;
+    let mut max_y = first.y;
+
+    for p in &points[1..] {
+        min_x = min_x.min(p.x);
+        max_x = max_x.max(p.x);
+        min_y = min_y.min(p.y);
+        max_y = max_y.max(p.y);
+    }
+
+    Some(Rect {
+        x: min_x,
+        y: min_y,
+        width: max_x - min_x,
+        height: max_y - min_y,
+    })
+}
+
+/// Union of two rectangles: the smallest axis-aligned rectangle containing both.
+pub fn rect_union(a: &Rect, b: &Rect) -> Rect {
+    let min_x = a.x.min(b.x);
+    let min_y = a.y.min(b.y);
+    let max_x = a.right().max(b.right());
+    let max_y = a.bottom().max(b.bottom());
+
+    Rect {
+        x: min_x,
+        y: min_y,
+        width: max_x - min_x,
+        height: max_y - min_y,
+    }
+}
+
+/// Translates every point in place by `(dx, dy)`.
+pub fn translate_points(points: &mut [Point], dx: f64, dy: f64) {
+    for p in points.iter_mut() {
+        p.x += dx;
+        p.y += dy;
+    }
+}
+
+/// True when the rect pair overlaps with at least `epsilon` of overlap extent in both axes.
+/// Distinct from [`rects_overlap_strict`]: this measures the overlap span directly against
+/// `epsilon` rather than shrinking each rectangle's boundary by `epsilon` first, so callers that
+/// want "meaningfully more than a hairline touch" should use this one.
+pub fn rects_overlap_area(a: &Rect, b: &Rect, epsilon: f64) -> bool {
+    let overlap_w = a.right().min(b.right()) - a.x.max(b.x);
+    let overlap_h = a.bottom().min(b.bottom()) - a.y.max(b.y);
+    overlap_w > epsilon && overlap_h > epsilon
+}
+
+/// Clips the ray from `rect`'s centre toward `toward` to the rect boundary. Used by
+/// straight/spline edge styles where there is no port to anchor to.
+///
+/// When `toward` coincides with the centre (degenerate: no direction to clip along), returns the
+/// centre itself rather than an arbitrary side, since there is no well-defined ray.
+pub fn clip_ray_to_rect(rect: &Rect, toward: &Point) -> Point {
+    let center = rect.center();
+    let dx = toward.x - center.x;
+    let dy = toward.y - center.y;
+
+    if dx == 0.0 && dy == 0.0 {
+        return center;
+    }
+
+    let half_w = rect.width / 2.0;
+    let half_h = rect.height / 2.0;
+
+    let t_x = if dx != 0.0 && half_w > 0.0 {
+        half_w / dx.abs()
+    } else {
+        f64::INFINITY
+    };
+    let t_y = if dy != 0.0 && half_h > 0.0 {
+        half_h / dy.abs()
+    } else {
+        f64::INFINITY
+    };
+
+    let t = t_x.min(t_y);
+    if !t.is_finite() {
+        // Degenerate rect (zero width and height): nothing to clip to.
+        return center;
+    }
+
+    Point {
+        x: center.x + dx * t,
+        y: center.y + dy * t,
+    }
+}
+
+/// Shelf/strip packer. Given component bounding boxes (only their `width`/`height` matter — the
+/// existing `x`/`y` are the pre-pack layout the returned translation moves away from), returns the
+/// translation for each box, by input index, so the packed arrangement approaches `target_aspect`
+/// (packed total width / packed total height).
+///
+/// Deterministic: boxes are visited in descending height order, ties broken by ascending input
+/// index, and placed left-to-right on a shelf until the next box would exceed the target shelf
+/// width, at which point a new shelf starts below the tallest box seen on the current shelf. This
+/// guarantees no two returned placements overlap, regardless of `target_aspect` or `gap`.
+pub fn pack_boxes(boxes: &[Rect], gap: f64, target_aspect: f64) -> Vec<(f64, f64)> {
+    if boxes.is_empty() {
+        return Vec::new();
+    }
+
+    let gap = if gap.is_finite() && gap >= 0.0 { gap } else { 0.0 };
+    let aspect = if target_aspect.is_finite() && target_aspect > 0.0 {
+        target_aspect
+    } else {
+        1.0
+    };
+
+    let total_area: f64 = boxes.iter().map(|b| b.width.max(0.0) * b.height.max(0.0)).sum();
+    let max_width = boxes.iter().fold(0.0f64, |acc, b| acc.max(b.width.max(0.0)));
+    let target_width = (total_area * aspect).sqrt().max(max_width);
+
+    let mut order: Vec<usize> = (0..boxes.len()).collect();
+    order.sort_by(|&i, &j| {
+        boxes[j]
+            .height
+            .partial_cmp(&boxes[i].height)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(i.cmp(&j))
+    });
+
+    let mut translations = vec![(0.0, 0.0); boxes.len()];
+    let mut x_cursor = 0.0f64;
+    let mut y_cursor = 0.0f64;
+    let mut shelf_height = 0.0f64;
+
+    for i in order {
+        let b = &boxes[i];
+        let w = b.width.max(0.0);
+        let h = b.height.max(0.0);
+
+        if x_cursor > 0.0 && x_cursor + w > target_width {
+            y_cursor += shelf_height + gap;
+            x_cursor = 0.0;
+            shelf_height = 0.0;
+        }
+
+        translations[i] = (x_cursor - b.x, y_cursor - b.y);
+
+        x_cursor += w + gap;
+        shelf_height = shelf_height.max(h);
+    }
+
+    translations
+}
+
 /// Generates a canonical string key representation for an undirected segment,
 /// ordering endpoints lexicographically by (x, y) coordinates.
 pub fn canonical_segment_key(s: &Segment) -> String {
@@ -294,4 +547,258 @@ pub fn canonical_segment_key(s: &Segment) -> String {
         &s.a
     };
     format!("{},{}:{},{}", p1.x, p1.y, p2.x, p2.y)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pt(x: f64, y: f64) -> Point {
+        Point { x, y }
+    }
+
+    fn rect(x: f64, y: f64, w: f64, h: f64) -> Rect {
+        Rect {
+            x,
+            y,
+            width: w,
+            height: h,
+        }
+    }
+
+    // ---- orthogonal_crossing_point ----
+
+    #[test]
+    fn crossing_point_finds_interior_intersection() {
+        let horiz = Segment {
+            a: pt(0.0, 5.0),
+            b: pt(10.0, 5.0),
+        };
+        let vert = Segment {
+            a: pt(5.0, 0.0),
+            b: pt(5.0, 10.0),
+        };
+        let got = orthogonal_crossing_point(&horiz, &vert, 1e-6);
+        assert_eq!(got, Some(pt(5.0, 5.0)));
+    }
+
+    #[test]
+    fn crossing_point_none_when_disjoint() {
+        let horiz = Segment {
+            a: pt(0.0, 5.0),
+            b: pt(4.0, 5.0),
+        };
+        let vert = Segment {
+            a: pt(5.0, 0.0),
+            b: pt(5.0, 10.0),
+        };
+        assert_eq!(orthogonal_crossing_point(&horiz, &vert, 1e-6), None);
+    }
+
+    #[test]
+    fn crossing_point_none_for_parallel_segments() {
+        let h1 = Segment {
+            a: pt(0.0, 0.0),
+            b: pt(10.0, 0.0),
+        };
+        let h2 = Segment {
+            a: pt(0.0, 5.0),
+            b: pt(10.0, 5.0),
+        };
+        assert_eq!(orthogonal_crossing_point(&h1, &h2, 1e-6), None);
+    }
+
+    // ---- nearest_point_on_polyline ----
+
+    #[test]
+    fn nearest_point_on_polyline_empty() {
+        let (p, seg) = nearest_point_on_polyline(&[], &pt(1.0, 1.0));
+        assert_eq!(p, pt(0.0, 0.0));
+        assert_eq!(seg, 0);
+    }
+
+    #[test]
+    fn nearest_point_on_polyline_picks_containing_segment() {
+        let points = vec![pt(0.0, 0.0), pt(10.0, 0.0), pt(10.0, 10.0)];
+        let (nearest, seg) = nearest_point_on_polyline(&points, &pt(10.0, 5.0));
+        assert_eq!(nearest, pt(10.0, 5.0));
+        assert_eq!(seg, 1);
+    }
+
+    #[test]
+    fn nearest_point_on_polyline_clamps_to_endpoint() {
+        let points = vec![pt(0.0, 0.0), pt(10.0, 0.0)];
+        let (nearest, seg) = nearest_point_on_polyline(&points, &pt(-5.0, 3.0));
+        assert_eq!(nearest, pt(0.0, 0.0));
+        assert_eq!(seg, 0);
+    }
+
+    // ---- bounding_box_of_points ----
+
+    #[test]
+    fn bounding_box_of_points_empty_is_none() {
+        assert_eq!(bounding_box_of_points(&[]), None);
+    }
+
+    #[test]
+    fn bounding_box_of_points_covers_all_points() {
+        let points = vec![pt(3.0, -2.0), pt(-1.0, 5.0), pt(10.0, 1.0)];
+        let bb = bounding_box_of_points(&points).expect("non-empty input");
+        assert_eq!(bb, rect(-1.0, -2.0, 11.0, 7.0));
+    }
+
+    // ---- rect_union ----
+
+    #[test]
+    fn rect_union_covers_both_rects() {
+        let a = rect(0.0, 0.0, 5.0, 5.0);
+        let b = rect(3.0, 3.0, 5.0, 5.0);
+        assert_eq!(rect_union(&a, &b), rect(0.0, 0.0, 8.0, 8.0));
+    }
+
+    #[test]
+    fn rect_union_disjoint_rects() {
+        let a = rect(0.0, 0.0, 1.0, 1.0);
+        let b = rect(10.0, 10.0, 1.0, 1.0);
+        assert_eq!(rect_union(&a, &b), rect(0.0, 0.0, 11.0, 11.0));
+    }
+
+    // ---- translate_points ----
+
+    #[test]
+    fn translate_points_shifts_every_point() {
+        let mut points = vec![pt(0.0, 0.0), pt(1.0, 1.0)];
+        translate_points(&mut points, 2.0, -3.0);
+        assert_eq!(points, vec![pt(2.0, -3.0), pt(3.0, -2.0)]);
+    }
+
+    #[test]
+    fn translate_points_empty_is_noop() {
+        let mut points: Vec<Point> = vec![];
+        translate_points(&mut points, 5.0, 5.0);
+        assert!(points.is_empty());
+    }
+
+    // ---- rects_overlap_area ----
+
+    #[test]
+    fn rects_overlap_area_true_for_real_overlap() {
+        let a = rect(0.0, 0.0, 10.0, 10.0);
+        let b = rect(5.0, 5.0, 10.0, 10.0);
+        assert!(rects_overlap_area(&a, &b, 1e-6));
+    }
+
+    #[test]
+    fn rects_overlap_area_false_for_hairline_touch() {
+        let a = rect(0.0, 0.0, 10.0, 10.0);
+        let b = rect(10.0, 0.0, 10.0, 10.0);
+        assert!(!rects_overlap_area(&a, &b, 1e-6));
+    }
+
+    // ---- clip_ray_to_rect ----
+
+    #[test]
+    fn clip_ray_to_rect_toward_right() {
+        let r = rect(0.0, 0.0, 10.0, 20.0);
+        let got = clip_ray_to_rect(&r, &pt(100.0, 10.0));
+        assert_eq!(got, pt(10.0, 10.0));
+    }
+
+    #[test]
+    fn clip_ray_to_rect_toward_left() {
+        let r = rect(0.0, 0.0, 10.0, 20.0);
+        let got = clip_ray_to_rect(&r, &pt(-100.0, 10.0));
+        assert_eq!(got, pt(0.0, 10.0));
+    }
+
+    #[test]
+    fn clip_ray_to_rect_toward_bottom() {
+        let r = rect(0.0, 0.0, 10.0, 20.0);
+        let got = clip_ray_to_rect(&r, &pt(5.0, 1000.0));
+        assert_eq!(got, pt(5.0, 20.0));
+    }
+
+    #[test]
+    fn clip_ray_to_rect_toward_top() {
+        let r = rect(0.0, 0.0, 10.0, 20.0);
+        let got = clip_ray_to_rect(&r, &pt(5.0, -1000.0));
+        assert_eq!(got, pt(5.0, 0.0));
+    }
+
+    #[test]
+    fn clip_ray_to_rect_degenerate_centre_returns_centre() {
+        let r = rect(0.0, 0.0, 10.0, 20.0);
+        let center = r.center();
+        assert_eq!(clip_ray_to_rect(&r, &center), center);
+    }
+
+    // ---- pack_boxes ----
+
+    #[test]
+    fn pack_boxes_single_box_needs_no_translation_when_already_at_origin() {
+        let boxes = vec![rect(0.0, 0.0, 5.0, 5.0)];
+        let translations = pack_boxes(&boxes, 1.0, 1.0);
+        assert_eq!(translations, vec![(0.0, 0.0)]);
+    }
+
+    #[test]
+    fn pack_boxes_empty_input() {
+        assert_eq!(pack_boxes(&[], 1.0, 1.0), Vec::<(f64, f64)>::new());
+    }
+
+    #[test]
+    fn pack_boxes_equal_boxes_form_grid_with_no_overlap() {
+        // Nine equal unit-ish boxes at arbitrary starting positions, packed toward a square aspect.
+        let boxes: Vec<Rect> = (0..9)
+            .map(|i| rect(i as f64 * 100.0, i as f64 * 37.0, 10.0, 10.0))
+            .collect();
+        let translations = pack_boxes(&boxes, 2.0, 1.0);
+        assert_eq!(translations.len(), 9);
+
+        let packed: Vec<Rect> = boxes
+            .iter()
+            .zip(translations.iter())
+            .map(|(b, (dx, dy))| rect(b.x + dx, b.y + dy, b.width, b.height))
+            .collect();
+
+        for i in 0..packed.len() {
+            for j in (i + 1)..packed.len() {
+                assert!(
+                    !rects_overlap_area(&packed[i], &packed[j], 1e-6),
+                    "boxes {i} and {j} overlap: {:?} vs {:?}",
+                    packed[i],
+                    packed[j]
+                );
+            }
+        }
+
+        // Square target aspect over 9 equal boxes should settle into multiple shelves (rows),
+        // i.e. not a single degenerate row.
+        let distinct_ys: std::collections::BTreeSet<i64> =
+            packed.iter().map(|r| (r.y * 1000.0).round() as i64).collect();
+        assert!(distinct_ys.len() > 1);
+    }
+
+    #[test]
+    fn pack_boxes_varied_sizes_no_overlap() {
+        let boxes = vec![
+            rect(0.0, 0.0, 40.0, 10.0),
+            rect(0.0, 0.0, 10.0, 30.0),
+            rect(0.0, 0.0, 20.0, 20.0),
+            rect(0.0, 0.0, 5.0, 5.0),
+            rect(0.0, 0.0, 15.0, 25.0),
+        ];
+        let translations = pack_boxes(&boxes, 3.0, 1.6);
+        let packed: Vec<Rect> = boxes
+            .iter()
+            .zip(translations.iter())
+            .map(|(b, (dx, dy))| rect(b.x + dx, b.y + dy, b.width, b.height))
+            .collect();
+
+        for i in 0..packed.len() {
+            for j in (i + 1)..packed.len() {
+                assert!(!rects_overlap_area(&packed[i], &packed[j], 1e-6));
+            }
+        }
+    }
 }

@@ -1,19 +1,20 @@
 [package]
 name = "gvui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "High-performance Rust + WebAssembly layout calculation engine for GVUI directed graphs"
 
 
+# `rlib` in addition to `cdylib` so the crate can be linked by native benchmark and audit
+# harnesses without duplicating the source tree.
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
 wasm-bindgen = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
-rayon = "1.10"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "Performance"] }
 
@@ -30,7 +31,3 @@ wasm-opt = false
 
 [dev-dependencies]
 serde_json = "1.0"
-
-
-
-

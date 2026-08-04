@@ -176,11 +176,11 @@ export const GraphTestingModal: FC<GraphTestingModalProps> = ({ isOpen, onClose 
                     </div>
                     <div className="testing-stat-badge">
                       Nodes: {layoutResult.nodes.length} | Edges: {layoutResult.edges.length} |
-                      Crossings: {layoutResult.validation.metrics.crossingCount} | Hairpins:{" "}
-                      {layoutResult.validation.metrics.hairpinCount ?? 0} | Leaders:{" "}
-                      {(layoutResult.validation.metrics.ordinaryLeaderCount ?? 0) +
-                        (layoutResult.validation.metrics.feedbackLeaderCount ?? 0)}{" "}
-                      | Passes: {layoutResult.optimizationStats?.globalPasses ?? 1} | Status:{" "}
+                      Crossings: {layoutResult.validation.metrics.crossings} (geo{" "}
+                      {layoutResult.validation.metrics.geometricCrossings}) | Straight:{" "}
+                      {Math.round(layoutResult.validation.metrics.straightChainRatio * 100)}% |
+                      Leaders: {layoutResult.validation.metrics.leaderCount} | Sweeps:{" "}
+                      {layoutResult.optimizationStats?.globalPasses ?? 0} | Status:{" "}
                       <strong>{layoutResult.status}</strong>
                     </div>
                   </div>

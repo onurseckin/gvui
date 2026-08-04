@@ -1,37 +1,20 @@
-//! Step 3: Crossing Minimization & Parallel Search Module.
+//! # Step 3 (Phases 4 & 5): Layering and ordering
 //!
-//! Refactored and modularized step 3 pipeline for crossing minimization, 2D crossing detection,
-//! Rayon parallel neighborhood search optimization, trial state generation, and 21-component objective evaluation.
+//! Builds the layered graph — dummy chains for long edges and **label items** carrying badge
+//! boxes — then minimizes crossings with median/barycenter sweeps and a local transpose pass over
+//! Barth-Mutzel-Juenger crossing counts.
 
-#[path = "3_1_barycenter_median_ordering.rs"]
-pub mod barycenter_median_ordering;
+#[path = "3_1_layer_builder.rs"]
+pub mod layer_builder;
 
 #[path = "3_2_crossing_counting.rs"]
 pub mod crossing_counting;
 
-#[path = "3_3_rayon_parallel_search.rs"]
-pub mod rayon_parallel_search;
+#[path = "3_3_ordering.rs"]
+pub mod ordering;
 
-#[path = "3_4_trial_state_generator.rs"]
-pub mod trial_state_generator;
+#[path = "3_4_order_facade.rs"]
+pub mod order_facade;
 
-#[path = "3_5_objective_evaluator.rs"]
-pub mod objective_evaluator;
-
-#[path = "3_6_layout_optimizer_state.rs"]
-pub mod layout_optimizer_state;
-
-#[path = "3_7_fast_layout_engine.rs"]
-pub mod fast_layout_engine;
-
-#[cfg(test)]
-pub mod tests;
-
-pub use barycenter_median_ordering::*;
-pub use crossing_counting::*;
-pub use fast_layout_engine::*;
-pub use layout_optimizer_state::*;
-pub use objective_evaluator::*;
-pub use rayon_parallel_search::*;
-pub use trial_state_generator::*;
-
+pub use layer_builder::build_layered;
+pub use order_facade::{order_layers, OrderingOutcome};

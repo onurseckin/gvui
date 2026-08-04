@@ -1,28 +1,20 @@
-//! # Step 4: Coordinate Assignment & Spacing
+//! # Step 4 (Phases 6 & 7): Routing demand and coordinates
 //!
-//! Submodule handling rank band calculation, PAVA isotonic regression,
-//! iterative coordinate sweeps, spacing demand resolution, and bounding translation.
+//! Lane demand is computed from the fixed ordering by interval-graph colouring — exact and
+//! optimal — and the resulting separations feed Brandes-Koepf. This is the single point where a
+//! downstream requirement reaches an upstream decision, and it is resolved in one pass.
 
-#[path = "4_1_spacing_demand_resolver.rs"]
-pub mod spacing_demand_resolver;
+#[path = "4_1_lane_demand.rs"]
+pub mod lane_demand;
 
-#[path = "4_2_pava_isotonic_regression.rs"]
-pub mod pava_isotonic_regression;
+#[path = "4_2_rank_bands.rs"]
+pub mod rank_bands;
 
-#[path = "4_3_coordinate_sweep.rs"]
-pub mod coordinate_sweep;
+#[path = "4_3_brandes_kopf.rs"]
+pub mod brandes_kopf;
 
-#[path = "4_4_bounding_translation.rs"]
-pub mod bounding_translation;
+#[path = "4_4_coordinate_facade.rs"]
+pub mod coordinate_facade;
 
-#[path = "4_5_coordinate_assignment_facade.rs"]
-pub mod coordinate_assignment_facade;
-
-#[cfg(test)]
-pub mod tests;
-
-pub use bounding_translation::*;
-pub use coordinate_assignment_facade::*;
-pub use coordinate_sweep::*;
-pub use pava_isotonic_regression::*;
-pub use spacing_demand_resolver::*;
+pub use coordinate_facade::assign_coordinates;
+pub use lane_demand::compute_routing_demand;

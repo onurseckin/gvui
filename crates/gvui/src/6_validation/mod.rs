@@ -1,10 +1,15 @@
-//! Step 6: Layout Validation Subsystem.
+//! # Step 6 (Phase 9): Constraints, metrics and emit
 //!
-//! This module contains layout validation rules, overlap checks, diagnostics,
-//! and comparative score evaluations.
+//! Constraints are asserted, not scored. Metrics are reported, not optimized.
 
-#[path = "6_1_layout_validator.rs"]
-pub mod layout_validator;
+#[path = "6_1_constraints.rs"]
+pub mod constraints;
 
-#[cfg(test)]
-pub mod tests;
+#[path = "6_2_metrics.rs"]
+pub mod metrics;
+
+#[path = "6_3_emit.rs"]
+pub mod emit;
+
+pub use constraints::check_constraints;
+pub use metrics::compute_metrics;

@@ -1,36 +1,75 @@
-import React, { useCallback, useEffect, useState, type FC } from "react";
-import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
-import { Button, LayoutSelectDropdown } from "../../ui";
+import React, { useCallback, useEffect, useRef, useState, type FC } from "react";
+import {
+  useGraphStore,
+  useLayoutConfig,
+  useLayoutPreset,
+  type LayoutMode,
+} from "../../state/useGraphStore";
+import { Button, LayoutSelectDropdown, Select, type SelectOption } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import {
-  DEFAULT_CUSTOM_LAYOUT_CONFIG,
+  LAYOUT_PRESETS,
   type CustomLayoutConfig,
+  type Direction,
+  type EdgeStyle,
+  type LabelPlacement,
+  type Compaction,
+  type LayoutPresetName,
 } from "../../engine/layout/custom/config";
 import "./Controls.css";
+
+// Tier-1 aesthetics only — see docs/planning/layout-engine-v2/04-config-and-quality.md §2. Every
+// other knob (Tier 2 algorithm selection, Tier 3 budgets) lives in EngineOptionsPanel; this is the
+// quick-access bar, not the full disclosure.
+
+const DIRECTION_OPTIONS: SelectOption<Direction>[] = [
+  { value: "top-down", label: "Top → Down" },
+  { value: "bottom-up", label: "Bottom → Up" },
+  { value: "left-right", label: "Left → Right" },
+  { value: "right-left", label: "Right → Left" },
+];
+
+const EDGE_STYLE_OPTIONS: SelectOption<EdgeStyle>[] = [
+  { value: "orthogonal", label: "Orthogonal" },
+  { value: "rounded", label: "Rounded" },
+  { value: "spline", label: "Spline" },
+  { value: "straight", label: "Straight" },
+];
+
+const LABEL_PLACEMENT_OPTIONS: SelectOption<LabelPlacement>[] = [
+  { value: "on-edge", label: "On Edge" },
+  { value: "beside-edge", label: "Beside Edge" },
+  { value: "above-edge", label: "Above Edge" },
+];
+
+const COMPACTION_OPTIONS: SelectOption<Compaction>[] = [
+  { value: "tight", label: "Tight" },
+  { value: "balanced", label: "Balanced" },
+  { value: "airy", label: "Airy" },
+];
+
+const PRESET_OPTIONS: SelectOption<LayoutPresetName>[] = (
+  Object.keys(LAYOUT_PRESETS) as LayoutPresetName[]
+).map((name) => ({ value: name, label: name.charAt(0).toUpperCase() + name.slice(1) }));
 
 export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const layoutConfig = useLayoutConfig();
+  const layoutPreset = useLayoutPreset();
 
   const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
   const setLayoutMode = useGraphStore((state) => state.setLayoutMode);
   const setLayoutConfig = useGraphStore((state) => state.setLayoutConfig);
   const resetLayoutConfig = useGraphStore((state) => state.resetLayoutConfig);
+  const applyPreset = useGraphStore((state) => state.applyPreset);
   const resetViewport = useGraphStore((state) => state.resetViewport);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [stagedConfig, setStagedConfig] = useState<CustomLayoutConfig>(layoutConfig);
-  const configWrapperRef = React.useRef<HTMLDivElement | null>(null);
-
-  const isDirty = React.useMemo(() => {
-    return (Object.keys(stagedConfig) as (keyof CustomLayoutConfig)[]).some(
-      (key) => stagedConfig[key] !== layoutConfig[key],
-    );
-  }, [stagedConfig, layoutConfig]);
+  const configWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isConfigOpen) return;
@@ -41,14 +80,12 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
         !configWrapperRef.current.contains(event.target as Node)
       ) {
         setIsConfigOpen(false);
-        setStagedConfig(layoutConfig);
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsConfigOpen(false);
-        setStagedConfig(layoutConfig);
       }
     };
 
@@ -58,7 +95,7 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isConfigOpen, layoutConfig]);
+  }, [isConfigOpen]);
 
   const handleZoomIn = useCallback(
     () => setZoomLevel((prev) => Math.min(prev + 0.2, 3.0)),
@@ -119,6 +156,22 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
     [setLayoutMode],
   );
 
+  // Quick controls apply immediately — unlike the full EngineOptionsPanel disclosure, this bar has
+  // no stage/apply workflow; it is meant for fast, low-ceremony tweaks.
+  const updateConfig = useCallback(
+    <K extends keyof CustomLayoutConfig>(key: K, value: CustomLayoutConfig[K]) => {
+      setLayoutConfig({ [key]: value } as Partial<CustomLayoutConfig>);
+    },
+    [setLayoutConfig],
+  );
+
+  const handlePresetChange = useCallback(
+    (name: LayoutPresetName) => {
+      applyPreset(name);
+    },
+    [applyPreset],
+  );
+
   return (
     <div className="canvas-toolbar">
       <div className="toolbar-group">
@@ -174,54 +227,43 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
         <LayoutSelectDropdown value={layoutMode} onLayoutChange={handleLayoutChange} size="sm" />
       </div>
 
+      <div className="layout-select-wrapper">
+        <label htmlFor="preset-select" className="layout-label">
+          Preset:
+        </label>
+        <Select<LayoutPresetName>
+          id="preset-select"
+          size="sm"
+          options={PRESET_OPTIONS}
+          value={layoutPreset}
+          onValueChange={handlePresetChange}
+          aria-label="Layout preset"
+        />
+      </div>
+
       <div className="layout-config-wrapper" ref={configWrapperRef}>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            setIsConfigOpen((prev) => {
-              if (prev) {
-                setStagedConfig(layoutConfig);
-              } else {
-                setStagedConfig(layoutConfig);
-              }
-              return !prev;
-            });
-          }}
-          title="WASM Layout Engine Options"
-          className={`toolbar-btn ${isDirty ? "has-unapplied" : ""}`}
+          onClick={() => setIsConfigOpen((prev) => !prev)}
+          title="Quick Layout Settings"
+          className="toolbar-btn"
         >
-          ⚙ Engine Options {isDirty && <span className="toolbar-unapplied-dot">●</span>}
+          ⚙ Quick Settings
         </Button>
 
         {isConfigOpen && (
           <div className="layout-config-popover">
             <div className="layout-config-header">
               <div className="layout-config-header-left">
-                <span className="layout-config-title">⚙ WASM Engine Options</span>
-                {isDirty && <span className="unapplied-badge">Unapplied Changes</span>}
+                <span className="layout-config-title">⚙ Quick Layout Settings</span>
               </div>
               <div className="layout-config-actions">
                 <Button
                   variant="outline"
                   size="sm"
-                  className={`apply-config-btn ${isDirty ? "dirty" : "applied"}`}
-                  disabled={!isDirty}
-                  onClick={() => {
-                    setLayoutConfig(stagedConfig);
-                  }}
-                  title="Apply new engine options to graph layout"
-                >
-                  {isDirty ? "🚀 Apply Options" : "✓ Applied"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   className="layout-config-reset-btn"
-                  onClick={() => {
-                    resetLayoutConfig();
-                    setStagedConfig(DEFAULT_CUSTOM_LAYOUT_CONFIG);
-                  }}
+                  onClick={() => resetLayoutConfig()}
                   title="Reset to default options"
                 >
                   Reset
@@ -231,7 +273,19 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
 
             <div className="layout-config-body">
               <div className="layout-config-section">
-                <span className="layout-config-section-title">📐 Spacing & Clearances</span>
+                <span className="layout-config-section-title">📐 Layout & Spacing</span>
+
+                <div className="layout-config-item">
+                  <span className="layout-config-item-label">Direction</span>
+                  <Select<Direction>
+                    size="sm"
+                    options={DIRECTION_OPTIONS}
+                    value={layoutConfig.direction}
+                    onValueChange={(value) => updateConfig("direction", value)}
+                    aria-label="Layout direction"
+                  />
+                </div>
+
                 <div className="layout-config-item">
                   <span className="layout-config-item-label">Node Gap (px)</span>
                   <div className="layout-config-controls-row">
@@ -239,18 +293,14 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
                       type="range"
                       min="10"
                       max="200"
-                      value={stagedConfig.nodeGap}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, nodeGap: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.nodeGap}
+                      onChange={(e) => updateConfig("nodeGap", Number(e.target.value))}
                       className="layout-config-slider"
                     />
                     <input
                       type="number"
-                      value={stagedConfig.nodeGap}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, nodeGap: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.nodeGap}
+                      onChange={(e) => updateConfig("nodeGap", Number(e.target.value))}
                       className="layout-config-number-input"
                     />
                   </div>
@@ -263,347 +313,74 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
                       type="range"
                       min="20"
                       max="300"
-                      value={stagedConfig.rankGap}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, rankGap: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.rankGap}
+                      onChange={(e) => updateConfig("rankGap", Number(e.target.value))}
                       className="layout-config-slider"
                     />
                     <input
                       type="number"
-                      value={stagedConfig.rankGap}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, rankGap: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.rankGap}
+                      onChange={(e) => updateConfig("rankGap", Number(e.target.value))}
                       className="layout-config-number-input"
                     />
                   </div>
                 </div>
 
                 <div className="layout-config-item">
-                  <span className="layout-config-item-label">Obstacle Clearance (px)</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="4"
-                      max="50"
-                      value={stagedConfig.obstacleClearance}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          obstacleClearance: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.obstacleClearance}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          obstacleClearance: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
+                  <span className="layout-config-item-label">Compaction</span>
+                  <Select<Compaction>
+                    size="sm"
+                    options={COMPACTION_OPTIONS}
+                    value={layoutConfig.compaction}
+                    onValueChange={(value) => updateConfig("compaction", value)}
+                    aria-label="Compaction preset"
+                  />
+                </div>
+              </div>
+
+              <div className="layout-config-section">
+                <span className="layout-config-section-title">🎨 Edges & Labels</span>
+
+                <div className="layout-config-item">
+                  <span className="layout-config-item-label">Edge Style</span>
+                  <Select<EdgeStyle>
+                    size="sm"
+                    options={EDGE_STYLE_OPTIONS}
+                    value={layoutConfig.edgeStyle}
+                    onValueChange={(value) => updateConfig("edgeStyle", value)}
+                    aria-label="Edge style"
+                  />
                 </div>
 
                 <div className="layout-config-item">
-                  <span className="layout-config-item-label">Lane Spacing (px)</span>
+                  <span className="layout-config-item-label">Corner Radius (px)</span>
                   <div className="layout-config-controls-row">
                     <input
                       type="range"
-                      min="4"
+                      min="0"
                       max="40"
-                      value={stagedConfig.laneSpacing}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, laneSpacing: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.cornerRadius}
+                      onChange={(e) => updateConfig("cornerRadius", Number(e.target.value))}
                       className="layout-config-slider"
                     />
                     <input
                       type="number"
-                      value={stagedConfig.laneSpacing}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, laneSpacing: Number(e.target.value) }))
-                      }
+                      value={layoutConfig.cornerRadius}
+                      onChange={(e) => updateConfig("cornerRadius", Number(e.target.value))}
                       className="layout-config-number-input"
                     />
                   </div>
                 </div>
 
                 <div className="layout-config-item">
-                  <span className="layout-config-item-label">Zoom Sensitivity</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="2.0"
-                      step="0.05"
-                      value={stagedConfig.zoomSensitivity}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          zoomSensitivity: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      step="0.05"
-                      value={stagedConfig.zoomSensitivity}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          zoomSensitivity: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="layout-config-section">
-                <span className="layout-config-section-title">⚖️ Cost Penalties</span>
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Bend Penalty</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="0"
-                      max="2000"
-                      value={stagedConfig.bendPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, bendPenalty: Number(e.target.value) }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.bendPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({ ...prev, bendPenalty: Number(e.target.value) }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Crossing Penalty</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="10"
-                      max="100000"
-                      value={stagedConfig.crossingPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          crossingPenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.crossingPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          crossingPenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Direction Penalty</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="0"
-                      max="5000"
-                      value={stagedConfig.directionPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          directionPenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.directionPenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          directionPenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Side Reuse Penalty</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1000"
-                      value={stagedConfig.sideReusePenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          sideReusePenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.sideReusePenalty}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          sideReusePenalty: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="layout-config-section">
-                <span className="layout-config-section-title">🔄 Search Bounds</span>
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Route Order Variants</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="1"
-                      max="12"
-                      value={stagedConfig.maxRouteOrderVariants}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxRouteOrderVariants: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.maxRouteOrderVariants}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxRouteOrderVariants: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Rip-Up Reroute Passes</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="1"
-                      max="32"
-                      value={stagedConfig.maxRipUpPasses}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxRipUpPasses: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.maxRipUpPasses}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxRipUpPasses: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Crossing Sweeps</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="1"
-                      max="64"
-                      value={stagedConfig.maxCrossingSweeps}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxCrossingSweeps: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.maxCrossingSweeps}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxCrossingSweeps: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Global Passes</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="1"
-                      max="24"
-                      value={stagedConfig.maxGlobalPasses}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxGlobalPasses: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={stagedConfig.maxGlobalPasses}
-                      onChange={(e) =>
-                        setStagedConfig((prev) => ({
-                          ...prev,
-                          maxGlobalPasses: Number(e.target.value),
-                        }))
-                      }
-                      className="layout-config-number-input"
-                    />
-                  </div>
+                  <span className="layout-config-item-label">Label Placement</span>
+                  <Select<LabelPlacement>
+                    size="sm"
+                    options={LABEL_PLACEMENT_OPTIONS}
+                    value={layoutConfig.labelPlacement}
+                    onValueChange={(value) => updateConfig("labelPlacement", value)}
+                    aria-label="Label placement"
+                  />
                 </div>
               </div>
             </div>

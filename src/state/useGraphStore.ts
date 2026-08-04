@@ -2,10 +2,42 @@ import { create } from "zustand";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../types/graphData";
 import {
   DEFAULT_CUSTOM_LAYOUT_CONFIG,
+  LAYOUT_PRESETS,
+  resolveCustomLayoutConfig,
   type CustomLayoutConfig,
+  type LayoutPresetName,
 } from "../engine/layout/custom/config";
 
-export type LayoutMode = "top-down" | "top-down-dagre" | "left-right" | "force" | "radial";
+/**
+ * v2 engine modes. `layered`/`layered-spline` replace the old direction-baked-into-mode values
+ * (`top-down`, `top-down-dagre`, `left-right`, `right-left` all used to be separate modes);
+ * direction is now an orthogonal `CustomLayoutConfig.direction` knob, not a mode.
+ */
+export type LayoutMode = "layered" | "layered-spline" | "left-right" | "organic" | "radial" | "grid";
+
+const LEGACY_LAYOUT_MODE_MAP: Record<string, LayoutMode> = {
+  "top-down": "layered",
+  "top-down-dagre": "layered",
+  "left-right": "left-right",
+  "right-left": "left-right",
+  force: "organic",
+  stress: "organic",
+  organic: "organic",
+  radial: "radial",
+  grid: "grid",
+  layered: "layered",
+  "layered-spline": "layered-spline",
+};
+
+/**
+ * Maps a possibly-legacy persisted layout mode string (from localStorage, a shared URL, or an
+ * older client) onto the current `LayoutMode` union. Unknown values fall back to `"layered"`
+ * rather than throwing, since a bad viewport string should degrade the layout, not the whole app.
+ */
+export function normalizeLayoutMode(mode: string): LayoutMode {
+  return LEGACY_LAYOUT_MODE_MAP[mode] ?? "layered";
+}
+
 export type FilterCategory = "all" | "success" | "error" | "tools";
 
 export interface GraphState {
@@ -18,6 +50,7 @@ export interface GraphState {
   activeFilter: FilterCategory;
   layoutMode: LayoutMode;
   layoutConfig: CustomLayoutConfig;
+  layoutPreset: LayoutPresetName;
   zoomLevel: number;
   panOffset: { x: number; y: number };
   collapsedNodeIds: Set<string>;
@@ -31,11 +64,13 @@ export interface GraphActions {
   setSelectedNodeId: (nodeId: string | null) => void;
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: FilterCategory) => void;
-  setLayoutMode: (mode: LayoutMode) => void;
+  setLayoutMode: (mode: LayoutMode | string) => void;
   setLayoutConfig: (
     config: Partial<CustomLayoutConfig> | ((prev: CustomLayoutConfig) => CustomLayoutConfig),
   ) => void;
   resetLayoutConfig: () => void;
+  /** Replaces the layout config with the named preset merged over the defaults. */
+  applyPreset: (name: LayoutPresetName) => void;
   setZoomLevel: (zoom: number | ((prev: number) => number)) => void;
   setPanOffset: (
     offset:
@@ -60,8 +95,9 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   selectedNodeId: null,
   searchQuery: "",
   activeFilter: "all",
-  layoutMode: "top-down",
+  layoutMode: "layered",
   layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG },
+  layoutPreset: "readable",
   zoomLevel: 1,
   panOffset: initialPanOffset,
   collapsedNodeIds: new Set<string>(),
@@ -73,7 +109,7 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveFilter: (filter) => set({ activeFilter: filter }),
-  setLayoutMode: (mode) => set({ layoutMode: mode }),
+  setLayoutMode: (mode) => set({ layoutMode: normalizeLayoutMode(mode) }),
   setLayoutConfig: (config) =>
     set((state) => ({
       layoutConfig:
@@ -81,7 +117,13 @@ export const useGraphStore = create<GraphStore>()((set) => ({
           ? config(state.layoutConfig)
           : { ...state.layoutConfig, ...config },
     })),
-  resetLayoutConfig: () => set({ layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG } }),
+  resetLayoutConfig: () =>
+    set({ layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG }, layoutPreset: "readable" }),
+  applyPreset: (name) =>
+    set({
+      layoutPreset: name,
+      layoutConfig: resolveCustomLayoutConfig(LAYOUT_PRESETS[name]),
+    }),
   setZoomLevel: (zoom) =>
     set((state) => ({
       zoomLevel: typeof zoom === "function" ? zoom(state.zoomLevel) : zoom,
@@ -141,6 +183,7 @@ export const useSearchQuery = () => useGraphStore((state) => state.searchQuery);
 export const useActiveFilter = () => useGraphStore((state) => state.activeFilter);
 export const useLayoutMode = () => useGraphStore((state) => state.layoutMode);
 export const useLayoutConfig = () => useGraphStore((state) => state.layoutConfig);
+export const useLayoutPreset = () => useGraphStore((state) => state.layoutPreset);
 export const useZoomLevel = () => useGraphStore((state) => state.zoomLevel);
 export const usePanOffset = () => useGraphStore((state) => state.panOffset);
 export const useCollapsedNodeIds = () => useGraphStore((state) => state.collapsedNodeIds);

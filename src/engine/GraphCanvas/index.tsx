@@ -9,7 +9,8 @@ import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileSt
 import { calculateFitView } from "../../utils/fitView";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
 import { computeCustomEngineGraphLayoutAsync } from "../layout/customLayoutAdapter";
-import { computeGraphLayout } from "../layout/layoutDispatcher";
+import type { CustomLayoutConfig } from "../layout/custom/config";
+import { buildEdgePath } from "../layout/custom/edgePath";
 import "./GraphCanvas.css";
 import { usePanZoom } from "./usePanZoom";
 
@@ -17,6 +18,26 @@ const inFlightLayoutRequests = new Map<
   string,
   Promise<{ nodes: PositionedNode[]; edges: PositionedEdge[] }>
 >();
+
+/**
+ * Config fields excluded from the layout cache signature. `cornerRadius`/`edgeStyle` are purely
+ * client-side rendering decisions (see `custom/edgePath.ts`) and `zoomSensitivity` never reaches
+ * the layout engine at all — none of the three can change a node position or a route, so folding
+ * them into the cache key would invalidate a perfectly good cached layout on every tweak.
+ */
+const CONFIG_HASH_EXCLUDED_KEYS: ReadonlySet<keyof CustomLayoutConfig> = new Set([
+  "cornerRadius",
+  "edgeStyle",
+  "zoomSensitivity",
+]);
+
+function computeLayoutConfigHash(config: CustomLayoutConfig): string {
+  return (Object.keys(config) as (keyof CustomLayoutConfig)[])
+    .filter((key) => !CONFIG_HASH_EXCLUDED_KEYS.has(key))
+    .sort()
+    .map((key) => `${key}:${String(config[key])}`)
+    .join("|");
+}
 
 export const GraphCanvas: FC = () => {
   const dataset = useGraphStore((state) => state.dataset);
@@ -67,7 +88,7 @@ export const GraphCanvas: FC = () => {
     }
 
     let isSubscribed = true;
-    const configHash = `${layoutConfig.nodeGap}_${layoutConfig.rankGap}_${layoutConfig.bendPenalty}_${layoutConfig.directionPenalty}_${layoutConfig.maxGlobalPasses}_${layoutConfig.obstacleClearance}_${layoutConfig.laneSpacing}`;
+    const configHash = computeLayoutConfigHash(layoutConfig);
     const signature = `${generateDatasetSignature(dataset)}_${configHash}`;
     const cacheKey = `${layoutMode}_${signature}`;
     const stored = loadStoredLayout(layoutMode, signature);
@@ -105,8 +126,11 @@ export const GraphCanvas: FC = () => {
       return;
     }
 
-    // Immediate unmount of old canvas elements on cache miss
-    setPositionedGraph([], []);
+    // Deliberately do NOT clear the canvas here. v1 unmounted every element on a cache miss, which
+    // was defensible when a layout took seconds — you did not want stale geometry on screen that
+    // long. v2 computes in ~2 ms, so clearing produces a visible flash on every settings change and
+    // leaves nothing on screen if the computation then fails. Keep the last good layout until a new
+    // one is ready; `handleLayoutCompletion` swaps it atomically.
     setIsCalculating(true);
 
     let layoutPromise = inFlightLayoutRequests.get(cacheKey);
@@ -114,18 +138,29 @@ export const GraphCanvas: FC = () => {
       layoutPromise = computeCustomEngineGraphLayoutAsync(dataset, {
         configPartial: layoutConfig,
         mode: layoutMode,
-        timeoutMs: 30000,
-      })
-        .catch(() => computeGraphLayout(dataset, layoutMode, layoutConfig))
-        .finally(() => {
-          inFlightLayoutRequests.delete(cacheKey);
-        });
+        // v2 targets <25ms end-to-end (see docs/planning/layout-engine-v2/01-architecture.md
+        // § 7), so 15s is already a wildly generous ceiling — a timeout here means a genuine bug,
+        // not a slow-but-working computation waiting on a bigger budget.
+        timeoutMs: 15000,
+      }).finally(() => {
+        inFlightLayoutRequests.delete(cacheKey);
+      });
       inFlightLayoutRequests.set(cacheKey, layoutPromise);
     }
 
-    void layoutPromise.then(({ nodes, edges }) => {
-      handleLayoutCompletion(nodes, edges);
-    });
+    // No synchronous main-thread fallback. v1 re-ran the identical computation on the main
+    // thread after a worker failure/timeout, which froze the tab for minutes — the worst possible
+    // response to a computation that was already too slow. On failure: surface it, leave whatever
+    // layout is already on screen untouched, and stop the spinner.
+    void layoutPromise
+      .then(({ nodes, edges }) => {
+        handleLayoutCompletion(nodes, edges);
+      })
+      .catch((error: unknown) => {
+        if (!isSubscribed) return;
+        console.error("Graph layout computation failed; keeping the previous layout.", error);
+        setIsCalculating(false);
+      });
 
     return () => {
       isSubscribed = false;
@@ -154,6 +189,21 @@ export const GraphCanvas: FC = () => {
       collapsedNodeIds: Array.from(collapsedNodeIds),
     });
   }, [dataset, currentFile, zoomLevel, panOffset, selectedNodeId, layoutMode, collapsedNodeIds]);
+
+  // Edge-style pass: rebuilds `path` from each edge's stored `points` whenever `edgeStyle` or
+  // `cornerRadius` changes, without touching the layout effect above — those two fields are
+  // excluded from `computeLayoutConfigHash`, so a config change limited to them never re-triggers
+  // a layout computation. Edges whose rebuilt path is unchanged keep their original object
+  // reference, so `GraphEdge`'s `memo` comparator still skips re-rendering them.
+  const styledEdges = useMemo(
+    () =>
+      positionedEdges.map((edge) => {
+        if (!edge.points || edge.points.length === 0) return edge;
+        const path = buildEdgePath(edge.points, layoutConfig.edgeStyle, layoutConfig.cornerRadius);
+        return path === edge.path ? edge : { ...edge, path };
+      }),
+    [positionedEdges, layoutConfig.edgeStyle, layoutConfig.cornerRadius],
+  );
 
   const hiddenNodeIds = useMemo(() => {
     if (collapsedNodeIds.size === 0) return new Set<string>();
@@ -245,7 +295,7 @@ export const GraphCanvas: FC = () => {
       <div className="graph-transform-stage" style={transformStyle}>
         <svg className="graph-svg-layer">
           <EdgeMarkerDefs />
-          {positionedEdges.map((edge) => {
+          {styledEdges.map((edge) => {
             if (hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target)) {
               return null;
             }

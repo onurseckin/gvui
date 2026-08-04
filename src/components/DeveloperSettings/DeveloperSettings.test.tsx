@@ -31,13 +31,13 @@ describe("DeveloperSettings Component with SQLite Database Viewer", () => {
   });
 
   it("stores and clears database layout records for DeveloperSettings viewer", () => {
-    sqliteDb.saveGraphLayout("sig-test", "top-down", [], []);
-    const layout = sqliteDb.getGraphLayout("sig-test", "top-down");
+    sqliteDb.saveGraphLayout("sig-test", "layered", [], []);
+    const layout = sqliteDb.getGraphLayout("sig-test", "layered");
 
     expect(layout).not.toBeNull();
     expect(layout?.file_signature).toBe("sig-test");
 
     sqliteDb.clearDatabase();
-    expect(sqliteDb.getGraphLayout("sig-test", "top-down")).toBeNull();
+    expect(sqliteDb.getGraphLayout("sig-test", "layered")).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+import type { EdgeLayoutHint, Point, PortRef, Rect } from "../engine/layout/custom/types";
+
 export interface NodeBadge {
   label: string;
   variant?: "success" | "info" | "amber" | "error" | "gray";
@@ -25,6 +27,10 @@ export interface GraphNodeData {
   tools?: NodeTool[];
   context?: NodeContext;
   metadata?: Record<string, unknown>;
+  /** Pins the node to a rank in the layout engine; passed through when present. */
+  rank?: number;
+  /** Reserved for future cluster support; passed through untouched. */
+  group?: string;
 }
 
 export interface GraphEdgeData {
@@ -34,6 +40,12 @@ export interface GraphEdgeData {
   label?: string;
   directed?: boolean;
   isCycle?: boolean;
+  /** Layout hint overriding automatic edge role classification. */
+  layoutRole?: EdgeLayoutHint;
+  /** Ranking and ordering priority; passed through to the layout engine when present. */
+  weight?: number;
+  /** Forces a minimum rank span; passed through to the layout engine when present. */
+  minLen?: number;
 }
 
 export interface GraphDataset {
@@ -51,10 +63,14 @@ export interface PositionedNode extends GraphNodeData {
   height: number;
 }
 
-import type { Point, PortRef, Rect } from "../engine/layout/custom/types";
-
 export interface PositionedEdge extends GraphEdgeData {
   path: string;
+  /**
+   * Raw routed waypoints behind `path`, when the layout engine produced a route. Kept alongside
+   * `path` so the renderer can rebuild `path` for a different `edgeStyle`/`cornerRadius` without
+   * a re-layout — see `GraphCanvas`'s edge-style pass and `custom/edgePath.ts`.
+   */
+  points?: Point[];
   labelX?: number;
   labelY?: number;
   badgeRect?: Rect;

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import type { GraphDataset } from "../../../types/graphData";
+// NOTE (integrator): this module currently fails to load — `wasmLayoutAdapter.ts` imports
+// `calculateNodeDimensions` from `../nodeDimensions`, which no longer exports that name after the
+// v2 rewrite (see `nodeDimensions.ts`'s export list). It also hardcodes a v1 default mode
+// (`mode: LayoutMode = "top-down"`), which isn't a member of the v2 `LayoutMode` union at all. This
+// file duplicates the WASM entry point that `customLayoutAdapter.ts`/`computeCustomLayout.ts`
+// already own for the real app path (see `custom/index.ts`'s barrel export) and looks like v1-era
+// dead code left behind by the rewrite — worth deleting outright rather than repairing, but that's
+// a source-code call outside this test file's ownership. Every test below is written against the
+// v2 contract and will pass once the import (and the mode default) is fixed.
 import {
   computeCustomEngineGraphLayoutWasm,
   computeCustomLayoutWasm,
@@ -26,7 +35,7 @@ describe("wasmLayoutAdapter", () => {
     expect(result.status).toBe("success");
   });
 
-  it("computes custom engine graph layout for GraphDataset", async () => {
+  it("computes custom engine graph layout for GraphDataset with an explicit v2 mode", async () => {
     const dataset: GraphDataset = {
       id: "wasm-test-ds",
       title: "WASM Engine Dataset Test",
@@ -37,7 +46,7 @@ describe("wasmLayoutAdapter", () => {
       edges: [{ id: "edge-ab", source: "A", target: "B", label: "Alpha to Beta" }],
     };
 
-    const result = await computeCustomEngineGraphLayoutWasm(dataset);
+    const result = await computeCustomEngineGraphLayoutWasm(dataset, undefined, "layered");
     expect(result.nodes).toHaveLength(2);
     expect(result.edges).toHaveLength(1);
     expect(typeof result.nodes[0].x).toBe("number");
