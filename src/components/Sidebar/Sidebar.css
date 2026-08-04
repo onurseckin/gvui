@@ -46,6 +46,7 @@
 
 .sample-btn {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -74,6 +75,22 @@
 
 .sample-icon {
   font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* The dataset names are the descriptive `title` from each JSON file, which are far longer than the
+   280px sidebar. Without a min-width of 0 the label refuses to shrink below its content width, so
+   it overflowed the button and the start of every name was clipped off the left edge. Two lines
+   keeps them readable; the button carries the full string as a tooltip. */
+.sample-label {
+  flex: 1;
+  min-width: 0;
+  /* Single-line ellipsis rather than a two-line clamp: the `line-clamp` shorthand resets `display`
+     to `flow-root` and quietly defeats the `-webkit-box` clamp, which produced a hard cut with no
+     ellipsis at all. The full name is on the button's `title`. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .upload-label {

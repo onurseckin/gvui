@@ -44,3 +44,4 @@ lerna-debug.log*
 ehthumbs.db
 # Brainstorming Visual Companion
 .superpowers/
+.playwright-mcp/

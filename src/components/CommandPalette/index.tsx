@@ -10,18 +10,14 @@ import type {
   CommandPaletteScope,
   SearchResultNode,
 } from "./CommandPalette.types";
+import { SAMPLE_GRAPHS } from "../Sidebar/sampleGraphs";
 import "./CommandPalette.css";
 
-const PRESET_FILES = [
-  "ai_agent_trace",
-  "decision_tree",
-  "cyclic_mesh",
-  "distributed_saga_workflow",
-  "kubernetes_cluster_topology",
-  "clean_ring_10n_10e",
-  "crossing_mesh_10n_10e",
-  "dense_kubernetes_mesh",
-];
+// Derived from the single sidebar registry rather than duplicated. This list was a second,
+// independent copy of the dataset ids; when the sample data was replaced it went stale and every
+// entry prefetched a 404, which Vite serves as index.html — hence a JSON parse error per dataset
+// on every page load.
+const PRESET_FILES: string[] = SAMPLE_GRAPHS.map((sample) => sample.id);
 
 interface CommandPaletteItemProps {
   node: SearchResultNode;

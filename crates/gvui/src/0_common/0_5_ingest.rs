@@ -169,6 +169,14 @@ pub fn build_graph_ir(
         in_degree[target as usize] += 1;
 
         ir.edge_names.push(edge.id.clone());
+        // The badge's display text, kept only when the edge actually reserves a badge box. Phase 8
+        // fills `BadgePlacement::label` from this; the box in `IrEdge::label` carries dimensions
+        // only, so without this the emitted label is always the empty string.
+        ir.edge_labels.push(if label.is_some() {
+            badge_measurement::get_badge_display_text(edge.label.as_deref(), is_cycle)
+        } else {
+            None
+        });
         ir.edges.push(IrEdge {
             name: (ir.edge_names.len() - 1) as u32,
             source,

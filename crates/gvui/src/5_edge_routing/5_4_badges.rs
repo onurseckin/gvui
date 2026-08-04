@@ -47,6 +47,19 @@ pub struct BadgeResult {
 /// **`BadgePlacement::label` is left empty.** `GraphIr` interns edge *ids* but not edge label text
 /// — nothing after Phase 1 is allowed to see text — so Phase 9 must join these placements back to
 /// the wire edges by `edge_id` and fill the display string in.
+/// Display text for an edge's badge, or the empty string when the IR has none.
+///
+/// `BadgePlacement::label` used to be hard-coded to `String::new()` at every construction site, so
+/// every emitted badge carried an empty label. The main renderer hid it by reading the label off
+/// the original dataset instead, but anything that trusts the engine's own output — the testing
+/// playground, the HTML and PNG exporters — drew empty boxes.
+fn badge_label_for(ir: &GraphIr, edge: u32) -> String {
+    ir.edge_labels
+        .get(edge as usize)
+        .and_then(|l| l.clone())
+        .unwrap_or_default()
+}
+
 pub fn place_badges(
     layered: &Layered,
     ir: &GraphIr,
@@ -101,7 +114,7 @@ pub fn place_badges(
         obstacles.insert(rect);
         badges.push(BadgePlacement {
             edge_id: edge_id.clone(),
-            label: String::new(),
+            label: badge_label_for(ir, chain.edge),
             rect,
             anchor_point,
             leader_points: None,
@@ -131,7 +144,7 @@ pub fn place_badges(
         obstacles.insert(rect);
         badges.push(BadgePlacement {
             edge_id: edge_id.clone(),
-            label: String::new(),
+            label: badge_label_for(ir, flat.edge),
             rect,
             anchor_point,
             leader_points: None,
@@ -164,7 +177,7 @@ pub fn place_badges(
         obstacles.insert(rect);
         badges.push(BadgePlacement {
             edge_id: edge_id.clone(),
-            label: String::new(),
+            label: badge_label_for(ir, edge),
             rect,
             anchor_point,
             leader_points: None,
@@ -229,7 +242,7 @@ pub fn place_badges(
         obstacles.insert(rect);
         badges.push(BadgePlacement {
             edge_id: edge_id.clone(),
-            label: String::new(),
+            label: badge_label_for(ir, chain.edge),
             rect,
             anchor_point,
             leader_points,

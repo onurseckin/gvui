@@ -28,6 +28,7 @@ const SampleListItem = React.memo<SampleListItemProps>(function SampleListItem({
       <Button
         variant={isActive ? "primary" : "ghost"}
         className={`sample-btn ${isActive ? "active" : ""}`}
+        title={sample.name}
         onClick={handleClick}
       >
         <span className="sample-icon">{sample.icon}</span>

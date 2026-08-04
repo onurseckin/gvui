@@ -321,6 +321,13 @@ pub struct GraphIr {
     pub node_names: Vec<String>,
     pub edge_names: Vec<String>,
     pub node_labels: Vec<Option<String>>,
+    /// Display text of each edge's badge, indexed by edge.
+    ///
+    /// Carried separately from [`IrEdge::label`], which holds only the measured *box*. Phase 8 needs
+    /// the text to fill [`BadgePlacement::label`]; without it that field is always empty, and any
+    /// consumer that trusts it — the testing playground, the HTML/PNG exporters — draws blank
+    /// badges while the main renderer looks right because it reads the original dataset instead.
+    pub edge_labels: Vec<Option<String>>,
     pub nodes: Vec<IrNode>,
     pub edges: Vec<IrEdge>,
     /// Successors, keyed by source.
