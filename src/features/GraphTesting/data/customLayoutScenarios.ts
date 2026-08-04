@@ -13,6 +13,10 @@ import type { TestScenario } from "../types";
  * that survived was renumbered so the ids stay contiguous, which matters because the scenario
  * pickers index this record by number.
  *
+ * Every edge carries a label on purpose: an unlabelled edge reserves no badge area, so a fixture
+ * without labels silently stops exercising the reserve-then-place half of the pipeline. #23 keeps
+ * deliberately long ones to drive wrapping.
+ *
  * Every scenario here is part of the `bun scripts/runLayoutAudit.ts` gate and must produce zero
  * constraint violations (no node-node overlap, no edge-node penetration, no badge overlap, every
  * edge routed) under the layered engine in both `top-down` and `left-right`.
@@ -128,11 +132,11 @@ export const CUSTOM_LAYOUT_SCENARIOS: Record<number, TestScenario> = {
       { id: "SINK", name: "Bottom Node", desc: "Bottom Rank", x: 360, y: 400, w: 160, h: 65 },
     ],
     edges: [
-      { source: "SRC", target: "MID1" },
-      { source: "SRC", target: "MID2" },
+      { source: "SRC", target: "MID1", label: "branch a" },
+      { source: "SRC", target: "MID2", label: "branch b" },
       { source: "MID1", target: "MID2", label: "horizontal sync", layoutRole: "cross" },
-      { source: "MID1", target: "SINK" },
-      { source: "MID2", target: "SINK" },
+      { source: "MID1", target: "SINK", label: "collect a" },
+      { source: "MID2", target: "SINK", label: "collect b" },
     ],
   },
   7: {
@@ -203,9 +207,9 @@ export const CUSTOM_LAYOUT_SCENARIOS: Record<number, TestScenario> = {
       { id: "N4", name: "Stage 4", desc: "Egress", x: 260, y: 460, w: 150, h: 60 },
     ],
     edges: [
-      { source: "N1", target: "N2" },
-      { source: "N2", target: "N3" },
-      { source: "N3", target: "N4" },
+      { source: "N1", target: "N2", label: "accept" },
+      { source: "N2", target: "N3", label: "process" },
+      { source: "N3", target: "N4", label: "emit" },
       { source: "N4", target: "N1", label: "↺ global feedback", isCycle: true },
     ],
   },

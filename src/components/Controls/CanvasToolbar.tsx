@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { ExportMenu } from "./ExportMenu";
+import { createPanelDismissHandler } from "./panelDismiss";
 import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
 import {
   Button,
@@ -8,7 +10,6 @@ import {
   type SelectOption,
 } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
-import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import {
   type CustomLayoutConfig,
   type Direction,
@@ -42,7 +43,6 @@ const COMPACTION_OPTIONS: SelectOption<Compaction>[] = [
 ];
 
 export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
-  const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const layoutConfig = useLayoutConfig();
@@ -60,10 +60,12 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   useEffect(() => {
     if (!isConfigOpen) return;
 
+    const dismiss = createPanelDismissHandler(
+      () => configWrapperRef.current,
+      () => setIsConfigOpen(false),
+    );
     const handleClickOutside = (event: MouseEvent) => {
-      if (configWrapperRef.current && !configWrapperRef.current.contains(event.target as Node)) {
-        setIsConfigOpen(false);
-      }
+      dismiss(event);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -124,13 +126,6 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleFitView, resetViewport]);
-
-  const handleExportHtml = useCallback(() => {
-    const dataset = useGraphStore.getState().dataset;
-    if (dataset) {
-      exportGraphAsHTML(dataset);
-    }
-  }, []);
 
   const handleLayoutChange = useCallback(
     (mode: LayoutMode) => {
@@ -357,16 +352,7 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
 
       <div className="toolbar-divider" />
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleExportHtml}
-        disabled={!dataset}
-        title="Export HTML"
-        className="toolbar-btn"
-      >
-        Export HTML
-      </Button>
+      <ExportMenu />
     </div>
   );
 });

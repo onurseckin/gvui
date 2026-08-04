@@ -193,8 +193,8 @@ export interface CustomLayoutConfig {
 /** Tuned defaults. Mirrors Rust's `DEFAULT_CUSTOM_LAYOUT_CONFIG`. */
 export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object.freeze({
   direction: "top-down",
-  nodeGap: 56,
-  rankGap: 120,
+  nodeGap: 60,
+  rankGap: 60,
   componentGap: 160,
   graphPadding: 80,
   laneSpacing: 12,

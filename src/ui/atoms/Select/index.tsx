@@ -64,8 +64,18 @@ export function Select<V extends string = string>({
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
 
-      <BaseSelect.Portal>
-        <BaseSelect.Positioner sideOffset={4} className="gvui-select-positioner">
+      {/* The popup mounts outside the trigger's DOM subtree, so any panel that dismisses itself on
+          outside clicks would tear down before Base UI commits an option click. This marker is the
+          stable hook those dismiss guards match on instead of a Base UI internal. It sits on the
+          portal container as well as the positioner because Base UI's modal backdrop is a sibling
+          of the positioner — without it, clicking the owning panel while the popup is open would
+          register as an outside click on the backdrop. */}
+      <BaseSelect.Portal data-gvui-portal="select">
+        <BaseSelect.Positioner
+          sideOffset={4}
+          className="gvui-select-positioner"
+          data-gvui-portal="select"
+        >
           <BaseSelect.Popup className={`gvui-select-popup ${popupClassName}`.trim()}>
             {options.map((option: SelectOption<V>) => (
               <BaseSelect.Item

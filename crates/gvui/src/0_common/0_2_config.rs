@@ -316,8 +316,8 @@ pub struct CustomLayoutConfig {
 /// Tuned defaults.
 pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig {
     direction: Direction::TopDown,
-    node_gap: 56.0,
-    rank_gap: 120.0,
+    node_gap: 60.0,
+    rank_gap: 60.0,
     component_gap: 160.0,
     graph_padding: 80.0,
     lane_spacing: 12.0,

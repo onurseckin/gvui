@@ -109,10 +109,15 @@
   color: #ffffff;
 }
 
+/*
+ * The body owns the dialog's leftover height and hands it to the active tab; scrolling belongs to
+ * the table/JSON viewer inside so their headers stay put and the dialog itself never grows past
+ * `max-height: 90vh`.
+ */
 .developer-settings-body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -122,6 +127,7 @@
 /* Toast Banner */
 .developer-settings-toast {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
@@ -137,6 +143,7 @@
 /* Local Storage Toolbar */
 .developer-settings-toolbar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -206,7 +213,8 @@
   border-radius: 8px;
   padding: 16px;
   overflow: auto;
-  max-height: 400px;
+  flex: 1;
+  min-height: 0;
 }
 
 .developer-settings-json-code {
@@ -243,6 +251,8 @@
 /* Database Viewer Container & Components */
 .db-viewer-container {
   display: flex;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 16px;
 }
@@ -306,6 +316,7 @@
   border-radius: 8px;
   padding: 14px;
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 10px;
   animation: developerSettingsFadeIn 0.15s ease;
@@ -364,8 +375,9 @@
   background-color: #08090d;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  overflow-x: auto;
-  max-height: 340px;
+  overflow: auto;
+  flex: 1;
+  min-height: 120px;
 }
 
 .db-empty-state {
@@ -382,12 +394,17 @@
   text-align: left;
 }
 
+/* Sticky so the column names survive scrolling the row body. `border-collapse: collapse` drops the
+   borders of sticky cells, hence the inset shadow standing in for the bottom rule. */
 .db-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 10px 14px;
   background-color: #14151c;
   color: #94a3b8;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
   white-space: nowrap;
 }

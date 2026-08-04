@@ -18,6 +18,20 @@
   padding: 12px 24px;
   background-color: #121318;
   border-bottom: 1px solid #27272a;
+  flex: 0 0 auto;
+}
+
+/*
+ * The single scroll port for the page. Header and footer stay pinned; everything in between —
+ * toolbar, settings, metrics and the full-height canvas — scrolls here, which is what makes the
+ * bottom of a tall scenario reachable at all. Kept a block container so the canvas panel is sized
+ * by its content instead of being squeezed by flex shrinking.
+ */
+.graph-testing-page-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .graph-testing-header-left {
@@ -56,6 +70,7 @@
   font-size: 0.8rem;
   color: #ffffff;
   opacity: 0.85;
+  flex: 0 0 auto;
 }
 
 /* Graph Testing Modal Backdrop Overlay */
@@ -148,28 +163,9 @@
   white-space: nowrap;
 }
 
-.scenario-select-dropdown {
-  background-color: #181920;
-  color: #ffffff;
-  border: 1px solid #3f3f46;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s ease;
-  max-width: 320px;
-}
-
-.scenario-select-dropdown:hover,
-.scenario-select-dropdown:focus {
-  border-color: #0284c7;
-}
-
-.scenario-select-dropdown option {
-  background-color: #181920;
-  color: #ffffff;
+.scenario-select-trigger {
+  min-width: 320px;
+  max-width: 480px;
 }
 
 .graph-testing-tabs {
@@ -274,6 +270,37 @@
   overflow: auto;
 }
 
+/*
+ * Page variant: the panel is as tall as the drawing and the page scroller handles the vertical
+ * axis, so the canvas only keeps the horizontal one. A wheel gesture over the canvas therefore
+ * reaches the page instead of dead-ending in a nested viewport.
+ */
+.graph-testing-page-scroll .graph-testing-content {
+  overflow: visible;
+}
+
+.graph-testing-page-scroll .testing-panel {
+  height: auto;
+}
+
+.graph-testing-page-scroll .testing-canvas-container {
+  flex: none;
+  min-height: 320px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Sized from the layout extent in `GraphTestingPage`; the absolute node cards and SVG layer are
+   positioned against it. */
+.testing-canvas-stage {
+  position: relative;
+}
+
+.testing-canvas-stage .testing-svg-layer {
+  min-width: 0;
+  min-height: 0;
+}
+
 .testing-svg-layer {
   position: absolute;
   top: 0;
@@ -331,16 +358,17 @@
   gap: 10px;
 }
 
-.metrics-header {
+/* The accordion body stacks grids and callouts that carry no margins of their own. */
+.metrics-section-body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.metrics-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #f4f4f5;
+.metrics-status-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: #e4e4e7;
 }
 
 .status-badge {

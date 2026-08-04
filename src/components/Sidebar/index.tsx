@@ -3,24 +3,10 @@ import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { GraphDataset } from "../../types/graphData";
 import { Button, FileUploadButton } from "../../ui";
+import { SAMPLE_GRAPHS } from "./sampleGraphs";
+import type { SampleGraph } from "./sampleGraphs";
 import "./Sidebar.css";
 
-interface SampleGraph {
-  id: string;
-  name: string;
-  icon: string;
-}
-
-const SAMPLE_GRAPHS: SampleGraph[] = [
-  { id: "ai_agent_trace", name: "AI Agent Trace", icon: "🤖" },
-  { id: "decision_tree", name: "Decision Tree", icon: "🌲" },
-  { id: "cyclic_mesh", name: "Cyclic Mesh", icon: "🔄" },
-  { id: "distributed_saga_workflow", name: "Saga Workflow", icon: "⚡" },
-  { id: "kubernetes_cluster_topology", name: "K8s Topology", icon: "☸️" },
-  { id: "clean_ring_10n_10e", name: "Planar Ring (10N)", icon: "⭕" },
-  { id: "crossing_mesh_10n_10e", name: "Crossing Mesh (10N)", icon: "🔀" },
-  { id: "dense_kubernetes_mesh", name: "Dense Mesh (30N)", icon: "🕸️" },
-];
 
 interface SampleListItemProps {
   sample: SampleGraph;

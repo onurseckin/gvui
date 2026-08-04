@@ -1,4 +1,5 @@
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
+import { useState } from "react";
 import type {
   CustomLayoutResult,
   NormalizedEdge,
@@ -94,7 +95,45 @@ const DEFAULT_OPTIMIZATION_STATS: OptimizationStats = {
   timings: DEFAULT_TIMINGS,
 };
 
+interface CollapsiblePanelProps {
+  title: string;
+  /** Rendered next to the title and stays visible while the panel is collapsed. */
+  summary: ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+/**
+ * Shares `EngineOptionsPanel`'s section markup and classes on purpose: the two panels sit next to
+ * each other, so a second look-alike header would be a second thing to keep in sync. A native
+ * button carries Enter/Space and focus handling without a key handler of its own.
+ */
+const CollapsiblePanel: FC<CollapsiblePanelProps> = ({
+  title,
+  summary,
+  expanded,
+  onToggle,
+  children,
+}) => (
+  <section className="engine-section">
+    <button
+      type="button"
+      className="engine-section-header"
+      aria-expanded={expanded}
+      onClick={onToggle}
+    >
+      <span className="engine-section-title">{title}</span>
+      <span className="engine-section-subtitle">{summary}</span>
+      <span className="engine-section-chevron">{expanded ? "▲" : "▼"}</span>
+    </button>
+    {expanded && <div className="engine-section-body metrics-section-body">{children}</div>}
+  </section>
+);
+
 export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult }) => {
+  const [metricsExpanded, setMetricsExpanded] = useState<boolean>(true);
+  const [statusExpanded, setStatusExpanded] = useState<boolean>(false);
   const validation = layoutResult?.validation;
   const metrics = validation?.metrics;
   const isValid = validation?.isValid ?? false;
@@ -112,14 +151,20 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
     return <span className="status-badge status-invalid">❌ Invalid</span>;
   };
 
+  const toggleMetrics = () => setMetricsExpanded((prev) => !prev);
+  const toggleStatus = () => setStatusExpanded((prev) => !prev);
+
   if (!metrics) {
     return (
       <div className="custom-layout-metrics-panel">
-        <div className="metrics-header">
-          <span className="metrics-title">📊 Engine Metrics & Status</span>
-          {getStatusBadge()}
-        </div>
-        <div className="metrics-diagnostics">No layout result yet.</div>
+        <CollapsiblePanel
+          title="📊 Engine Metrics"
+          summary={getStatusBadge()}
+          expanded={metricsExpanded}
+          onToggle={toggleMetrics}
+        >
+          <div className="metrics-diagnostics">No layout result yet.</div>
+        </CollapsiblePanel>
       </div>
     );
   }
@@ -136,251 +181,298 @@ export const CustomLayoutMetrics: FC<CustomLayoutMetricsProps> = ({ layoutResult
   const leaderWarning = metrics.leaderCount > 0;
 
   const timings = stats.timings ?? DEFAULT_TIMINGS;
-  const totalTiming = timings.total > 0 ? timings.total : TIMING_PHASES.reduce(
-    (sum, phase) => sum + timings[phase.key],
-    0,
-  );
+  const totalTiming =
+    timings.total > 0
+      ? timings.total
+      : TIMING_PHASES.reduce((sum, phase) => sum + timings[phase.key], 0);
 
   return (
     <div className="custom-layout-metrics-panel">
-      <div className="metrics-header">
-        <span className="metrics-title">📊 Engine Metrics & Status</span>
-        {getStatusBadge()}
-      </div>
-
-      {/* Primary row: the numbers that actually describe layout quality. */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <span className="metric-label">Crossings</span>
-          <span className={`metric-value ${metrics.crossings > 0 ? "has-conflicts" : ""}`}>
-            {metrics.crossings}
-          </span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Geometric Crossings</span>
-          <span
-            className={`metric-value ${
-              geometricCrossingsExcessIsLarge(metrics.crossings, metrics.geometricCrossings)
-                ? "has-conflicts"
-                : ""
-            }`}
-            title="Expected to exceed `crossings` somewhat (lane routing has crossings the combinatorial count doesn't model). A large ratio means lane ordering is fighting the topology."
-          >
-            {metrics.geometricCrossings}
-          </span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Bends</span>
-          <span className="metric-value">{metrics.bendCount}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Straight Chain Ratio</span>
-          <span
-            className="metric-value"
-            style={straightChainWarning ? { color: "#fbbf24" } : undefined}
-            title="Fraction of dummy chains that are perfectly straight — the best single proxy for &quot;looks designed&quot;. A drop is an early warning, not a tuning knob."
-          >
-            {formatPercent(metrics.straightChainRatio)}
-            {straightChainWarning && " ⚠"}
-          </span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Leaders</span>
-          <span
-            className="metric-value"
-            style={leaderWarning ? { color: "#fbbf24" } : undefined}
-            title="Badges that needed a leader line. Should be ~0; nonzero means a label's reserved area was defeated upstream."
-          >
-            {metrics.leaderCount}
-            {leaderWarning && " ⚠"}
-          </span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Max Lane Depth</span>
-          <span className="metric-value">{metrics.laneDepthMax}</span>
-        </div>
-      </div>
-
-      {/* Secondary row: graph shape and drawing footprint. */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <span className="metric-label">Nodes</span>
-          <span className="metric-value">{metrics.nodeCount}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Edges</span>
-          <span className="metric-value">{metrics.edgeCount}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Ranks</span>
-          <span className="metric-value">{metrics.rankCount}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Dummies</span>
-          <span className="metric-value">{metrics.dummyCount}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Area</span>
-          <span className="metric-value">{Math.round(metrics.area).toLocaleString()} px²</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Aspect Ratio</span>
-          <span className="metric-value">{metrics.aspectRatio.toFixed(2)}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Total Length</span>
-          <span className="metric-value">{Math.round(metrics.totalLength)}px</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Labels Truncated</span>
-          <span className={`metric-value ${metrics.labelsTruncated > 0 ? "has-conflicts" : ""}`}>
-            {metrics.labelsTruncated}
-          </span>
-        </div>
-      </div>
-
-      {/* Constraint row: v2 guarantees these by construction, so nonzero is a bug report. */}
-      <div>
-        <div className="diagnostics-title" style={{ color: "#a1a1aa" }}>
-          🔒 Constraints ({constraintViolations === 0 ? "all hold" : `${constraintViolations} violated`})
-        </div>
+      <CollapsiblePanel
+        title="📊 Engine Metrics"
+        summary={`${metrics.nodeCount} nodes · ${metrics.edgeCount} edges · ${metrics.crossings} crossings · ${formatMs(timings.total)}`}
+        expanded={metricsExpanded}
+        onToggle={toggleMetrics}
+      >
+        {/* Primary row: the numbers that actually describe layout quality. */}
         <div className="metrics-grid">
           <div className="metric-card">
-            <span className="metric-label">Node-Node Overlaps</span>
-            <span
-              className="metric-value"
-              style={metrics.nodeNodeOverlaps > 0 ? { color: "#f87171" } : undefined}
-            >
-              {metrics.nodeNodeOverlaps}
+            <span className="metric-label">Crossings</span>
+            <span className={`metric-value ${metrics.crossings > 0 ? "has-conflicts" : ""}`}>
+              {metrics.crossings}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Edge-Node Penetrations</span>
+            <span className="metric-label">Geometric Crossings</span>
             <span
-              className="metric-value"
-              style={metrics.edgeNodePenetrations > 0 ? { color: "#f87171" } : undefined}
+              className={`metric-value ${
+                geometricCrossingsExcessIsLarge(metrics.crossings, metrics.geometricCrossings)
+                  ? "has-conflicts"
+                  : ""
+              }`}
+              title="Expected to exceed `crossings` somewhat (lane routing has crossings the combinatorial count doesn't model). A large ratio means lane ordering is fighting the topology."
             >
-              {metrics.edgeNodePenetrations}
+              {metrics.geometricCrossings}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Badge-Node Overlaps</span>
+            <span className="metric-label">Bends</span>
+            <span className="metric-value">{metrics.bendCount}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Straight Chain Ratio</span>
             <span
               className="metric-value"
-              style={metrics.badgeNodeOverlaps > 0 ? { color: "#f87171" } : undefined}
+              style={straightChainWarning ? { color: "#fbbf24" } : undefined}
+              title='Fraction of dummy chains that are perfectly straight — the best single proxy for "looks designed". A drop is an early warning, not a tuning knob.'
             >
-              {metrics.badgeNodeOverlaps}
+              {formatPercent(metrics.straightChainRatio)}
+              {straightChainWarning && " ⚠"}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Badge-Badge Overlaps</span>
+            <span className="metric-label">Leaders</span>
             <span
               className="metric-value"
-              style={metrics.badgeBadgeOverlaps > 0 ? { color: "#f87171" } : undefined}
+              style={leaderWarning ? { color: "#fbbf24" } : undefined}
+              title="Badges that needed a leader line. Should be ~0; nonzero means a label's reserved area was defeated upstream."
             >
-              {metrics.badgeBadgeOverlaps}
+              {metrics.leaderCount}
+              {leaderWarning && " ⚠"}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Unresolved Routes</span>
-            <span
-              className="metric-value"
-              style={metrics.unresolvedRouteCount > 0 ? { color: "#f87171" } : undefined}
-            >
-              {metrics.unresolvedRouteCount}
-            </span>
-          </div>
-          <div className="metric-card">
-            <span className="metric-label">Unresolved Badges</span>
-            <span
-              className="metric-value"
-              style={metrics.unresolvedBadgeCount > 0 ? { color: "#f87171" } : undefined}
-            >
-              {metrics.unresolvedBadgeCount}
-            </span>
+            <span className="metric-label">Max Lane Depth</span>
+            <span className="metric-value">{metrics.laneDepthMax}</span>
           </div>
         </div>
-        {constraintViolations > 0 && (
-          <div className="metrics-diagnostics" style={{ marginTop: "6px" }}>
-            Any nonzero value above is a <strong>bug</strong>, not a tuning opportunity — v2
-            guarantees these constraints by construction (see 04-config-and-quality.md §3a).
-          </div>
-        )}
-      </div>
 
-      {/* Timings row: per-phase bar breakdown of optimizationStats.timings. */}
-      <div>
-        <div className="diagnostics-title" style={{ color: "#a1a1aa" }}>
-          ⏱️ Phase Timings ({formatMs(timings.total)} total, {stats.stopReason})
+        {/* Secondary row: graph shape and drawing footprint. */}
+        <div className="metrics-grid">
+          <div className="metric-card">
+            <span className="metric-label">Nodes</span>
+            <span className="metric-value">{metrics.nodeCount}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Edges</span>
+            <span className="metric-value">{metrics.edgeCount}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Ranks</span>
+            <span className="metric-value">{metrics.rankCount}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Dummies</span>
+            <span className="metric-value">{metrics.dummyCount}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Area</span>
+            <span className="metric-value">{Math.round(metrics.area).toLocaleString()} px²</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Aspect Ratio</span>
+            <span className="metric-value">{metrics.aspectRatio.toFixed(2)}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Total Length</span>
+            <span className="metric-value">{Math.round(metrics.totalLength)}px</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Labels Truncated</span>
+            <span className={`metric-value ${metrics.labelsTruncated > 0 ? "has-conflicts" : ""}`}>
+              {metrics.labelsTruncated}
+            </span>
+          </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            height: "10px",
-            borderRadius: "4px",
-            overflow: "hidden",
-            border: "1px solid #27272a",
-          }}
-        >
-          {TIMING_PHASES.map((phase, idx) => {
-            const value = timings[phase.key];
-            const widthPct = totalTiming > 0 ? (value / totalTiming) * 100 : 0;
-            return (
-              <div
-                key={phase.key}
-                title={`${phase.label}: ${formatMs(value)}`}
-                style={{
-                  width: `${widthPct}%`,
-                  backgroundColor: TIMING_BAR_COLORS[idx % TIMING_BAR_COLORS.length],
-                  minWidth: value > 0 ? "1px" : 0,
-                }}
-              />
-            );
-          })}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px",
-            marginTop: "6px",
-            fontSize: "0.72rem",
-            color: "#a1a1aa",
-          }}
-        >
-          {TIMING_PHASES.map((phase, idx) => (
-            <span key={phase.key} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+
+        {/* Constraint row: v2 guarantees these by construction, so nonzero is a bug report. */}
+        <div>
+          <div className="diagnostics-title" style={{ color: "#a1a1aa" }}>
+            🔒 Constraints (
+            {constraintViolations === 0 ? "all hold" : `${constraintViolations} violated`})
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <span className="metric-label">Node-Node Overlaps</span>
               <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "2px",
-                  backgroundColor: TIMING_BAR_COLORS[idx % TIMING_BAR_COLORS.length],
-                  display: "inline-block",
-                }}
-              />
-              {phase.label} {formatMs(timings[phase.key])}
-            </span>
-          ))}
+                className="metric-value"
+                style={metrics.nodeNodeOverlaps > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.nodeNodeOverlaps}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Edge-Node Penetrations</span>
+              <span
+                className="metric-value"
+                style={metrics.edgeNodePenetrations > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.edgeNodePenetrations}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Badge-Node Overlaps</span>
+              <span
+                className="metric-value"
+                style={metrics.badgeNodeOverlaps > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.badgeNodeOverlaps}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Badge-Badge Overlaps</span>
+              <span
+                className="metric-value"
+                style={metrics.badgeBadgeOverlaps > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.badgeBadgeOverlaps}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Unresolved Routes</span>
+              <span
+                className="metric-value"
+                style={metrics.unresolvedRouteCount > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.unresolvedRouteCount}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Unresolved Badges</span>
+              <span
+                className="metric-value"
+                style={metrics.unresolvedBadgeCount > 0 ? { color: "#f87171" } : undefined}
+              >
+                {metrics.unresolvedBadgeCount}
+              </span>
+            </div>
+          </div>
+          {constraintViolations > 0 && (
+            <div className="metrics-diagnostics" style={{ marginTop: "6px" }}>
+              Any nonzero value above is a <strong>bug</strong>, not a tuning opportunity — v2
+              guarantees these constraints by construction (see 04-config-and-quality.md §3a).
+            </div>
+          )}
         </div>
-      </div>
 
-      {diagnostics.length > 0 && (
-        <div className="metrics-diagnostics">
-          <div className="diagnostics-title">⚠️ Diagnostics ({diagnostics.length})</div>
-          <ul className="diagnostics-list">
-            {diagnostics.slice(0, 5).map((diag, idx) => (
-              <li key={`${diag.code}-${idx}`} className={`diag-item diag-${diag.severity}`}>
-                <span className="diag-code">[{diag.code}]</span> {diag.message}
-              </li>
+        {/* Timings row: per-phase bar breakdown of optimizationStats.timings. */}
+        <div>
+          <div className="diagnostics-title" style={{ color: "#a1a1aa" }}>
+            ⏱️ Phase Timings ({formatMs(timings.total)} total, {stats.stopReason})
+          </div>
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              height: "10px",
+              borderRadius: "4px",
+              overflow: "hidden",
+              border: "1px solid #27272a",
+            }}
+          >
+            {TIMING_PHASES.map((phase, idx) => {
+              const value = timings[phase.key];
+              const widthPct = totalTiming > 0 ? (value / totalTiming) * 100 : 0;
+              return (
+                <div
+                  key={phase.key}
+                  title={`${phase.label}: ${formatMs(value)}`}
+                  style={{
+                    width: `${widthPct}%`,
+                    backgroundColor: TIMING_BAR_COLORS[idx % TIMING_BAR_COLORS.length],
+                    minWidth: value > 0 ? "1px" : 0,
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+              marginTop: "6px",
+              fontSize: "0.72rem",
+              color: "#a1a1aa",
+            }}
+          >
+            {TIMING_PHASES.map((phase, idx) => (
+              <span
+                key={phase.key}
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "2px",
+                    backgroundColor: TIMING_BAR_COLORS[idx % TIMING_BAR_COLORS.length],
+                    display: "inline-block",
+                  }}
+                />
+                {phase.label} {formatMs(timings[phase.key])}
+              </span>
             ))}
-            {diagnostics.length > 5 && (
-              <li className="diag-more">...and {diagnostics.length - 5} more issues</li>
-            )}
-          </ul>
+          </div>
         </div>
-      )}
+      </CollapsiblePanel>
+
+      <CollapsiblePanel
+        title="🩺 Layout Status"
+        summary={getStatusBadge()}
+        expanded={statusExpanded}
+        onToggle={toggleStatus}
+      >
+        <div className="metrics-grid">
+          <div className="metric-card">
+            <span className="metric-label">Result</span>
+            <span className="metric-value metrics-status-value">{status}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Validation</span>
+            <span
+              className="metric-value metrics-status-value"
+              style={isValid ? undefined : { color: "#f87171" }}
+            >
+              {isValid ? "passed" : "failed"}
+            </span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Stop Reason</span>
+            <span className="metric-value metrics-status-value">{stats.stopReason}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Global Passes</span>
+            <span className="metric-value">{stats.globalPasses}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Port States</span>
+            <span className="metric-value">{stats.evaluatedPortStates.toLocaleString()}</span>
+          </div>
+          <div className="metric-card">
+            <span className="metric-label">Spacing Expansions</span>
+            <span className="metric-value">{stats.spacingExpansions}</span>
+          </div>
+        </div>
+
+        {diagnostics.length > 0 ? (
+          <div className="metrics-diagnostics">
+            <div className="diagnostics-title">⚠️ Diagnostics ({diagnostics.length})</div>
+            <ul className="diagnostics-list">
+              {diagnostics.slice(0, 5).map((diag, idx) => (
+                <li key={`${diag.code}-${idx}`} className={`diag-item diag-${diag.severity}`}>
+                  <span className="diag-code">[{diag.code}]</span> {diag.message}
+                </li>
+              ))}
+              {diagnostics.length > 5 && (
+                <li className="diag-more">...and {diagnostics.length - 5} more issues</li>
+              )}
+            </ul>
+          </div>
+        ) : (
+          <div className="metrics-diagnostics">No diagnostics reported for this run.</div>
+        )}
+      </CollapsiblePanel>
     </div>
   );
 };

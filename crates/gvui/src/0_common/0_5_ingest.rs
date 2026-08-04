@@ -271,6 +271,20 @@ pub fn build_graph_ir(
 ///
 /// Host-measured `label_width`/`label_height` always win because they come from real font metrics;
 /// the character-estimate fallback exists only for hosts that cannot measure.
+///
+/// ## Why the fallback is transposed for horizontal directions
+///
+/// Everything from here to Phase 9 works in an internal **top-down** frame. For `LeftRight` /
+/// `RightLeft`, `layout_layered` transposes every box on the way in and transposes all geometry
+/// back on the way out. Host-supplied label boxes go through that inbound swap, so by the time they
+/// arrive here they are already in the internal frame and the outbound swap restores them.
+///
+/// The character estimate, however, is computed *here* — after the inbound swap has happened — so
+/// it lands in the internal frame un-transposed, and the outbound swap then rotates it. The badge
+/// comes out 28x150 where it should be 150x28: a tall, narrow container holding horizontal text.
+///
+/// Transposing the estimate puts it in the same frame as a host-supplied box, so both survive the
+/// round trip identically. Text orientation never changes — only the reserved box does.
 fn resolve_label_box(
     edge: &NormalizedEdge,
     is_cycle: bool,
@@ -295,10 +309,12 @@ fn resolve_label_box(
         is_cycle,
     );
     if rect.width > 0.0 && rect.height > 0.0 {
-        Some(LabelBox {
-            width: rect.width,
-            height: rect.height,
-        })
+        let (width, height) = if config.direction.is_horizontal() {
+            (rect.height, rect.width)
+        } else {
+            (rect.width, rect.height)
+        };
+        Some(LabelBox { width, height })
     } else {
         None
     }
