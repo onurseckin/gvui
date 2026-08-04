@@ -26,7 +26,7 @@ export default defineConfig({
   plugins: [react(), wasmAutoRebuildPlugin()],
   server: {
     host: "0.0.0.0",
-    port: 5173,
+    port: 48173,
     watch: {
       usePolling: true,
       ignored: [
@@ -36,6 +36,10 @@ export default defineConfig({
         "**/.tmp/**",
       ],
     },
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 48180,
   },
   build: {
     chunkSizeWarningLimit: 1000,

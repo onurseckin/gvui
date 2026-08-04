@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
+      - "48173:48173"
     volumes:
       - .:/app
       - /app/node_modules
@@ -17,7 +17,7 @@ services:
       - WATCHPACK_POLLING=true
       - VITE_USE_POLLING=true
     healthcheck:
-      test: ["CMD-SHELL", "bun run -e 'fetch(\"http://localhost:5173\").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))'"]
+      test: ["CMD-SHELL", "bun run -e 'fetch(\"http://localhost:48173\").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))'"]
       interval: 10s
       timeout: 5s
       retries: 3

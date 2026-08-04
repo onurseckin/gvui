@@ -4,137 +4,105 @@
 
 ---
 
-## 🚀 Quick Start: Running Locally (Dockerless)
+## 🚀 Setup
 
-To run `GVUI` directly on your host machine without Docker:
-
-### Prerequisites
-
-- **[Bun](https://bun.sh)** (v1.0+)
-- **[Rust](https://rustup.rs)** with the `wasm32-unknown-unknown` target:
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  ```
-- **[wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)**:
-  ```bash
-  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-  ```
-
-### Steps to Run
-
-1. **Install dependencies:**
-
-   ```bash
-   bun install
-   ```
-
-2. **Build the WASM layout engine:**
-
-   ```bash
-   bun run build:wasm
-   ```
-
-3. **Start the local development server:**
-   ```bash
-   bun run dev:host
-   ```
-   Open **`http://localhost:5173`** in your browser.
-
----
-
-## 📦 Production Deployment Options
-
-### Option 1: Production with Docker (Recommended)
-
-Run the production static bundle served behind an optimized Nginx container:
-
-1. **Build and start the container in background:**
-   ```bash
-   bun run prod
-   # Or directly using docker compose:
-   docker compose -f docker-compose.prod.yml up -d --build
-   ```
-2. **Access the app:**
-   Open **`http://localhost:8080`** in your browser.
-
-3. **Stop the production container:**
-   ```bash
-   bun run prod:stop
-   # Or:
-   docker compose -f docker-compose.prod.yml down
-   ```
-
----
-
-### Option 2: Production without Docker (Local Production Compilation)
-
-To build and test the production-compiled bundle locally without Docker:
-
-1. **Compile WASM & build the production bundle:**
-
-   ```bash
-   bun run build
-   ```
-
-   _This outputs static assets to the `./dist` directory._
-
-2. **Preview the production bundle locally:**
-
-   ```bash
-   bun run preview:local
-   ```
-
-   Open **`http://localhost:4173`** to view the production preview.
-
-3. **Deploying to a web server / host:**
-   You can serve the generated `dist/` directory using any static web server (such as Nginx, Caddy, Vercel, Netlify, or GitHub Pages).
-
----
-
-## 🛠️ Development Steps & Workflow
-
-### 1. Running Development Server with Docker
-
-If you prefer developing inside a containerized environment with auto-rebuilding and hot-reloading:
+One command installs everything you need — Bun, the Rust toolchain, the `wasm32-unknown-unknown` target, and `wasm-pack` — if they're not already on your machine, then installs dependencies and builds the WASM engine.
 
 ```bash
-bun run dev
-# Or directly:
-docker compose -f docker-compose.dev.yml up --build --watch
+bun run setup
 ```
 
-- App access: `http://localhost:5173`
-- Logs: `bun run logs`
-- Stop server: `bun run stop`
+> **Note:** If Bun was just installed by the script, open a new terminal (or `source` your shell rc file) before running the next commands, so `bun` is on your `PATH`.
 
-### 2. Running Development Server Dockerless
+---
+
+## 📦 Running in Production Mode (Local)
+
+### Option 1: Without Docker (fastest)
+
+```bash
+bun start
+```
+
+Builds the WASM engine and the production bundle, then serves it locally.
+
+Open **http://localhost:48180**
+
+### Option 2: With Docker
+
+```bash
+bun run prod
+```
+
+Builds the WASM engine on the host, then builds and runs an optimized Nginx container serving the production bundle.
+
+Open **http://localhost:48180**
+
+Other Docker prod commands:
+
+```bash
+bun run prod:stop     # stop the container
+bun run prod:restart  # restart the container
+bun run prod:logs     # tail logs
+```
+
+---
+
+## 🛠️ Development Mode
+
+### Option 1: Without Docker
 
 ```bash
 bun run dev:host
 ```
 
-### 3. Testing & Code Quality Commands
+Open **http://localhost:48173**
 
-- **Run all unit tests** (Rust crate tests + TypeScript test suite):
+### Option 2: With Docker (hot reload)
+
+```bash
+bun run dev
+```
+
+- App access: **http://localhost:48173**
+- Logs: `bun run logs`
+- Stop server: `bun run stop`
+- Run in background: `bun run dev:daemon`
+- Restart: `bun run restart` (or `bun run restart:daemon`)
+
+### Testing & Code Quality Commands
+
+- **Run all tests** (Rust crate tests + TypeScript test suite + layout audit):
   ```bash
   bun run test
   ```
-- **Run Typecheck:**
+- **Typecheck:**
   ```bash
   bun run typecheck
   ```
-- **Run Linter (Oxlint):**
+- **Lint (Oxlint):**
   ```bash
   bun run lint
   ```
-- **Run Formatter (Oxfmt):**
+- **Format (Oxfmt):**
   ```bash
   bun run format
   ```
-- **Run Layout Audit Harness:**
+- **Layout audit harness:**
   ```bash
   bun run audit
   ```
+
+---
+
+## 🔌 Ports
+
+| Mode                         | URL                     |
+| ----------------------------- | ------------------------ |
+| Production (Docker or not)   | http://localhost:48180  |
+| Development (Docker or not)  | http://localhost:48173  |
+
+These ports were chosen deliberately outside the common `3000`/`5173`/`8080` range so gvui can run alongside other local projects without colliding.
 
 ---
 

@@ -24,8 +24,8 @@ RUN bun install
 # Copy application code
 COPY . .
 
-# Expose Vite default dev port
-EXPOSE 5173
+# Expose gvui dev port
+EXPOSE 48173
 
 # Start development server with live watch mode
 CMD ["bun", "run", "dev:local", "--", "--host", "0.0.0.0"]

@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "start": "bun run build && bun run preview:local",
+    "start:docker": "bun run prod",
     "dev": "bun run build:wasm && docker compose -f docker-compose.dev.yml up --build --watch",
     "dev:daemon": "bun run build:wasm && docker compose -f docker-compose.dev.yml up -d --build",
     "stop": "docker compose -f docker-compose.dev.yml down",
@@ -26,6 +29,9 @@
     "prod:stop": "docker compose -f docker-compose.prod.yml down",
     "prod:restart": "docker compose -f docker-compose.prod.yml restart",
     "prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
