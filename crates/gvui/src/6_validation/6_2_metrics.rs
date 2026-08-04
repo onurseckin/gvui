@@ -20,7 +20,7 @@ use crate::types::{
 
 use super::constraints::{
     rect_is_finite, scan_badge_badge_overlaps, scan_badge_node_overlaps,
-    scan_edge_node_penetrations, scan_node_node_overlaps,
+    scan_collinear_edge_overlaps, scan_edge_node_penetrations, scan_node_node_overlaps,
 };
 
 /// Suffix the host's label measurer appends when a label hit `max_label_lines` and was ellipsized.
@@ -135,6 +135,8 @@ pub fn compute_metrics(
     scan_badge_node_overlaps(badges, nodes, eps, |_, _| badge_node_overlaps += 1);
     let mut badge_badge_overlaps = 0usize;
     scan_badge_badge_overlaps(badges, eps, |_, _| badge_badge_overlaps += 1);
+    let mut collinear_edge_overlaps = 0usize;
+    scan_collinear_edge_overlaps(routes, eps, |_, _| collinear_edge_overlaps += 1);
 
     let (rank_count, dummy_count) = match layered {
         Some(l) => (
@@ -166,6 +168,7 @@ pub fn compute_metrics(
         badge_badge_overlaps,
         unresolved_route_count,
         unresolved_badge_count,
+        collinear_edge_overlaps,
     }
 }
 

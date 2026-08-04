@@ -256,9 +256,18 @@ pub struct CustomLayoutConfig {
     /// of forcing every forward edge onto Bottom -> Top. Sideways targets then leave sideways,
     /// which removes the dog-leg they would otherwise need.
     pub flexible_port_sides: bool,
-    /// How strongly a forward edge still prefers the rank-flow sides (Bottom/Top) when
-    /// `flexible_port_sides` is on. 0 is purely geometric; larger values keep the hierarchy
-    /// reading top-to-bottom even when a sideways exit would be marginally shorter.
+    /// What attaching to a `Left`/`Right` face costs, measured in corners, when
+    /// `flexible_port_sides` is on.
+    ///
+    /// A side attachment always costs exactly one more corner than a flow-face one in this router:
+    /// the route has to step out of the face horizontally before it can descend into its channel.
+    /// So at any bias `>= 0` the flow faces win essentially every inter-rank edge, and the sides are
+    /// left to the same-rank edges that genuinely travel sideways. That is the measured-best
+    /// setting and the default.
+    ///
+    /// **Negative values buy side attachment at the price of that corner** — `-2.0` makes an
+    /// edge heading sideways leave sideways even though the drawing gains a bend. This is an
+    /// aesthetic trade with no right answer, which is why it is a knob and not a constant.
     pub flow_side_bias: f64,
     /// Snap a source and target port to a common coordinate when that turns a dog-leg into one
     /// straight segment. The largest single reducer of unnecessary corners.
@@ -267,6 +276,37 @@ pub struct CustomLayoutConfig {
     /// two siblings can be joined by a straight horizontal line instead of being forced onto
     /// different ranks and connected vertically.
     pub same_rank_peer_edges: bool,
+    /// Re-decide which routing lane each channel segment occupies once coordinates exist, using the
+    /// segments' real x-spans instead of Phase 6's order-space colouring.
+    ///
+    /// Phase 6 has to work before any coordinate exists, so it colours intervals in *order* space.
+    /// Order is not a proxy for x across ranks — item 0 of a fifteen-wide rank and item 0 of a
+    /// one-wide rank sit at completely different x — so two segments it believes are disjoint can
+    /// overlap heavily in the drawing. Every geometric crossing this engine produces is a
+    /// horizontal channel run cut by another edge's vertical drop, and which runs get cut is
+    /// decided entirely by the lane order. Turning this off restores the v2 behaviour.
+    pub crossing_aware_lanes: bool,
+    /// Per-channel segment count above which [`Self::crossing_aware_lanes`] keeps Phase 6's
+    /// assignment rather than optimising (> 0).
+    ///
+    /// The optimiser is quadratic in the segments sharing one channel, so this bounds it: a
+    /// pathological graph degrades to the old behaviour instead of to a long pause. Measured on a
+    /// 10 600-edge mesh and an 800-edge double fan, raising it from 256 to 1024 cost no measurable
+    /// time at all and cut the fan's crossings by 15%, so the default is set where it stops being
+    /// free rather than where it stops being cheap.
+    pub lane_order_max_segments: usize,
+    /// Place each port as close to its counterpart as the sorted port order and `port_pitch` allow,
+    /// instead of spreading ports evenly along the face.
+    ///
+    /// A shorter horizontal run is a narrower window for another edge's drop to cut, so this
+    /// reduces crossings as well as bends.
+    pub port_destination_affinity: bool,
+    /// Ports one `Left`/`Right` face may carry (> 0).
+    ///
+    /// Each one descends at its own x, staggered outward by `port_pitch`, so the face needs
+    /// proportionally more clearance to its rank neighbour before the router will use it. `1`
+    /// reproduces the v3 behaviour.
+    pub side_face_capacity: usize,
 
     // ---- Tier 2: algorithm selection ----------------------------------------------------------
     /// Rank assignment algorithm.
@@ -341,6 +381,10 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     flow_side_bias: 1.0,
     straight_shot_alignment: true,
     same_rank_peer_edges: true,
+    crossing_aware_lanes: true,
+    lane_order_max_segments: 1024,
+    port_destination_affinity: true,
+    side_face_capacity: 2,
 
     ranker: Ranker::NetworkSimplex,
     ordering: OrderingHeuristic::Median,
@@ -441,8 +485,18 @@ impl CustomLayoutConfig {
         let non_negative_f64: &[(&str, f64)] = &[
             ("portEndpointPadding", self.port_endpoint_padding),
             ("cornerRadius", self.corner_radius),
-            ("flowSideBias", self.flow_side_bias),
         ];
+
+        // `flowSideBias` is the one signed knob: negative means "prefer the side faces", which is a
+        // legitimate aesthetic choice rather than a misconfiguration. It still has to be finite.
+        if !self.flow_side_bias.is_finite() {
+            return Err(LayoutConfigurationError {
+                message: format!(
+                    "Configuration property 'flowSideBias' must be a finite number, got {}",
+                    self.flow_side_bias
+                ),
+            });
+        }
         for &(name, v) in non_negative_f64 {
             if !v.is_finite() || v < 0.0 {
                 return Err(LayoutConfigurationError {
@@ -460,6 +514,8 @@ impl CustomLayoutConfig {
             ("orderingSeeds", self.ordering_seeds),
             ("stressIterations", self.stress_iterations),
             ("maxDummyChainLength", self.max_dummy_chain_length),
+            ("laneOrderMaxSegments", self.lane_order_max_segments),
+            ("sideFaceCapacity", self.side_face_capacity),
         ];
         for &(name, v) in positive_usize {
             if v == 0 {
@@ -517,6 +573,10 @@ pub struct PartialCustomLayoutConfig {
     pub flow_side_bias: Option<f64>,
     pub straight_shot_alignment: Option<bool>,
     pub same_rank_peer_edges: Option<bool>,
+    pub crossing_aware_lanes: Option<bool>,
+    pub lane_order_max_segments: Option<usize>,
+    pub port_destination_affinity: Option<bool>,
+    pub side_face_capacity: Option<usize>,
 
     pub ranker: Option<Ranker>,
     pub ordering: Option<OrderingHeuristic>,
@@ -582,6 +642,10 @@ pub fn resolve_custom_layout_config(
         take!(flow_side_bias);
         take!(straight_shot_alignment);
         take!(same_rank_peer_edges);
+        take!(crossing_aware_lanes);
+        take!(lane_order_max_segments);
+        take!(port_destination_affinity);
+        take!(side_face_capacity);
 
         take!(ranker);
         take!(ordering);

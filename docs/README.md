@@ -69,6 +69,7 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 | [`concepts/`](./concepts/README.md) | Cross-cutting ideas referenced by several chapters. |
 | [`planning/layout-engine-v2/`](./planning/layout-engine-v2/README.md) | The design record: diagnosis of the previous engine, the architecture decision, and the measured results. |
 | [`planning/layout-engine-v3/`](./planning/layout-engine-v3/README.md) | The v3 pass: what the drawing looked wrong about, and what each fix cost. |
+| [`planning/layout-engine-v4/`](./planning/layout-engine-v4/README.md) | The v4 pass: 148 geometric crossings down to 40, and the measured case against using all four node sides. |
 
 ### The engine chapters
 

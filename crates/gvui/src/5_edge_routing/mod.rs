@@ -21,4 +21,7 @@ pub mod edge_style;
 #[path = "5_6_route_facade.rs"]
 pub mod route_facade;
 
+#[path = "5_7_lane_order.rs"]
+pub mod lane_order;
+
 pub use route_facade::{route_edges, RouteResult};

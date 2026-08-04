@@ -191,7 +191,7 @@ one-to-one: directory `3_crossing_minimization/` holds Phases 4 and 5, directory
 | [07 — Crossing Minimization](./07-crossing-minimization.md) | The only search. BMJ counting, median sweeps, transpose, seeds and dummy priority. |
 | [08 — Routing Demand](./08-routing-demand.md) | Channels, corridors, interval graphs, greedy colouring, and the separations that make routing safe. |
 | [09 — Coordinate Assignment](./09-coordinate-assignment.md) | Rank bands for $y$, Brandes–Köpf for $x$, and the four-candidate alignment. |
-| [10 — Edge Routing](./10-edge-routing.md) | Scored port sides, port order, straight-shot alignment, lane index to polyline, bundling, self-loops, flat peer edges, octilinear chamfering, and badge geometry. |
+| [10 — Edge Routing](./10-edge-routing.md) | Scored port sides, port order and destination affinity, straight-shot alignment, coordinate-space lane assignment, lane index to polyline, bundling, self-loops, flat peer edges, octilinear chamfering, and badge geometry. |
 | [11 — Emit and Quality](./11-emit-and-quality.md) | Constraints that are asserted, metrics that are reported, and the difference between the two. |
 
 Related reading:
@@ -204,6 +204,9 @@ Related reading:
   v1 that motivated them, and the measured results.
 - [Planning: v3](../planning/layout-engine-v3/README.md) — the aesthetic and usability pass: two
   modes instead of six, scored port sides, flat peer edges, octilinear.
+- [Planning: v4](../planning/layout-engine-v4/README.md) — edge crossing reduction: why every
+  geometric crossing was one shape, coordinate-space lane assignment, and the measured case against
+  four-side attachment.
 
 ---
 

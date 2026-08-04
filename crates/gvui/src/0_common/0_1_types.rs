@@ -722,6 +722,12 @@ pub struct LayoutMetrics {
     pub badge_badge_overlaps: usize,
     pub unresolved_route_count: usize,
     pub unresolved_badge_count: usize,
+    /// Pairs of edges drawing an axis-aligned run along the same line, so that one hides the other.
+    ///
+    /// Invisible to `geometric_crossings`, which counts proper intersections only. Two merged edges
+    /// are worse than two crossing ones — a crossing stays readable — so this is a constraint
+    /// counter rather than an aesthetic score.
+    pub collinear_edge_overlaps: usize,
 }
 
 /// Per-phase timings, in milliseconds.

@@ -37,6 +37,7 @@
 //! [`SIDE_FACE_CLEARANCE_FACTOR`] stub lengths wide — which is what keeps the descent out of the
 //! neighbour's interior and the "no edge-node penetration" invariant intact.
 
+use super::lane_router::pass_x;
 use crate::config::CustomLayoutConfig;
 use crate::types::{GraphIr, Item, ItemKind, Layered, Point, PortRef, Rect, Side};
 use std::collections::HashMap;
@@ -72,14 +73,6 @@ const TARGET_CANDIDATES: [Side; 4] = [Side::Top, Side::Right, Side::Left, Side::
 /// much again, which is the margin that makes "no edge-node penetration" hold by construction
 /// rather than by luck.
 const SIDE_FACE_CLEARANCE_FACTOR: f64 = 2.0;
-
-/// Chain ports one `Left`/`Right` face may carry.
-///
-/// Every port on a vertical face descends at the *same* x (`port_stub_length` outside the face is
-/// fixed by the stub contract Step 5.2 reads), so a second port on the same face would run
-/// collinear with the first from its own y down to the channel. One port per vertical face is the
-/// only cap under which that cannot happen.
-const SIDE_FACE_CAPACITY: usize = 1;
 
 /// Pixels of extra path length that cost as much as one unit of `flow_side_bias`.
 ///
@@ -122,6 +115,13 @@ struct PortSlot {
     order_key: u32,
     /// Primary key for `Left`/`Right`: the other endpoint item's `y`.
     y_key: f64,
+    /// Where along its face this port would sit if it were the only one there: the centre of the
+    /// adjacent chain item, projected onto the face's axis (x for `Top`/`Bottom`, y otherwise).
+    ///
+    /// This is a *want*, not a position — [`place_by_affinity`] reconciles all the wants on one face
+    /// against the sorted order and `port_pitch`. Aiming at the neighbour's centre rather than at its
+    /// port keeps the two ends of an edge from chasing each other.
+    desired: f64,
     /// True when this slot is the chain's source end.
     is_source: bool,
 }
@@ -176,6 +176,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                     edge: chain.edge,
                     order_key: next.order as u32,
                     y_key: next.center_y(),
+                    desired: face_axis_target(next, source_side, config),
                     is_source: true,
                 });
             }
@@ -191,6 +192,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                     edge: chain.edge,
                     order_key: prev.order as u32,
                     y_key: prev.center_y(),
+                    desired: face_axis_target(prev, target_side, config),
                     is_source: false,
                 });
             }
@@ -223,6 +225,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                 edge: flat.edge,
                 order_key: 0,
                 y_key: to.y,
+                desired: face_axis_target(to, source_side, config),
                 is_source: true,
             });
         }
@@ -231,6 +234,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                 edge: flat.edge,
                 order_key: 0,
                 y_key: from.y,
+                desired: face_axis_target(from, target_side, config),
                 is_source: false,
             });
         }
@@ -279,12 +283,19 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                 Side::Top | Side::Bottom => rect.x,
                 Side::Left | Side::Right => rect.y,
             };
-            let (pitch, base) = port_spacing(side_length, list.len(), config);
-            positions[node * 4 + si] = (0..list.len())
-                .map(|i| {
-                    origin + (base + (i as f64 + 1.0) * pitch).clamp(0.0, side_length.max(0.0))
-                })
-                .collect();
+            let even = || {
+                let (pitch, base) = port_spacing(side_length, list.len(), config);
+                (0..list.len())
+                    .map(|i| {
+                        origin + (base + (i as f64 + 1.0) * pitch).clamp(0.0, side_length.max(0.0))
+                    })
+                    .collect::<Vec<f64>>()
+            };
+            positions[node * 4 + si] = if config.port_destination_affinity {
+                place_by_affinity(list, origin, side_length, config).unwrap_or_else(even)
+            } else {
+                even()
+            };
         }
     }
 
@@ -330,7 +341,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                 else {
                     continue;
                 };
-                let port = make_port(node_id, side, i, &rect, coord, config.port_stub_length);
+                let port = make_port(node_id, side, i, &rect, coord, config);
                 if slot.is_source {
                     table.source.insert(slot.edge, port);
                 } else {
@@ -351,11 +362,14 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
 struct EndContext {
     node: u32,
     item_index: u32,
+    /// Channel this end's first (or last) link runs through, indexed like `demand.channel_lanes`.
+    channel: usize,
     /// Box of the endpoint node itself.
     rect: Rect,
-    /// Box of the adjacent chain item — the one the route reaches first (source end) or arrives
-    /// from (target end). For an adjacent-rank chain that is simply the other endpoint.
-    hop: Rect,
+    /// The x at which the route will traverse the adjacent chain item — the one it reaches first
+    /// (source end) or arrives from (target end). Taken from [`pass_x`] rather than the item's plain
+    /// centre so a badge item under `BesideEdge` reports the line's x and not the badge's.
+    hop_x: f64,
 }
 
 /// Chooses `(source_side, target_side)` for every chain, indexed by chain index.
@@ -380,6 +394,9 @@ fn plan_chain_sides(
     }
 
     let mut used = vec![0usize; node_count * 4];
+    // Channel runs already committed by earlier edges, indexed by channel. Only the *unavoidable*
+    // part of a conflict is scored -- see `residual_crossings`.
+    let mut committed: Vec<Vec<(f64, f64)>> = vec![Vec::new(); layered.rank_count()];
 
     for flat in &layered.flat_edges {
         let (Some(from), Some(to)) = (
@@ -437,22 +454,40 @@ fn plan_chain_sides(
         let source = EndContext {
             node: source_node,
             item_index: chain.items[0],
+            channel: source_item.rank as usize,
             rect: source_item.rect(),
-            hop: source_hop.rect(),
+            hop_x: pass_x(source_hop, config),
         };
         let target = EndContext {
             node: target_node,
             item_index: chain.items[last],
+            channel: (target_item.rank as usize).saturating_sub(1),
             rect: target_item.rect(),
-            hop: target_hop.rect(),
+            hop_x: pass_x(target_hop, config),
         };
 
-        let choice = best_side_pair(&source, &target, last == 1, layered, &used, config);
+        let choice = best_side_pair(
+            &source,
+            &target,
+            last == 1,
+            layered,
+            &used,
+            &committed,
+            config,
+        );
         if let Some(cell) = plan.get_mut(chain_index) {
             *cell = choice;
         }
         claim_face(&mut used, source_node, choice.0);
         claim_face(&mut used, target_node, choice.1);
+        commit_runs(
+            &mut committed,
+            &source,
+            &target,
+            choice,
+            last == 1,
+            config,
+        );
     }
 
     plan
@@ -468,28 +503,41 @@ fn plan_chain_sides(
 ///    candidate scores 0 when the `Top`/`Bottom` face's port range overlaps the other end's, and 2
 ///    when it cannot. Multi-rank chains score their two ends independently, because their ends sit
 ///    in different channels and never have to agree with each other.
-/// 2. **`flow_penalty + length / 1000`**: `flow_side_bias` per end that is not on the rank-flow
+/// 2. **`residual`**: crossings against the runs already committed in the same channel that *no*
+///    lane ordering could remove — see [`residual_crossings`]. Step 5.7 deletes every crossing the
+///    lane order can reach, so the only thing left for the side choice to influence is what it
+///    cannot, and scoring anything else here would be double-counting. This is the key that makes
+///    an edge arrive on a node's side rather than its top when the top approach would have to cut
+///    across something.
+/// 3. **`flow_penalty + length / 1000`**: `flow_side_bias` per end that is not on the rank-flow
 ///    face, plus the Manhattan distance between the two candidate attachment points. This is where
 ///    "keep the hierarchy readable" is priced against "take the shorter path".
-/// 3. **`congestion`**: ports already claimed on the two faces, so a fan-out spreads instead of
+/// 4. **`congestion`**: ports already claimed on the two faces, so a fan-out spreads instead of
 ///    piling onto one face once the first two keys stop discriminating.
-/// 4. **Candidate order** ([`SOURCE_CANDIDATES`] x [`TARGET_CANDIDATES`]), which makes the choice
+/// 5. **Candidate order** ([`SOURCE_CANDIDATES`] x [`TARGET_CANDIDATES`]), which makes the choice
 ///    total and therefore byte-identical across processes.
+///
+/// Bends outrank crossings deliberately. A crossing is one intersection; a needless corner is a
+/// permanent kink in the line, and the two complaints that produced this scorer -- "unnecessary
+/// cornering" and "edges cutting each other" -- are not worth the same. Anything that reorders
+/// these two keys should be measured against `cargo run --example audit` before it ships.
 ///
 /// Infeasible combinations are skipped rather than scored (see [`face_is_feasible`]); `(Bottom,
 /// Top)` is always feasible, so the fallback at the end is unreachable on well-formed input and is
 /// there only to keep the function total.
+#[allow(clippy::too_many_arguments)]
 fn best_side_pair(
     source: &EndContext,
     target: &EndContext,
     single_link: bool,
     layered: &Layered,
     used: &[usize],
+    committed: &[Vec<(f64, f64)>],
     config: &CustomLayoutConfig,
 ) -> (Side, Side) {
     let pad = config.port_endpoint_padding.max(0.0);
     let stub = config.port_stub_length.max(0.0);
-    let bias = config.flow_side_bias.max(0.0);
+    let bias = config.flow_side_bias;
 
     let mut best: Option<(u32, f64, usize)> = None;
     let mut best_pair = (Side::Bottom, Side::Top);
@@ -508,52 +556,188 @@ fn best_side_pair(
             let target_span = drop_span(&target.rect, target_side, pad, stub);
             let target_point = face_point(&target.rect, target_side, source.rect.center(), pad);
 
-            let bends = if single_link {
+            let run_bends = if single_link {
                 if spans_intersect(source_span, target_span) {
                     0
                 } else {
                     2
                 }
             } else {
-                let head = if span_contains(source_span, source.hop.center().x) {
+                let head = if span_contains(source_span, source.hop_x) {
                     0
                 } else {
                     2
                 };
-                let tail = if span_contains(target_span, target.hop.center().x) {
+                let tail = if span_contains(target_span, target.hop_x) {
                     0
                 } else {
                     2
                 };
                 head + tail
             };
+            // Leaving a vertical face costs one turn the flow faces do not pay: the route steps out
+            // horizontally to the stub before it can start descending, and that corner survives
+            // even when the two ends agree on an x. Charging it explicitly is what makes
+            // `flow_side_bias` a meaningful trade rather than a knob with no reachable effect.
+            let bends = run_bends
+                + u32::from(!is_flow_face(source_side, true))
+                + u32::from(!is_flow_face(target_side, false));
 
-            let off_flow = u32::from(source_side != Side::Bottom) + u32::from(target_side != Side::Top);
+            let off_flow = u32::from(!is_flow_face(source_side, true))
+                + u32::from(!is_flow_face(target_side, false));
             let length = manhattan(source_point, target_point);
-            let weighted = bias * off_flow as f64 + length / LENGTH_PER_FLOW_UNIT;
+            // One weighted number rather than a second lexicographic key, so that `flow_side_bias`
+            // can genuinely outweigh a corner. Lexicographic keys made it unreachable: a horizontal
+            // face has a whole interval to drop from and a vertical face has a single point, so the
+            // horizontal face won the bend key essentially always and nothing after it was ever
+            // consulted.
+            let weighted = bends as f64 + bias * off_flow as f64 + length / LENGTH_PER_FLOW_UNIT;
             let congestion = face_usage(used, source.node, source_side)
                 + face_usage(used, target.node, target_side);
+
+            let (source_run, target_run) = candidate_runs(
+                source,
+                target,
+                (source_side, target_side),
+                single_link,
+                config,
+            );
+            let mut residual = residual_crossings(committed, source.channel, source_run);
+            if let Some(run) = target_run {
+                residual += residual_crossings(committed, target.channel, run);
+            }
 
             // Strictly-less, so the first candidate of an exact tie wins and the enumeration order
             // is the documented final key.
             let better = match best {
                 None => true,
-                Some((b_bends, b_weighted, b_congestion)) => {
-                    bends
-                        .cmp(&b_bends)
+                Some((b_residual, b_weighted, b_congestion)) => {
+                    residual
+                        .cmp(&b_residual)
                         .then_with(|| weighted.total_cmp(&b_weighted))
                         .then_with(|| congestion.cmp(&b_congestion))
                         == std::cmp::Ordering::Less
                 }
             };
             if better {
-                best = Some((bends, weighted, congestion));
+                best = Some((residual, weighted, congestion));
                 best_pair = (source_side, target_side);
             }
         }
     }
 
     best_pair
+}
+
+/// True when `side` is the face the rank flow naturally uses at this end.
+fn is_flow_face(side: Side, is_source: bool) -> bool {
+    if is_source {
+        side == Side::Bottom
+    } else {
+        side == Side::Top
+    }
+}
+
+/// The channel run each end of a chain would make under a candidate side pair.
+///
+/// The source end always produces one; the target end produces one only for a multi-link chain,
+/// because a single-link chain has just one run and both ends share it.
+///
+/// These are *estimates*, and deliberately so: the exact drop x of a horizontal face is not settled
+/// until [`place_by_affinity`] has reconciled every port on it, which cannot happen before the sides
+/// are chosen. A vertical face is exact ([`fixed_drop_x`]); a horizontal face is quoted at the point
+/// it would take if it were free to slide, which is the same best case [`face_point`] reports for
+/// the length term.
+fn candidate_runs(
+    source: &EndContext,
+    target: &EndContext,
+    sides: (Side, Side),
+    single_link: bool,
+    config: &CustomLayoutConfig,
+) -> ((f64, f64), Option<(f64, f64)>) {
+    let pad = config.port_endpoint_padding.max(0.0);
+    let stub = config.port_stub_length.max(0.0);
+
+    let source_drop = drop_x_estimate(&source.rect, sides.0, source.hop_x, pad, stub);
+    if single_link {
+        let target_drop = drop_x_estimate(&target.rect, sides.1, target.hop_x, pad, stub);
+        return ((source_drop, target_drop), None);
+    }
+    let target_drop = drop_x_estimate(&target.rect, sides.1, target.hop_x, pad, stub);
+    (
+        (source_drop, source.hop_x),
+        Some((target.hop_x, target_drop)),
+    )
+}
+
+/// x at which a port on `side` would enter the channel, sliding toward `toward` where it can.
+fn drop_x_estimate(rect: &Rect, side: Side, toward: f64, pad: f64, stub: f64) -> f64 {
+    match side {
+        Side::Right => rect.right() + stub,
+        Side::Left => rect.x - stub,
+        Side::Top | Side::Bottom => {
+            let (lo, hi) = padded_range(rect.x, rect.right(), pad);
+            clamp_finite(toward, lo, hi)
+        }
+    }
+}
+
+/// Crossings between `run` and the runs already committed in `channel` that no lane order can
+/// remove.
+///
+/// Step 5.7 will choose the depth order, and it removes every crossing that choice can reach. What
+/// survives is the pairwise minimum: the cost of putting `a` above `b` versus `b` above `a`,
+/// whichever is smaller. Scoring the raw conflict count here instead would charge the side choice
+/// for crossings the lane phase is about to delete, and push it into contortions for nothing.
+///
+/// Mirrors [`super::lane_order::pair_cost`]'s crossing half. The merge half is deliberately absent:
+/// two runs meeting end-to-end are separable by ordering, so they are not residual.
+fn residual_crossings(committed: &[Vec<(f64, f64)>], channel: usize, run: (f64, f64)) -> u32 {
+    let Some(others) = committed.get(channel) else {
+        return 0;
+    };
+    others
+        .iter()
+        .map(|&other| {
+            let ab = u32::from(inside(other.0, run)) + u32::from(inside(run.1, other));
+            let ba = u32::from(inside(run.0, other)) + u32::from(inside(other.1, run));
+            ab.min(ba)
+        })
+        .sum()
+}
+
+fn inside(x: f64, run: (f64, f64)) -> bool {
+    let (lo, hi) = (run.0.min(run.1), run.0.max(run.1));
+    x > lo && x < hi
+}
+
+/// Records the runs a committed side choice produces, so later edges can score against them.
+fn commit_runs(
+    committed: &mut [Vec<(f64, f64)>],
+    source: &EndContext,
+    target: &EndContext,
+    sides: (Side, Side),
+    single_link: bool,
+    config: &CustomLayoutConfig,
+) {
+    let (source_run, target_run) = candidate_runs(source, target, sides, single_link, config);
+    if let Some(list) = committed.get_mut(source.channel) {
+        list.push(source_run);
+    }
+    if let (Some(run), Some(list)) = (target_run, committed.get_mut(target.channel)) {
+        list.push(run);
+    }
+}
+
+/// How far outside its face the port at `index` on a vertical side reaches before descending.
+///
+/// Every port on one vertical face used to descend at the same x, which is why only one was ever
+/// allowed there — a second would have run collinear with the first from its own y down to the
+/// channel. Staggering the reach by `port_pitch` per port gives each its own descent line and is
+/// what makes `side_face_capacity > 1` safe. [`face_is_feasible`] charges the extra reach against
+/// the corridor before allowing the face, so the descents still land in the gap Phase 6 reserved.
+fn side_stub_reach(index: usize, config: &CustomLayoutConfig) -> f64 {
+    config.port_stub_length.max(0.0) + index as f64 * config.port_pitch.max(0.0)
 }
 
 /// True when a port may attach to `side` of this end.
@@ -563,8 +747,11 @@ fn best_side_pair(
 /// - A source may not use `Top` and a target may not use `Bottom`. The router always descends from
 ///   the source into the channel below its rank and rises into the target from that same channel,
 ///   so a backward-facing stub would have to cross the node's own interior to get there.
-/// - A vertical face needs [`SIDE_FACE_CLEARANCE_FACTOR`] stub lengths of clearance to the rank
-///   neighbour on that side and must not already be claimed ([`SIDE_FACE_CAPACITY`]).
+/// - A vertical face may hold up to `side_face_capacity` ports, and needs clearance to its rank
+///   neighbour for **all** of them: [`SIDE_FACE_CLEARANCE_FACTOR`] stub lengths for the first, plus
+///   one [`CustomLayoutConfig::port_pitch`] for each further descent line
+///   ([`side_stub_reach`]). Charging for the port about to be added rather than for the configured
+///   capacity is what lets a node with one narrow-ish gap still use its side once.
 fn face_is_feasible(
     side: Side,
     is_source: bool,
@@ -577,10 +764,12 @@ fn face_is_feasible(
         Side::Top => !is_source,
         Side::Bottom => is_source,
         Side::Left | Side::Right => {
-            if face_usage(used, end.node, side) >= SIDE_FACE_CAPACITY {
+            let taken = face_usage(used, end.node, side);
+            if taken >= config.side_face_capacity.max(1) {
                 return false;
             }
-            let needed = SIDE_FACE_CLEARANCE_FACTOR * config.port_stub_length.max(0.0);
+            let needed = SIDE_FACE_CLEARANCE_FACTOR * config.port_stub_length.max(0.0)
+                + taken as f64 * config.port_pitch.max(0.0);
             face_clearance(layered, end.item_index, side) >= needed
         }
     }
@@ -788,7 +977,6 @@ fn apply_straight_shot_alignment(
 ) {
     let pad = config.port_endpoint_padding.max(0.0);
     let pitch = config.port_pitch.max(0.0);
-    let stub = config.port_stub_length.max(0.0);
 
     let mut order: Vec<(usize, u32, f64)> = Vec::with_capacity(layered.chains.len());
     for (chain_index, chain) in layered.chains.iter().enumerate() {
@@ -875,7 +1063,7 @@ fn apply_straight_shot_alignment(
                     set_position(positions, target_face, target_slot, x);
                 }
                 (true, false) => {
-                    let want = fixed_drop_x(&target_rect, target_side, stub);
+                    let want = fixed_drop_x(&target_rect, target_side, target_slot, config);
                     if let (Some(span), Some(want)) = (source_span, want) {
                         if span_contains(span, want) {
                             set_position(positions, source_face, source_slot, want);
@@ -883,7 +1071,7 @@ fn apply_straight_shot_alignment(
                     }
                 }
                 (false, true) => {
-                    let want = fixed_drop_x(&source_rect, source_side, stub);
+                    let want = fixed_drop_x(&source_rect, source_side, source_slot, config);
                     if let (Some(span), Some(want)) = (target_span, want) {
                         if span_contains(span, want) {
                             set_position(positions, target_face, target_slot, want);
@@ -936,10 +1124,15 @@ fn is_free_face(side: Side) -> bool {
 
 /// The single x at which a port on a vertical face drops into the channel, or `None` for a
 /// horizontal face, which has no single x.
-fn fixed_drop_x(rect: &Rect, side: Side, stub: f64) -> Option<f64> {
+///
+/// `index` is the port's position along the face, because [`side_stub_reach`] staggers each further
+/// port outward. A caller that passes the wrong index snaps the *other* end of the edge onto a line
+/// nothing descends at, which turns a straight shot into a dog-leg with no bend saved.
+fn fixed_drop_x(rect: &Rect, side: Side, index: usize, config: &CustomLayoutConfig) -> Option<f64> {
+    let reach = side_stub_reach(index, config);
     match side {
-        Side::Right => Some(rect.right() + stub),
-        Side::Left => Some(rect.x - stub),
+        Side::Right => Some(rect.right() + reach),
+        Side::Left => Some(rect.x - reach),
         Side::Top | Side::Bottom => None,
     }
 }
@@ -1002,6 +1195,127 @@ fn side_index(side: Side) -> usize {
     }
 }
 
+/// Where along a `side` face's axis the adjacent item wants this port to sit.
+///
+/// For a horizontal face this is [`pass_x`] — the x at which Step 5.2 will actually traverse that
+/// item — rather than its plain centre. The two differ for a badge under `BesideEdge`, where the
+/// item is double width and the line runs down the reserved left half; aiming at the centre there
+/// would pull the port toward the badge instead of toward the line.
+fn face_axis_target(item: &Item, side: Side, config: &CustomLayoutConfig) -> f64 {
+    match side {
+        Side::Top | Side::Bottom => pass_x(item, config),
+        Side::Left | Side::Right => item.center_y(),
+    }
+}
+
+/// Places the ports of one face as near their wants as the order and the pitch allow.
+///
+/// Even distribution treats a face as a row of identical pigeonholes, which is exactly wrong for
+/// routing: it puts a port at the far end of a node from the thing it connects to, and the channel
+/// run then has to travel back. That run is what other edges' drops cut, so a longer one is not just
+/// uglier but measurably more crossings.
+///
+/// ## Why this is a projection and not a heuristic
+///
+/// The wants are already in the crossing-free order the caller sorted them into, and the constraint
+/// is that consecutive ports stay `pitch` apart inside `[lo, hi]`. Substituting `q_i = p_i - i*pitch`
+/// turns "at least `pitch` apart" into plain "non-decreasing", so the problem becomes: find the
+/// non-decreasing sequence closest to the shifted wants. That is isotonic regression, and
+/// [`pool_adjacent_violators`] solves it exactly in one pass. So this is the *optimal* placement for
+/// the given order, not an approximation of one — and because the result is monotone in the input
+/// index, it cannot reorder the ports and undo the sort that made the attachment crossing-free.
+///
+/// Returns `None` when the face is too crowded to hold the run at [`CROWDED_MIN_PITCH`], which
+/// hands the caller back to [`port_spacing`]'s crowded branch rather than piling every port on one
+/// point.
+fn place_by_affinity(
+    slots: &[PortSlot],
+    origin: f64,
+    side_length: f64,
+    config: &CustomLayoutConfig,
+) -> Option<Vec<f64>> {
+    let n = slots.len();
+    if n == 0 || !side_length.is_finite() {
+        return None;
+    }
+    let pad = config.port_endpoint_padding.max(0.0);
+    let lo = origin + pad;
+    let hi = origin + side_length - pad;
+    let span = hi - lo;
+    if !span.is_finite() || span < 0.0 {
+        return None;
+    }
+
+    // Room for the ideal pitch, else the widest that fits, else give up to the crowded branch.
+    let gaps = n.saturating_sub(1) as f64;
+    let pitch = if gaps > 0.0 {
+        let widest = span / gaps;
+        if widest < CROWDED_MIN_PITCH {
+            return None;
+        }
+        config.port_pitch.max(0.0).min(widest)
+    } else {
+        0.0
+    };
+
+    let midpoint = (lo + hi) / 2.0;
+    let shifted: Vec<f64> = slots
+        .iter()
+        .enumerate()
+        .map(|(i, slot)| {
+            let want = if slot.desired.is_finite() {
+                slot.desired
+            } else {
+                midpoint
+            };
+            want - i as f64 * pitch
+        })
+        .collect();
+
+    let fitted = pool_adjacent_violators(&shifted);
+    // The whole run has to fit, so the first port's ceiling is `hi` minus the run's own length.
+    // Clamping a non-decreasing sequence into an interval leaves it non-decreasing, so the pitch
+    // guarantee survives this step.
+    let ceiling = (hi - gaps * pitch).max(lo);
+    Some(
+        fitted
+            .iter()
+            .enumerate()
+            .map(|(i, &q)| clamp_finite(q, lo, ceiling) + i as f64 * pitch)
+            .collect(),
+    )
+}
+
+/// The non-decreasing sequence minimising the squared distance to `values` — the classic
+/// pool-adjacent-violators algorithm, linear in the input.
+///
+/// Each block holds a mean and the number of original entries it covers. A new value is pushed as
+/// its own block; while the last two blocks are out of order they are merged into their weighted
+/// mean, which is the least-squares fit for a block forced to one level. The merge cannot cascade
+/// more than once per input overall, so the loop is amortised O(1) per element.
+fn pool_adjacent_violators(values: &[f64]) -> Vec<f64> {
+    let mut level: Vec<f64> = Vec::with_capacity(values.len());
+    let mut weight: Vec<f64> = Vec::with_capacity(values.len());
+    for &v in values {
+        level.push(v);
+        weight.push(1.0);
+        while level.len() >= 2 && level[level.len() - 2] > level[level.len() - 1] {
+            let (v_hi, w_hi) = (level.pop().unwrap_or(0.0), weight.pop().unwrap_or(1.0));
+            let (v_lo, w_lo) = (level.pop().unwrap_or(0.0), weight.pop().unwrap_or(1.0));
+            let total = w_lo + w_hi;
+            level.push((v_lo * w_lo + v_hi * w_hi) / total);
+            weight.push(total);
+        }
+    }
+    let mut out: Vec<f64> = Vec::with_capacity(values.len());
+    for (&value, &count) in level.iter().zip(weight.iter()) {
+        for _ in 0..(count as usize) {
+            out.push(value);
+        }
+    }
+    out
+}
+
 /// Pitch and base offset for `n` ports on a side of length `side_length`.
 ///
 /// The normal branch is the spec formula: `pitch = (len - 2 * padding) / (n + 1)` with the first
@@ -1033,8 +1347,15 @@ fn make_port(
     index: usize,
     rect: &Rect,
     coord: f64,
-    stub_length: f64,
+    config: &CustomLayoutConfig,
 ) -> PortRef {
+    // A horizontal face gives every port its own x already, so its stub is a plain outward step.
+    // A vertical face does not: the descent line is the stub's x, so the reach has to grow with the
+    // index or two ports on one face would run collinear.
+    let stub_length = match side {
+        Side::Top | Side::Bottom => config.port_stub_length,
+        Side::Left | Side::Right => side_stub_reach(index, config),
+    };
     let point = match side {
         Side::Top => Point {
             x: coord,
@@ -1083,12 +1404,23 @@ mod tests {
         CustomLayoutConfig::default()
     }
 
-    /// The v2 fixed-table baseline: sides come from the table and no port is ever slid. Tests that
-    /// pin the exact spacing formula use this, because both v3 features are allowed to move ports.
+    /// The v2 fixed-table baseline: sides come from the table and no port is ever moved from where
+    /// even distribution puts it. Tests that pin the exact spacing formula use this, because every
+    /// feature added since is allowed to move ports.
     fn classic_cfg() -> CustomLayoutConfig {
         CustomLayoutConfig {
             flexible_port_sides: false,
             straight_shot_alignment: false,
+            port_destination_affinity: false,
+            ..CustomLayoutConfig::default()
+        }
+    }
+
+    /// A config that asks for side attachment despite its corner cost — the aesthetic opt-in
+    /// `flow_side_bias` exists for. `-2.0` is comfortably past the one-corner threshold.
+    fn side_seeking_cfg() -> CustomLayoutConfig {
+        CustomLayoutConfig {
+            flow_side_bias: -2.0,
             ..CustomLayoutConfig::default()
         }
     }
@@ -1282,6 +1614,97 @@ mod tests {
         assert!((ports.source[&0].point.x - expect(2)).abs() < 1e-9);
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Destination affinity
+    // ---------------------------------------------------------------------------------------
+
+    #[test]
+    fn affinity_moves_each_port_toward_the_child_it_serves() {
+        let (layered, ir) = fan_out();
+        // Children sit at x = 0..100, 150..250 and 300..400 under a source spanning 0..300, so
+        // every port has somewhere distinct it would rather be.
+        let even = assign_ports(&layered, &ir, &classic_cfg());
+        let hugged = assign_ports(&layered, &ir, &cfg());
+
+        // Edge 1 runs to the leftmost child (centre 50) and edge 0 to the rightmost (centre 350).
+        let error = |ports: &PortTable, edge: u32, want: f64| (ports.source[&edge].point.x - want).abs();
+        assert!(
+            error(&hugged, 1, 50.0) < error(&even, 1, 50.0),
+            "left child: {} should beat {}",
+            error(&hugged, 1, 50.0),
+            error(&even, 1, 50.0)
+        );
+        assert!(
+            error(&hugged, 0, 350.0) < error(&even, 0, 350.0),
+            "right child: {} should beat {}",
+            error(&hugged, 0, 350.0),
+            error(&even, 0, 350.0)
+        );
+    }
+
+    #[test]
+    fn affinity_keeps_the_sorted_order_and_the_pitch() {
+        let (layered, ir) = fan_out();
+        let config = cfg();
+        let ports = assign_ports(&layered, &ir, &config);
+
+        // Same order the even distribution produced: sorted by the child's position, which is what
+        // makes the attachment crossing-free. Affinity must not permute it.
+        let mut xs = [
+            ports.source[&1].point.x,
+            ports.source[&2].point.x,
+            ports.source[&0].point.x,
+        ];
+        assert!(xs[0] < xs[1] && xs[1] < xs[2], "{:?}", xs);
+        for pair in xs.windows(2) {
+            assert!(
+                pair[1] - pair[0] >= config.port_pitch - 1e-9,
+                "ports {:?} are closer than the pitch",
+                pair
+            );
+        }
+        // Everything stays on the face, inside the endpoint padding.
+        xs.sort_by(f64::total_cmp);
+        assert!(xs[0] >= config.port_endpoint_padding - 1e-9);
+        assert!(xs[2] <= 300.0 - config.port_endpoint_padding + 1e-9);
+    }
+
+    #[test]
+    fn a_face_too_crowded_for_the_floor_falls_back_to_even_spacing() {
+        let config = cfg();
+        let slots: Vec<PortSlot> = (0..200)
+            .map(|_| PortSlot {
+                edge: 0,
+                order_key: 0,
+                y_key: 0.0,
+                desired: 60.0,
+                is_source: true,
+            })
+            .collect();
+        // 200 ports on a 120-wide face cannot hold `CROWDED_MIN_PITCH`, so affinity declines and
+        // `port_spacing`'s crowded branch takes over rather than stacking every port on one x.
+        assert!(place_by_affinity(&slots, 0.0, 120.0, &config).is_none());
+        assert!(place_by_affinity(&slots[..3], 0.0, 120.0, &config).is_some());
+    }
+
+    #[test]
+    fn pooling_violators_yields_the_nearest_non_decreasing_sequence() {
+        // Already sorted: nothing to do.
+        assert_eq!(
+            pool_adjacent_violators(&[1.0, 2.0, 3.0]),
+            vec![1.0, 2.0, 3.0]
+        );
+        // One inversion collapses to the block mean, which is the least-squares fit for a run
+        // forced to a single level.
+        assert_eq!(pool_adjacent_violators(&[5.0, 1.0]), vec![3.0, 3.0]);
+        // A cascade: the merge of the last two blocks can violate the one before it.
+        assert_eq!(
+            pool_adjacent_violators(&[10.0, 20.0, 0.0]),
+            vec![10.0, 10.0, 10.0]
+        );
+        assert!(pool_adjacent_violators(&[]).is_empty());
+    }
+
     #[test]
     fn crowded_side_clamps_pitch_and_keeps_ports_on_the_boundary() {
         let config = cfg();
@@ -1376,9 +1799,13 @@ mod tests {
         // `Right -> Top` scores identically here — the two boxes are the same width, so the mirror
         // shape saves exactly as much — and the candidate order breaks that tie in favour of
         // keeping the *source* on the rank-flow face, which is what preserves the top-down read.
+        //
+        // Needs a negative `flow_side_bias`. A vertical face always costs one corner more than a
+        // flow face — the route must step out to its stub before it can descend — so at the default
+        // bias the flow faces win here too, and asking for the side is a deliberate opt-in.
         let (layered, ir) = one_hop(rect(0.0, 0.0, 120.0, 40.0), rect(110.0, 120.0, 120.0, 40.0));
 
-        let flexible = assign_ports(&layered, &ir, &cfg());
+        let flexible = assign_ports(&layered, &ir, &side_seeking_cfg());
         assert_eq!(flexible.source[&0].side, Side::Bottom);
         assert_eq!(flexible.target[&0].side, Side::Left);
         assert_eq!(flexible.target[&0].point.x, 110.0);
@@ -1414,7 +1841,7 @@ mod tests {
             self_loops: Vec::new(),
             item_of_node: vec![0, 2, 1],
         };
-        let ports = assign_ports(&layered, &ir, &cfg());
+        let ports = assign_ports(&layered, &ir, &side_seeking_cfg());
         assert_eq!(ports.source[&0].side, Side::Right);
         assert_eq!(ports.target[&0].side, Side::Top);
         assert_eq!(ports.source[&0].stub.x, 140.0);
@@ -1484,20 +1911,50 @@ mod tests {
     }
 
     #[test]
-    fn only_one_chain_port_may_claim_a_vertical_face() {
-        // With no flow bias the congestion term pushes each successive edge onto a fresh face. Both
-        // vertical faces get taken exactly once and everything after that falls back to the bottom,
-        // because two ports on one vertical face would descend at the same x.
+    fn a_vertical_face_holds_no_more_ports_than_its_capacity() {
         let (layered, ir) = fan(6);
-        let mut config = cfg();
-        config.flow_side_bias = 0.0;
+        for capacity in [1usize, 2, 3] {
+            let config = CustomLayoutConfig {
+                side_face_capacity: capacity,
+                ..side_seeking_cfg()
+            };
+            let ports = assign_ports(&layered, &ir, &config);
+            let count = |side: Side| (0..6u32).filter(|e| ports.source[e].side == side).count();
+            assert!(count(Side::Right) <= capacity, "right, cap {capacity}");
+            assert!(count(Side::Left) <= capacity, "left, cap {capacity}");
+            // A source may never leave through its own top, whatever the capacity.
+            assert_eq!(count(Side::Top), 0);
+        }
+    }
+
+    #[test]
+    fn every_port_on_one_vertical_face_gets_its_own_descent_line() {
+        // This is the whole reason a vertical face may hold more than one port. The descent x is the
+        // stub's x, so without the per-index stagger a second port would run collinear with the
+        // first from its own y all the way down to the channel — two edges drawn as one.
+        let (layered, ir) = fan(6);
+        let config = CustomLayoutConfig {
+            side_face_capacity: 3,
+            ..side_seeking_cfg()
+        };
         let ports = assign_ports(&layered, &ir, &config);
 
-        let count = |side: Side| (0..6u32).filter(|e| ports.source[e].side == side).count();
-        assert_eq!(count(Side::Right), 1);
-        assert_eq!(count(Side::Left), 1);
-        assert_eq!(count(Side::Bottom), 4);
-        assert_eq!(count(Side::Top), 0);
+        for side in [Side::Left, Side::Right] {
+            let mut drops: Vec<f64> = (0..6u32)
+                .filter(|e| ports.source[e].side == side)
+                .map(|e| ports.source[&e].stub.x)
+                .collect();
+            let claimed = drops.len();
+            drops.sort_by(f64::total_cmp);
+            drops.dedup_by(|a, b| (*a - *b).abs() < 1e-9);
+            assert_eq!(drops.len(), claimed, "{side:?} reused a descent line");
+            for pair in drops.windows(2) {
+                assert!(
+                    pair[1] - pair[0] >= config.port_pitch - 1e-9,
+                    "{side:?} descent lines {pair:?} are closer than the pitch"
+                );
+            }
+        }
     }
 
     /// Fan-out wide enough that every child is off to one side. With no flow bias the congestion
@@ -1528,10 +1985,14 @@ mod tests {
     }
 
     #[test]
-    fn zero_flow_bias_produces_more_side_faces_than_a_large_one() {
+    fn a_negative_flow_bias_buys_side_faces_and_a_positive_one_refuses_them() {
         let (layered, ir) = wide_fan();
-        let count_sides = |config: &CustomLayoutConfig| {
-            let ports = assign_ports(&layered, &ir, config);
+        let count_sides = |bias: f64| {
+            let config = CustomLayoutConfig {
+                flow_side_bias: bias,
+                ..cfg()
+            };
+            let ports = assign_ports(&layered, &ir, &config);
             (0..3u32)
                 .filter(|e| {
                     matches!(ports.source[e].side, Side::Left | Side::Right)
@@ -1540,18 +2001,12 @@ mod tests {
                 .count()
         };
 
-        let mut loose = cfg();
-        loose.flow_side_bias = 0.0;
-        let mut strict = cfg();
-        strict.flow_side_bias = 10.0;
-
-        assert!(
-            count_sides(&loose) > count_sides(&strict),
-            "loose {} strict {}",
-            count_sides(&loose),
-            count_sides(&strict)
-        );
-        assert_eq!(count_sides(&strict), 0);
+        // The sign is the switch, not the magnitude. A side attachment costs exactly one corner
+        // more than a flow one, so nothing at or above zero can ever buy it — including zero, which
+        // means "price the corner honestly and let geometry decide", and geometry decides against.
+        assert_eq!(count_sides(10.0), 0);
+        assert_eq!(count_sides(0.0), 0);
+        assert!(count_sides(-2.0) > 0, "a negative bias must reach the sides");
     }
 
     #[test]
@@ -1697,10 +2152,18 @@ mod tests {
     fn a_label_carrying_chain_is_left_alone() {
         // Same shape as `dummy_chain`, but the interior item is a badge: where a chain crosses a
         // `Label` is Step 5.2's rule, so the alignment declines rather than guessing at it.
+        //
+        // Affinity is held off on both sides, because it does not decline — it asks `pass_x` where
+        // the crossing will be and aims there, which is the same rule rather than a guess at it.
+        // Leaving it on would test the two features at once and prove neither.
         let (mut layered, ir) = dummy_chain();
         layered.items[1].kind = ItemKind::Label(0);
 
-        let aligned = assign_ports(&layered, &ir, &cfg());
+        let straight_shot_only = CustomLayoutConfig {
+            port_destination_affinity: false,
+            ..cfg()
+        };
+        let aligned = assign_ports(&layered, &ir, &straight_shot_only);
         let plain = assign_ports(&layered, &ir, &classic_cfg());
         assert_eq!(aligned.source[&0].point.x, plain.source[&0].point.x);
         assert_eq!(aligned.target[&0].point.x, plain.target[&0].point.x);

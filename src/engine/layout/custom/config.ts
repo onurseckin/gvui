@@ -128,9 +128,19 @@ export interface CustomLayoutConfig {
    */
   flexiblePortSides: boolean;
   /**
-   * How strongly a forward edge still prefers the rank-flow sides (Bottom/Top) when
-   * `flexiblePortSides` is on. 0 is purely geometric; larger values keep the hierarchy reading
-   * top-to-bottom even when a sideways exit would be marginally shorter (>= 0).
+   * What attaching to a left/right face costs, measured in corners, when `flexiblePortSides` is on.
+   *
+   * A side attachment always costs exactly one more corner than a flow-face one: the route has to
+   * step out of the face before it can descend into its routing channel. So at any bias `>= 0` the
+   * flow faces win essentially every inter-rank edge, and the sides are left to same-rank edges that
+   * genuinely travel sideways.
+   *
+   * **Negative values buy side attachment at the price of that corner.** Measured over the sample
+   * corpus: `1` (default) gives 5% of ports on a side face with 40 crossings and 368 bends; `-1`
+   * gives 15% with 69 and 404; `-1.5` gives 44% with 146 and 508. Using all four sides costs
+   * crossings rather than saving them, because a side port is forced to drop at a fixed x outside
+   * the node instead of near the x it is heading for. It is offered as an aesthetic choice, not an
+   * optimisation.
    */
   flowSideBias: number;
   /**
@@ -144,6 +154,35 @@ export interface CustomLayoutConfig {
    * ranks and connected vertically.
    */
   sameRankPeerEdges: boolean;
+  /**
+   * Re-decide which routing lane each channel segment occupies once coordinates exist, using the
+   * segments' real x-spans instead of the order-space colouring that sized the channels.
+   *
+   * Every geometric crossing this engine produces is a horizontal channel run cut by another edge's
+   * vertical drop, and which runs get cut is decided entirely by the lane order. Turning this off
+   * restores the older behaviour: 148 crossings and 14 pairs of edges drawn on top of each other
+   * across the sample corpus, against 40 and 0 with it on.
+   */
+  crossingAwareLanes: boolean;
+  /**
+   * Per-channel segment count above which `crossingAwareLanes` keeps the original assignment rather
+   * than optimising (> 0). The optimiser is quadratic in the segments sharing one channel, so this
+   * bounds it. Raising it from 256 to 1024 measured as free on a 10,600-edge mesh, so the default
+   * sits where it stops being free rather than where it stops being cheap.
+   */
+  laneOrderMaxSegments: number;
+  /**
+   * Place each port as close to its counterpart as the sorted port order and `portPitch` allow,
+   * instead of spreading ports evenly along the face. A shorter channel run is a narrower window for
+   * another edge's drop to cut, so this reduces crossings as well as bends.
+   */
+  portDestinationAffinity: boolean;
+  /**
+   * Ports one left/right face may carry (> 0). Each descends at its own x, staggered outward by
+   * `portPitch`, so the face needs proportionally more clearance before the router will use it.
+   * Only reachable at all when `flowSideBias` is negative.
+   */
+  sideFaceCapacity: number;
 
   // ---- Tier 2: algorithm selection ---------------------------------------------------------
   /** Rank assignment algorithm. */
@@ -218,6 +257,10 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   flowSideBias: 1,
   straightShotAlignment: true,
   sameRankPeerEdges: true,
+  crossingAwareLanes: true,
+  laneOrderMaxSegments: 1024,
+  portDestinationAffinity: true,
+  sideFaceCapacity: 2,
 
   ranker: "network-simplex",
   ordering: "median",
@@ -269,8 +312,16 @@ const POSITIVE_F64_FIELDS: (keyof CustomLayoutConfig)[] = [
 const NON_NEGATIVE_F64_FIELDS: (keyof CustomLayoutConfig)[] = [
   "portEndpointPadding",
   "cornerRadius",
-  "flowSideBias",
 ];
+
+/**
+ * Fields that may be negative but must still be finite.
+ *
+ * Only `flowSideBias` qualifies: its sign is meaningful — negative asks the router to attach to the
+ * left/right faces despite the corner that costs — so clamping it at zero would remove the setting's
+ * whole purpose rather than catch a mistake.
+ */
+const FINITE_F64_FIELDS: (keyof CustomLayoutConfig)[] = ["flowSideBias"];
 
 /** Mirrors Rust's `positive_usize` list; these must additionally be integers. */
 const POSITIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = [
@@ -279,6 +330,8 @@ const POSITIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = [
   "orderingSeeds",
   "stressIterations",
   "maxDummyChainLength",
+  "laneOrderMaxSegments",
+  "sideFaceCapacity",
 ];
 
 /** Non-negative integer fields with no lower bound beyond zero (`0` is a valid "auto"/"off"). */
@@ -310,6 +363,15 @@ export function validateCustomLayoutConfig(config: CustomLayoutConfig): void {
     if (!isFiniteNumber(v) || v < 0) {
       throw new LayoutConfigurationError(
         `Configuration property '${field}' must be a non-negative finite number, got ${String(v)}`,
+      );
+    }
+  }
+
+  for (const field of FINITE_F64_FIELDS) {
+    const v = config[field];
+    if (!isFiniteNumber(v)) {
+      throw new LayoutConfigurationError(
+        `Configuration property '${field}' must be a finite number, got ${String(v)}`,
       );
     }
   }

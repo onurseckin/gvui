@@ -142,11 +142,11 @@ made to leave downwards and come back up, so a route that wanted to be one strai
 dog-leg:
 
 ```text
-   fixed table (v2)                       scored sides (v3)
+   fixed table (v2)                       scored sides
 
    ┌───────┐                              ┌───────┐
    │   A   │                              │   A   ├──┐   ← Right face + stub
-   └───┬───┘                              └───────┘  │
+   └───┬───┘                              └───────┘  │      (1 corner, here)
        │                                             │   ← descends at A.right + stub
    ════╧══════════════╗  ← channel        ═══════════╪═══  (no horizontal run)
                       ║                              │
@@ -154,12 +154,17 @@ dog-leg:
                  │   B   │                      │   B   │
                  └───────┘                      └───────┘
 
-   2 bends                                0 bends
+   2 corners                              1 corner
 ```
 
-v3 still evaluates sixteen combinations — it just **scores** them with a closed-form cost and takes
-the minimum. One pass, no repair, no backtracking. `flexible_port_sides` (default `true`) turns it
-on; with it off, the v2 table is used verbatim and nothing is scored.
+Note where that one corner is: **stepping out of the vertical face is itself a turn.** A side
+attachment can beat a dog-leg, but it can never beat a flow-face attachment that was already
+straight — it costs exactly one corner more than that. §3.3 prices this, and §3.3's table shows what
+happens when you overrule it.
+
+The engine still evaluates sixteen combinations — it just **scores** them with a closed-form cost and
+takes the minimum. One pass, no repair, no backtracking. `flexible_port_sides` (default `true`) turns
+it on; with it off, the v2 table is used verbatim and nothing is scored.
 
 The scorer lives in
 [`plan_chain_sides` / `best_side_pair`](../../crates/gvui/src/5_edge_routing/5_1_ports.rs).
@@ -182,7 +187,7 @@ through the box it starts from.
               └── stub       Rejected before it is ever scored.
 ```
 
-**A vertical face needs two stub lengths of clearance, and carries at most one chain port.**
+**A vertical face needs clearance for every port it carries.**
 
 - `SIDE_FACE_CLEARANCE_FACTOR = 2.0`. A port on a `Left`/`Right` face makes the router descend at
   `port_stub_length` *outside* that face, so the whole departure — the horizontal stub and the
@@ -192,10 +197,13 @@ through the box it starts from.
   wide, but `node_gap` and `port_stub_length` are configured independently and can be set into
   conflict — `face_clearance` is the check that rejects that case rather than drawing through a
   node.
-- `SIDE_FACE_CAPACITY = 1`. Every port on a vertical face descends at the *same* x — that x is fixed
-  by the stub contract the router reads — so a second port on the same face would run collinear with
-  the first from its own y all the way down to the channel. One port per vertical face is the only
-  cap under which that cannot happen.
+- `side_face_capacity` (default 2). Ports on a vertical face used to be capped at one, because they
+  all descended at the *same* x — that x is fixed by the stub contract the router reads — so a second
+  port would run collinear with the first from its own y all the way down to the channel. The cap is
+  now a setting because the descent lines are staggered: port *k* reaches `port_stub_length + k *
+  port_pitch` outside the face, so each gets its own line. `face_clearance` is charged for the port
+  about to be added, not for the configured capacity, so a node with one narrow-ish gap can still use
+  its side once.
 
 Flat edges claim their faces **first**. A flat edge has no side choice at all (it is routed through
 the corridor between its endpoints, §9), so letting a chain edge take a vertical face a flat edge
@@ -238,28 +246,61 @@ A multi-rank chain scores its two ends **independently**: they sit in different 
 have to agree with each other, so each end is tested against the x of the adjacent chain item it
 meets (`head + tail`, each 0 or 2).
 
+**Plus one corner per vertical face.** A port on `Left`/`Right` has to step *out* of its face
+horizontally before it can start descending, and that corner survives even when both ends agree on an
+x. So a side attachment costs exactly one more bend than a flow-face one, always. This is the single
+most important fact about side attachment in this engine and it is worth stating plainly:
+
+> In a Z-router, attaching to a node's side never *saves* a corner. It costs one.
+
 ### 3.3 The rest of the cost
 
-The four keys, compared lexicographically:
+Three keys, compared lexicographically:
 
 | # | key | what it prices |
 | --- | --- | --- |
-| 1 | `bends` | 0 or 2 per end, as above |
-| 2 | `flow_side_bias · off_flow + length / 1000` | readability against path length |
+| 1 | `residual` | crossings against already-committed runs in the same channel that **no lane order could remove** |
+| 2 | `bends + flow_side_bias · off_flow + length / 1000` | corners, the side-face trade, and path length — one comparable number |
 | 3 | `congestion` | ports already claimed on the two faces, so a fan-out spreads instead of piling onto one face |
 | 4 | candidate order | `SOURCE_CANDIDATES × TARGET_CANDIDATES`, so the choice is total and byte-identical across processes |
 
-`off_flow` counts the ends that are *not* on the rank-flow face (source `Bottom`, target `Top`).
-`LENGTH_PER_FLOW_UNIT = 1000` is what makes key 2 a single comparable number: at the default
-`flow_side_bias` of 1.0, an off-flow face has to save a **kilopixel** of Manhattan distance before it
-outranks the flow face on an otherwise equal-bend candidate. In practice that means side faces are
-chosen only when they strictly *reduce* the bend count — which is the intent. `flow_side_bias = 0`
-makes the choice purely geometric; larger values keep the hierarchy reading top-to-bottom even when a
-sideways exit would be marginally shorter.
+**Why `residual` and not a raw crossing count.** [§5.5](#55-lane-assignment-happens-in-coordinate-space)
+deletes every crossing the lane order can reach. Charging the side choice for those too would be
+double-counting, and would push it into contortions to avoid crossings that were about to disappear
+anyway. What is left is the pairwise minimum — the cost of putting `a` above `b` versus `b` above `a`,
+whichever is smaller — and that is the only part a side choice can still influence. This is the key
+that makes an edge arrive on a node's *side* when arriving at its top would have to cut across
+something.
+
+**Why keys 1 and 2 are one number each, not four.** They used to be lexicographic, with `bends`
+first. That made `flow_side_bias` unreachable: a horizontal face has a whole interval to drop from
+and a vertical face has a single point, so the horizontal face won the bend key essentially always
+and nothing after it was ever consulted. Folding bends, the side trade and length into one weighted
+score is what gives the setting a reachable effect.
+
+**`flow_side_bias` is signed, and the sign is the switch.** It prices a side attachment in corners.
+Since a side always costs exactly one more corner, nothing at or above zero can ever choose one —
+including `0`, which means "price the corner honestly and let geometry decide", and geometry decides
+against. Negative values buy side attachment at the price of that corner. Measured over the corpus:
+
+| `flow_side_bias` | ports on a side face | geometric crossings | bends |
+| --- | --- | --- | --- |
+| **1.0 (default)** | **5.1 %** | **40** | **368** |
+| 0.0 | 5.1 % | 40 | 368 |
+| −1.0 | 15.4 % | 69 | 404 |
+| −1.5 | 44.0 % | 146 | 508 |
+
+Using all four sides costs crossings rather than saving them, and the reason is not subtle: with
+[destination affinity](#6-port-spacing-and-where-node-growth-actually-happens) a flow-face port is
+placed at very nearly the x the edge is heading for, so its channel run is short or absent. A side
+port is *forced* to drop at a fixed x outside the node, which is generally further from where it is
+going — a longer run, and a longer run is a wider window for other edges' drops to cut. The setting
+is offered as an aesthetic choice, not an optimisation, and it is documented here with numbers so the
+choice can be made with open eyes.
 
 The candidate lists lead with the rank-flow face (`Bottom` first for a source, `Top` first for a
-target) because key 4 decides only genuine ties, and when the geometry does not care, a hierarchy
-should read top-to-bottom.
+target) because the last key decides only genuine ties, and when the geometry does not care, a
+hierarchy should read top-to-bottom.
 
 Chains are visited in ascending **edge index** — not in `layered.chains` order — so the congestion
 term is a function of the graph alone and not of how Phase 4 happened to emit chains.
@@ -421,9 +462,105 @@ Flat-edge ports on `Left`/`Right` sides sort by the **other endpoint's y** inste
 and the sort order implementation-defined. Every sort ends with the edge index as a tie-break, so
 the result is byte-identical across runs.
 
+### 5.5 Lane assignment happens in coordinate space
+
+The sort above makes attachment locally crossing-free. It says nothing about what happens once two
+edges are in the same channel — and that turns out to be where every crossing this engine draws
+comes from.
+
+**Every route crosses a channel as a Z.** It drops at `from_x` from the band above, runs horizontally
+at its lane's y, then drops again at `to_x` into the band below. Two such Zs can only meet in one
+place: where a *horizontal run* of one passes a *vertical drop* of the other. Horizontal runs never
+meet each other — different lanes are different y, and same-lane runs are x-disjoint by construction.
+Vertical drops never meet each other — different x.
+
+This is not a claim, it is a measurement. Classifying all 148 geometric crossings the corpus produced
+before this pass existed: **148 horizontal×vertical, 0 horizontal×horizontal, 0 vertical×vertical.**
+
+That makes the crossing count a pure function of the lane **order**. With `a` in the shallower lane,
+exactly two crossings are possible, and the mirror pair if you swap them:
+
+```text
+    a shallower                            b shallower
+    ────────────────────────────           ────────────────────────────
+    band above                             band above
+      │ a          │ b                       │ a          │ b
+      └──── a's run ┼─────                    │      ┌──── b's run ────┐
+                    │              <─ b drops │      │                 │
+      ┌──── b's run ┘                  through└──────┼──── a's run ────┘
+      │                                a's run       │
+    band below                             band below
+
+    cost = [b.from_x inside a's span]       cost = [a.from_x inside b's span]
+         + [a.to_x   inside b's span]            + [b.to_x   inside a's span]
+```
+
+A **fan-in** — fifteen shards converging on one reducer — wants its longest run *deepest*: every
+other segment drops somewhere inside it, so anything shallower gets cut by all fourteen. A
+**fan-out** wants the exact opposite. Any single hand-picked sort key gets one of those two right and
+the other catastrophically wrong, which is why the order is derived from the pair cost itself:
+adjacent-swap descent, where exchanging two neighbours changes the total by exactly
+`cost(b,a) − cost(a,b)`, so a sweep that exchanges every improving pair is a descent step.
+
+The cost also charges a **merge**: when the shallower edge *leaves* the channel at the same x the
+deeper one *enters* it, their two verticals run along one line between the lanes and the deeper edge
+is hidden. Weighted at 4 — worse than the two crossings a pair can otherwise produce, because a
+crossing stays readable and a merge does not. That term was missing from the first version of this
+pass, and the audit's collinear-overlap check found it within one run.
+
+**Two tiers, and a floor.**
+
+1. **Order, then pack.** Walk the crossing-optimal order and open a new lane only on a genuine
+   overlap. Merging only ever joins segments adjacent in the order, so lane index stays monotone in
+   it and the ordering's count is realised exactly.
+2. **Colour, then permute.** If tier 1 needs more lanes than the channel has room for, colour by
+   ascending left endpoint instead — greedy colouring of an interval graph uses exactly the maximum
+   overlap depth, the provable minimum — then permute whole lanes by the same descent. Coarser, since
+   a lane moves as a unit, but it fits whenever the drawing has room at all.
+3. If even tier 2 does not fit, Phase 6's assignment is kept untouched, so this pass can never make a
+   channel worse than it was before it existed.
+
+Capacity is measured from the **realised** gap between the band bottom and the next rank's top, not
+from Phase 6's count — `rank_gap` frequently makes the actual gap larger, and the optimiser should
+have the room the drawing actually has. Phase 6's count is folded in with a `max` so float error can
+never report less room than was reserved.
+
+Channels with more than `laneOrderMaxSegments` (default 1024) segments keep Phase 6's assignment; the
+optimiser is quadratic in one channel's segment count and this bounds it. The default is set where
+the cap stops being free rather than where it stops being cheap: on a 10 600-edge mesh and an
+800-edge double fan, raising it from 256 to 1024 cost no measurable time and cut the fan's crossings
+by 15%.
+
 ---
 
 ## 6. Port spacing, and where node growth actually happens
+
+### 6.1 Destination affinity — the default
+
+Even distribution treats a node's face as a row of identical pigeonholes. For routing that is exactly
+backwards: it puts a port at the far end of a node from the thing it connects to, and the channel run
+then has to travel all the way back. That run is what other edges' drops cut, so a longer one is not
+merely uglier — it is measurably more crossings.
+
+So each port instead states a **want**: the x at which the route will traverse the adjacent chain item
+(`pass_x`, not the item's plain centre — the two differ for a badge under `beside-edge`, where the
+line runs down the reserved left half). The face then places every port as near its want as two
+constraints allow: the sorted order from §5 must survive, and consecutive ports must stay
+`port_pitch` apart inside `[x + padding, right − padding]`.
+
+**This is a projection, not a heuristic.** Substituting $q_i = p_i - i \cdot \text{pitch}$ turns "at
+least pitch apart" into plain "non-decreasing", so the problem becomes *find the non-decreasing
+sequence closest to the shifted wants* — isotonic regression, solved exactly in one pass by
+pool-adjacent-violators. It is therefore the **optimal** placement for the given order, and because
+the result is monotone in the input index it cannot permute the ports and undo the sort that made the
+attachment crossing-free.
+
+Measured effect on the corpus: bends **432 → 368**, geometric crossings **44 → 40**.
+
+Set `portDestinationAffinity` off to get the even distribution below, which is also what a face too
+crowded to hold `CROWDED_MIN_PITCH` falls back to.
+
+### 6.2 Even distribution — the fallback
 
 With `n` ports to place on a side of length `L`:
 
@@ -482,7 +619,8 @@ $$\text{channelY} = \text{bandBottom}(r) + \text{portStubLength} + (\text{lane} 
 \text{laneSpacing}$$
 
 The `+ 0.5` centres the run inside its lane. The lane index comes from
-`demand.lane_of_link[(edge, link)]` — Phase 6's colouring. A missing entry defaults to lane 0,
+the lane table [§5.5](#55-lane-assignment-happens-in-coordinate-space) refined from Phase 6's
+colouring, keyed by `(edge, link)`. A missing entry defaults to lane 0,
 which is the only choice that keeps the route inside the reserved gap.
 
 `rank_band_bottoms` is computed **once** per phase and passed in. The naive alternative rescans a

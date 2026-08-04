@@ -333,6 +333,35 @@ The sort key ends with the old lane id, which makes the ordering strictly total 
 reproducible. A randomized test with 200 intervals asserts that after the relabel the assignment is
 still a proper colouring and still a bijection onto $0..\omega$.
 
+### 5.1 Why this is not the final word
+
+Everything above reasons in **order** space, because order is all Phase 6 has. The worked example is
+sound there — and the drawing can still come out looking like the right-hand picture, because *order
+is not a proxy for x across ranks*.
+
+Item 0 of a rank holding fifteen shards and item 0 of the next rank holding the single reducer they
+all feed are both "order 0", and they are a thousand pixels apart. Two segments whose order intervals
+are disjoint can therefore overlap for most of the drawing's width, and — worse — a segment whose two
+items share an order index looks perfectly *vertical* to the sweep in §3, gets excluded from the
+colouring as needing no lane at all, and lands in lane 0 on top of whatever is already there.
+
+Both failures were real. On the sample corpus this phase's assignment produced **148 geometric
+crossings against 28 combinatorial ones**, plus **14 pairs of edges drawn along the same line**, one
+of them overlapping for 1226 px.
+
+The fix is not to make this phase cleverer, because it cannot be: no amount of order-space reasoning
+recovers information that only coordinates carry. Instead the two questions are separated.
+
+| question | phase | why there |
+| --- | --- | --- |
+| **How much** routing space does this channel need? | 6 (here) | Phase 7 needs the answer *before* it can place anything |
+| **Which** lane does each segment take? | 8, [§5.5](10-edge-routing.md#55-lane-assignment-happens-in-coordinate-space) | needs the coordinates Phase 7 produces |
+
+The count computed here is unchanged and still binding — it is an upper bound on the lanes needed,
+and Phase 8 only ever permutes and packs *within* the space it bought. So the reservation guarantee
+is untouched, and the drawn assignment is made where the geometry is known. Same corpus after the
+split: **40 crossings and 0 merged pairs.**
+
 ---
 
 ## 6. Corridors are easier

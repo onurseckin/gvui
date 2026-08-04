@@ -141,6 +141,14 @@ struct Row {
     bends: usize,
     straight: f64,
     leaders: usize,
+    merged: usize,
+    /// Share of ports attached to a Left/Right face, as a percentage.
+    ///
+    /// Measured in the **emitted** frame, so it is only comparable within one direction: a
+    /// left-right drawing flows along the x axis, which makes Left/Right its flow faces and drives
+    /// this number high by construction. The row that answers "does the engine use the sides" is
+    /// the `layered` (top-down) one.
+    side_share: f64,
     errors: usize,
     valid: bool,
     deterministic: bool,
@@ -179,6 +187,7 @@ fn run(
         ("badgeBadgeOverlaps", m.badge_badge_overlaps),
         ("unresolvedRouteCount", m.unresolved_route_count),
         ("unresolvedBadgeCount", m.unresolved_badge_count),
+        ("collinearEdgeOverlaps", m.collinear_edge_overlaps),
     ];
     let strict_violations: usize = strict.iter().filter(|(_, v)| *v != 0).count();
     let strict_detail = strict
@@ -203,6 +212,20 @@ fn run(
         bends: res.validation.metrics.bend_count,
         straight: res.validation.metrics.straight_chain_ratio,
         leaders: res.validation.metrics.leader_count,
+        merged: res.validation.metrics.collinear_edge_overlaps,
+        side_share: {
+            let mut vertical = 0usize;
+            let mut total = 0usize;
+            for e in &res.edges {
+                for p in [&e.source_port, &e.target_port] {
+                    total += 1;
+                    if matches!(p.side, gvui::types::Side::Left | gvui::types::Side::Right) {
+                        vertical += 1;
+                    }
+                }
+            }
+            100.0 * vertical as f64 / total.max(1) as f64
+        },
         errors,
         valid: res.validation.is_valid,
         deterministic,
@@ -261,18 +284,18 @@ fn main() {
 
     println!();
     println!(
-        "{:<30} {:<11} {:>4} {:>4} {:>9} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7} {:>4} {:>5} {:>5}",
+        "{:<30} {:<11} {:>4} {:>4} {:>9} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7} {:>4} {:>4} {:>6} {:>5} {:>5}",
         "dataset", "engine", "N", "E", "ms", "ranks", "cross", "geo", "lanes", "bends", "straight", "ldr",
-        "valid", "det"
+        "mrg", "side%", "valid", "det"
     );
-    println!("{}", "-".repeat(122));
+    println!("{}", "-".repeat(134));
 
     let mut failures: Vec<String> = Vec::new();
     let mut slowest: f64 = 0.0;
 
     for r in &rows {
         println!(
-            "{:<30} {:<11} {:>4} {:>4} {:>9.2} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7.2} {:>4} {:>5} {:>5}",
+            "{:<30} {:<11} {:>4} {:>4} {:>9.2} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7.2} {:>4} {:>4} {:>5.1} {:>5} {:>5}",
             r.name,
             r.engine,
             r.n,
@@ -285,6 +308,8 @@ fn main() {
             r.bends,
             r.straight,
             r.leaders,
+            r.merged,
+            r.side_share,
             if r.valid { "yes" } else { "NO" },
             if r.deterministic { "yes" } else { "NO" }
         );
@@ -333,7 +358,18 @@ fn main() {
         }
     }
 
+    let layered_rows: Vec<&Row> = rows
+        .iter()
+        .filter(|r| r.engine == "layered")
+        .collect();
     println!();
+    println!(
+        "layered totals: {} geometric crossings, {} combinatorial, {} bends, {} merged edge pairs",
+        layered_rows.iter().map(|r| r.geo_crossings).sum::<usize>(),
+        layered_rows.iter().map(|r| r.crossings).sum::<usize>(),
+        layered_rows.iter().map(|r| r.bends).sum::<usize>(),
+        layered_rows.iter().map(|r| r.merged).sum::<usize>(),
+    );
     println!("slowest fixture: {:.2} ms (budget {:.0} ms)", slowest, TIME_BUDGET_MS);
 
     if failures.is_empty() {

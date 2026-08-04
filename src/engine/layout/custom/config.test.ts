@@ -43,6 +43,10 @@ const RUST_CONFIG_FIELDS: string[] = [
   "flowSideBias",
   "straightShotAlignment",
   "sameRankPeerEdges",
+  "crossingAwareLanes",
+  "laneOrderMaxSegments",
+  "portDestinationAffinity",
+  "sideFaceCapacity",
   "ranker",
   "ordering",
   "orderingSweeps",
@@ -79,11 +83,15 @@ describe("CustomLayoutConfig mirrors the Rust struct", () => {
     );
   });
 
-  it("carries the v3 routing knobs with the Rust defaults", () => {
+  it("carries the routing knobs with the Rust defaults", () => {
     expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.flexiblePortSides).toBe(true);
     expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.flowSideBias).toBe(1);
     expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.straightShotAlignment).toBe(true);
     expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.sameRankPeerEdges).toBe(true);
+    expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.crossingAwareLanes).toBe(true);
+    expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.laneOrderMaxSegments).toBe(1024);
+    expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.portDestinationAffinity).toBe(true);
+    expect(DEFAULT_CUSTOM_LAYOUT_CONFIG.sideFaceCapacity).toBe(2);
   });
 
   it("defaults labelPlacement to on-edge so no badge needs a leader line", () => {
@@ -102,16 +110,19 @@ describe("validateCustomLayoutConfig", () => {
     expect(captureError(() => validateCustomLayoutConfig(base()))).toBeNull();
   });
 
-  it("accepts flowSideBias of 0, which means 'score sides purely geometrically'", () => {
+  it("accepts flowSideBias of 0, which means 'price the side's corner honestly'", () => {
     expect(
       captureError(() => validateCustomLayoutConfig({ ...base(), flowSideBias: 0 })),
     ).toBeNull();
   });
 
-  it("rejects a negative flowSideBias", () => {
-    const error = captureError(() => validateCustomLayoutConfig({ ...base(), flowSideBias: -1 }));
-    expect(error instanceof LayoutConfigurationError).toBe(true);
-    expect(String(error)).toContain("flowSideBias");
+  it("accepts a negative flowSideBias, which asks for side attachment despite its corner", () => {
+    // The only signed knob in the config. A side attachment always costs one corner more than a
+    // flow-face one, so nothing at or above zero can ever choose it; rejecting negatives would
+    // leave the setting with no reachable effect at all.
+    expect(
+      captureError(() => validateCustomLayoutConfig({ ...base(), flowSideBias: -2 })),
+    ).toBeNull();
   });
 
   it("rejects a non-finite flowSideBias", () => {

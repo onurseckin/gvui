@@ -364,6 +364,114 @@ pub fn scan_badge_badge_overlaps(
     }
 }
 
+/// Reports every unordered pair of *different* routes that draw an axis-aligned run along the same
+/// line with overlapping extent, as `(route i, route j)` with `i < j`.
+///
+/// This is the failure the geometric crossing count cannot see. Two edges sharing a line do not
+/// *intersect* — [`super::super::step3_crossing_minimization::crossing_counting`] reports proper
+/// intersections only, and rightly so — they **merge**, and the reader loses one of them entirely.
+/// It is also strictly worse than a crossing, which at least stays legible.
+///
+/// Runs are compared in a single line-keyed pass rather than all-pairs: two runs can only conflict
+/// when they share an orientation and a coordinate, so bucketing on the rounded coordinate reduces
+/// the scan to the runs actually in contention. The bucket key is quantised to `epsilon`, and each
+/// run is probed against its own bucket and the two neighbouring ones so a pair straddling a bucket
+/// boundary is not missed.
+///
+/// A route is never compared with itself: a polyline that doubles back along its own run is a
+/// corner-reduction artefact, not two edges merging.
+pub fn scan_collinear_edge_overlaps(
+    routes: &[RoutedPath],
+    epsilon: f64,
+    mut on_hit: impl FnMut(usize, usize),
+) {
+    let eps = if epsilon.is_finite() && epsilon > 0.0 {
+        epsilon
+    } else {
+        1e-9
+    };
+    // Bucket width is deliberately coarser than `eps`: it only has to be fine enough that two runs
+    // in the same bucket are worth comparing, and the +/-1 probe covers the rest.
+    let quantum = (eps * 100.0).max(0.5);
+
+    /// `(orientation, line coordinate, run start, run end, route)`.
+    struct Run {
+        vertical: bool,
+        line: f64,
+        lo: f64,
+        hi: f64,
+        route: usize,
+    }
+
+    let mut runs: Vec<Run> = Vec::new();
+    for (ri, route) in routes.iter().enumerate() {
+        for w in route.points.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            if !is_finite_point(&a) || !is_finite_point(&b) {
+                continue;
+            }
+            let horizontal = (a.y - b.y).abs() <= eps;
+            let vertical = (a.x - b.x).abs() <= eps;
+            // A degenerate point is neither; a diagonal is both false and skipped, which matches
+            // the orthogonal-only scope of every other constraint scan here.
+            let (line, lo, hi) = match (horizontal, vertical) {
+                (true, false) => (a.y, a.x.min(b.x), a.x.max(b.x)),
+                (false, true) => (a.x, a.y.min(b.y), a.y.max(b.y)),
+                _ => continue,
+            };
+            if hi - lo <= eps {
+                continue;
+            }
+            runs.push(Run {
+                vertical,
+                line,
+                lo,
+                hi,
+                route: ri,
+            });
+        }
+    }
+
+    let mut buckets: HashMap<(bool, i64), Vec<usize>> = HashMap::new();
+    for (i, run) in runs.iter().enumerate() {
+        let key = (run.vertical, (run.line / quantum).round() as i64);
+        buckets.entry(key).or_default().push(i);
+    }
+
+    let mut seen: HashSet<(usize, usize)> = HashSet::new();
+    for (i, run) in runs.iter().enumerate() {
+        let centre = (run.line / quantum).round() as i64;
+        for delta in -1..=1 {
+            let Some(bucket) = buckets.get(&(run.vertical, centre + delta)) else {
+                continue;
+            };
+            for &j in bucket {
+                if j <= i {
+                    continue;
+                }
+                let other = &runs[j];
+                if other.route == run.route {
+                    continue;
+                }
+                if (other.line - run.line).abs() > eps {
+                    continue;
+                }
+                if run.lo >= other.hi - eps || other.lo >= run.hi - eps {
+                    continue;
+                }
+                let pair = if run.route < other.route {
+                    (run.route, other.route)
+                } else {
+                    (other.route, run.route)
+                };
+                if seen.insert(pair) {
+                    on_hit(pair.0, pair.1);
+                }
+            }
+        }
+    }
+}
+
 /// Bounding box of a segment, grown by `epsilon` so that a candidate whose interior the segment
 /// only just enters is still retrieved.
 fn segment_bbox(s: &Segment, epsilon: f64) -> Rect {

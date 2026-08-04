@@ -14,6 +14,7 @@
 
 use super::badges::place_badges;
 use super::edge_style::{chamfer_corners, octilinear_corner_cut, NodeRectIndex};
+use super::lane_order::refine_channel_lanes;
 use super::lane_router::{rank_band_bottoms, route_chain_with_bands};
 use super::ports::assign_ports;
 use super::special_routes::{route_flat_edge, route_self_loop};
@@ -48,6 +49,17 @@ pub fn route_edges(
     let ports = assign_ports(layered, ir, config);
     let band_bottoms = rank_band_bottoms(layered, rank_tops);
 
+    // Phase 6 sized the channels before any coordinate existed; now that they do, Step 5.7 decides
+    // which lane inside those channels each segment takes. It only ever permutes and packs within
+    // the space Phase 6 reserved, so the routes it produces still cannot leave their channel.
+    let refined;
+    let lanes = if config.crossing_aware_lanes {
+        refined = refine_channel_lanes(layered, demand, &ports, &band_bottoms, rank_tops, config);
+        &refined
+    } else {
+        &demand.lane_of_link
+    };
+
     let mut routes: Vec<RoutedPath> = Vec::with_capacity(
         layered.chains.len() + layered.flat_edges.len() + layered.self_loops.len(),
     );
@@ -57,7 +69,7 @@ pub fn route_edges(
             chain_index,
             layered,
             ir,
-            demand,
+            lanes,
             &ports,
             &band_bottoms,
             config,

@@ -19,6 +19,7 @@ use super::edge_style::simplify_polyline;
 use super::ports::PortTable;
 use crate::config::{CustomLayoutConfig, LabelPlacement};
 use crate::types::{GraphIr, Item, ItemKind, Layered, Point, RoutedPath, RoutingDemand};
+use std::collections::HashMap;
 
 /// Hard ceiling on [`reduce_corners`] fixed-point passes.
 ///
@@ -68,19 +69,32 @@ pub fn route_chain(
     config: &CustomLayoutConfig,
 ) -> Option<RoutedPath> {
     let bands = rank_band_bottoms(layered, rank_tops);
-    route_chain_with_bands(chain_index, layered, ir, demand, ports, &bands, config)
+    route_chain_with_bands(
+        chain_index,
+        layered,
+        ir,
+        &demand.lane_of_link,
+        ports,
+        &bands,
+        config,
+    )
 }
 
-/// [`route_chain`] with the rank band bottoms hoisted out of the loop.
+/// [`route_chain`] with the rank band bottoms hoisted out of the loop and the lane table supplied
+/// directly.
 ///
 /// `band_bottoms` must be the output of [`rank_band_bottoms`] for the same `layered`/`rank_tops`
 /// pair; passing a stale table silently shifts every channel.
+///
+/// `lane_of_link` is passed rather than read off the [`RoutingDemand`] because Step 5.7 refines it
+/// once coordinates exist. Taking the whole demand here would make it far too easy to route half a
+/// channel from the refined table and half from the original, which puts two edges at the same y.
 #[allow(clippy::too_many_arguments)]
 pub fn route_chain_with_bands(
     chain_index: usize,
     layered: &Layered,
     ir: &GraphIr,
-    demand: &RoutingDemand,
+    lane_of_link: &HashMap<(u32, u32), u16>,
     ports: &PortTable,
     band_bottoms: &[f64],
     config: &CustomLayoutConfig,
@@ -108,11 +122,7 @@ pub fn route_chain_with_bands(
 
         // A missing lane means Phase 6 never saw this link. Lane 0 is the only choice that keeps
         // the route inside the reserved gap, so it is the safe default rather than a guess.
-        let lane = demand
-            .lane_of_link
-            .get(&(edge, link as u32))
-            .copied()
-            .unwrap_or(0);
+        let lane = lane_of_link.get(&(edge, link as u32)).copied().unwrap_or(0);
         let band_bottom = band_bottoms
             .get(from.rank as usize)
             .copied()
@@ -265,7 +275,10 @@ pub fn label_box_width(item: &Item, config: &CustomLayoutConfig) -> f64 {
 /// For dummies this is simply the centre, which is what keeps a Brandes-Köpf-aligned dummy chain
 /// perfectly straight. For labels it is where `label_placement` says the line runs relative to the
 /// badge.
-fn pass_x(item: &Item, config: &CustomLayoutConfig) -> f64 {
+///
+/// Visible to Step 5.7, which has to predict the exact x values this module will emit; deriving
+/// them independently there would optimise a drawing other than the one produced.
+pub(super) fn pass_x(item: &Item, config: &CustomLayoutConfig) -> f64 {
     match item.kind {
         ItemKind::Label(_) => match config.label_placement {
             // Down the middle of the reserved left half; the badge occupies the right half.
@@ -472,9 +485,9 @@ mod tests {
         let rank_tops = [0.0, 200.0];
         let bands = rank_band_bottoms(&layered, &rank_tops);
 
-        let a = route_chain_with_bands(0, &layered, &ir, &demand, &ports, &bands, &config)
+        let a = route_chain_with_bands(0, &layered, &ir, &demand.lane_of_link, &ports, &bands, &config)
             .expect("routes");
-        let b = route_chain_with_bands(1, &layered, &ir, &demand, &ports, &bands, &config)
+        let b = route_chain_with_bands(1, &layered, &ir, &demand.lane_of_link, &ports, &bands, &config)
             .expect("routes");
 
         let horiz_y = |r: &RoutedPath| -> f64 {
