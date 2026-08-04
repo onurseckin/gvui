@@ -1,46 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState, type FC } from "react";
 import { ExportMenu } from "./ExportMenu";
+import { EngineOptionsPanel } from "../../features/GraphTesting/components/EngineOptionsPanel";
 import { createPanelDismissHandler } from "./panelDismiss";
 import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
-import {
-  Button,
-  DirectionSelectDropdown,
-  LayoutSelectDropdown,
-  Select,
-  type SelectOption,
-} from "../../ui";
+import { Button, DirectionSelectDropdown, LayoutSelectDropdown } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
-import {
-  type CustomLayoutConfig,
-  type Direction,
-  type EdgeStyle,
-  type LabelPlacement,
-  type Compaction,
-} from "../../engine/layout/custom/config";
+import { type CustomLayoutConfig, type Direction } from "../../engine/layout/custom/config";
 import "./Controls.css";
 
-// The most-reached-for knobs only. Everything else — and every knob in full — lives in the
-// Settings panel (`EngineOptionsPanel`); this is the quick-access bar, not the full disclosure.
-
-const EDGE_STYLE_OPTIONS: SelectOption<EdgeStyle>[] = [
-  { value: "orthogonal", label: "Orthogonal" },
-  { value: "rounded", label: "Rounded" },
-  { value: "spline", label: "Spline" },
-  { value: "octilinear", label: "Octilinear" },
-  { value: "straight", label: "Straight" },
-];
-
-const LABEL_PLACEMENT_OPTIONS: SelectOption<LabelPlacement>[] = [
-  { value: "on-edge", label: "On Edge" },
-  { value: "beside-edge", label: "Beside Edge" },
-  { value: "above-edge", label: "Above Edge" },
-];
-
-const COMPACTION_OPTIONS: SelectOption<Compaction>[] = [
-  { value: "tight", label: "Tight" },
-  { value: "balanced", label: "Balanced" },
-  { value: "airy", label: "Airy" },
-];
+// The bar itself carries only mode and direction. Every other knob lives behind the Settings
+// button, which renders the same `EngineOptionsPanel` the testing playground uses — one definition
+// of the settings UI rather than a reduced duplicate that silently disagreed with it.
 
 export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
@@ -51,7 +21,6 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
   const setLayoutMode = useGraphStore((state) => state.setLayoutMode);
   const setLayoutConfig = useGraphStore((state) => state.setLayoutConfig);
-  const resetLayoutConfig = useGraphStore((state) => state.resetLayoutConfig);
   const resetViewport = useGraphStore((state) => state.resetViewport);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -227,125 +196,12 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
 
         {isConfigOpen && (
           <div className="layout-config-popover">
-            <div className="layout-config-header">
-              <div className="layout-config-header-left">
-                <span className="layout-config-title">⚙ Settings</span>
-              </div>
-              <div className="layout-config-actions">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="layout-config-reset-btn"
-                  onClick={() => resetLayoutConfig()}
-                  title="Reset to default options"
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-
-            <div className="layout-config-body">
-              <div className="layout-config-section">
-                <span className="layout-config-section-title">📐 Layout & Spacing</span>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Node Gap (px)</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="10"
-                      max="200"
-                      value={layoutConfig.nodeGap}
-                      onChange={(e) => updateConfig("nodeGap", Number(e.target.value))}
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={layoutConfig.nodeGap}
-                      onChange={(e) => updateConfig("nodeGap", Number(e.target.value))}
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Rank Gap (px)</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="20"
-                      max="300"
-                      value={layoutConfig.rankGap}
-                      onChange={(e) => updateConfig("rankGap", Number(e.target.value))}
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={layoutConfig.rankGap}
-                      onChange={(e) => updateConfig("rankGap", Number(e.target.value))}
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Compaction</span>
-                  <Select<Compaction>
-                    size="sm"
-                    options={COMPACTION_OPTIONS}
-                    value={layoutConfig.compaction}
-                    onValueChange={(value) => updateConfig("compaction", value)}
-                    aria-label="Compaction preset"
-                  />
-                </div>
-              </div>
-
-              <div className="layout-config-section">
-                <span className="layout-config-section-title">🎨 Edges & Labels</span>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Edge Style</span>
-                  <Select<EdgeStyle>
-                    size="sm"
-                    options={EDGE_STYLE_OPTIONS}
-                    value={layoutConfig.edgeStyle}
-                    onValueChange={(value) => updateConfig("edgeStyle", value)}
-                    aria-label="Edge style"
-                  />
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Corner Radius (px)</span>
-                  <div className="layout-config-controls-row">
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      value={layoutConfig.cornerRadius}
-                      onChange={(e) => updateConfig("cornerRadius", Number(e.target.value))}
-                      className="layout-config-slider"
-                    />
-                    <input
-                      type="number"
-                      value={layoutConfig.cornerRadius}
-                      onChange={(e) => updateConfig("cornerRadius", Number(e.target.value))}
-                      className="layout-config-number-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Label Placement</span>
-                  <Select<LabelPlacement>
-                    size="sm"
-                    options={LABEL_PLACEMENT_OPTIONS}
-                    value={layoutConfig.labelPlacement}
-                    onValueChange={(value) => updateConfig("labelPlacement", value)}
-                    aria-label="Label placement"
-                  />
-                </div>
-              </div>
-            </div>
+            {/* The full settings surface, not a reduced copy of it. This popover used to hand-roll
+                six of the ~40 config fields with no Apply step, so the toolbar and the testing
+                playground disagreed about what "Settings" meant and most knobs were unreachable
+                from the main canvas. Rendering the same component gives one definition of the
+                settings UI — including its staged-edit/Apply behaviour — in both places. */}
+            <EngineOptionsPanel className="layout-config-embedded" />
           </div>
         )}
       </div>
