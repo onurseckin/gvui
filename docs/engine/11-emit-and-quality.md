@@ -411,7 +411,7 @@ So the two gates now encode the same split:
 | `badgeNodeOverlaps`, `badgeBadgeOverlaps` | **fail** | reported as best-effort |
 
 The implementation is a small, explicit list in
-[`7_2_organic.rs`](../../crates/gvui/src/7_engines/7_2_organic.rs), applied by the shared emit path
+[`7_2_organic.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs), applied by the shared emit path
 the three geometric engines use:
 
 ```rust

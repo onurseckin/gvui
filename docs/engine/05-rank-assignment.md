@@ -26,6 +26,11 @@ phase that could repair them:
 1. **Totality.** Every node has a rank, including nodes with no edges at all.
 2. **Feasibility.** For every arc $u \to v$, $\;rank(v) - rank(u) \ge minlen(u,v)$.
 
+The `minlen` in that second invariant is the one **this phase decides**, not the one Phase 0 wrote:
+peer edges are relaxed to 0 before anything is ranked ([§7](#7-peer-edges-and-the-same-rank-relaxation)),
+and labelled edges left at span 1 are pushed apart after everything else has run
+([§8](#8-the-span-1-rule-for-labelled-edges)).
+
 See [the facade](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs) for the phase entry
 point, `assign_ranks`.
 
@@ -40,7 +45,9 @@ $$rank(v) - rank(u) \ge minlen(u,v)$$
 `minlen` is the **minimum rank span** of the edge. It defaults to 1 — "the target must be at least
 one row below the source" — and Phase 0 raises it to 2 for any edge that carries a label. We will
 come back to why in [§6](#6-the-two-parameters-that-matter); the short version is that a labelled
-edge needs an empty row in between for its badge to live on.
+edge needs an empty row in between for its badge to live on. A `minlen` of **0** is also legal, and
+means "the target may sit on the same row as the source"; [§7](#7-peer-edges-and-the-same-rank-relaxation)
+is where the engine hands that out.
 
 Not every edge takes part. [`rank_arc`](../../crates/gvui/src/2_rank_assignment/2_3_rank_balancing.rs)
 is the single definition of "an arc ranking cares about", and it excludes four kinds:
@@ -339,7 +346,7 @@ Two consequences worth knowing:
 - **A pin that contradicts a `minlen` loses.** If you pin the head of a chain level with its tail,
   the successor is raised. Phase 4 can survive a moved node; it cannot survive a violated `minlen`,
   because a labelled edge with span 1 has no rank to put its badge on.
-- **Pins disable rank balancing entirely** (§7). A pin is an explicit instruction about where a node
+- **Pins disable rank balancing entirely** ([§9](#9-aspect-ratio-rank-balancing)). A pin is an explicit instruction about where a node
   goes, and a heuristic that quietly overrides it would be worse than useless.
 
 Normalisation happens after pinning, so if repair lifts *every* node above rank 0 the whole drawing
@@ -395,7 +402,156 @@ See [ingest](../../crates/gvui/src/0_common/0_5_ingest.rs) for where the 2 is ap
 
 ---
 
-## 7. Aspect-ratio rank balancing
+## 7. Peer edges and the same-rank relaxation
+
+Everything so far assumes an edge means "below". Some edges do not.
+
+```text
+   minlen = 1 on every edge                 minlen = 0 on a -> b
+
+rank 0        [ root ]                     rank 0        [ root ]
+              /      \                                   /      \
+rank 1     [ a ]      |                    rank 1     [ a ]───[ b ]
+              |       |
+rank 2     [ b ]------+                             a -> b becomes one straight
+                                                    horizontal segment
+```
+
+`root → a`, `root → b`, `a → b`. The third edge is not a hierarchy step; it joins two *siblings*.
+Forcing it to span a rank makes the drawing a row taller and turns a straight horizontal line into a
+vertical one with two corners.
+
+v3 detects that shape and relaxes it. `same_rank_peer_edges` (default `true`) lowers every **peer
+edge** to `minlen = 0`, so the ranker is *permitted* — never forced — to put the two endpoints on one
+rank. When it does, Phase 4 emits a [`FlatEdge`](./06-layering-and-labels.md#8-flat-edges) instead of
+a chain, and Phase 8 draws it as one horizontal segment through the corridor between them.
+
+This made `FlatEdge` reachable **for the first time**. Every edge previously carried `minlen ≥ 1`, so
+`span == 0` was arithmetically impossible and the entire flat-edge path — the record, the corridor
+reservation, the router, the badge case — was dead code that had never executed on real input.
+
+### What counts as a peer edge
+
+An edge $u \to v$ of the cycle-broken DAG is a peer edge when **all three** hold:
+
+1. **It still carries the `minlen` ingest would have defaulted to** — 2 with a badge, 1 without. A
+   host that sent an explicit `minLen` is giving an instruction about rank separation, and peer
+   detection must not silently override it.
+2. **$u$ and $v$ share at least one predecessor.** They hang off a common parent, which is the shape
+   a reader expects to see side by side.
+3. **Masking this edge out leaves no other directed path $u \to v$.**
+
+Condition 3 is what makes the relaxation *safe* rather than merely optimistic. `minlen = 0` only ever
+**permits** equality; it can never create a cycle, because the constraint system is still a system of
+inequalities over a DAG. But if some other path $u \to x \to v$ existed, that path already forces
+$rank(v) \ge rank(u) + 2$, so relaxing this edge would achieve nothing except to spend a scan
+pretending the edge might be flat.
+
+```text
+   peer                               not a peer — rule 3 fails
+
+        [ root ]                          [ root ]
+        /      \                          /      \
+     [ a ]───[ b ]                     [ a ]     [ b ]
+                                          | \      ^
+     a -> b relaxed to 0                  |  [ x ]-+
+                                          +--------+   <- a -> b, the candidate
+
+                                       a -> x -> b already forces
+                                       rank(b) >= rank(a) + 2, so
+                                       relaxing a -> b would buy nothing
+```
+
+### The bounded reachability probe
+
+Condition 3 is a forward BFS from $u$ looking for $v$, with the candidate edge masked out. Two
+details matter.
+
+**It masks by edge index, not by endpoint pair.** One of two parallel $u \to v$ edges therefore still
+sees the other, and neither is mistaken for a peer.
+
+**It has a visit budget — `PEER_PROBE_BUDGET = 256` — and exhausting it answers "a path exists".**
+That is the conservative answer, and the asymmetry is the reason it is safe to answer it that way:
+
+| the probe is wrong… | cost |
+| --- | --- |
+| wrong **yes** (says a path exists when none does) | the edge keeps `minlen = 1` and is drawn hierarchically. Nothing is broken; one edge is less pretty. |
+| wrong **no** (says no path exists when one does) | the ranker is permitted to collapse a genuine hierarchy onto a single rank. |
+
+Since one direction is cosmetic and the other is a wrong drawing, running out of budget must resolve
+to the cosmetic side. That is what lets the cap be small enough to keep the whole scan effectively
+linear on real graphs.
+
+Determinism: arcs are visited in ascending edge order, both adjacency structures are built from that
+same ordered list, and the probe is FIFO — so the budget cut-off, the only order-sensitive part of the
+answer, lands in the same place on every run. Visited marks are generation stamps over one allocation
+rather than a fresh `visited` vector per probe, so clearing is a counter bump.
+
+### The relaxation is written into the IR, not just handed to the ranker
+
+`relax_peer_edges` returns a `Cow<GraphIr>` — borrowed when nothing is relaxed, so only graphs that
+actually contain peers pay for the clone — and **every** later step of the phase reads its constraints
+from that relaxed IR.
+
+That is not tidiness. Rank balancing ([§9](#9-aspect-ratio-rank-balancing)) re-derives the constraint
+set from the IR itself rather than taking one, and closes with a feasibility repair. Handed the
+caller's original IR, that repair would read `minlen = 1` for a peer edge and pull an equal-ranked
+pair straight back apart — silently undoing the whole feature, with no error and no diagnostic.
+
+---
+
+## 8. The span-1 rule for labelled edges
+
+Relaxing an edge to 0 opens a case that could not previously arise, and it needs closing before the
+ranking leaves this phase.
+
+> A labelled edge is drawable at **span 0** or **span ≥ 2**, and at no other value.
+
+| span | where the badge lives |
+| --- | --- |
+| 0 | a flat edge: the badge rides the horizontal run, and Phase 6 widened the corridor by the label width to fit it |
+| 1 | **nowhere** |
+| ≥ 2 | the middle intermediate rank carries a `Label` item whose box *is* the badge reservation |
+
+Span 1 is the hole. There is no intermediate rank, so Phase 4 degrades to `label_at = None` and the
+badge falls through to [Phase 8's positional safety net](./10-edge-routing.md#the-safety-net-and-what-a-leader-line-means)
+— which is allowed to emit a leader line and is covered by no reservation at all.
+
+`enforce_labelled_span` closes it. For every arc with `minlen ≤ 1` that is **currently sitting at**
+exactly span 1 and carries a label, it tightens that arc's `minlen` to 2 and runs
+`repair_feasibility`, which only ever raises ranks. Each pass is therefore monotone and the loop
+terminates; the `node_count + 1` bound is belt-and-braces.
+
+Two deliberate asymmetries:
+
+- **An edge resting at span 0 is left alone.** That is the same-rank placement §7 exists to produce,
+  and it is drawable.
+- **This is the one place a host's explicit `minLen: 1` loses**, for a labelled edge that lands at
+  span 1. A badge with no reservation is a worse outcome than a rank separation the host asked for
+  and did not get.
+
+### Why it has to run last
+
+```text
+   relax peers → rank → park isolates → pins+repair | balance → ENFORCE SPAN → normalise
+                                                         ▲           ▲
+                                                         │           └── fixes it
+                                                         └── creates the bad case
+```
+
+The failure mode is concrete. A labelled edge relaxed to `minlen = 0` legitimately lands at span 0 —
+a flat edge, everything fine. Then `balance_ranks` pushes its target down one rank to respect the
+width cap, and the edge is at span 1 with a badge and nowhere to put it. An earlier revision ran the
+check *before* balancing, which inspects a rank vector that balancing then invalidates.
+
+The measured symptom of getting this wrong: scenario 17 ("Cyclic Agent Execution Trace") emitted a
+badge with a leader line overlapping two nodes — **the only constraint violation in the whole audit
+suite**. Which is also the point of `leader_count` as a metric: it is not a crowding measure, it is a
+signal that a reservation upstream of Phase 8 went missing.
+
+---
+
+## 9. Aspect-ratio rank balancing
 
 Network simplex minimises edge length. It has no opinion whatsoever about the *shape* of the
 drawing, and that produces two visible failure modes.
@@ -507,7 +663,7 @@ not exist in v2.
 
 ---
 
-## 8. What v1 did here, and what it cost
+## 10. What v1 did here, and what it cost
 
 Two defects, both in ranking, both single lines.
 
@@ -533,7 +689,7 @@ data it was supposed to see.
 
 ---
 
-## 9. Output
+## 11. Output
 
 ```rust
 pub struct RankResult {

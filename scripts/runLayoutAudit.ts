@@ -1,13 +1,14 @@
 /**
- * v2 regression gate. Extends the old print-only diagnostic dump into a real assertion: it fails
- * the process (non-zero exit) rather than leaving a bad layout as a line of console output — see
- * docs/planning/layout-engine-v2/04-config-and-quality.md §3c for why that distinction matters
- * (`dense_kubernetes_mesh` shipped an invalid, 191-crossing layout under the old print-only audit).
+ * Layout regression gate. Fails the process (non-zero exit) rather than leaving a bad layout as a
+ * line of console output — see docs/planning/layout-engine-v2/04-config-and-quality.md §3c for why
+ * that distinction matters (`dense_kubernetes_mesh` shipped an invalid, 191-crossing layout under
+ * the old print-only audit).
  *
- * Runs every engine mode against every fixture in public/data/graphs/*.json and every scenario in
- * customLayoutScenarios.ts, feeding node/label boxes through the real `MeasurementProvider` so this
- * exercises the exact same measure -> normalize -> layout path the browser does (mirrors
- * `customLayoutAdapter.ts`'s `buildEngineInputs`, which is not itself exported for reuse here).
+ * Runs every audited engine/direction pair (`AUDIT_CASES`) against every fixture in
+ * public/data/graphs/*.json and every scenario in customLayoutScenarios.ts, feeding node/label
+ * boxes through the real `MeasurementProvider` so this exercises the exact same
+ * measure -> normalize -> layout path the browser does (mirrors `customLayoutAdapter.ts`'s
+ * `buildEngineInputs`, which is not itself exported for reuse here).
  */
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
@@ -15,6 +16,7 @@ import initWasm, { compute_custom_layout_wasm } from "../src/engine/layout/custo
 import {
   resolveCustomLayoutConfig,
   type CustomLayoutConfig,
+  type Direction,
 } from "../src/engine/layout/custom/config";
 import { getDefaultMeasurer } from "../src/engine/layout/measurement";
 import type { NormalizedEdge, NormalizedNode } from "../src/engine/layout/custom/types";
@@ -73,20 +75,35 @@ interface AuditLayoutResult {
   optimizationStats: AuditOptimizationStats;
 }
 
-/** Every mode the wasm entry point accepts, per `EngineMode` in crates/gvui/src/lib.rs. */
-const ALL_MODES: readonly LayoutMode[] = [
-  "layered",
-  "layered-spline",
-  "left-right",
-  "organic",
-  "radial",
-  "grid",
+/**
+ * One audited configuration: an engine plus the flow direction it runs under.
+ *
+ * v3 collapsed six mode strings down to two engines (`EngineMode` in
+ * crates/gvui/src/0_common/0_2_config.rs). `layered-spline` was only ever `layered` with a
+ * different `edgeStyle`, and `left-right` was never an engine at all — it was a *direction* smuggled
+ * through the mode string, which is exactly why it silently rendered top-down. Direction is now its
+ * own axis, so it has to be its own axis here too: running `layered` at one direction would leave
+ * the entire transposed coordinate path (Phase 6 lane demand and Phase 7 routing both swap axes)
+ * untested.
+ */
+interface AuditCase {
+  /** Mode string sent over the wire, resolved by `EngineMode::from_mode_str`. */
+  mode: LayoutMode;
+  direction: Direction;
+  /** Stable identifier used in log lines and failure messages. */
+  label: string;
+}
+
+const AUDIT_CASES: readonly AuditCase[] = [
+  { mode: "layered", direction: "top-down", label: "layered/top-down" },
+  { mode: "layered", direction: "left-right", label: "layered/left-right" },
+  { mode: "radial", direction: "top-down", label: "radial" },
 ];
 
 /**
  * Counters that must be zero for EVERY engine. These are preventable regardless of how edges are
- * drawn: overlap removal handles node collisions in organic mode, the grid and the rings are
- * separated by construction, and no engine is allowed to drop an edge or a badge.
+ * drawn: the rings are separated by construction, and no engine is allowed to drop an edge or a
+ * badge.
  */
 const UNIVERSAL_CONSTRAINT_FIELDS: readonly (keyof AuditLayoutMetrics)[] = [
   "nodeNodeOverlaps",
@@ -98,13 +115,13 @@ const UNIVERSAL_CONSTRAINT_FIELDS: readonly (keyof AuditLayoutMetrics)[] = [
  * Counters that must additionally be zero for the LAYERED engines only.
  *
  * The layered pipeline guarantees these by construction — Phase 6 reserves a routing lane for every
- * segment, and the label item reserves badge area inside the layered graph. The straight-line
- * engines have neither: organic, radial and grid draw a direct line between two boxes, so a line
- * grazing a third box is a property of straight-line drawing, not a defect. Their badge placement
- * is an explicitly best-effort local pass that announces its failures with a leader line.
+ * segment, and the label item reserves badge area inside the layered graph. Radial has neither: it
+ * draws a direct line between two boxes on concentric rings, so a line grazing a third box is a
+ * property of straight-line drawing, not a defect. Its badge placement is an explicitly best-effort
+ * local pass that announces its failures with a leader line.
  *
- * They are still reported as metrics for those engines (and as warnings in the diagnostics), just
- * not as build failures — asserting a guarantee an engine never made would make the gate useless.
+ * They are still reported as metrics for radial (and as warnings in the diagnostics), just not as
+ * build failures — asserting a guarantee an engine never made would make the gate useless.
  */
 const LAYERED_ONLY_CONSTRAINT_FIELDS: readonly (keyof AuditLayoutMetrics)[] = [
   "edgeNodePenetrations",
@@ -112,11 +129,9 @@ const LAYERED_ONLY_CONSTRAINT_FIELDS: readonly (keyof AuditLayoutMetrics)[] = [
   "badgeBadgeOverlaps",
 ];
 
-const LAYERED_MODES: ReadonlySet<string> = new Set(["layered", "layered-spline", "left-right"]);
-
-/** The counters that are build failures for `mode`. */
-function constraintFieldsFor(mode: string): readonly (keyof AuditLayoutMetrics)[] {
-  return LAYERED_MODES.has(mode)
+/** The counters that are build failures for `auditCase`. */
+function constraintFieldsFor(auditCase: AuditCase): readonly (keyof AuditLayoutMetrics)[] {
+  return auditCase.mode === "layered"
     ? [...UNIVERSAL_CONSTRAINT_FIELDS, ...LAYERED_ONLY_CONSTRAINT_FIELDS]
     : UNIVERSAL_CONSTRAINT_FIELDS;
 }
@@ -249,7 +264,7 @@ async function runLayoutAudit(): Promise<void> {
   const fixtures = [...loadScenarioFixtures(), ...loadPublicGraphFixtures(projectRoot)];
 
   console.log("\n===============================================================================");
-  console.log("                        LAYOUT ENGINE V2 REGRESSION GATE                        ");
+  console.log("                        LAYOUT ENGINE V3 REGRESSION GATE                        ");
   console.log("===============================================================================\n");
 
   const failures: string[] = [];
@@ -264,36 +279,33 @@ async function runLayoutAudit(): Promise<void> {
 
     console.log(`\n--- ${fixture.name} ---`);
 
-    for (const mode of ALL_MODES) {
+    for (const auditCase of AUDIT_CASES) {
       runCount += 1;
-      // `resolveCustomLayoutConfig` always returns every field populated, including `direction` —
-      // so passing it verbatim as `options` makes the wasm entry point treat `direction` as
-      // explicitly set (see `EngineMode::from_mode_str` in crates/gvui/src/lib.rs) and skip the
-      // mode-implied direction entirely. Without this override, `"left-right"` would silently run
-      // as top-down and the audit would test `"layered"` twice under two different labels.
-      const modeConfig: CustomLayoutConfig =
-        mode === "left-right" ? { ...config, direction: "left-right" } : config;
-      const result = computeLayout(normalizedNodes, normalizedEdges, modeConfig, mode);
+      // `resolveCustomLayoutConfig` always returns every field populated, and `direction` is now
+      // the single source of truth for flow (`EngineMode::from_mode_str` deliberately no longer
+      // returns one). Overriding it per case is therefore the only way to exercise a direction.
+      const modeConfig: CustomLayoutConfig = { ...config, direction: auditCase.direction };
+      const result = computeLayout(normalizedNodes, normalizedEdges, modeConfig, auditCase.mode);
       const { validation, status, optimizationStats } = result;
       const durationMs = optimizationStats.durationMs;
 
       console.log(
-        `  [${mode}] status=${status} isValid=${validation.isValid} ` +
+        `  [${auditCase.label}] status=${status} isValid=${validation.isValid} ` +
           `nodes=${result.nodes.length} edges=${result.edges.length} badges=${result.badges.length} ` +
           `${formatMetrics(validation.metrics)} durationMs=${durationMs.toFixed(2)}`,
       );
 
-      const label = `${fixture.name} [${mode}]`;
+      const label = `${fixture.name} [${auditCase.label}]`;
 
-      for (const field of constraintFieldsFor(mode)) {
+      for (const field of constraintFieldsFor(auditCase)) {
         const value = validation.metrics[field];
         if (value !== 0) {
           failures.push(`${label}: constraint '${field}' = ${value} (must be 0)`);
         }
       }
 
-      // Reported, not failed, for the straight-line engines — see LAYERED_ONLY_CONSTRAINT_FIELDS.
-      if (!LAYERED_MODES.has(mode)) {
+      // Reported, not failed, for radial — see LAYERED_ONLY_CONSTRAINT_FIELDS.
+      if (auditCase.mode !== "layered") {
         const soft = LAYERED_ONLY_CONSTRAINT_FIELDS.map(
           (f) => [f, validation.metrics[f]] as const,
         ).filter(([, v]) => v !== 0);

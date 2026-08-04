@@ -1,0 +1,255 @@
+{
+  "id": "deep-release-pipeline",
+  "title": "Deep Release Pipeline — 14 Sequential Ranks",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "checkout",
+      "name": "1. Checkout",
+      "type": "start",
+      "description": "Fetches the commit and restores the dependency cache.",
+      "badges": [
+        {
+          "label": "cache: hit",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "name": "2. Install Deps",
+      "type": "stage",
+      "description": "Resolves the lockfile and links the workspace packages.",
+      "badges": [
+        {
+          "label": "1,284 pkgs",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "codegen",
+      "name": "3. Codegen",
+      "type": "stage",
+      "description": "Regenerates the client bindings from the schema.",
+      "badges": [
+        {
+          "label": "drift: none",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "lint",
+      "name": "4. Lint",
+      "type": "stage",
+      "description": "Runs the linter over every changed file in the diff.",
+      "badges": [
+        {
+          "label": "0 errors",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "typecheck",
+      "name": "5. Type Check",
+      "type": "stage",
+      "description": "Builds the project references and reports type errors.",
+      "badges": [
+        {
+          "label": "0 errors",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "unit",
+      "name": "6. Unit Tests",
+      "type": "stage",
+      "description": "Runs the fast, hermetic test tier with coverage on.",
+      "badges": [
+        {
+          "label": "cov: 97.4%",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "name": "7. Build",
+      "type": "stage",
+      "description": "Produces the optimized bundle and the wasm artifact.",
+      "badges": [
+        {
+          "label": "2.1 MB",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "integration",
+      "name": "8. Integration Tests",
+      "type": "stage",
+      "description": "Boots the service against ephemeral Postgres and Redis.",
+      "badges": [
+        {
+          "label": "48 cases",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "image",
+      "name": "9. Container Image",
+      "type": "stage",
+      "description": "Assembles the distroless runtime image and tags it.",
+      "badges": [
+        {
+          "label": "sha256:4b91…",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "scan",
+      "name": "10. Vulnerability Scan",
+      "type": "stage",
+      "description": "Scans the image layers against the advisory database.",
+      "badges": [
+        {
+          "label": "1 medium",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "sign",
+      "name": "11. Sign & Attest",
+      "type": "stage",
+      "description": "Signs the digest and publishes the provenance attestation.",
+      "badges": [
+        {
+          "label": "signed",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "staging",
+      "name": "12. Deploy Staging",
+      "type": "stage",
+      "description": "Rolls the new revision onto the staging cluster.",
+      "badges": [
+        {
+          "label": "rev: 219",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "smoke",
+      "name": "13. Smoke Tests",
+      "type": "stage",
+      "description": "Probes the public endpoints of the staged revision.",
+      "badges": [
+        {
+          "label": "12/12",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "prod",
+      "name": "14. Deploy Production",
+      "type": "end",
+      "description": "Shifts production traffic to the new revision in steps.",
+      "badges": [
+        {
+          "label": "25% → 100%",
+          "variant": "success"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-checkout-install",
+      "source": "checkout",
+      "target": "install",
+      "label": "stage 1 → 2"
+    },
+    {
+      "id": "e-install-codegen",
+      "source": "install",
+      "target": "codegen",
+      "label": "stage 2 → 3"
+    },
+    {
+      "id": "e-codegen-lint",
+      "source": "codegen",
+      "target": "lint",
+      "label": "stage 3 → 4"
+    },
+    {
+      "id": "e-lint-typecheck",
+      "source": "lint",
+      "target": "typecheck",
+      "label": "stage 4 → 5"
+    },
+    {
+      "id": "e-typecheck-unit",
+      "source": "typecheck",
+      "target": "unit",
+      "label": "stage 5 → 6"
+    },
+    {
+      "id": "e-unit-build",
+      "source": "unit",
+      "target": "build",
+      "label": "stage 6 → 7"
+    },
+    {
+      "id": "e-build-integration",
+      "source": "build",
+      "target": "integration",
+      "label": "stage 7 → 8"
+    },
+    {
+      "id": "e-integration-image",
+      "source": "integration",
+      "target": "image",
+      "label": "stage 8 → 9"
+    },
+    {
+      "id": "e-image-scan",
+      "source": "image",
+      "target": "scan",
+      "label": "stage 9 → 10"
+    },
+    {
+      "id": "e-scan-sign",
+      "source": "scan",
+      "target": "sign",
+      "label": "stage 10 → 11"
+    },
+    {
+      "id": "e-sign-staging",
+      "source": "sign",
+      "target": "staging",
+      "label": "stage 11 → 12"
+    },
+    {
+      "id": "e-staging-smoke",
+      "source": "staging",
+      "target": "smoke",
+      "label": "stage 12 → 13"
+    },
+    {
+      "id": "e-smoke-prod",
+      "source": "smoke",
+      "target": "prod",
+      "label": "stage 13 → 14"
+    }
+  ]
+}

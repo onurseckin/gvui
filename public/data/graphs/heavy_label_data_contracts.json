@@ -1,0 +1,118 @@
+{
+  "id": "heavy-label-data-contracts",
+  "title": "Heavy Labels — Data Contracts Written Out In Full",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "source",
+      "name": "Point-of-Sale Feed",
+      "type": "start",
+      "description": "Emits one event per till transaction across 4,100 retail locations.",
+      "badges": [
+        {
+          "label": "avro v7",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "landing",
+      "name": "Landing Zone",
+      "type": "datastore",
+      "description": "Immutable raw object storage; retained for seven years unmodified.",
+      "badges": [
+        {
+          "label": "raw",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "validate",
+      "name": "Contract Validator",
+      "type": "gate",
+      "description": "Rejects any record that violates the published producer contract.",
+      "badges": [
+        {
+          "label": "reject rate: 0.03%",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "quarantine",
+      "name": "Quarantine Bucket",
+      "type": "datastore",
+      "description": "Holds rejected records with the exact rule that rejected them.",
+      "badges": [
+        {
+          "label": "24h TTL",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "normalize",
+      "name": "Normalizer",
+      "type": "stage",
+      "description": "Rewrites currency, timezone and unit fields into canonical form.",
+      "badges": [
+        {
+          "label": "utc",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "warehouse",
+      "name": "Analytics Warehouse",
+      "type": "end",
+      "description": "Columnar store the business intelligence layer queries directly.",
+      "badges": [
+        {
+          "label": "partitioned by day",
+          "variant": "info"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-source-landing",
+      "source": "source",
+      "target": "landing",
+      "label": "at-least-once delivery of every till transaction, keyed by store id and terminal id"
+    },
+    {
+      "id": "e-landing-validate",
+      "source": "landing",
+      "target": "validate",
+      "label": "hourly micro-batch replay of the landing prefix, ordered by ingestion timestamp"
+    },
+    {
+      "id": "e-validate-quarantine",
+      "source": "validate",
+      "target": "quarantine",
+      "label": "records failing schema, referential or range checks, annotated with the failing rule id"
+    },
+    {
+      "id": "e-validate-normalize",
+      "source": "validate",
+      "target": "normalize",
+      "label": "contract-clean records only; downstream may assume every required field is present"
+    },
+    {
+      "id": "e-normalize-warehouse",
+      "source": "normalize",
+      "target": "warehouse",
+      "label": "idempotent upsert into the daily partition, deduplicated on the natural business key"
+    },
+    {
+      "id": "e-quarantine-normalize",
+      "source": "quarantine",
+      "target": "normalize",
+      "label": "↺ operator-approved replay after the producer ships a corrected schema version",
+      "isCycle": true
+    }
+  ]
+}

@@ -69,6 +69,10 @@ pub enum EdgeStyle {
     Rounded,
     /// Smooth cubic spline through the chain waypoints.
     Spline,
+    /// Orthogonal polyline whose right-angle corners are replaced by 45-degree chamfers wherever
+    /// the chamfer is collision-free. This is the "8-direction" look, applied as a post-pass so the
+    /// exact lane model — and with it the guarantee that routing cannot fail — is preserved.
+    Octilinear,
     /// Direct source-to-target line, clipped to node boundaries.
     Straight,
 }
@@ -77,10 +81,14 @@ pub enum EdgeStyle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum LabelPlacement {
-    /// Badge centered on the edge; the edge passes behind it.
-    OnEdge,
-    /// Badge offset to the right of the edge; the edge passes along its left face (default).
+    /// Badge centred on the edge; the edge passes behind it (default).
+    ///
+    /// This is the default because a badge that sits beside its edge has to be joined to it by a
+    /// leader line, and a drawing full of dotted connectors reads worse than one where each label
+    /// simply sits on the line it describes.
     #[default]
+    OnEdge,
+    /// Badge offset to the right of the edge; the edge passes along its left face.
     BesideEdge,
     /// Badge offset above the edge's horizontal run.
     AboveEdge,
@@ -169,29 +177,24 @@ pub enum EngineMode {
     /// Full layered pipeline with orthogonal lane routing (default).
     #[default]
     Layered,
-    /// Layered pipeline, spline edges.
-    LayeredSpline,
-    /// Stress majorization by SGD plus overlap removal.
-    Organic,
     /// Concentric BFS rings with proportional wedge allocation.
     Radial,
-    /// Deterministic row-major grid.
-    Grid,
 }
 
 impl EngineMode {
-    /// Resolves the legacy `mode` strings accepted by the WASM entry point.
-    pub fn from_mode_str(s: &str) -> (EngineMode, Option<Direction>) {
+    /// Resolves a `mode` string, including the legacy values older clients still send.
+    ///
+    /// Direction is deliberately **not** returned here. It used to be, and the result was that
+    /// `left-right` silently did nothing: the client sends a fully resolved config, so
+    /// `direction` was always present, and the "explicit direction wins over mode" rule discarded
+    /// the mode's direction every single time. Flow direction now has exactly one source of
+    /// truth — [`CustomLayoutConfig::direction`].
+    pub fn from_mode_str(s: &str) -> EngineMode {
         match s {
-            "top-down" | "layered" | "top-down-dagre" => (EngineMode::Layered, Some(Direction::TopDown)),
-            "bottom-up" => (EngineMode::Layered, Some(Direction::BottomUp)),
-            "left-right" => (EngineMode::Layered, Some(Direction::LeftRight)),
-            "right-left" => (EngineMode::Layered, Some(Direction::RightLeft)),
-            "layered-spline" => (EngineMode::LayeredSpline, Some(Direction::TopDown)),
-            "force" | "organic" | "stress" => (EngineMode::Organic, None),
-            "radial" => (EngineMode::Radial, None),
-            "grid" => (EngineMode::Grid, None),
-            _ => (EngineMode::Layered, Some(Direction::TopDown)),
+            "radial" => EngineMode::Radial,
+            // Everything else, including the retired `organic`/`grid`/`layered-spline` values and
+            // every direction-bearing legacy string, resolves to the layered engine.
+            _ => EngineMode::Layered,
         }
     }
 }
@@ -249,6 +252,21 @@ pub struct CustomLayoutConfig {
     pub bundle_parallel_edges: bool,
     /// Spacing preset multiplier.
     pub compaction: Compaction,
+    /// Let the router pick any of the four node sides per endpoint, scored geometrically, instead
+    /// of forcing every forward edge onto Bottom -> Top. Sideways targets then leave sideways,
+    /// which removes the dog-leg they would otherwise need.
+    pub flexible_port_sides: bool,
+    /// How strongly a forward edge still prefers the rank-flow sides (Bottom/Top) when
+    /// `flexible_port_sides` is on. 0 is purely geometric; larger values keep the hierarchy
+    /// reading top-to-bottom even when a sideways exit would be marginally shorter.
+    pub flow_side_bias: f64,
+    /// Snap a source and target port to a common coordinate when that turns a dog-leg into one
+    /// straight segment. The largest single reducer of unnecessary corners.
+    pub straight_shot_alignment: bool,
+    /// Allow the ranker to place the endpoints of a peer edge on the same rank (`min_len = 0`), so
+    /// two siblings can be joined by a straight horizontal line instead of being forced onto
+    /// different ranks and connected vertically.
+    pub same_rank_peer_edges: bool,
 
     // ---- Tier 2: algorithm selection ----------------------------------------------------------
     /// Rank assignment algorithm.
@@ -308,7 +326,7 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     port_endpoint_padding: 16.0,
     corner_radius: 8.0,
     edge_style: EdgeStyle::Rounded,
-    label_placement: LabelPlacement::BesideEdge,
+    label_placement: LabelPlacement::OnEdge,
     badge_clearance: 10.0,
     max_label_width: 220.0,
     max_label_lines: 3,
@@ -319,6 +337,10 @@ pub const DEFAULT_CUSTOM_LAYOUT_CONFIG: CustomLayoutConfig = CustomLayoutConfig 
     balance_ranks: true,
     bundle_parallel_edges: true,
     compaction: Compaction::Balanced,
+    flexible_port_sides: true,
+    flow_side_bias: 1.0,
+    straight_shot_alignment: true,
+    same_rank_peer_edges: true,
 
     ranker: Ranker::NetworkSimplex,
     ordering: OrderingHeuristic::Median,
@@ -419,6 +441,7 @@ impl CustomLayoutConfig {
         let non_negative_f64: &[(&str, f64)] = &[
             ("portEndpointPadding", self.port_endpoint_padding),
             ("cornerRadius", self.corner_radius),
+            ("flowSideBias", self.flow_side_bias),
         ];
         for &(name, v) in non_negative_f64 {
             if !v.is_finite() || v < 0.0 {
@@ -490,6 +513,10 @@ pub struct PartialCustomLayoutConfig {
     pub balance_ranks: Option<bool>,
     pub bundle_parallel_edges: Option<bool>,
     pub compaction: Option<Compaction>,
+    pub flexible_port_sides: Option<bool>,
+    pub flow_side_bias: Option<f64>,
+    pub straight_shot_alignment: Option<bool>,
+    pub same_rank_peer_edges: Option<bool>,
 
     pub ranker: Option<Ranker>,
     pub ordering: Option<OrderingHeuristic>,
@@ -551,6 +578,10 @@ pub fn resolve_custom_layout_config(
         take!(balance_ranks);
         take!(bundle_parallel_edges);
         take!(compaction);
+        take!(flexible_port_sides);
+        take!(flow_side_bias);
+        take!(straight_shot_alignment);
+        take!(same_rank_peer_edges);
 
         take!(ranker);
         take!(ordering);

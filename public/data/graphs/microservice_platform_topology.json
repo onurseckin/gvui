@@ -1,0 +1,418 @@
+{
+  "id": "microservice-platform-topology",
+  "title": "Mixed Real-World — Full Platform Topology",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "cdn",
+      "name": "Global CDN",
+      "type": "start",
+      "description": "Serves cached assets and forwards dynamic requests to the origin.",
+      "badges": [
+        {
+          "label": "hit: 94%",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "name": "API Gateway",
+      "type": "service",
+      "description": "Single ingress: routing, request signing and per-plan rate limits.",
+      "badges": [
+        {
+          "label": "rps: 18.4k",
+          "variant": "info"
+        },
+        {
+          "label": "p99: 210ms",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "name": "Identity Service",
+      "type": "service",
+      "description": "Issues and rotates access tokens; owns the session record.",
+      "badges": [
+        {
+          "label": "OIDC",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "accounts",
+      "name": "Accounts Service",
+      "type": "service",
+      "description": "Owns organisations, members and their role assignments.",
+      "badges": [
+        {
+          "label": "orgs: 41k",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "billing",
+      "name": "Billing Service",
+      "type": "service",
+      "description": "Meters usage and drives the subscription lifecycle.",
+      "badges": [
+        {
+          "label": "MRR sync",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "name": "Projects Service",
+      "type": "service",
+      "description": "Owns project metadata and the deployment history per project.",
+      "badges": [
+        {
+          "label": "projects: 122k",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "builder",
+      "name": "Build Orchestrator",
+      "type": "worker",
+      "description": "Schedules build jobs onto the pool and streams their logs back.",
+      "badges": [
+        {
+          "label": "queue: 37",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "runner_a",
+      "name": "Runner Pool A",
+      "type": "worker",
+      "description": "Linux x86 build fleet; handles the default runtime images.",
+      "badges": [
+        {
+          "label": "nodes: 64",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "runner_b",
+      "name": "Runner Pool B",
+      "type": "worker",
+      "description": "ARM build fleet used by the native and container targets.",
+      "badges": [
+        {
+          "label": "nodes: 24",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "artifacts",
+      "name": "Artifact Store",
+      "type": "datastore",
+      "description": "Content-addressed object store for build outputs and caches.",
+      "badges": [
+        {
+          "label": "3.1 TB",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "deployer",
+      "name": "Deployer",
+      "type": "service",
+      "description": "Promotes an artifact through preview, staging and production.",
+      "badges": [
+        {
+          "label": "canary",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Postgres",
+      "type": "datastore",
+      "description": "Single writer for all transactional state; synchronous replica attached.",
+      "badges": [
+        {
+          "label": "writer",
+          "variant": "error"
+        }
+      ]
+    },
+    {
+      "id": "replica_db",
+      "name": "Read Replica",
+      "type": "datastore",
+      "description": "Serves read-only queries with a bounded replication lag.",
+      "badges": [
+        {
+          "label": "lag: 40ms",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "name": "Redis Cluster",
+      "type": "datastore",
+      "description": "Session store, rate-limit counters and hot read cache.",
+      "badges": [
+        {
+          "label": "evict: 0.2%",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "bus",
+      "name": "Event Bus",
+      "type": "service",
+      "description": "Durable topic log every service publishes domain events onto.",
+      "badges": [
+        {
+          "label": "topics: 28",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "name": "Search Indexer",
+      "type": "worker",
+      "description": "Projects domain events into the query-side search index.",
+      "badges": [
+        {
+          "label": "behind: 1.2s",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "notifier",
+      "name": "Notification Service",
+      "type": "service",
+      "description": "Delivers email, webhook and in-product notifications.",
+      "badges": [
+        {
+          "label": "sent: 1.1M/d",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "telemetry",
+      "name": "Telemetry Pipeline",
+      "type": "end",
+      "description": "Collects traces, metrics and logs from every hop above.",
+      "badges": [
+        {
+          "label": "otel",
+          "variant": "info"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-cdn-gateway",
+      "source": "cdn",
+      "target": "gateway",
+      "label": "origin miss"
+    },
+    {
+      "id": "e-gateway-identity",
+      "source": "gateway",
+      "target": "identity",
+      "label": "verify token"
+    },
+    {
+      "id": "e-gateway-accounts",
+      "source": "gateway",
+      "target": "accounts",
+      "label": "org context"
+    },
+    {
+      "id": "e-gateway-projects",
+      "source": "gateway",
+      "target": "projects",
+      "label": "project api"
+    },
+    {
+      "id": "e-gateway-billing",
+      "source": "gateway",
+      "target": "billing",
+      "label": "usage event"
+    },
+    {
+      "id": "e-identity-cache",
+      "source": "identity",
+      "target": "cache",
+      "label": "session read"
+    },
+    {
+      "id": "e-accounts-primary_db",
+      "source": "accounts",
+      "target": "primary_db",
+      "label": "write"
+    },
+    {
+      "id": "e-accounts-replica_db",
+      "source": "accounts",
+      "target": "replica_db",
+      "label": "read"
+    },
+    {
+      "id": "e-billing-primary_db",
+      "source": "billing",
+      "target": "primary_db",
+      "label": "write"
+    },
+    {
+      "id": "e-projects-primary_db",
+      "source": "projects",
+      "target": "primary_db",
+      "label": "write"
+    },
+    {
+      "id": "e-projects-replica_db",
+      "source": "projects",
+      "target": "replica_db",
+      "label": "read"
+    },
+    {
+      "id": "e-projects-builder",
+      "source": "projects",
+      "target": "builder",
+      "label": "trigger build"
+    },
+    {
+      "id": "e-builder-runner_a",
+      "source": "builder",
+      "target": "runner_a",
+      "label": "dispatch x86"
+    },
+    {
+      "id": "e-builder-runner_b",
+      "source": "builder",
+      "target": "runner_b",
+      "label": "dispatch arm"
+    },
+    {
+      "id": "e-runner_a-artifacts",
+      "source": "runner_a",
+      "target": "artifacts",
+      "label": "upload"
+    },
+    {
+      "id": "e-runner_b-artifacts",
+      "source": "runner_b",
+      "target": "artifacts",
+      "label": "upload"
+    },
+    {
+      "id": "e-artifacts-deployer",
+      "source": "artifacts",
+      "target": "deployer",
+      "label": "promote"
+    },
+    {
+      "id": "e-deployer-cdn",
+      "source": "deployer",
+      "target": "cdn",
+      "label": "↺ purge edge cache",
+      "isCycle": true
+    },
+    {
+      "id": "e-deployer-bus",
+      "source": "deployer",
+      "target": "bus",
+      "label": "deployment event"
+    },
+    {
+      "id": "e-accounts-bus",
+      "source": "accounts",
+      "target": "bus",
+      "label": "membership event"
+    },
+    {
+      "id": "e-billing-bus",
+      "source": "billing",
+      "target": "bus",
+      "label": "subscription event"
+    },
+    {
+      "id": "e-projects-bus",
+      "source": "projects",
+      "target": "bus",
+      "label": "project event"
+    },
+    {
+      "id": "e-bus-search",
+      "source": "bus",
+      "target": "search",
+      "label": "index stream"
+    },
+    {
+      "id": "e-bus-notifier",
+      "source": "bus",
+      "target": "notifier",
+      "label": "notify stream"
+    },
+    {
+      "id": "e-notifier-identity",
+      "source": "notifier",
+      "target": "identity",
+      "label": "↺ re-auth prompt",
+      "isCycle": true
+    },
+    {
+      "id": "e-search-gateway",
+      "source": "search",
+      "target": "gateway",
+      "label": "↺ query results",
+      "isCycle": true
+    },
+    {
+      "id": "e-primary_db-replica_db",
+      "source": "primary_db",
+      "target": "replica_db",
+      "label": "streaming replication"
+    },
+    {
+      "id": "e-gateway-telemetry",
+      "source": "gateway",
+      "target": "telemetry",
+      "label": "spans"
+    },
+    {
+      "id": "e-builder-telemetry",
+      "source": "builder",
+      "target": "telemetry",
+      "label": "build metrics"
+    },
+    {
+      "id": "e-deployer-telemetry",
+      "source": "deployer",
+      "target": "telemetry",
+      "label": "rollout events"
+    },
+    {
+      "id": "e-bus-telemetry",
+      "source": "bus",
+      "target": "telemetry",
+      "label": "lag metrics"
+    }
+  ]
+}

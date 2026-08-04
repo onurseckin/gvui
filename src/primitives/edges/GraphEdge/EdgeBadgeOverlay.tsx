@@ -61,12 +61,25 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
     const renderY = badgeRect ? badgeRect.y + badgeRect.height / 2 : y;
 
     const hasLeaderPoints = Boolean(leaderPoints && leaderPoints.length >= 2);
-    const hasLeaderLine =
-      !hasLeaderPoints &&
-      Boolean(anchorPoint && Math.hypot(anchorPoint.x - renderX, anchorPoint.y - renderY) > 4);
+
+    // A connector is only honest when the edge does NOT pass under the badge. Containment, not
+    // distance from the badge centre, is the right test: with `on-edge` placement — the default —
+    // the anchor is the point of the edge the badge covers, so it is inside the rect and a dashed
+    // line to it would point at the thing it starts from. A wide badge whose anchor sits well
+    // off-centre but still under the rect is the same case, and a distance test would miss it.
+    const anchor = anchorPoint ?? (hasLeaderPoints && leaderPoints ? leaderPoints[0] : undefined);
+    const anchorIsOutsideBadge =
+      anchor !== undefined &&
+      (anchor.x < renderX - width / 2 ||
+        anchor.x > renderX + width / 2 ||
+        anchor.y < renderY - height / 2 ||
+        anchor.y > renderY + height / 2);
+
+    const showLeaderPath = anchorIsOutsideBadge && hasLeaderPoints;
+    const showLeaderLine = anchorIsOutsideBadge && !hasLeaderPoints && anchorPoint !== undefined;
 
     const leaderSvgPath =
-      hasLeaderPoints && leaderPoints
+      showLeaderPath && leaderPoints
         ? leaderPoints
             .reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "")
             .trim()
@@ -81,7 +94,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
         role="button"
         tabIndex={0}
       >
-        {hasLeaderPoints ? (
+        {showLeaderPath && (
           <path
             d={leaderSvgPath}
             stroke="#38bdf8"
@@ -90,19 +103,17 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
             fill="none"
             transform={`translate(${-renderX}, ${-renderY})`}
           />
-        ) : (
-          hasLeaderLine &&
-          anchorPoint && (
-            <line
-              x1={anchorPoint.x - renderX}
-              y1={anchorPoint.y - renderY}
-              x2={0}
-              y2={0}
-              stroke="#38bdf8"
-              strokeWidth="1"
-              strokeDasharray="3,3"
-            />
-          )
+        )}
+        {showLeaderLine && anchorPoint && (
+          <line
+            x1={anchorPoint.x - renderX}
+            y1={anchorPoint.y - renderY}
+            x2={0}
+            y2={0}
+            stroke="#38bdf8"
+            strokeWidth="1"
+            strokeDasharray="3,3"
+          />
         )}
         <rect
           x={-width / 2}

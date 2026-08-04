@@ -1,4 +1,4 @@
-← [Organic](./02-organic.md) | [Index](./README.md) | [Next: Grid →](./04-grid.md)
+← [Layered](./01-layered.md) | [Index](./README.md) | [Docs Index →](../README.md)
 
 # Radial Mode
 
@@ -21,6 +21,10 @@ arrange everything else in rings by how many hops away it is.
 It is the natural shape for an ego network ("what does this service touch, and what do *those*
 touch"), a taxonomy, or a dependency neighbourhood. It is a poor shape for a graph with several
 equally important roots, or one whose edges mostly do not belong to any tree.
+
+It is also, since v3, **the only engine that is not the layered pipeline**. The organic
+(stress-majorization) engine that used to share its plumbing was removed; see
+[what was removed and why](./README.md#what-was-removed-in-v3-and-what-it-cost).
 
 See [the implementation](../../crates/gvui/src/7_engines/7_3_radial.rs).
 
@@ -221,9 +225,28 @@ Ring sizing guarantees a ring has *enough total arc*. It cannot guarantee the ar
 because wedges are allocated by subtree leaf count, not by ring occupancy: a deep, narrow subtree
 crowds its slice of ring 3 while a shallow, wide one leaves slack.
 
-The same push-apart pass the [organic engine](./02-organic.md#4-overlap-removal) uses closes exactly
+The push-apart pass in
+[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs) closes exactly
 that gap, and because the crowding is local, its displacements are small enough to leave the ring
-structure legible. The engine's guarantee is therefore the strong one: **no two node boxes overlap**.
+structure legible. It is two stages, and the split matters:
+
+1. `relax_overlaps` — `overlap_removal_passes` symmetric push-apart passes. Each pair still too
+   close moves *both* boxes half the penetration apart, along the axis of least penetration. Cheap,
+   local, and it preserves the arrangement the ring geometry found, because the cheaper axis is the
+   smallest displacement that resolves the overlap. It is a shaping pass: it removes the great
+   majority of overlaps but not all of them, and driving it to zero takes $O(n)$ passes.
+2. `enforce_separation` — one exact scan-line sweep in ascending centre-$x$ order, pushing each box
+   just far enough right to clear every already-placed box it still overlaps in $y$. Boxes only ever
+   move right, so placing one cannot disturb a pair already resolved, which is why one pass suffices.
+
+Doing only (1) would ship a defect nothing downstream can repair. Doing only (2) would skew the
+whole drawing to the right, because (2) resolves everything in one direction. Running (1) first is
+what leaves (2) almost nothing to do. The engine's guarantee is therefore the strong one: **no two
+node boxes overlap** — 0 on every dataset in the audit.
+
+Setting `overlap_removal_passes` to 0 disables **both** stages, and is the only configuration in
+which radial can emit overlapping boxes. It does so deliberately, for a caller who wants to see the
+raw ring positions.
 
 ---
 
@@ -238,7 +261,7 @@ a shortcut across rings, a back edge. Every chord bends through one interior way
 the way from its own midpoint toward the centre**:
 
 ```text
-   v1: EVERY edge through the exact centre        v2: chords bowed 30% toward the centre
+   v1: EVERY edge through the exact centre        v2+: chords bowed 30% toward the centre
 
           ○         ○                                    ○         ○
            ╲       ╱                                      ╲       ╱
@@ -260,25 +283,53 @@ converging on one point. It also changes where the edge attaches: both endpoints
 *toward the bend*, so the polyline leaves each box pointing at its waypoint rather than at the far
 node.
 
-Chords are the reason radial mode is a poor fit for meshes. On `dense_kubernetes_mesh` — 45 edges,
-most of them not in any spanning tree — radial measures **32 crossings** against organic's 8. The
-mode is not doing anything wrong; a graph with that many non-tree edges simply does not have the
-shape radial mode draws.
+Self-loops are a fixed four-point bracket off the node's right side — a table lookup, not a search.
+
+Chords are the reason radial is a poor fit for meshes, and the audit shows exactly where the line
+is:
+
+| dataset | shape | radial | layered |
+| --- | --- | ---: | ---: |
+| `deep_release_pipeline` | 14 nodes, near-linear | 0 crossings | 0 crossings |
+| `long_span_bypass_network` | 10 nodes, long spans | 2 crossings | 5 geometric |
+| `peer_mesh_service_registry` | 8 nodes, 22 edges | 12 crossings | 29 geometric |
+| `microservice_platform_topology` | 18 nodes, 31 edges | **30 crossings** | 22 geometric |
+| `fanout_fanin_scatter_gather` | 17 nodes, 30 edges | **52 crossings** | 82 geometric |
+
+Radial wins where the graph is close to a tree and loses where most edges are not in any spanning
+tree — every one of those becomes a chord, and chords cross. The mode is not doing anything wrong on
+`microservice_platform_topology`; that graph simply does not have the shape radial draws.
 
 ---
 
 ## 6. Badges
 
-Radial shares the [organic engine's badge placement](./02-organic.md#badge-placement-is-local-greedy-and-best-effort):
-descending area order, five candidate offsets per badge, spatial-hash conflict detection, leader line
-when nothing fits. It also shares the same honesty about it — `BADGE_*_OVERLAP` is a warning here,
-not an error.
+Radial's badge placement is the shared local-greedy pass in
+[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs): badges in
+descending area order, five candidate offsets each, spatial-hash conflict detection, and a leader
+line when nothing fits. The first candidate honours `label_placement`, so `on-edge` (the v3 default)
+puts the badge on the line, `beside-edge` offsets it to one side, and `above-edge` lifts it.
 
-In practice radial has an easier time of it than organic does, because its edges are mostly long
-radial spokes with empty arc between them: on all eight audit datasets, including the dense mesh,
-radial needed **0 leader lines** and produced 0 badge–node overlaps. Its measured weakness is
-elsewhere — 6 `EDGE_NODE_PENETRATION` warnings on the dense mesh, chords grazing boxes on their way
-across the drawing.
+The algorithm is deliberately local, because in this family of engines there is no layered structure
+to reserve badge area in — that trick only exists in the layered pipeline, where the badge is an
+item with a box of its own.
+
+Be honest about the result. Across the ten audit datasets radial produces:
+
+| metric | radial |
+| --- | ---: |
+| node–node overlaps | 0 (guaranteed) |
+| edge–node penetrations | **9** (5 on `long_span_bypass_network`, 2 each on `microservice_platform_topology` and `peer_mesh_service_registry`) |
+| badge–node overlaps | **1** (`peer_mesh_service_registry`) |
+| badge–badge overlaps | **7** (5 on `parallel_bundle_transports`, 1 each on `feedback_retry_state_machine` and `peer_mesh_service_registry`) |
+| leader lines | **7** |
+
+The layered engine produces zero of every one of those on the same datasets. These are recorded as
+quality metrics rather than errors because radial never promised otherwise — a straight chord
+between two boxes may graze a third by construction, not by defect. The policy is in
+[the quality model](../concepts/quality-model.md) and
+[06-results.md §4d](../planning/layout-engine-v2/06-results.md); the audit gates radial on
+determinism, validity and the node-overlap guarantee, and reports the rest.
 
 ---
 
@@ -290,11 +341,12 @@ across the drawing.
 | leaf counts | $O(V \log V)$ (one sort by ring) |
 | wedge assignment | $O(V)$ |
 | ring radii | $O(V)$ |
-| overlap removal | as [organic](./02-organic.md#4-overlap-removal) |
+| overlap removal | $O(\texttt{passes} \cdot V)$ expected, then one $O(V \log V)$ sweep |
 | routes + badges | $O(E)$ expected |
 
-Measured: **0.29 ms** for `dense_kubernetes_mesh` (30 nodes, 45 edges) — the second-cheapest engine
-after grid. There is no iteration and no search here; the geometry is computed in one pass.
+Measured: **0.03 – 0.22 ms** across the audit set, against layered's 0.06 – 1.17 ms on the same
+graphs. Radial is the cheaper engine everywhere, which is unsurprising: there is no iteration and no
+search here, and the geometry is computed in one pass.
 
 ---
 
@@ -308,11 +360,26 @@ after grid. There is no iteration and no search here; the geometry is computed i
 | `rank_gap` | 120 | floor for the ring gap; vertical clearance during overlap removal |
 | `compaction` | `balanced` | scales the ring gap like every other gap |
 | `target_aspect_ratio` | 1.6 | elliptical stretch, clamped to $[0.25, 4]$ |
-| `overlap_removal_passes` | 6 | shared with organic; `0` disables overlap removal |
+| `overlap_removal_passes` | 6 | `0` disables overlap removal entirely, guarantee included |
+| `label_placement` | `on-edge` | which of the five badge candidates is tried first |
 
-`direction` and `edge_style` are ignored: there is no flow axis, and the edges are straight or
-single-bend by construction.
+`direction` is **ignored**: there is no flow axis, so a direction is meaningless here rather than
+wrong, and [`compute_layout`](../../crates/gvui/src/7_engines/7_5_facade.rs) does not pass it on.
+
+`edge_style` does not change what radial *computes* — spokes are two points and chords are three,
+whatever the style says — but it is not ignored either, because the renderer applies
+[`buildEdgePath`](../../src/engine/layout/custom/edgePath.ts) to whatever points came back. So
+`rounded` will arc a chord's single bend and `spline` will smooth it. `octilinear` is the one that
+does nothing visible: its chamfer only ever fires on right-angle corners, and radial emits none.
+
+Note that radial evaluates its own constraints against a config clone whose `edge_style` is forced
+to `straight`, so a caller's `rounded` setting — which is about how the *layered* engine renders —
+cannot turn a correct radial drawing into a hard failure.
+
+The stress knobs (`stress_iterations`, `stress_ideal_edge_length`) survive in the config — and in the
+Settings panel — for wire compatibility with clients that still send them. **No engine reads them**
+now that organic is gone; only `overlap_removal_passes`, which sat beside them, still does anything.
 
 ---
 
-← [Organic](./02-organic.md) | [Index](./README.md) | [Next: Grid →](./04-grid.md)
+← [Layered](./01-layered.md) | [Index](./README.md) | [Docs Index →](../README.md)

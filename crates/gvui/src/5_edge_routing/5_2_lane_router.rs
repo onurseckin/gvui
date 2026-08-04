@@ -20,6 +20,13 @@ use super::ports::PortTable;
 use crate::config::{CustomLayoutConfig, LabelPlacement};
 use crate::types::{GraphIr, Item, ItemKind, Layered, Point, RoutedPath, RoutingDemand};
 
+/// Hard ceiling on [`reduce_corners`] fixed-point passes.
+///
+/// Each pass that changes anything removes at least two points, so `len / 2 + 1` passes is
+/// unreachable in practice; the constant exists so a future rule that fails to shrink the polyline
+/// cannot turn the router into an infinite loop.
+const MAX_REDUCTION_PASSES: usize = 8;
+
 /// Bottom y of every rank band, indexed by rank.
 ///
 /// The band bottom is `rank_tops[r] + max(item.height)` over rank `r`, which is where Phase 7's
@@ -153,10 +160,92 @@ pub fn route_chain_with_bands(
 
     Some(RoutedPath {
         edge_id,
-        points: simplify_polyline(&points, config.epsilon),
+        points: reduce_corners(&points, config.epsilon),
         source_port,
         target_port,
     })
+}
+
+/// Removes bends a route does not need. Always on, and a pure rewrite of the point list.
+///
+/// Three rules:
+///
+/// 1. **Collinear merge and zero-length steps** — delegated to [`simplify_polyline`], which also
+///    owns the bit-exact endpoint contract.
+/// 2. **Stub absorption** — when the segment leaving the source port runs in the same direction as
+///    the stub itself, the stub vertex disappears. This is the collinear merge applied at index 1,
+///    not a separate rule, and it is called out here because it is the redundancy the lane router
+///    emits most often: every port whose stub points into its own channel produces one.
+/// 3. **Redundant jog removal** — four consecutive points that all share a y (or all share an x)
+///    within `epsilon` collapse to the single run `A -> D`. This is the shape
+///    `A -(h)-> B -(v)-> C -(h)-> D` whose vertical leg has degenerated, and the transpose.
+///    [`simplify_polyline`] cannot do this one: it deliberately preserves a run that doubles back
+///    on itself, and a jog whose two parallel runs overlap along their shared axis is exactly that.
+///
+/// ## Why none of this can introduce a collision
+///
+/// Both extra rewrites only ever *delete* vertices; no surviving vertex moves. So:
+///
+/// - The merged run `A -> D` spans `[A, D]` on the shared axis. Because `B` and `C` are consecutive
+///   with `A` and `D`, the two original runs `[A, B]` and `[C, D]` are connected through `[B, C]`
+///   and their union is a single interval containing both `A` and `D`. The result is therefore a
+///   **subset of the footprint the route already occupied**, at the same coordinate to within
+///   `epsilon`.
+/// - An `epsilon`-scale shift cannot move a segment out of the lane Phase 6 reserved for it: lanes
+///   are `lane_spacing` apart, which is orders of magnitude larger than `epsilon`.
+///
+/// A rewrite that could not be justified this way — collapsing a jog whose runs differ by a visible
+/// amount, say — is deliberately absent. It would move an edge off its reserved lane, and the
+/// reservation is the only reason routing in this engine cannot fail.
+pub fn reduce_corners(points: &[Point], epsilon: f64) -> Vec<Point> {
+    let eps = if epsilon.is_finite() && epsilon > 0.0 {
+        epsilon
+    } else {
+        0.0
+    };
+    let mut out = simplify_polyline(points, epsilon);
+    for _ in 0..MAX_REDUCTION_PASSES {
+        let next = collapse_jogs(&out, eps);
+        let shrank = next.len() < out.len();
+        out = next;
+        if !shrank {
+            break;
+        }
+    }
+    simplify_polyline(&out, epsilon)
+}
+
+/// One left-to-right sweep of the jog rule. Never touches the first or last point.
+fn collapse_jogs(points: &[Point], eps: f64) -> Vec<Point> {
+    if points.len() < 4 {
+        return points.to_vec();
+    }
+    let mut out: Vec<Point> = Vec::with_capacity(points.len());
+    let mut i = 0usize;
+    while i < points.len() {
+        if i + 3 < points.len() {
+            let a = points[i];
+            let b = points[i + 1];
+            let c = points[i + 2];
+            let d = points[i + 3];
+            let flat_y = (b.y - a.y).abs() <= eps
+                && (c.y - a.y).abs() <= eps
+                && (d.y - a.y).abs() <= eps;
+            let flat_x = (b.x - a.x).abs() <= eps
+                && (c.x - a.x).abs() <= eps
+                && (d.x - a.x).abs() <= eps;
+            if flat_y || flat_x {
+                out.push(a);
+                // Resume at `D`, which is kept: dropping only interior vertices is what preserves
+                // the endpoints when the jog sits at either end of the polyline.
+                i += 3;
+                continue;
+            }
+        }
+        out.push(points[i]);
+        i += 1;
+    }
+    out
 }
 
 /// Measured badge width carried by a `Label` item.
@@ -369,7 +458,13 @@ mod tests {
             self_loops: Vec::new(),
             item_of_node: vec![0, 1, 2],
         };
-        let config = cfg();
+        // Both edges must keep a horizontal run for their channel y to be observable at all. Step
+        // 5.1's straight-shot alignment would slide edge 0's two ports onto one x and delete its
+        // run, which is that feature working, not this lane rule failing.
+        let config = CustomLayoutConfig {
+            straight_shot_alignment: false,
+            ..cfg()
+        };
         let ports = assign_ports(&layered, &ir, &config);
         let mut demand = RoutingDemand::default();
         demand.lane_of_link.insert((0, 0), 0);
@@ -429,6 +524,124 @@ mod tests {
         config.label_placement = LabelPlacement::AboveEdge;
         assert_eq!(pass_x(&item, &config), 180.0);
         assert_eq!(band_entry_y(&item, &config), 228.0);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Corner reduction
+    // ---------------------------------------------------------------------------------------
+
+    fn pt(x: f64, y: f64) -> Point {
+        Point { x, y }
+    }
+
+    #[test]
+    fn a_jog_whose_two_horizontal_runs_share_a_y_collapses_to_one_segment() {
+        // `A -(h)-> B -(v)-> C -(h)-> D` with a degenerate vertical leg.
+        let pts = [
+            pt(0.0, 40.0),
+            pt(100.0, 40.0),
+            pt(100.0, 40.0005),
+            pt(220.0, 40.0005),
+        ];
+        let out = reduce_corners(&pts, 0.001);
+        assert_eq!(out, vec![pts[0], pts[3]]);
+
+        // The transpose: two vertical runs sharing an x.
+        let pts = [
+            pt(40.0, 0.0),
+            pt(40.0, 100.0),
+            pt(40.0005, 100.0),
+            pt(40.0005, 220.0),
+        ];
+        let out = reduce_corners(&pts, 0.001);
+        assert_eq!(out, vec![pts[0], pts[3]]);
+    }
+
+    /// The case `simplify_polyline` alone cannot handle: it preserves a run that doubles back, so
+    /// an overshoot inside a single horizontal run survives its collinear pass.
+    #[test]
+    fn an_overshoot_inside_one_run_is_removed_although_simplify_alone_keeps_it() {
+        let pts = [
+            pt(0.0, 40.0),
+            pt(160.0, 40.0),
+            pt(90.0, 40.0),
+            pt(240.0, 40.0),
+        ];
+        assert_eq!(simplify_polyline(&pts, 0.001), pts.to_vec());
+        assert_eq!(reduce_corners(&pts, 0.001), vec![pts[0], pts[3]]);
+    }
+
+    #[test]
+    fn a_stub_running_into_its_own_channel_is_absorbed() {
+        // port -> stub -> channel corner -> across. The stub continues straight into the channel
+        // drop, so it is not a bend and must not survive as a point.
+        let pts = [
+            pt(50.0, 40.0),
+            pt(50.0, 60.0),
+            pt(50.0, 130.0),
+            pt(300.0, 130.0),
+        ];
+        let out = reduce_corners(&pts, 0.001);
+        assert_eq!(out, vec![pt(50.0, 40.0), pt(50.0, 130.0), pt(300.0, 130.0)]);
+    }
+
+    #[test]
+    fn corner_reduction_never_changes_the_first_or_last_point() {
+        let cases: Vec<Vec<Point>> = vec![
+            vec![pt(1.5, 2.5), pt(1.5, 90.0), pt(200.0, 90.0), pt(200.0, 300.25)],
+            vec![
+                pt(0.0, 0.0),
+                pt(120.0, 0.0),
+                pt(120.0, 0.0004),
+                pt(260.0, 0.0004),
+                pt(260.0, 500.0),
+            ],
+            // A jog sitting flush against the tail of the polyline.
+            vec![
+                pt(0.0, 0.0),
+                pt(0.0, 50.0),
+                pt(80.0, 50.0),
+                pt(40.0, 50.0),
+                pt(175.0, 50.0),
+            ],
+            vec![pt(7.0, 9.0), pt(7.0, 9.0)],
+            vec![pt(3.0, 4.0)],
+        ];
+        for pts in cases {
+            let out = reduce_corners(&pts, 0.001);
+            assert_eq!(out[0], pts[0], "{:?}", pts);
+            assert_eq!(out[out.len() - 1], pts[pts.len() - 1], "{:?}", pts);
+        }
+        assert!(reduce_corners(&[], 0.001).is_empty());
+    }
+
+    #[test]
+    fn a_real_corner_is_not_removed() {
+        let pts = [
+            pt(0.0, 0.0),
+            pt(0.0, 120.0),
+            pt(200.0, 120.0),
+            pt(200.0, 300.0),
+        ];
+        assert_eq!(reduce_corners(&pts, 0.001), pts.to_vec());
+    }
+
+    #[test]
+    fn reduction_is_idempotent_and_survives_a_degenerate_epsilon() {
+        let pts = [
+            pt(0.0, 0.0),
+            pt(0.0, 60.0),
+            pt(140.0, 60.0),
+            pt(90.0, 60.0),
+            pt(260.0, 60.0),
+            pt(260.0, 400.0),
+        ];
+        let once = reduce_corners(&pts, 0.001);
+        assert_eq!(reduce_corners(&once, 0.001), once);
+        // A non-positive epsilon degrades to exact comparison rather than panicking.
+        let exact = reduce_corners(&pts, f64::NAN);
+        assert_eq!(exact[0], pts[0]);
+        assert_eq!(exact[exact.len() - 1], pts[pts.len() - 1]);
     }
 
     #[test]

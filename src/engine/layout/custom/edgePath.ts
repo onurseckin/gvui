@@ -2,7 +2,7 @@
  * Turns a routed polyline (the `points` on a `RoutedPath`) into an SVG path string.
  *
  * DESIGN NOTE — corner rounding lives entirely on the client, not in the Rust layout engine.
- * The Rust side (Phase 8) only ever emits axis-aligned waypoints; how those waypoints are drawn
+ * The Rust side (Phase 8) emits axis-aligned waypoints (`octilinear` excepted); how those are drawn
  * — sharp, rounded, splined, or collapsed to a straight line — is a pure rendering decision that
  * does not change any node position, port assignment, or lane allocation. Keeping it here means
  * changing `cornerRadius` or `edgeStyle` in the developer panel re-renders instantly, with no
@@ -138,6 +138,11 @@ function buildRoundedPath(points: Point[], cornerRadius: number): string {
  * `rounded` style; the other styles ignore it (they either have no corners to round, in the case
  * of `straight`, or handle smoothing a different way, in the case of `spline`).
  *
+ * `octilinear` renders as a plain polyline for a reason that is easy to get wrong: the engine has
+ * already replaced each right-angle corner with a 45-degree chamfer, so the chamfer segments ARE
+ * the corners. Rounding them a second time would eat the very geometry that makes the style look
+ * different, and would round the chamfer's own two shallow joints into a wobble.
+ *
  * Safe on degenerate input: empty returns `""`, a single point returns a zero-length `M`.
  */
 export function buildEdgePath(points: Point[], style: EdgeStyle, cornerRadius: number): string {
@@ -150,6 +155,8 @@ export function buildEdgePath(points: Point[], style: EdgeStyle, cornerRadius: n
     case "spline":
       return buildSplinePath(points);
     case "orthogonal":
+      return buildOrthogonalPath(points);
+    case "octilinear":
       return buildOrthogonalPath(points);
     case "rounded":
       return buildRoundedPath(points, cornerRadius);

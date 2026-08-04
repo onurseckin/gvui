@@ -13,9 +13,10 @@ spent its time on instead.
 cargo run --release --manifest-path crates/gvui/Cargo.toml --example audit
 ```
 
-The harness runs 5 engines × 8 datasets from `public/data/graphs/`, times the whole `compute_layout`
-call, and fails if any combination exceeds a 50 ms budget. Native release is the *optimistic* bound;
-WASM in a browser will be slower and **has not been measured** — a recorded open gap.
+The harness runs 4 mode/direction cases (`layered` in top-down, left-right and bottom-up, plus
+`radial`) × the 10 datasets in `public/data/graphs/`, times the whole `compute_layout` call, and
+fails if any combination exceeds a 50 ms budget. Native release is the *optimistic* bound; WASM in a
+browser will be slower and **has not been measured** — a recorded open gap.
 
 Notation: $V$ nodes, $E$ edges, $R$ ranks. $S$ is the number of segments in a route.
 
@@ -28,12 +29,12 @@ Notation: $V$ nodes, $E$ edges, $R$ ranks. $S$ is the number of segments in a ro
 | 0 Ingest | intern ids, build CSR adjacency, bundle parallel edges, find components | $O(V + E\,\alpha(V))$ | [`0_5_ingest.rs`](../../crates/gvui/src/0_common/0_5_ingest.rs) |
 | 1 Measure | text → boxes, on the host | $O(\text{total characters})$ cold, $O(V + E)$ lookups warm | [`measurement/`](../../src/engine/layout/measurement/) |
 | 2 Structure | Tarjan SCC, Eades FAS per component, Kahn verification | $O(V + E)$ | [`1_6_structure.rs`](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs) |
-| 3 Rank | network simplex over $\sum \omega \cdot \text{span}$, then balancing | $O(V+E)$ per pivot; near-linear in practice | [`2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs) |
+| 3 Rank | peer relaxation, network simplex over $\sum \omega \cdot \text{span}$, balancing, labelled-span repair | $O(V+E)$ per pivot; near-linear in practice | [`2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs) |
 | 4 Layer | one item per node, a dummy per intermediate rank, a label item per labelled edge | $O(V + \sum \text{span})$ | [`3_1_layer_builder.rs`](../../crates/gvui/src/3_crossing_minimization/3_1_layer_builder.rs) |
 | 5 Order | $k$ seeds × $s$ median/transpose rounds, BMJ counting | $O(k \cdot s \cdot E \log V)$ | [`3_4_order_facade.rs`](../../crates/gvui/src/3_crossing_minimization/3_4_order_facade.rs) |
 | 6 Demand | interval-graph colouring per channel and corridor | $O(E \log E)$ | [`4_1_lane_demand.rs`](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) |
 | 7 Coordinates | rank bands, then Brandes–Köpf (4 passes) | $O(V + E)$ | [`4_4_coordinate_facade.rs`](../../crates/gvui/src/4_coordinate_assignment/4_4_coordinate_facade.rs) |
-| 8 Route | ports, then one polyline per chain by table lookup | $O(E \cdot S + \sum_v \deg(v) \log \deg(v))$ | [`5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs) |
+| 8 Route | port sides scored, ports sorted, straight-shot alignment, one polyline per chain by table lookup, style post-pass | $O(E \cdot S + E \log E + \sum_v \deg(v) \log \deg(v))$ | [`5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs) |
 | 9 Emit | packing, deterministic sorts, constraint checks, metrics | $O((V+E)\log(V+E))$ + linear-in-practice scans | [`6_3_emit.rs`](../../crates/gvui/src/6_validation/6_3_emit.rs) |
 
 Nothing in that table is superlinear in a way that bites. The details worth spelling out:
@@ -85,9 +86,121 @@ could not be run outside a debug build. v2's checks run on every layout by defau
 
 ---
 
-## Measured: the layered engine
+## What v3 added, and what it cost
 
-Same machine, same eight datasets, native `--release`:
+v3 was an aesthetic and usability pass. The bar it had to clear was that nothing it added could
+reintroduce a search, because the whole performance argument above rests on there not being one.
+Every addition below is either a closed-form evaluation, a sort, or a post-pass over a finished
+polyline.
+
+| addition | where | cost |
+| --- | --- | --- |
+| geometric port-side scoring | Phase 8, [`5_1_ports.rs`](../../crates/gvui/src/5_edge_routing/5_1_ports.rs) | $O(16)$ per edge → $O(E)$ |
+| straight-shot alignment | Phase 8, `5_1_ports.rs` | $O(E \log E)$ |
+| same-rank peer detection | Phase 3, [`2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs) | $O(E)$ merges + a probe capped at 256 nodes per candidate |
+| labelled-span repair | Phase 3, `2_4_rank_facade.rs` | monotone, one or two passes in practice |
+| octilinear chamfering | Phase 8, [`5_5_edge_style.rs`](../../crates/gvui/src/5_edge_routing/5_5_edge_style.rs) | $O(\text{bends})$, one spatial-hash lookup per corner |
+
+### Port-side scoring is 16 evaluations, not a search
+
+`flexible_port_sides` lets either endpoint attach to any of four faces, which is $4 \times 4 = 16$
+`(source_side, target_side)` combinations per edge. v1 also tried sixteen — and then searched again
+to repair the crossings that produced, which is where the cost was. v3 *scores* each combination
+with a closed-form cost and takes the minimum:
+
+```text
+   (bends, flow_penalty + length/1000, congestion, candidate order)
+     ↑                   ↑                  ↑            ↑
+   integer      flow_side_bias keeps   ports already   fixed table,
+                the hierarchy          committed to    so ties resolve
+                reading top-down       that face       deterministically
+```
+
+Sixteen is a constant, the cost function is arithmetic on already-known coordinates, and there is no
+second pass. The whole thing is $O(E)$ with a constant of 16. Nothing is retried, so the sixteen
+evaluations are the *entire* budget for the decision — which is the difference from v1, not the
+number 16.
+
+### Straight-shot alignment is one sort
+
+`apply_straight_shot_alignment` snaps a source port and a target port onto a common coordinate when
+that collapses a dog-leg into a single straight segment. Candidates are sorted once by descending
+edge weight (edge index as the tie-break, for determinism) and applied greedily, each subject to
+`port_pitch` against the ports already placed on that face. One sort dominates: $O(E \log E)$.
+
+Greedy in weight order is deliberate rather than approximate. There is no ordering of the
+alignments that satisfies all of them — two edges wanting the same port slot are a genuine conflict
+— so the choice is between a greedy pass and a search, and a search here would cost more than the
+bends it saves. Measured effect on a 24-node graph: **92 bends → 61**.
+
+### Peer detection is a merge plus a bounded probe
+
+An edge $u \to v$ is a *peer* edge when $u$ and $v$ share a predecessor and masking the edge out
+leaves no other directed path $u \to v$. Both halves are cheap:
+
+- **Shared predecessor** is a linear merge of two sorted CSR rows — $O(\deg(u) + \deg(v))$, summing
+  to $O(E)$ over all edges.
+- **The path probe** is a FIFO reachability walk with the candidate edge masked by *index*, over the
+  same CSR, capped by `PEER_PROBE_BUDGET = 256` visited nodes. When the budget runs out it answers
+  "a path exists", which keeps the edge hierarchical — the cap can only ever cost a missed
+  side-by-side placement, never an invalid ranking.
+
+So the whole detection is $O(E)$ merges plus $O(E \cdot 256)$ worst-case probe work, and the 256 is
+what turns an otherwise-quadratic reachability question into a linear one. Visited state is a
+generation-stamp array rather than a fresh `visited` vector per probe: one allocation for the whole
+scan, and clearing is a counter increment.
+
+### Labelled-span repair, and why it runs last
+
+`enforce_labelled_span` is the last thing in Phase 3 that touches the rank vector. A labelled edge
+is drawable at span 0 (a flat edge, badge on the horizontal run) or span $\ge 2$ (an intermediate
+rank carries the `Label` item), and at **no other value**. Span 1 has neither, so the badge falls
+through to Phase 8's positional safety net, which is allowed to emit a leader line and is covered by
+no reservation.
+
+Peer relaxation makes span 0 reachable, and `balance_ranks` is then the step most likely to push one
+endpoint down by exactly one and land on the bad case — which is precisely why the repair runs
+*after* balancing rather than before. An earlier revision ran it first and inspected a rank vector
+that balancing then invalidated.
+
+Each pass raises the `min_len` of any labelled arc found at span 1 to 2 and calls
+`repair_feasibility`, which only ever raises ranks — so the loop is monotone and terminates; the
+`node_count + 1` bound is belt-and-braces. In practice it converges in one or two passes, because
+tightening only fires for a labelled edge that balancing happened to leave at span 1. The pass exists
+because of one measured failure: scenario 17 ("Cyclic Agent Execution Trace") emitted a badge whose
+leader line overlapped two nodes — the only constraint violation in the whole suite.
+
+### Octilinear is linear in bend count
+
+`chamfer_corners` walks the finished polyline once. For each interior right-angle corner it computes
+the two chamfer vertices and asks a local `NodeRectIndex` — a uniform spatial hash over the node
+boxes, pre-grown by the clearance — whether the diagonal would clip a node. That is one hash lookup
+with $O(1)$ expected candidates per corner, so the pass is linear in bend count.
+
+Two properties make it free of any global reasoning. The cut is clamped to half the shorter leg, so
+two neighbouring corners can each claim at most half of the leg they share and **no lookahead is
+needed**; and every rejection is local, so the worst case is the unmodified orthogonal polyline.
+Octilinear cannot fail — it degrades to a square corner one corner at a time.
+
+That is the whole reason it is a post-pass rather than a router, and the reason is a complexity
+argument, not a scheduling one. The exactness of Phase 6 comes from channels being **axis-aligned
+intervals**: the set of segments competing for a channel is an interval graph, interval graphs are
+perfect, and greedy colouring therefore uses exactly $\omega$ lanes in one sweep. A diagonal corridor
+is not an interval on either axis, and the conflict graph of a set of diagonals is not perfect — so
+an eight-direction lane model has no equivalent exact colouring. Building one would mean replacing
+an exact $O(E \log E)$ reservation with a search, and giving up the guarantee that every edge routes.
+The chamfer buys softer turns and slightly shorter paths (each applied cut trades $2c$ of
+axis-aligned travel for $c\sqrt{2}$) without touching that guarantee.
+
+---
+
+## Measured: v1 against v2
+
+Same machine, same eight datasets, native `--release`. **This is a historical table.** Those eight
+fixtures were retired in v3 and replaced by ten harder ones, so the dataset names below no longer
+exist in `public/data/graphs/`; a v1-vs-v2 comparison is only meaningful run-for-run on identical
+input, so the original run is reproduced rather than re-derived. Current figures are in
+[the next section](#measured-today).
 
 | dataset | N | E | v1 ms | v2 ms | speedup | v1 crossings | v2 crossings | v1 valid | v2 valid |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--: | :--: |
@@ -100,7 +213,7 @@ Same machine, same eight datasets, native `--release`:
 | `kubernetes_cluster_topology` | 12 | 13 | 26,710.0 | **0.14** | **190,785×** | 2 | 0 | ✓ | ✓ |
 | `dense_kubernetes_mesh` | 30 | 45 | 47,335.8 | **1.79** | **26,445×** | 191 | **28** | ✗ | ✓ |
 
-Slowest fixture across **all five engines** and all eight datasets: **1.88 ms**, against the
+Slowest fixture across every engine and all eight datasets at the time: **1.88 ms**, against the
 harness's 50 ms budget.
 
 Two honest readings of this table:
@@ -112,80 +225,130 @@ Two honest readings of this table:
 - **`crossing_mesh_10n_10e` reports more crossings under v2** (6 vs 3), the only fixture that does.
   It is not a regression in the drawing: v1 produced 3 *geometric* crossings by routing through a
   2-rank layout in which half the edges are feedback edges, and spent 1.5 seconds of A\* doing it.
-  v2 reports 6 crossings genuinely present in a graph whose forward DAG is only 2 ranks deep. That
-  dataset is an organic-mode candidate, not a layered one.
+  v2 reports 6 crossings genuinely present in a graph whose forward DAG is only 2 ranks deep. A
+  graph with no flow direction is the case a hierarchical engine is structurally worst at, and at
+  the time the stress engine drew it better. That engine was removed in v3, so the honest current
+  answer is that such graphs are drawn by an engine that is wrong for them — recorded in
+  [`planning/layout-engine-v3/`](../planning/layout-engine-v3/README.md) so the decision stays
+  reversible.
 
 ---
 
-## The five engines
+## Measured today
+
+The two engines, and what the layered one costs to give you a routed drawing.
 
 | mode | dominant cost | complexity | notes |
 | --- | --- | --- | --- |
-| layered / left-right | Phase 5 ordering | $O(k \cdot s \cdot E \log V)$ | $k, s$ constant → effectively $O(E \log V)$ |
-| organic | stress SGD | $O(\text{epochs} \cdot \lvert P \rvert)$ | $\lvert P \rvert = V(V-1)/2$ below 400 nodes, $\approx V \cdot 100$ above |
-| radial | BFS + wedge allocation | $O(V + E)$ | plus overlap removal |
-| grid | placement | $O(V + E)$ | consults no topology at all |
-
-### Organic
-
-The pair set is built by all-pairs BFS while $V \le 400$ (`PIVOT_THRESHOLD`), which is
-$O(V(V+E))$ time and $V(V-1)/2$ pairs. Above that it switches to **sparse stress**: roughly 100
-pivots (`PIVOT_TARGET`) chosen by arithmetic stride, giving $O(V \cdot P)$ pairs instead of
-$O(V^2)$. The cut-off is about memory and pair count, not time — at 400 nodes the full set is
-already ~80,000 pairs per epoch.
-
-SGD then runs `stress_iterations` (default 30) epochs over the shuffled pair set. Overlap removal is
-`overlap_removal_passes` (default 6) cheap symmetric relaxation passes through a spatial hash,
-followed by **one exact scan-line pass** that closes whatever is left. The split matters: relaxation
-alone would need $O(V)$ passes, i.e. $O(V^2)$ work, to drive overlaps to zero; the scan-line pass
-alone would produce a drawing skewed to one side, because it resolves everything by moving boxes in
-one direction.
-
-Notably, organic does **not** consult `time_budget_ms`: its cost is a deterministic function of node
-count and epoch count, and clipping on wall-clock time would make the drawing depend on machine load.
+| `layered` (any `direction`) | Phase 5 ordering | $O(k \cdot s \cdot E \log V)$ | $k, s$ constant → effectively $O(E \log V)$ |
+| `radial` | BFS + wedge allocation | $O(V + E)$ | plus overlap removal and the shared straight-line routing path |
 
 ### Radial
 
 BFS from the root to get ring depth, a leaf-count pass to size wedges proportionally, then ring radii
 derived from the boxes actually on rings $k-1$ and $k$. All linear. Followed by overlap removal and
-the shared routing/badge/emit path.
+the shared routing/badge/emit path in
+[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs).
 
-### Grid
+Overlap removal is two stages, and the split matters: `overlap_removal_passes` (default 6) cheap
+symmetric relaxation passes through a spatial hash, then **one exact scan-line pass** that closes
+whatever is left. Relaxation alone would need $O(V)$ passes — $O(V^2)$ work — to drive overlaps to
+zero; the scan-line pass alone would produce a drawing skewed to one side, because it resolves every
+conflict by moving boxes in one direction.
 
-`cols = ceil(sqrt(n * target_aspect_ratio))`, then row-major placement in input order. Cell sizes are
-the widest box in the column and the tallest in the row, so no two boxes can overlap for any input.
-This is the cheapest correctness oracle in the engine.
+Radial does **not** consult `time_budget_ms`. Its cost is a deterministic function of node count, and
+clipping on wall-clock time would make the drawing depend on machine load. Only Phase 5 of the
+layered pipeline reads the clock.
 
-### Measured, all five
+Badge placement is `BADGE_CANDIDATES = 5` trial positions per badge, then a leader line. That is a
+best-effort local pass, not a reservation, and the audit treats its failures as reported rather than
+fatal — see [the quality model](./quality-model.md#the-per-engine-constraint-policy).
 
-Two fixtures at opposite ends of the range:
+### The full audit run
+
+Reproduced verbatim from `cargo run --release --manifest-path crates/gvui/Cargo.toml --example
+audit`:
 
 ```text
-dataset                        engine         N    E        ms  ranks  cross    geo  bends  ldr valid  det
-ai_agent_trace                 layered        6    6      0.36      8      0      0     20    0   yes  yes
-ai_agent_trace                 left-right     6    6      0.09      8      0      0     20    0   yes  yes
-ai_agent_trace                 organic        6    6      0.07      0      0      0      0    2   yes  yes
-ai_agent_trace                 radial         6    6      0.03      0      0      0      1    0   yes  yes
-ai_agent_trace                 grid           6    6      0.03      0      0      0      0    1   yes  yes
-dense_kubernetes_mesh          layered       30   45      1.79     15     28     44    234    0   yes  yes
-dense_kubernetes_mesh          left-right    30   45      1.82     15     27     57    234    0   yes  yes
-dense_kubernetes_mesh          organic       30   45      0.43      0      8      8      0   18   yes  yes
-dense_kubernetes_mesh          radial        30   45      0.30      0     32     32     14    0   yes  yes
-dense_kubernetes_mesh          grid          30   45      0.27      0     99     99      0   23   yes  yes
+dataset                        engine         N    E        ms  ranks  cross    geo lanes  bends straight  ldr valid   det
+--------------------------------------------------------------------------------------------------------------------------
+ai_agent_trace                 layered       12   16      0.66     17      0      0     2     28    1.00    0   yes   yes
+ai_agent_trace                 left-right    12   16      0.31     17      0      0     2     28    1.00    0   yes   yes
+ai_agent_trace                 bottom-up     12   16      0.27     17      0      0     2     28    1.00    0   yes   yes
+ai_agent_trace                 radial        12   16      0.14      0      5      5     0      5    1.00    0   yes   yes
+deep_release_pipeline          layered       14   13      0.10     27      0      0     0      0    1.00    0   yes   yes
+deep_release_pipeline          left-right    14   13      0.09     27      0      0     0      0    1.00    0   yes   yes
+deep_release_pipeline          bottom-up     14   13      0.09     27      0      0     0      0    1.00    0   yes   yes
+deep_release_pipeline          radial        14   13      0.09      0      0      0     0      0    1.00    0   yes   yes
+fanout_fanin_scatter_gather    layered       17   30      0.19      5      0     82    14     56    1.00    0   yes   yes
+fanout_fanin_scatter_gather    left-right    17   30      0.18      5      0     82    14     56    1.00    0   yes   yes
+fanout_fanin_scatter_gather    bottom-up     17   30      0.17      5      0     82    14     56    1.00    0   yes   yes
+fanout_fanin_scatter_gather    radial        17   30      0.19      0     52     52     0     14    1.00    0   yes   yes
+feedback_retry_state_machine   layered       10   17      0.65     15      2      2     5     44    1.00    0   yes   yes
+feedback_retry_state_machine   left-right    10   17      0.59     15      2      6     5     44    1.00    0   yes   yes
+feedback_retry_state_machine   bottom-up     10   17      0.58     15      2      2     5     44    1.00    0   yes   yes
+feedback_retry_state_machine   radial        10   17      0.09      0     10     10     0      6    1.00    1   yes   yes
+heavy_label_data_contracts     layered        6    6      0.05      9      0      0     1      4    1.00    0   yes   yes
+heavy_label_data_contracts     left-right     6    6      0.04      9      0      0     1      4    1.00    0   yes   yes
+heavy_label_data_contracts     bottom-up      6    6      0.04      9      0      0     1      4    1.00    0   yes   yes
+heavy_label_data_contracts     radial         6    6      0.03      0      0      0     0      1    1.00    0   yes   yes
+long_span_bypass_network       layered       10   14      0.56     19      3      5     4     34    1.00    0   yes   yes
+long_span_bypass_network       left-right    10   14      0.51     19      3      5     4     34    1.00    0   yes   yes
+long_span_bypass_network       bottom-up     10   14      0.50     19      3      5     4     34    1.00    0   yes   yes
+long_span_bypass_network       radial        10   14      0.08      0      2      2     0      4    1.00    0   yes   yes
+microservice_platform_topology layered       18   31      1.16     17     14     22     8    108    0.79    0   yes   yes
+microservice_platform_topology left-right    18   31      1.10     17     14     24     8    108    0.79    0   yes   yes
+microservice_platform_topology bottom-up     18   31      1.07     17     14     22     8    108    0.79    0   yes   yes
+microservice_platform_topology radial        18   31      0.20      0     30     30     0     14    1.00    0   yes   yes
+multi_component_tenants        layered       12   12      0.12      7      0      0     4     24    1.00    0   yes   yes
+multi_component_tenants        left-right    12   12      0.09      5      0      0     4     12    1.00    0   yes   yes
+multi_component_tenants        bottom-up     12   12      0.09      7      0      0     4     24    1.00    0   yes   yes
+multi_component_tenants        radial        12   12      0.08      0      4      4     0      9    1.00    0   yes   yes
+parallel_bundle_transports     layered        5   14      0.11      9      0      8     5     56    1.00    0   yes   yes
+parallel_bundle_transports     left-right     5   14      0.09      9      0      8     5     56    1.00    0   yes   yes
+parallel_bundle_transports     bottom-up      5   14      0.09      9      0      8     5     56    1.00    0   yes   yes
+parallel_bundle_transports     radial         5   14      0.06      0      0      0     0      2    1.00    4   yes   yes
+peer_mesh_service_registry     layered        8   22      0.61      7      9     29     7     78    1.00    0   yes   yes
+peer_mesh_service_registry     left-right     8   22      0.48      7      9     29     7     76    1.00    0   yes   yes
+peer_mesh_service_registry     bottom-up      8   22      0.45      7      9     29     7     78    1.00    0   yes   yes
+peer_mesh_service_registry     radial         8   22      0.12      0     12     12     0     15    1.00    0   yes   yes
+
+slowest fixture: 1.16 ms (budget 50 ms)
+AUDIT PASSED: 40 fixture/engine combinations clean
 ```
 
 Reading notes:
 
-- The layered pipeline costs roughly 4–6× the geometric engines on the dense mesh, which is what you
-  are paying for orthogonal routing, straight dummy chains and reserved badge space.
-- `layered` and `left-right` are the *same code* on the same input — the LR variant just transposes
-  every box on the way in and the result on the way out — yet report 0.36 ms and 0.09 ms on the
-  6-node fixture. At a tenth of a millisecond that gap is measurement noise and first-call warm-up,
-  not an algorithmic difference. Treat sub-0.1 ms figures as "too small to measure".
-- On the dense mesh, **organic produces 8 crossings against layered's 28**. That dataset has 13
-  feedback edges out of 45; it has no strong flow direction, and forcing it into ranks costs
-  crossings. This is the argument for having a real stress engine rather than only a hierarchical
-  one.
+- **Slowest fixture: 1.16 ms**, on `microservice_platform_topology` (18 nodes, 31 edges), against a
+  50 ms budget. Every one of the 40 combinations is valid and deterministic. Everything v3 added is
+  inside these numbers.
+- **The three layered directions agree to within noise.** `layered`, `left-right` and `bottom-up`
+  are the *same code* on the same input — LR transposes every box on the way in and the drawing on
+  the way out, BU mirrors the rank axis — and their timings differ by tens of microseconds. Where
+  they differ is in the drawing: `feedback_retry_state_machine` reports 2 geometric crossings
+  top-down and 6 left-right, and `multi_component_tenants` packs into 7 ranks top-down but 5
+  left-right, because component packing is aspect-driven and the aspect target does not transpose
+  with the frame.
+- **`straight_chain_ratio` is 1.00 on nine of the ten datasets**, and `leader_count` is 0 on every
+  layered run. Those are the two numbers to watch: the first dropping means Brandes–Köpf's dummy-chain
+  alignment is being defeated, the second rising means a label item's reserved area was not
+  respected.
+- **Radial is 3–6× cheaper on most fixtures** (0.20 ms against 1.16 ms on
+  `microservice_platform_topology`, 0.09 against 0.65 on `feedback_retry_state_machine`) and that
+  gap is what orthogonal routing, straight dummy chains and reserved badge space cost. It is not
+  cheaper everywhere: on `fanout_fanin_scatter_gather` both land at 0.19 ms, because a 17-node
+  scatter-gather is small enough that ingest and emit dominate both engines.
+- **The two crossing counts are different questions.** `fanout_fanin_scatter_gather` reports 0
+  combinatorial crossings under layered and 82 geometric ones: the ordering is optimal, and the 82
+  are edges descending through a 14-lane channel and crossing the horizontal runs above them. Radial
+  reports 52 of each, because it has no channels. Neither number is a defect count on its own — see
+  [the quality model](./quality-model.md#combinatorial-versus-geometric-crossings).
+- Radial's three non-zero `ldr` values (1, 2 and 4) are its badge fallback firing, which is expected:
+  radial reserves no badge space, so a leader line is the designed outcome, not a defect.
+
+The WASM gate in [`scripts/runLayoutAudit.ts`](../../scripts/runLayoutAudit.ts) covers a wider
+fixture set at the cost of not timing anything: 3 cases × (26 graph-testing scenarios + the same 10
+datasets) = **108 fixture/mode runs, 0 failures**.
 
 ---
 
@@ -279,7 +442,7 @@ thing.
 
 ## What dominates now
 
-Layout itself is under 2 ms on every audit fixture, which means the remaining costs in a real
+Layout itself is under 1.2 ms on every audit fixture, which means the remaining costs in a real
 browser are the two things *outside* the Rust pipeline:
 
 1. **Measurement** — canvas `measureText` on the host, cached per `(font, text)`.
@@ -300,16 +463,20 @@ The architecture note projects, for a 200-node / 400-edge graph — roughly 7× 
 47 seconds under v1 — a total of **≈ 15–25 ms**, of which measurement (1–3 ms) and emit (1–2 ms) are
 a meaningful share. A 2,000-node graph should land around 150–250 ms.
 
-Those are projections, not measurements. The measured points today are: 30 nodes / 45 edges →
-1.79 ms layered, and a slowest-of-forty of 1.88 ms. Everything above 30 nodes is extrapolation from
-the complexity table.
+Those are projections, not measurements. The measured points today are: 18 nodes / 31 edges →
+1.16 ms layered, which is the slowest of the current forty combinations, and 30 nodes / 45 edges →
+1.79 ms layered on the retired v2 fixture set. Everything larger is extrapolation from the
+complexity table.
 
-Two structural reasons to expect the extrapolation to hold:
+Three structural reasons to expect the extrapolation to hold:
 
 - The only $O(E \log V)$ term sits inside a loop bounded by a constant (`ordering_seeds` ×
   `ordering_sweeps`).
 - Nothing anywhere in the pipeline is quadratic in $E$. The two places v1 was — the occupancy ledger
   and the validator — have been replaced by an interval colouring and a spatial hash respectively.
+- Nothing v3 added changes the leading term. Port-side scoring is $O(E)$ with a constant of 16,
+  straight-shot alignment is one $O(E \log E)$ sort, peer detection is bounded by a 256-node probe,
+  and octilinear is linear in bend count. The dominant term is still Phase 5.
 
 ### On parallelism
 

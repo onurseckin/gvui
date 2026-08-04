@@ -1,27 +1,16 @@
-//! # Step 7.2: Organic engine — stress majorization by SGD
+//! # Step 7.2: Shared geometric-engine helpers
 //!
-//! v1's "force" mode was a staggered grid with lines through node centres: it never looked at the
-//! topology, so two strongly related nodes were as likely to land in opposite corners as next to
-//! each other. This is the real thing.
+//! Utilities used by every engine that places boxes freely and then draws straight edges between
+//! them, rather than routing through layered channels. Today that is only the radial engine; the
+//! organic (stress-majorization) engine that also used them was removed in v3 at the user's
+//! request. The helpers stayed because the alternative was inlining route construction, overlap
+//! removal and badge placement into radial, which is where they would then have to be duplicated
+//! again by the next geometric mode.
 //!
-//! Minimize `stress(P) = SUM_{i<j} w_ij * (||p_i - p_j|| - d_ij)^2` with `w_ij = d_ij^-2`, where
-//! `d_ij` is graph-theoretic distance scaled to pixels. The optimizer is the SGD of Zheng, Pawar &
-//! Goodman (2018), **not** Fruchterman-Reingold: every step is a constrained move of one node pair
-//! toward its target separation, capped so it can never overshoot. There is no temperature, no
-//! repulsion constant, and nothing that can explode.
-//!
-//! Note what is *not* here: no convergence test that re-runs the layout, no overlap check that
-//! restarts the solver. The epoch count is a fixed budget; overlap removal is a fixed number of
-//! shaping passes followed by one exact sweep that closes the residue; and the drawing that comes
-//! out is the drawing that ships.
-//!
-//! ## This module also hosts the shared geometric-engine support code
-//!
-//! [`super::radial`] and [`super::grid`] draw exactly the same way this engine does — boxes at
-//! arbitrary positions joined by straight polylines clipped to the boxes, badges resolved against a
-//! spatial hash, one common emit path. That machinery lives here, next to the mode that needs the
-//! most of it, rather than being copied three times: [`build_routes`], [`place_badges`],
-//! [`detect_geometric_crossings`] and [`finish_geometric_layout`].
+//! The distinction that matters: these engines cannot make the guarantees the layered pipeline
+//! makes. A straight line between two boxes may grazes a third, and badge placement is a local
+//! best-effort pass. `check_constraints` still reports those, but the audit records them rather
+//! than failing on them — see `docs/concepts/quality-model.md`.
 
 use std::collections::HashMap;
 
@@ -30,39 +19,13 @@ use crate::config::{CustomLayoutConfig, EdgeStyle, LabelPlacement};
 use crate::geometry::{
     clip_ray_to_rect, expand_rect, nearest_point_on_polyline, point_at_path_ratio,
 };
-use crate::step0_common::ingest::build_graph_ir;
 use crate::step6_validation::constraints::SpatialHash;
 use crate::step6_validation::{check_constraints, compute_metrics};
 use crate::types::{
     get_now_ms, BadgePlacement, CustomLayoutResult, EdgeCrossing, GraphIr, LayoutDiagnostic,
-    LayoutMetrics, LayoutValidationResult, NormalizedEdge, NormalizedNode, OptimizationStats,
-    PhaseTimings, Point, PortRef, PositionedNode, Rect, RoutedPath, Side,
+    LayoutMetrics, LayoutValidationResult, NormalizedEdge, OptimizationStats,
+    Point, PortRef, PositionedNode, Rect, RoutedPath, Side,
 };
-
-/// Above this many nodes the full all-pairs BFS is replaced by pivot-based sparse stress.
-///
-/// The cut-off is about memory and pair count, not time: full APSP stores `n^2` distances and
-/// `n(n-1)/2` pairs, which at 400 nodes is already ~80k pairs per epoch.
-const PIVOT_THRESHOLD: usize = 400;
-
-/// Approximate number of BFS sources used once [`PIVOT_THRESHOLD`] is exceeded.
-const PIVOT_TARGET: usize = 100;
-
-/// Fixed LCG seed. **Never** replace this with a clock or `Math::random`: the pair visiting order
-/// is an input to the optimizer, so a varying seed would make the same graph lay out differently
-/// on every run and break the engine's determinism guarantee.
-const SGD_SEED: u64 = 0x9E37_79B9_7F4A_7C15;
-
-/// Multiplier applied to the largest finite graph distance when a pair is in different components.
-///
-/// Finite but large means separate components *repel* to a bounded distance instead of drifting to
-/// infinity, which is what an unreachable pair with zero weight would do.
-const DISCONNECTED_DISTANCE_FACTOR: f64 = 1.5;
-
-/// Bounds on the area-preserving stretch used to steer the drawing toward `target_aspect_ratio`.
-/// Wide enough to matter, narrow enough that it cannot turn a mesh into a smear.
-const MIN_ASPECT_SCALE: f64 = 0.6;
-const MAX_ASPECT_SCALE: f64 = 1.6;
 
 /// Number of candidate positions tried per badge before falling back to a leader line.
 const BADGE_CANDIDATES: usize = 5;
@@ -70,371 +33,6 @@ const BADGE_CANDIDATES: usize = 5;
 // =============================================================================================
 // The engine
 // =============================================================================================
-
-/// Lays a graph out by stress majorization, then removes rectangle overlaps.
-///
-/// Guarantees, in order of how much they cost to break:
-///
-/// - **Deterministic.** Same input, byte-identical output, across processes. The only randomness is
-///   an LCG seeded by [`SGD_SEED`].
-/// - **Every node is positioned and every surviving edge is routed.** A route exists for each entry
-///   of [`GraphIr::edges`], in that order.
-/// - **Monotone in `node_gap`.** One unit of graph distance is worth
-///   `stress_ideal_edge_length + effective_node_gap()` pixels, so widening the gap widens the whole
-///   drawing rather than only the places that happened to overlap.
-/// - **No two node boxes overlap** — see [`remove_overlaps`] — unless
-///   `overlap_removal_passes` is 0, which switches the pass off on purpose.
-///
-/// `config.time_budget_ms` is **not** consulted. The cost here is a deterministic function of the
-/// node count and `stress_iterations`, and clipping the epochs on wall-clock time would make the
-/// drawing depend on machine load.
-pub fn layout_organic(
-    nodes: &[NormalizedNode],
-    edges: &[NormalizedEdge],
-    config: &CustomLayoutConfig,
-) -> CustomLayoutResult {
-    if nodes.is_empty() {
-        return CustomLayoutResult::empty("empty_graph");
-    }
-
-    let t_start = get_now_ms();
-    let mut timings = PhaseTimings::default();
-
-    let t = get_now_ms();
-    let ir = build_graph_ir(nodes, edges, config);
-    timings.ingest = get_now_ms() - t;
-
-    let n = ir.node_count();
-    if n == 0 {
-        return CustomLayoutResult::empty("empty_graph");
-    }
-
-    // ---- graph distances ----------------------------------------------------------------------
-    let t = get_now_ms();
-    let adj = undirected_adjacency(&ir);
-    let unit = distance_unit(config);
-    let pairs = build_stress_pairs(&adj, n, unit);
-    timings.structure = get_now_ms() - t;
-
-    // ---- SGD ----------------------------------------------------------------------------------
-    let t = get_now_ms();
-    let (mut px, mut py) = initial_circle(n, unit);
-    run_sgd(&mut px, &mut py, &pairs, config);
-    apply_aspect_correction(&mut px, &mut py, config);
-    timings.order = get_now_ms() - t;
-
-    // ---- boxes and overlap removal ------------------------------------------------------------
-    let t = get_now_ms();
-    let mut rects: Vec<Rect> = (0..n)
-        .map(|i| {
-            let node = &ir.nodes[i];
-            Rect {
-                x: px[i] - node.width / 2.0,
-                y: py[i] - node.height / 2.0,
-                width: node.width,
-                height: node.height,
-            }
-        })
-        .collect();
-    remove_overlaps(&mut rects, config);
-    timings.coordinates = get_now_ms() - t;
-
-    // ---- routes and badges --------------------------------------------------------------------
-    let t = get_now_ms();
-    let routes = build_routes(&ir, &rects, &[], config);
-    timings.route = get_now_ms() - t;
-
-    let (badges, leader_count) = place_badges(&ir, edges, &rects, &routes, config);
-
-    // Organic has no ranks; `order` reports the IR index so the renderer still has a stable key.
-    let placement: Vec<(usize, usize)> = (0..n).map(|i| (0usize, i)).collect();
-
-    let stats = OptimizationStats {
-        global_passes: config.stress_iterations,
-        evaluated_port_states: 0,
-        spacing_expansions: 0,
-        duration_ms: 0.0,
-        stop_reason: "stress-converged".to_string(),
-        timings,
-    };
-
-    finish_geometric_layout(
-        &ir, &rects, &placement, routes, badges, leader_count, stats, t_start, config,
-    )
-}
-
-/// Pixel length of one unit of graph distance.
-///
-/// The configured `stress_ideal_edge_length` is the desired *free space* between two adjacent
-/// boxes, so the node gap is added rather than ignored. Without this the spacing knobs would have
-/// no effect at all on an organic drawing that happened not to overlap anywhere, and `compaction`
-/// would be silently inert in this mode.
-fn distance_unit(config: &CustomLayoutConfig) -> f64 {
-    let ideal = if config.stress_ideal_edge_length.is_finite() && config.stress_ideal_edge_length > 0.0
-    {
-        config.stress_ideal_edge_length
-    } else {
-        1.0
-    };
-    (ideal + config.effective_node_gap().max(0.0)).max(1.0)
-}
-
-/// One node pair and the separation the optimizer wants between its endpoints.
-#[derive(Debug, Clone, Copy)]
-struct StressPair {
-    i: u32,
-    j: u32,
-    /// Target distance in pixels.
-    d: f64,
-    /// `d^-2`. Precomputed because it is read once per pair per epoch.
-    w: f64,
-}
-
-/// Builds the pair set the optimizer sweeps.
-///
-/// Up to [`PIVOT_THRESHOLD`] nodes this is the full `i < j` set from all-pairs BFS. Beyond it,
-/// roughly [`PIVOT_TARGET`] evenly spaced pivots are chosen by index — an arithmetic stride, so the
-/// choice is reproducible without sorting anything — and only `(node, pivot)` pairs are kept. That
-/// is sparse stress: `O(n * P)` pairs instead of `O(n^2)`.
-///
-/// Pairs in different components get `max_finite_distance * `[`DISCONNECTED_DISTANCE_FACTOR`],
-/// which makes components settle at a bounded remove from each other instead of drifting apart.
-fn build_stress_pairs(adj: &[Vec<u32>], n: usize, unit: f64) -> Vec<StressPair> {
-    if n < 2 {
-        return Vec::new();
-    }
-
-    let use_pivots = n > PIVOT_THRESHOLD;
-    let sources: Vec<u32> = if use_pivots {
-        let stride = (n / PIVOT_TARGET).max(1);
-        (0..n).step_by(stride).map(|i| i as u32).collect()
-    } else {
-        (0..n as u32).collect()
-    };
-
-    let mut rows: Vec<Vec<u32>> = Vec::with_capacity(sources.len());
-    let mut scratch = vec![u32::MAX; n];
-    let mut queue: Vec<u32> = Vec::with_capacity(n);
-    for &s in &sources {
-        bfs(adj, s, &mut scratch, &mut queue);
-        rows.push(scratch.clone());
-    }
-
-    let mut max_finite = 0u32;
-    for row in &rows {
-        for &d in row {
-            if d != u32::MAX && d > max_finite {
-                max_finite = d;
-            }
-        }
-    }
-    let disconnected = ((max_finite as f64) * DISCONNECTED_DISTANCE_FACTOR).max(1.0);
-
-    let hops = |raw: u32| -> f64 {
-        if raw == u32::MAX {
-            disconnected
-        } else {
-            raw as f64
-        }
-    };
-
-    let mut pairs: Vec<StressPair> = Vec::new();
-    if use_pivots {
-        pairs.reserve(sources.len() * n);
-        for (row_idx, &p) in sources.iter().enumerate() {
-            for j in 0..n as u32 {
-                if j == p {
-                    continue;
-                }
-                let d = hops(rows[row_idx][j as usize]) * unit;
-                if d <= 0.0 {
-                    continue;
-                }
-                pairs.push(StressPair {
-                    i: p,
-                    j,
-                    d,
-                    w: 1.0 / (d * d),
-                });
-            }
-        }
-    } else {
-        pairs.reserve(n * (n - 1) / 2);
-        for (i, row) in rows.iter().enumerate() {
-            for (j, &raw) in row.iter().enumerate().skip(i + 1) {
-                let d = hops(raw) * unit;
-                if d <= 0.0 {
-                    continue;
-                }
-                pairs.push(StressPair {
-                    i: i as u32,
-                    j: j as u32,
-                    d,
-                    w: 1.0 / (d * d),
-                });
-            }
-        }
-    }
-    pairs
-}
-
-/// Breadth-first hop counts from `src`. `dist` is overwritten; `u32::MAX` marks unreachable.
-fn bfs(adj: &[Vec<u32>], src: u32, dist: &mut [u32], queue: &mut Vec<u32>) {
-    for d in dist.iter_mut() {
-        *d = u32::MAX;
-    }
-    if (src as usize) >= dist.len() {
-        return;
-    }
-    dist[src as usize] = 0;
-    queue.clear();
-    queue.push(src);
-    let mut head = 0usize;
-    while head < queue.len() {
-        let v = queue[head];
-        head += 1;
-        let dv = dist[v as usize];
-        for &w in &adj[v as usize] {
-            if dist[w as usize] == u32::MAX {
-                dist[w as usize] = dv + 1;
-                queue.push(w);
-            }
-        }
-    }
-}
-
-/// Deterministic starting configuration: a circle of radius `unit * sqrt(n)`.
-///
-/// The circle matters more than it looks. Starting from a common point would make every early step
-/// degenerate, and starting from anything random would forfeit determinism; a circle of the right
-/// scale puts the configuration within one order of magnitude of its final size, which is what lets
-/// the geometric step schedule finish in ~30 epochs.
-fn initial_circle(n: usize, unit: f64) -> (Vec<f64>, Vec<f64>) {
-    let mut px = vec![0.0f64; n];
-    let mut py = vec![0.0f64; n];
-    if n < 2 {
-        return (px, py);
-    }
-    let radius = unit * (n as f64).sqrt();
-    for i in 0..n {
-        let theta = std::f64::consts::TAU * (i as f64) / (n as f64);
-        px[i] = radius * theta.cos();
-        py[i] = radius * theta.sin();
-    }
-    (px, py)
-}
-
-/// Runs exactly `config.stress_iterations` SGD epochs.
-///
-/// The step size decays geometrically from `d_max^2` (which makes `w * eta = 1` for the loosest
-/// pair, i.e. a full move) down to `config.epsilon`. `mu` is capped at `1.0` before halving, so a
-/// pair can never be moved past its target — that cap is the reason this optimizer cannot diverge
-/// and needs no safety clamps anywhere else.
-///
-/// **The epoch count is not clipped by `time_budget_ms`, deliberately.** A wall-clock cut-off would
-/// make the drawing depend on how loaded the machine was, and determinism is a hard requirement
-/// here: the same graph must produce byte-identical output across processes. `stress_iterations` is
-/// the budget knob for this engine.
-fn run_sgd(px: &mut [f64], py: &mut [f64], pairs: &[StressPair], config: &CustomLayoutConfig) {
-    if pairs.is_empty() || px.len() < 2 {
-        return;
-    }
-
-    let epochs = config.stress_iterations.max(1);
-    let d_max = pairs.iter().fold(0.0f64, |acc, p| acc.max(p.d));
-    let eta_max = (d_max * d_max).max(1.0);
-    let eta_min = config.epsilon.max(f64::MIN_POSITIVE).min(eta_max);
-    let decay = if epochs > 1 {
-        (eta_min / eta_max).powf(1.0 / (epochs - 1) as f64)
-    } else {
-        1.0
-    };
-
-    let mut order: Vec<u32> = (0..pairs.len() as u32).collect();
-    let mut rng = Lcg::new(SGD_SEED);
-    let mut eta = eta_max;
-
-    for _epoch in 0..epochs {
-        shuffle(&mut order, &mut rng);
-        for &idx in &order {
-            let p = pairs[idx as usize];
-            let (i, j) = (p.i as usize, p.j as usize);
-            let mut dx = px[i] - px[j];
-            let mut dy = py[i] - py[j];
-            let mut mag = (dx * dx + dy * dy).sqrt();
-            if !(mag.is_finite()) || mag < 1e-9 {
-                // Coincident endpoints have no direction to separate along. Pick one from the pair
-                // indices so the choice is reproducible instead of depending on float noise.
-                dx = if p.i <= p.j { 1.0 } else { -1.0 };
-                dy = 0.0;
-                mag = 1.0;
-            }
-            let mu = (p.w * eta).min(1.0) / 2.0;
-            let delta = (mag - p.d) * mu;
-            let ux = dx / mag;
-            let uy = dy / mag;
-            px[i] -= ux * delta;
-            py[i] -= uy * delta;
-            px[j] += ux * delta;
-            py[j] += uy * delta;
-        }
-        eta *= decay;
-    }
-
-    // A non-finite coordinate is unreachable given the `mu <= 1` cap, but a caller-supplied
-    // `epsilon` or `stress_ideal_edge_length` at the edge of the float range could still poison one.
-    // Repairing it here is cheaper than every downstream phase having to tolerate NaN.
-    let radius = (d_max).max(1.0);
-    let n = px.len();
-    for i in 0..n {
-        if !px[i].is_finite() || !py[i].is_finite() {
-            let theta = std::f64::consts::TAU * (i as f64) / (n as f64);
-            px[i] = radius * theta.cos();
-            py[i] = radius * theta.sin();
-        }
-    }
-}
-
-/// Stretches the point cloud toward `target_aspect_ratio` while preserving its area.
-///
-/// Scale-invariant by construction (`s` is computed from a ratio), so it cannot interfere with the
-/// engine's monotonicity in the spacing knobs.
-fn apply_aspect_correction(px: &mut [f64], py: &mut [f64], config: &CustomLayoutConfig) {
-    if px.len() < 2 {
-        return;
-    }
-    let target = config.target_aspect_ratio;
-    if !target.is_finite() || target <= 0.0 {
-        return;
-    }
-
-    let mut min_x = f64::INFINITY;
-    let mut max_x = f64::NEG_INFINITY;
-    let mut min_y = f64::INFINITY;
-    let mut max_y = f64::NEG_INFINITY;
-    for i in 0..px.len() {
-        min_x = min_x.min(px[i]);
-        max_x = max_x.max(px[i]);
-        min_y = min_y.min(py[i]);
-        max_y = max_y.max(py[i]);
-    }
-    let w = max_x - min_x;
-    let h = max_y - min_y;
-    if !(w.is_finite() && h.is_finite()) || w <= config.epsilon || h <= config.epsilon {
-        return;
-    }
-
-    let s = (target / (w / h)).sqrt().clamp(MIN_ASPECT_SCALE, MAX_ASPECT_SCALE);
-    if !s.is_finite() || (s - 1.0).abs() < 1e-9 {
-        return;
-    }
-    for v in px.iter_mut() {
-        *v *= s;
-    }
-    for v in py.iter_mut() {
-        *v /= s;
-    }
-}
 
 /// Separates overlapping rectangles. **After this returns, no two boxes overlap.**
 ///
@@ -596,43 +194,6 @@ fn enforce_separation(rects: &mut [Rect], config: &CustomLayoutConfig) {
 // =============================================================================================
 // Deterministic pseudo-randomness
 // =============================================================================================
-
-/// 64-bit linear congruential generator (Knuth's MMIX constants).
-///
-/// Exists solely to permute the SGD pair order. It must stay seeded by a constant — see
-/// [`SGD_SEED`].
-struct Lcg(u64);
-
-impl Lcg {
-    fn new(seed: u64) -> Self {
-        Lcg(seed)
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        self.0
-    }
-
-    /// Uniform-ish index in `0..bound`. The modulo bias is irrelevant here: the sequence only has to
-    /// be well mixed and reproducible, not statistically perfect.
-    fn below(&mut self, bound: usize) -> usize {
-        if bound <= 1 {
-            return 0;
-        }
-        ((self.next_u64() >> 33) as usize) % bound
-    }
-}
-
-/// In-place Fisher-Yates using `rng`.
-fn shuffle<T>(items: &mut [T], rng: &mut Lcg) {
-    for i in (1..items.len()).rev() {
-        let j = rng.below(i + 1);
-        items.swap(i, j);
-    }
-}
 
 // =============================================================================================
 // Shared geometric-engine support
@@ -1421,6 +982,8 @@ fn mean_cell(dims: impl Iterator<Item = (f64, f64)>) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::step0_common::ingest::build_graph_ir;
+    use crate::types::NormalizedNode;
     use crate::config::DEFAULT_CUSTOM_LAYOUT_CONFIG;
     use crate::geometry::rects_overlap_area;
 
@@ -1447,110 +1010,6 @@ mod tests {
             min_len: None,
             label_width: None,
             label_height: None,
-        }
-    }
-
-    /// A `len`-cycle of identical boxes.
-    fn cycle(len: usize) -> (Vec<NormalizedNode>, Vec<NormalizedEdge>) {
-        let nodes: Vec<NormalizedNode> = (0..len)
-            .map(|i| node(&format!("n{}", i), 140.0, 60.0))
-            .collect();
-        let edges: Vec<NormalizedEdge> = (0..len)
-            .map(|i| {
-                edge(
-                    &format!("e{}", i),
-                    &format!("n{}", i),
-                    &format!("n{}", (i + 1) % len),
-                )
-            })
-            .collect();
-        (nodes, edges)
-    }
-
-    fn bbox_width(r: &CustomLayoutResult) -> f64 {
-        let mut min_x = f64::INFINITY;
-        let mut max_x = f64::NEG_INFINITY;
-        for n in &r.nodes {
-            min_x = min_x.min(n.x);
-            max_x = max_x.max(n.x + n.width);
-        }
-        if min_x > max_x {
-            0.0
-        } else {
-            max_x - min_x
-        }
-    }
-
-    #[test]
-    fn empty_input_is_an_empty_graph() {
-        let out = layout_organic(&[], &[], &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert!(out.nodes.is_empty());
-        assert_eq!(out.optimization_stats.stop_reason, "empty_graph");
-    }
-
-    #[test]
-    fn single_node_is_placed_at_the_padding_corner() {
-        let nodes = vec![node("solo", 200.0, 80.0)];
-        let out = layout_organic(&nodes, &[], &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(out.nodes.len(), 1);
-        let p = DEFAULT_CUSTOM_LAYOUT_CONFIG.graph_padding;
-        assert!((out.nodes[0].x - p).abs() < 1e-6);
-        assert!((out.nodes[0].y - p).abs() < 1e-6);
-    }
-
-    #[test]
-    fn every_node_and_edge_is_present() {
-        let (nodes, edges) = cycle(6);
-        let out = layout_organic(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(out.nodes.len(), 6);
-        assert_eq!(out.edges.len(), 6);
-        assert!(out.nodes.iter().all(|n| n.x.is_finite() && n.y.is_finite()));
-        assert!(out
-            .edges
-            .iter()
-            .all(|e| e.points.len() >= 2 && e.points.iter().all(|p| p.x.is_finite())));
-    }
-
-    #[test]
-    fn layout_is_deterministic_across_runs() {
-        let (nodes, edges) = cycle(8);
-        let a = layout_organic(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        let b = layout_organic(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(
-            serde_json::to_string(&a.nodes).unwrap_or_default(),
-            serde_json::to_string(&b.nodes).unwrap_or_default()
-        );
-        assert_eq!(
-            serde_json::to_string(&a.edges).unwrap_or_default(),
-            serde_json::to_string(&b.edges).unwrap_or_default()
-        );
-    }
-
-    #[test]
-    fn six_cycle_has_no_overlapping_boxes_after_removal() {
-        let (nodes, edges) = cycle(6);
-        let out = layout_organic(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        for i in 0..out.nodes.len() {
-            for j in (i + 1)..out.nodes.len() {
-                let a = Rect {
-                    x: out.nodes[i].x,
-                    y: out.nodes[i].y,
-                    width: out.nodes[i].width,
-                    height: out.nodes[i].height,
-                };
-                let b = Rect {
-                    x: out.nodes[j].x,
-                    y: out.nodes[j].y,
-                    width: out.nodes[j].width,
-                    height: out.nodes[j].height,
-                };
-                assert!(
-                    !rects_overlap_area(&a, &b, DEFAULT_CUSTOM_LAYOUT_CONFIG.epsilon),
-                    "nodes {} and {} overlap",
-                    out.nodes[i].id,
-                    out.nodes[j].id
-                );
-            }
         }
     }
 
@@ -1623,55 +1082,6 @@ mod tests {
     }
 
     #[test]
-    fn doubling_node_gap_widens_the_drawing() {
-        let (nodes, edges) = cycle(6);
-        let base = DEFAULT_CUSTOM_LAYOUT_CONFIG;
-        let mut wide = DEFAULT_CUSTOM_LAYOUT_CONFIG;
-        wide.node_gap = base.node_gap * 2.0;
-
-        let w0 = bbox_width(&layout_organic(&nodes, &edges, &base));
-        let w1 = bbox_width(&layout_organic(&nodes, &edges, &wide));
-        assert!(w1 > w0, "doubling node_gap must widen the drawing: {w0} -> {w1}");
-    }
-
-    #[test]
-    fn disconnected_components_stay_at_a_bounded_distance() {
-        let nodes = vec![node("a", 100.0, 40.0), node("b", 100.0, 40.0)];
-        let out = layout_organic(&nodes, &[], &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(out.nodes.len(), 2);
-        let dx = out.nodes[0].x - out.nodes[1].x;
-        let dy = out.nodes[0].y - out.nodes[1].y;
-        let d = (dx * dx + dy * dy).sqrt();
-        assert!(d.is_finite(), "unreachable pairs must not diverge");
-        assert!(d > 0.0, "unreachable pairs must still be separated");
-    }
-
-    #[test]
-    fn self_loops_are_routed_on_the_right_side() {
-        let nodes = vec![node("a", 120.0, 60.0)];
-        let edges = vec![edge("loop", "a", "a")];
-        let out = layout_organic(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(out.edges.len(), 1);
-        assert_eq!(out.edges[0].source_port.side, Side::Right);
-        assert_eq!(out.edges[0].target_port.side, Side::Right);
-        assert_ne!(out.edges[0].source_port.index, out.edges[0].target_port.index);
-    }
-
-    #[test]
-    fn badges_are_emitted_for_labelled_edges() {
-        let nodes = vec![node("a", 140.0, 60.0), node("b", 140.0, 60.0)];
-        let mut e = edge("e0", "a", "b");
-        e.label = Some("calls".to_string());
-        e.label_width = Some(80.0);
-        e.label_height = Some(24.0);
-        let out = layout_organic(&nodes, &[e], &DEFAULT_CUSTOM_LAYOUT_CONFIG);
-        assert_eq!(out.badges.len(), 1);
-        assert_eq!(out.badges[0].edge_id, "e0");
-        assert_eq!(out.badges[0].label, "calls");
-        assert!(out.badges[0].rect.width > 0.0);
-    }
-
-    #[test]
     fn nearest_side_resolves_corners_deterministically() {
         let r = Rect { x: 0.0, y: 0.0, width: 100.0, height: 100.0 };
         assert_eq!(nearest_side(&r, &Point { x: 50.0, y: 0.0 }), Side::Top);
@@ -1710,18 +1120,6 @@ mod tests {
             &Point { x: 10.0, y: 5.0 }
         )
         .is_none());
-    }
-
-    #[test]
-    fn shuffle_is_reproducible_from_the_fixed_seed() {
-        let mut a: Vec<u32> = (0..64).collect();
-        let mut b: Vec<u32> = (0..64).collect();
-        shuffle(&mut a, &mut Lcg::new(SGD_SEED));
-        shuffle(&mut b, &mut Lcg::new(SGD_SEED));
-        assert_eq!(a, b);
-        let mut sorted = a.clone();
-        sorted.sort_unstable();
-        assert_eq!(sorted, (0..64).collect::<Vec<u32>>(), "shuffle must be a permutation");
     }
 
     #[test]

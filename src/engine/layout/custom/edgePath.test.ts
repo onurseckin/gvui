@@ -7,6 +7,7 @@ describe("buildEdgePath", () => {
     expect(buildEdgePath([], "orthogonal", 8)).toBe("");
     expect(buildEdgePath([], "rounded", 8)).toBe("");
     expect(buildEdgePath([], "spline", 8)).toBe("");
+    expect(buildEdgePath([], "octilinear", 8)).toBe("");
     expect(buildEdgePath([], "straight", 8)).toBe("");
   });
 
@@ -15,6 +16,7 @@ describe("buildEdgePath", () => {
     expect(buildEdgePath(points, "orthogonal", 8)).toBe("M 12 34");
     expect(buildEdgePath(points, "rounded", 8)).toBe("M 12 34");
     expect(buildEdgePath(points, "spline", 8)).toBe("M 12 34");
+    expect(buildEdgePath(points, "octilinear", 8)).toBe("M 12 34");
     expect(buildEdgePath(points, "straight", 8)).toBe("M 12 34");
   });
 
@@ -104,6 +106,34 @@ describe("buildEdgePath", () => {
       { x: 100, y: 100 },
     ];
     expect(buildEdgePath(points, "rounded", 0)).toBe(buildEdgePath(points, "orthogonal", 0));
+  });
+
+  it("octilinear style keeps the chamfer segments the engine emitted, verbatim", () => {
+    // A right-angle corner at (100, 0) already chamfered by the engine: the 45-degree run from
+    // (92, 0) to (100, 8) IS the corner. Every point must survive into the path unchanged.
+    const points: Point[] = [
+      { x: 0, y: 0 },
+      { x: 92, y: 0 },
+      { x: 100, y: 8 },
+      { x: 100, y: 100 },
+    ];
+    expect(buildEdgePath(points, "octilinear", 8)).toBe("M 0 0 L 92 0 L 100 8 L 100 100");
+  });
+
+  it("octilinear style ignores cornerRadius, because the chamfers are the corners", () => {
+    const points: Point[] = [
+      { x: 0, y: 0 },
+      { x: 92, y: 0 },
+      { x: 100, y: 8 },
+      { x: 100, y: 100 },
+    ];
+    const sharp = buildEdgePath(points, "octilinear", 0);
+    const rounded = buildEdgePath(points, "octilinear", 20);
+    expect(rounded).toBe(sharp);
+    expect(rounded).not.toContain("Q");
+    // Identical to the orthogonal renderer — the difference between the two styles is entirely
+    // in the points the engine produced, not in how this module draws them.
+    expect(rounded).toBe(buildEdgePath(points, "orthogonal", 20));
   });
 
   it("spline style produces one C command per segment and passes through every waypoint", () => {

@@ -194,7 +194,7 @@ single-threaded, `Vec`-ordered traversal gives.
 
 The organic engine's stress optimizer visits its pair set in a shuffled order each epoch — SGD needs
 that to avoid a systematic sweep bias. So it needs randomness, and it gets it from a fixed-seed LCG
-([`7_2_organic.rs`](../../crates/gvui/src/7_engines/7_2_organic.rs)):
+([`7_2_organic.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs)):
 
 ```rust
 /// Fixed LCG seed. **Never** replace this with a clock or `Math::random`: the pair visiting order

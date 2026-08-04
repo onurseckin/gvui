@@ -65,9 +65,10 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 | Section | What it covers |
 | --- | --- |
 | [`engine/`](./engine/README.md) | The layered pipeline, phase by phase. The main body of the docs. |
-| [`modes/`](./modes/README.md) | The four layout engines and the six selectable modes. |
+| [`modes/`](./modes/README.md) | The two layout engines, and the `direction` axis that is orthogonal to them. |
 | [`concepts/`](./concepts/README.md) | Cross-cutting ideas referenced by several chapters. |
 | [`planning/layout-engine-v2/`](./planning/layout-engine-v2/README.md) | The design record: diagnosis of the previous engine, the architecture decision, and the measured results. |
+| [`planning/layout-engine-v3/`](./planning/layout-engine-v3/README.md) | The v3 pass: what the drawing looked wrong about, and what each fix cost. |
 
 ### The engine chapters
 
@@ -89,10 +90,8 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 
 | Chapter | Topic |
 | --- | --- |
-| [01](./modes/01-layered.md) | Layered — the full pipeline; covers the `layered`, `layered-spline` and `left-right` modes |
-| [02](./modes/02-organic.md) | Organic — stress majorization by SGD, then overlap removal |
-| [03](./modes/03-radial.md) | Radial — concentric BFS rings with proportional wedges |
-| [04](./modes/04-grid.md) | Grid — row-major placement in input order; the debug mode |
+| [01](./modes/01-layered.md) | Layered — the full pipeline, and the four values of `direction` it draws in |
+| [03](./modes/02-radial.md) | Radial — concentric BFS rings with proportional wedges |
 
 ### The concepts
 
@@ -106,24 +105,72 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 
 ---
 
-## Six modes, four engines
+## Two engines, one direction axis
 
-`mode` selects an engine; `direction` is an independent configuration knob. The six values of the
-`LayoutMode` union in [`src/state/useGraphStore.ts`](../src/state/useGraphStore.ts) map onto four
-engines:
+`mode` selects an engine. `direction` selects the flow, independently of the engine. The
+`LayoutMode` union in [`src/state/useGraphStore.ts`](../src/state/useGraphStore.ts) has exactly two
+values, and [`EngineMode`](../crates/gvui/src/0_common/0_2_config.rs) mirrors them:
 
-| mode | engine | direction | notes |
-| --- | --- | --- | --- |
-| `layered` | layered | `top-down` | The default. Orthogonal lane routing. |
-| `layered-spline` | layered | `top-down` | Identical geometry; the renderer draws smooth curves instead of rounded corners. |
-| `left-right` | layered | `left-right` | The same pipeline with every box transposed on the way in and the result transposed on the way out. |
-| `organic` | organic | — | Stress majorization. For meshes with no strong flow direction. |
-| `radial` | radial | — | Concentric rings around a root. For strongly centralized graphs. |
-| `grid` | grid | — | Row-major in input order. Consults no topology at all. |
+| mode | engine | honours `direction` | notes |
+| --- | --- | :--: | --- |
+| `layered` | the full pipeline in [`engine/`](./engine/README.md) | yes | The default. Orthogonal lane routing, badge space reserved in the layered graph, routing that cannot fail. |
+| `radial` | concentric BFS rings with proportional wedges | no | Rings have no flow axis, so `direction` is ignored. Straight edges between boxes; edge–node grazing and badge overlap are best-effort, not guaranteed absent. See [the quality model](./concepts/quality-model.md#the-per-engine-constraint-policy). |
 
-Legacy mode strings (`top-down`, `top-down-dagre`, `force`, `stress`, `right-left`, …) are still
-accepted and normalized; see `normalizeLayoutMode`. There is no dagre in the build — the dependency
-was removed with the v2 rewrite, and `top-down-dagre` now resolves to the layered engine.
+### `direction`
+
+The edge `a → b`, drawn four ways:
+
+```text
+   top-down (default)      bottom-up          left-right        right-left
+
+        [ a ]                [ b ]                              [ b ]◀──[ a ]
+          │                    ▲            [ a ]──▶[ b ]
+          ▼                    │
+        [ b ]                [ a ]
+```
+
+| `direction` | ranks increase | how the pipeline gets there |
+| --- | --- | --- |
+| `top-down` | downward | the native frame; nothing is transformed |
+| `bottom-up` | upward | mirrored along the rank axis on the way out |
+| `left-right` | rightward | every box transposed on the way in, the drawing transposed on the way out |
+| `right-left` | leftward | transposed, then mirrored |
+
+`direction` being the **only** source of flow direction is a v3 correction, not a refactor. Flow
+used to be half-encoded in the mode string as well (`left-right`, `right-left`, `bottom-up` were
+"modes"), and because the client sends a *fully resolved* config, `direction` was always present and
+the "explicit direction wins over mode" rule discarded the mode's direction every single time.
+Choosing `left-right` silently drew top-down. `EngineMode::from_mode_str` now returns no direction
+at all.
+
+### `edgeStyle`
+
+`layered-spline` was never a separate engine — it was the layered pipeline with a different
+renderer. It is now a value of `edgeStyle`, which changes how a finished polyline is drawn and never
+changes where anything is placed:
+
+| `edgeStyle` | what it draws |
+| --- | --- |
+| `rounded` (default) | axis-aligned polyline, corners rounded to `cornerRadius` |
+| `orthogonal` | the same polyline with sharp corners |
+| `spline` | a smooth cubic through the chain waypoints |
+| `octilinear` | each right-angle corner replaced by a 45° chamfer where the diagonal is collision-free — a post-pass, not a router. [Why](./engine/10-edge-routing.md) |
+| `straight` | source to target, clipped to the node boundaries |
+
+Legacy mode strings (`top-down`, `top-down-dagre`, `force`, `stress`, `right-left`, `organic`,
+`grid`, `layered-spline`, …) are still accepted and normalized onto the surviving two engines; see
+`normalizeLayoutMode`, and `directionFromLegacyLayoutMode` for the three that also carried a
+direction worth recovering. There is no dagre in the build — the dependency was removed with the v2
+rewrite, and `top-down-dagre` resolves to the layered engine.
+
+The `organic` (stress majorization) and `grid` engines were **deleted** in v3. The shared helpers
+they used — free box placement, overlap removal, straight-line routing, best-effort badge placement
+— live in
+[`7_engines/7_2_geometric_common.rs`](../crates/gvui/src/7_engines/7_2_geometric_common.rs), which
+radial still uses. One measurement is recorded against the deletion rather than buried: on the old
+`dense_kubernetes_mesh` fixture, organic drew 8 crossings against layered's 28, because that graph
+has no real flow direction. The reasoning and the numbers are in
+[`planning/layout-engine-v3/`](./planning/layout-engine-v3/README.md); the code is in git history.
 
 ---
 
@@ -140,20 +187,34 @@ If you are new to this codebase, read in this order:
 4. [`engine/06-layering-and-labels.md`](./engine/06-layering-and-labels.md) and
    [`engine/08-routing-demand.md`](./engine/08-routing-demand.md) — the two chapters that carry the
    organizing idea. If you only read two, read these.
-5. [`modes/README.md`](./modes/README.md) — when to reach for something other than layered.
+5. [`engine/10-edge-routing.md`](./engine/10-edge-routing.md) — where the drawing stops being
+   combinatorics and starts being lines. Port sides, straight-shot alignment, flat edges,
+   octilinear. Almost everything v3 changed is in this chapter.
+6. [`modes/03-radial.md`](./modes/02-radial.md) — the one case where layered is not the answer.
 
-If you are here to change behaviour rather than to understand it, start instead with
-[`concepts/quality-model.md`](./concepts/quality-model.md): it tells you which properties are
-guaranteed (and so are bugs when violated) and which are merely measured.
+Two shortcuts for specific errands:
+
+- **Changing behaviour rather than understanding it?** Start with
+  [`concepts/quality-model.md`](./concepts/quality-model.md): it tells you which properties are
+  guaranteed (and so are bugs when violated) and which are merely measured, and which of the two
+  engines promises which.
+- **Wondering why a setting exists?** Every field of `CustomLayoutConfig` is documented at its
+  declaration in
+  [`crates/gvui/src/0_common/0_2_config.rs`](../crates/gvui/src/0_common/0_2_config.rs), and the
+  Settings panel exposes all of them. There are no presets: a preset is a named point in a space
+  the user cannot see, and the space is small enough to show.
 
 ---
 
 ## Measured comparison
 
 The layout engine was rewritten (v1 → v2). Both versions were measured on the same machine, in
-native `--release`, over the same eight datasets in `public/data/graphs/`. The full tables are in
+native `--release`, over the same eight datasets. The full tables are in
 [`planning/layout-engine-v2/00-diagnosis.md`](./planning/layout-engine-v2/00-diagnosis.md) (v1) and
-[`planning/layout-engine-v2/06-results.md`](./planning/layout-engine-v2/06-results.md) (v2).
+[`planning/layout-engine-v2/06-results.md`](./planning/layout-engine-v2/06-results.md) (v2). Those
+eight fixtures were replaced in v3 by ten harder ones, so the dataset names below no longer exist in
+`public/data/graphs/`; they are kept here because the comparison is only meaningful run-for-run on
+identical input.
 
 Two datasets, as the headline:
 
@@ -175,8 +236,6 @@ own validity check to passing it.
 
 - The v1 figures come from a harness that invoked the same pipeline phases directly; the repo was
   not modified to obtain them (method recorded at the bottom of `00-diagnosis.md`).
-- The audit runs 5 engines × 8 datasets = 40 combinations. All 40 are valid, deterministic, and
-  under the harness's 50 ms per-fixture budget; the slowest is 1.88 ms.
 - **Native release is the optimistic bound.** WASM in a browser will be meaningfully slower and has
   not been measured. That is a recorded open gap, not an oversight.
 
@@ -185,6 +244,17 @@ The speedup is not a micro-optimisation result. v1 spent 99.5 %+ of its time run
 no routing grid, no A\*, and no search loop; routing is a table lookup over lanes that were already
 counted. See [`concepts/computational-complexity.md`](./concepts/computational-complexity.md) for
 the per-phase accounting.
+
+**v3 changed none of that.** Every v3 change was aesthetic or usability — badge placement, port-side
+choice, flat peer edges, octilinear corners, two modes instead of six, a Settings panel instead of
+presets. Nothing was added to the hot path: the whole of v3's routing work is closed-form scoring
+and polyline post-passes, and the slowest fixture in the native audit is 1.16 ms against the same
+50 ms budget. What did change is the gate. It is now **108 fixture/mode runs with 0 failures** —
+three mode/direction cases (`layered`/`top-down`, `layered`/`left-right`, `radial`) across 26
+graph-testing scenarios and the 10 datasets in `public/data/graphs/`, run through the real WASM
+build by [`scripts/runLayoutAudit.ts`](../scripts/runLayoutAudit.ts). The native harness covers 4
+cases × the same 10 datasets = 40 combinations, all valid, all deterministic, all under budget. Zero
+constraint violations is a pass condition, not a reported number.
 
 ---
 
@@ -200,6 +270,7 @@ the per-phase accounting.
 | [`crates/gvui/src/4_coordinate_assignment/`](../crates/gvui/src/4_coordinate_assignment/) | Phases 6 and 7 — demand and coordinates |
 | [`crates/gvui/src/5_edge_routing/`](../crates/gvui/src/5_edge_routing/) | Phase 8 — routes, ports, badges |
 | [`crates/gvui/src/6_validation/`](../crates/gvui/src/6_validation/) | Phase 9 — constraints, metrics, emit |
-| [`crates/gvui/src/7_engines/`](../crates/gvui/src/7_engines/) | The four engines and the dispatch facade |
+| [`crates/gvui/src/7_engines/`](../crates/gvui/src/7_engines/) | The two engines, the shared geometric helpers, and the dispatch facade |
 | [`src/engine/layout/measurement/`](../src/engine/layout/measurement/) | The measurement boundary — the only code that sees text |
-| [`crates/gvui/examples/audit.rs`](../crates/gvui/examples/audit.rs) | The native audit harness |
+| [`crates/gvui/examples/audit.rs`](../crates/gvui/examples/audit.rs) | The native audit harness — 4 mode/direction cases × 10 datasets |
+| [`scripts/runLayoutAudit.ts`](../scripts/runLayoutAudit.ts) | The WASM regression gate — 3 cases × (26 scenarios + 10 datasets) = 108 runs |

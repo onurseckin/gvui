@@ -109,22 +109,15 @@ pub fn compute_custom_layout_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 
     let input: LayoutInput = serde_wasm_bindgen::from_value(val)?;
 
-    let mut cfg = resolve_custom_layout_config(input.options.as_ref())
+    let cfg = resolve_custom_layout_config(input.options.as_ref())
         .map_err(|e| JsValue::from_str(&e.message))?;
 
-    let (engine_mode, dir_override) =
-        EngineMode::from_mode_str(input.mode.as_deref().unwrap_or("top-down"));
-
-    // An explicit `direction` in `options` wins over the one implied by `mode`.
-    let direction_was_explicit = input
-        .options
-        .as_ref()
-        .is_some_and(|o| o.direction.is_some());
-    if let Some(d) = dir_override {
-        if !direction_was_explicit {
-            cfg.direction = d;
-        }
-    }
+    // `mode` selects the engine and nothing else. Flow direction comes only from
+    // `cfg.direction`. The previous version also derived a direction from the mode string and let
+    // an explicit config value override it — but the client always sends a fully resolved config,
+    // so the explicit value was always present and the mode's direction was discarded every time.
+    // `left-right` therefore drew exactly like `top-down`.
+    let engine_mode = EngineMode::from_mode_str(input.mode.as_deref().unwrap_or("layered"));
 
     let mut result = compute_layout(&input.nodes, &input.edges, &cfg, engine_mode);
     result.optimization_stats.duration_ms = (js_sys::Date::now() - t_start).max(0.0);

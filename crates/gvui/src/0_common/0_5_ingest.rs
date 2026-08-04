@@ -12,6 +12,8 @@
 //!    happen before ranking, not during routing (see `02-algorithms.md` §8c).
 //! 2. **A labelled edge gets `min_len = 2`.** Phase 4 hosts the badge on an intermediate rank; if
 //!    the span were 1 there would be no rank to put it on and the reservation would be impossible.
+//!    That is a *default*, not a floor: an explicit `min_len` from the host is honoured verbatim,
+//!    including `0`, which is what lets two peers share a rank and be joined by a flat edge.
 //! 3. **Unresolvable edges are dropped here, loudly.** v1 skipped them silently inside the router,
 //!    which made a data error look like a layout bug.
 //!
@@ -136,11 +138,15 @@ pub fn build_graph_ir(
         let label = resolve_label_box(edge, is_cycle, config);
 
         // A labelled edge must span >= 2 ranks so Phase 4 has an intermediate rank on which to
-        // materialise the label item. An explicit `min_len` from the host always wins.
+        // materialise the label item. An explicit `min_len` from the host always wins — including
+        // `0`, which asks for a same-rank (flat) edge. Zero is deliberately *not* floored to 1:
+        // every ranker treats `min_len` as a lower bound on `rank(to) - rank(from)`, so 0 is a
+        // legal constraint that simply permits equality, and Phase 4 turns a zero span into a
+        // `FlatEdge`. Flooring it here is what made flat edges unreachable in v2.
         let min_len: u16 = match edge.min_len {
-            Some(m) if m >= 1 => m.min(u16::MAX as usize) as u16,
-            _ if label.is_some() => 2,
-            _ => 1,
+            Some(m) => m.min(u16::MAX as usize) as u16,
+            None if label.is_some() => 2,
+            None => 1,
         };
 
         let weight = match edge.weight {
@@ -495,6 +501,27 @@ mod tests {
         assert_eq!(lb.height, 31.0);
         assert_eq!(ir.edges[0].min_len, 5);
         assert_eq!(ir.edges[0].weight, 4.0);
+    }
+
+    #[test]
+    fn an_explicit_min_len_of_zero_survives_ingest() {
+        // `minLen: 0` is the host asking for a same-rank edge. It must reach the ranker intact on
+        // both a plain and a labelled edge, otherwise `span == 0` — and with it every flat-edge
+        // code path — stays unreachable.
+        let nodes = vec![node("a", 100.0, 40.0), node("b", 100.0, 40.0)];
+        let mut plain = edge("e1", "a", "b");
+        plain.min_len = Some(0);
+        let mut labelled = edge("e2", "a", "b");
+        labelled.label = Some("peer".to_string());
+        labelled.min_len = Some(0);
+
+        let ir = build_graph_ir(&nodes, &[plain, labelled], &cfg());
+        assert_eq!(ir.edges[0].min_len, 0);
+        assert_eq!(ir.edges[1].min_len, 0);
+        assert!(
+            ir.edges[1].label.is_some(),
+            "a zero-span edge still carries its badge; Phase 6 reserves corridor width for it"
+        );
     }
 
     #[test]

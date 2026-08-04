@@ -520,8 +520,13 @@ pub fn check_constraints(
     });
 
     // ---- NON_ORTHOGONAL_SEGMENT ---------------------------------------------------------------
-    // Only meaningful for the axis-aligned styles; `Spline` and `Straight` are diagonal by design.
-    if !matches!(config.edge_style, EdgeStyle::Spline | EdgeStyle::Straight) {
+    // Only meaningful for the axis-aligned styles. `Spline` and `Straight` are diagonal by design;
+    // `Octilinear` emits a 45-degree chamfer in place of each corner it was able to cut, which is
+    // the whole point of that style and not a defect.
+    if !matches!(
+        config.edge_style,
+        EdgeStyle::Spline | EdgeStyle::Straight | EdgeStyle::Octilinear
+    ) {
         reported = 0;
         for r in routes {
             if r.points.len() < 2 {

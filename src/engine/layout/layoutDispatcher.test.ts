@@ -3,16 +3,27 @@ import { computeGraphLayout } from "./layoutDispatcher";
 import type { GraphDataset } from "../../types/graphData";
 import type { LayoutMode } from "../../state/useGraphStore";
 
-const ALL_LAYOUT_MODES: LayoutMode[] = [
-  "layered",
-  "layered-spline",
+const ALL_LAYOUT_MODES: LayoutMode[] = ["layered", "radial"];
+
+/**
+ * Mode strings older clients persisted. Each must still produce a drawing rather than throwing;
+ * the direction-bearing ones additionally prove that a mode which no longer exists as an engine is
+ * not mistaken for an unknown value and silently dropped.
+ */
+const LEGACY_MODE_STRINGS: string[] = [
+  "top-down",
+  "top-down-dagre",
+  "bottom-up",
   "left-right",
+  "right-left",
+  "layered-spline",
+  "force",
+  "stress",
   "organic",
-  "radial",
   "grid",
 ];
 
-describe("layoutDispatcher all v2 modes", () => {
+describe("layoutDispatcher all modes", () => {
   const sampleDataset: GraphDataset = {
     id: "sample-test-graph",
     title: "Sample Test Graph",
@@ -42,13 +53,13 @@ describe("layoutDispatcher all v2 modes", () => {
     });
   }
 
-  it("normalizes a legacy mode string instead of throwing", async () => {
-    // "top-down" is a v1 mode string; callers holding it (old localStorage, shared URLs) must
-    // still resolve to a real v2 engine mode via normalizeLayoutMode rather than crashing.
-    const res = await computeGraphLayout(sampleDataset, "top-down");
-    expect(res.nodes).toHaveLength(3);
-    expect(res.edges).toHaveLength(2);
-  });
+  for (const legacy of LEGACY_MODE_STRINGS) {
+    it(`normalizes the legacy mode string "${legacy}" instead of throwing`, async () => {
+      const res = await computeGraphLayout(sampleDataset, legacy);
+      expect(res.nodes).toHaveLength(3);
+      expect(res.edges).toHaveLength(2);
+    });
+  }
 
   it("falls back to the default mode for an unrecognized mode string", async () => {
     const res = await computeGraphLayout(sampleDataset, "not-a-real-mode");

@@ -54,6 +54,13 @@ well under a millisecond.
 Every other phase uses an algorithm with a proof attached. Those proofs are tabulated in
 [The Pipeline § The guarantee table](./02-the-pipeline.md#4-the-guarantee-table).
 
+A **scored choice is not a search**, and Phase 8 is where the distinction earns its keep. Port-side
+selection evaluates all sixteen `(source_side, target_side)` combinations for an edge and takes the
+minimum of a closed-form cost. Sixteen is a constant, the cost is arithmetic on coordinates that are
+already final, and nothing is re-evaluated afterwards. v1 also tried sixteen combinations — and then
+searched again to repair the crossings that produced. The sixteen evaluations are now the *entire*
+budget for the decision, which is what makes it a determination rather than a search.
+
 ---
 
 ## The pipeline
@@ -77,7 +84,8 @@ Every other phase uses an algorithm with a proof attached. Those proofs are tabu
 └──────────────────────────────────────────────────────────────────────────────┘
                                      ▼
 ┌── Phase 3 ── Rank ───────────────────────────────────────────────────────────┐
-│  Network simplex with weights and per-edge min_len · aspect-ratio balancing  │
+│  peer edges relaxed to min_len 0 · network simplex with weights and per-edge │
+│  min_len · aspect-ratio balancing · ★ enforce_labelled_span LAST             │
 │  2_rank_assignment/2_4_rank_facade.rs                                        │
 └──────────────────────────────────────────────────────────────────────────────┘
                                      ▼
@@ -103,8 +111,9 @@ Every other phase uses an algorithm with a proof attached. Those proofs are tabu
 └──────────────────────────────────────────────────────────────────────────────┘
                                      ▼
 ┌── Phase 8 ── Route ──────────────────────────────────────────────────────────┐
-│  Port sides (determined) · port order (a sort) · lane index → polyline ·     │
-│  bundling · corner rounding · badge rects read off their label items         │
+│  Port sides (16 combinations, scored) · port order (a sort) · straight-shot  │
+│  alignment · lane index → polyline · bundling · style post-pass (chamfer/    │
+│  spline) · badge rects read off their label items                            │
 │  5_edge_routing/5_6_route_facade.rs                                          │
 └──────────────────────────────────────────────────────────────────────────────┘
                                      ▼
@@ -148,6 +157,20 @@ Phase 1 is the only phase that does not live in Rust. Measurement is where text 
 it must happen where the fonts are — in the browser. Every type in the table is declared in
 [`0_common/0_1_types.rs`](../../crates/gvui/src/0_common/0_1_types.rs).
 
+Two ordering details inside those phases are load-bearing and easy to get wrong:
+
+- **Phase 3 ends with `enforce_labelled_span`, after balancing.** A labelled edge is drawable at
+  span 0 (flat, badge on the horizontal run) or span $\ge 2$ (an intermediate rank carries the
+  `Label` item) and at *no other value* — span 1 has no rank for the label item, so the badge falls
+  through to Phase 8's positional safety net, which may emit a leader line and is covered by no
+  reservation. Peer relaxation makes span 0 reachable and balancing is the step most likely to then
+  push an endpoint down by exactly one, so the repair has to observe the rank vector balancing
+  actually produced. An earlier revision ran it before balancing and inspected a vector that
+  balancing then invalidated.
+- **Phase 7 returns `Vec<f64>` of rank tops and writes `x`/`y` onto the items in place.** The return
+  value is not the layout; it is the band geometry Phase 8 needs to know where each routing channel
+  begins.
+
 The phases are numbered 0–9 and the source directories are numbered 0–7, which do not line up
 one-to-one: directory `3_crossing_minimization/` holds Phases 4 and 5, directory
 `4_coordinate_assignment/` holds Phases 6 and 7. The phase table in
@@ -168,17 +191,19 @@ one-to-one: directory `3_crossing_minimization/` holds Phases 4 and 5, directory
 | [07 — Crossing Minimization](./07-crossing-minimization.md) | The only search. BMJ counting, median sweeps, transpose, seeds and dummy priority. |
 | [08 — Routing Demand](./08-routing-demand.md) | Channels, corridors, interval graphs, greedy colouring, and the separations that make routing safe. |
 | [09 — Coordinate Assignment](./09-coordinate-assignment.md) | Rank bands for $y$, Brandes–Köpf for $x$, and the four-candidate alignment. |
-| [10 — Edge Routing](./10-edge-routing.md) | Port sides, port order, lane index to polyline, bundling, self-loops, and badge geometry. |
+| [10 — Edge Routing](./10-edge-routing.md) | Scored port sides, port order, straight-shot alignment, lane index to polyline, bundling, self-loops, flat peer edges, octilinear chamfering, and badge geometry. |
 | [11 — Emit and Quality](./11-emit-and-quality.md) | Constraints that are asserted, metrics that are reported, and the difference between the two. |
 
 Related reading:
 
 - [Concepts](../concepts/README.md) — the Sugiyama framework, node measurement, determinism,
   complexity, and the quality model, treated independently of any one phase.
-- [Modes](../modes/README.md) — the four non-layered engines (organic, radial, grid) and the
-  layered mode's four directions.
-- [Planning archive](../planning/layout-engine-v2/README.md) — the v2 design documents, the
-  diagnosis of v1 that motivated them, and the measured results.
+- [Modes](../modes/README.md) — the layered engine's four `direction` values, and
+  [radial](../modes/02-radial.md), the one engine that is not this pipeline.
+- [Planning: v2](../planning/layout-engine-v2/README.md) — the v2 design documents, the diagnosis of
+  v1 that motivated them, and the measured results.
+- [Planning: v3](../planning/layout-engine-v3/README.md) — the aesthetic and usability pass: two
+  modes instead of six, scored port sides, flat peer edges, octilinear.
 
 ---
 

@@ -116,7 +116,7 @@ reroute, and no fallback path.
 Three inputs, all already fixed:
 
 ```text
-   ports            ← this phase, step 1: a table lookup and a sort
+   ports            ← this phase, step 1: a scored choice, a sort, an alignment pass
    lane per link    ← Phase 6: interval-graph colouring
    item coordinates ← Phase 7: Brandes–Köpf
         │
@@ -130,28 +130,178 @@ as it can be put: *"This module contains no search, no grid, no collision test a
 
 ---
 
-## 3. Port sides are determined by a table
+## 3. Port sides are a scored choice, not a search
 
 An edge has to attach *somewhere* on its endpoints' boundaries. v1 tried all sixteen
-`(source_side, target_side)` combinations per edge, then searched again to repair the crossings
-that produced.
+`(source_side, target_side)` combinations per edge, then searched again to repair the crossings that
+produced. v2 replaced the search with a fixed table: every chain edge left the source's **Bottom**
+face and entered the target's **Top** face, always.
 
-v2 looks the answer up. In the engine's internal top-down frame:
+The table was too blunt, and it showed. A target that sits mostly *sideways* of its source was still
+made to leave downwards and come back up, so a route that wanted to be one straight segment became a
+dog-leg:
+
+```text
+   fixed table (v2)                       scored sides (v3)
+
+   ┌───────┐                              ┌───────┐
+   │   A   │                              │   A   ├──┐   ← Right face + stub
+   └───┬───┘                              └───────┘  │
+       │                                             │   ← descends at A.right + stub
+   ════╧══════════════╗  ← channel        ═══════════╪═══  (no horizontal run)
+                      ║                              │
+                 ┌────╨──┐                      ┌────┴──┐
+                 │   B   │                      │   B   │
+                 └───────┘                      └───────┘
+
+   2 bends                                0 bends
+```
+
+v3 still evaluates sixteen combinations — it just **scores** them with a closed-form cost and takes
+the minimum. One pass, no repair, no backtracking. `flexible_port_sides` (default `true`) turns it
+on; with it off, the v2 table is used verbatim and nothing is scored.
+
+The scorer lives in
+[`plan_chain_sides` / `best_side_pair`](../../crates/gvui/src/5_edge_routing/5_1_ports.rs).
+
+### 3.1 Which of the sixteen are legal at all
+
+Infeasible combinations are skipped rather than scored, and there are two rules
+(`face_is_feasible`). Both are about what the lane router will actually draw.
+
+**A source may not use `Top`, and a target may not use `Bottom`.** The router always descends from
+the source into the channel below its rank, and rises into the target out of that same channel. A
+backward-facing stub would have to cross the node's own **interior** to get there — a line drawn
+through the box it starts from.
+
+```text
+        ┌───────────┐
+        │     A     │        source on Top:  the stub points up,
+        └───────────┘        the channel is down, and the only way
+              ↑              between them is straight through A.
+              └── stub       Rejected before it is ever scored.
+```
+
+**A vertical face needs two stub lengths of clearance, and carries at most one chain port.**
+
+- `SIDE_FACE_CLEARANCE_FACTOR = 2.0`. A port on a `Left`/`Right` face makes the router descend at
+  `port_stub_length` *outside* that face, so the whole departure — the horizontal stub and the
+  vertical run down to the channel — lives in the gap between this node and its rank neighbour. One
+  stub length would put the descent exactly on the neighbour's boundary; requiring twice that keeps
+  it clear of the neighbour by as much again. Phase 6 guarantees the gap is at least `node_gap`
+  wide, but `node_gap` and `port_stub_length` are configured independently and can be set into
+  conflict — `face_clearance` is the check that rejects that case rather than drawing through a
+  node.
+- `SIDE_FACE_CAPACITY = 1`. Every port on a vertical face descends at the *same* x — that x is fixed
+  by the stub contract the router reads — so a second port on the same face would run collinear with
+  the first from its own y all the way down to the channel. One port per vertical face is the only
+  cap under which that cannot happen.
+
+Flat edges claim their faces **first**. A flat edge has no side choice at all (it is routed through
+the corridor between its endpoints, §9), so letting a chain edge take a vertical face a flat edge
+needs would trade a free decision for a forced one.
+
+`(Bottom, Top)` is always feasible, which is why the scorer needs no failure path.
+
+### 3.2 What `bends` means under a lane router
+
+The first and dominant cost key is the number of corners **the lane router will actually emit at the
+two ends**, and it is only ever 0 or 2 per end. That is a property of the lane model, not an
+estimate.
+
+Every chain end is drawn as "drop from the port into the channel". Two ends that drop at the same x
+need no horizontal run between them, and therefore no corners. Two ends that cannot agree on an x
+need one horizontal run, which costs exactly two corners — one to turn into it, one to turn out.
+
+So the question is whether the two ends' **drop-x intervals** meet (`drop_span`):
+
+| face | interval of x the port can drop at |
+| --- | --- |
+| `Top` / `Bottom` | the whole padded face, `[x + padding, right − padding]` — it drops wherever it sits |
+| `Left` / `Right` | a **single point**, `port_stub_length` outside the face |
+
+```text
+   intervals meet  ->  bends = 0            intervals disjoint  ->  bends = 2
+
+   ┌───────┐                                ┌───────┐
+   │   A   │                                │   A   │
+   └───┬───┘                                └───┬───┘
+       │  [────A's span────]                    │        [──A's span──]
+       │   ∩  (the spans overlap)           ════╧════════════╗
+       │  [────B's span────]                                 ║
+   ┌───┴───┐                                            ┌────╨──┐
+   │   B   │                                            │   B   │
+   └───────┘                                            └───────┘
+```
+
+A multi-rank chain scores its two ends **independently**: they sit in different channels and never
+have to agree with each other, so each end is tested against the x of the adjacent chain item it
+meets (`head + tail`, each 0 or 2).
+
+### 3.3 The rest of the cost
+
+The four keys, compared lexicographically:
+
+| # | key | what it prices |
+| --- | --- | --- |
+| 1 | `bends` | 0 or 2 per end, as above |
+| 2 | `flow_side_bias · off_flow + length / 1000` | readability against path length |
+| 3 | `congestion` | ports already claimed on the two faces, so a fan-out spreads instead of piling onto one face |
+| 4 | candidate order | `SOURCE_CANDIDATES × TARGET_CANDIDATES`, so the choice is total and byte-identical across processes |
+
+`off_flow` counts the ends that are *not* on the rank-flow face (source `Bottom`, target `Top`).
+`LENGTH_PER_FLOW_UNIT = 1000` is what makes key 2 a single comparable number: at the default
+`flow_side_bias` of 1.0, an off-flow face has to save a **kilopixel** of Manhattan distance before it
+outranks the flow face on an otherwise equal-bend candidate. In practice that means side faces are
+chosen only when they strictly *reduce* the bend count — which is the intent. `flow_side_bias = 0`
+makes the choice purely geometric; larger values keep the hierarchy reading top-to-bottom even when a
+sideways exit would be marginally shorter.
+
+The candidate lists lead with the rank-flow face (`Bottom` first for a source, `Top` first for a
+target) because key 4 decides only genuine ties, and when the geometry does not care, a hierarchy
+should read top-to-bottom.
+
+Chains are visited in ascending **edge index** — not in `layered.chains` order — so the congestion
+term is a function of the graph alone and not of how Phase 4 happened to emit chains.
+
+### 3.4 The two edge kinds that do not get a choice
 
 | edge kind | source side | target side |
 | --- | --- | --- |
-| chain edge (spans ≥ 1 rank) | **Bottom** | **Top** |
 | flat edge (same rank) | **Right** if `from.x ≤ to.x`, else **Left** | the opposite side |
 | self-loop | **Right** | **Right** |
 
-That is the whole rule, and it is what a human would draw anyway.
+Flat-edge sides compare `from.x ≤ to.x`. Items within a rank never overlap, so comparing left edges
+is the same as comparing centres and is stable under differing widths.
 
-Two things this table does *not* contain:
+### 3.5 Why a side port cannot break Phase 6's reservation
 
-**Direction.** `LeftRight`, `BottomUp` and `RightLeft` are handled as a change of coordinate frame
+This is the part that makes flexible sides safe rather than merely nicer.
+
+[Phase 6](./08-routing-demand.md) reserved routing space in **order space**, before any coordinate
+existed: a channel below each rank sized by an interval colouring, and a corridor between each
+adjacent pair of items in a rank. Moving an attachment point from the bottom face to a side face does
+not touch either reservation, because **a side port still descends into the channel below its own
+rank**. The router drops from `port.stub` straight to the channel y and runs horizontally from there.
+The travel direction through the layered structure is unchanged; only the last few pixels before the
+node boundary move.
+
+What *does* change is where the descent happens: `stub.x` is now `port_stub_length` outside a
+vertical face rather than somewhere inside the node's own width, so the descent lives in the gap
+between the node and its rank neighbour. That gap is Phase 6's corridor — and the two-stub-length
+clearance test of §3.1 is exactly what keeps the descent out of the neighbour's interior, and the
+"no edge–node penetration" invariant intact by construction.
+
+### 3.6 Two things the sides do not encode
+
+**Direction.** `left-right`, `bottom-up` and `right-left` are handled as a change of coordinate frame
 applied around the entire pipeline — boxes are transposed before ingest, and results are transposed
 and mirrored after emit. [`5_1_ports.rs`](../../crates/gvui/src/5_edge_routing/5_1_ports.rs) never
-branches on direction.
+branches on direction, and since v3 `direction` is the **only** source of flow direction anywhere in
+the engine: `EngineMode::from_mode_str` no longer returns one. It used to, and the result was that
+`left-right` silently did nothing — the client sends a fully resolved config, so `direction` was
+always present, and the "explicit direction wins over the mode" rule discarded the mode's direction
+every single time.
 
 **Feedback edges.** Phase 2 reversed them — it swapped their endpoints — so by the time they reach
 this phase they are ordinary `Bottom → Top` chains in the internal frame, and they are deliberately
@@ -160,12 +310,77 @@ this phase they are ordinary `Bottom → Top` chains in the internal frame, and 
 into the bottom via a side corridor. The implementation does not do that; feedback edges are drawn
 like any other edge and are distinguished only by direction and by the renderer's styling.)
 
-Flat-edge sides compare `from.x ≤ to.x`. Items within a rank never overlap, so comparing left edges
-is the same as comparing centres and is stable under differing widths.
+---
+
+## 4. Straight-shot alignment
+
+Choosing a side is only half of the decision, and on its own it is the *wrong* half.
+
+Look again at the zero-bend case in §3.2. The scorer says a `Right` source face costs no bends
+because its drop x — a single point, `port_stub_length` outside the face — falls inside the target's
+port range. But "falls inside the range" is not the same as "the target's port is actually there".
+Port distribution (§6) spreads ports evenly along a face; the odds of one landing exactly on that x
+are nil. Without something to close the gap, the route drops at the side's x, still needs its
+horizontal run and its two corners, **and** has paid for a stub sticking out sideways as well. The
+flexible side would have *added* a bend rather than removing one.
+
+`apply_straight_shot_alignment` is the pass that redeems the prediction. It slides ports onto a
+common x wherever the slack allows, which is also the single largest bend reducer in the phase in its
+own right — measured **92 → 61 bends on a 24-node graph**. It is on by default
+(`straight_shot_alignment`).
+
+A port on `Top`/`Bottom` is **free**: it drops wherever it sits along its face, so it can be slid. A
+port on `Left`/`Right` is **fixed**: it drops exactly `port_stub_length` outside its face and there is
+nothing to slide. Three cases follow, and the mixed one matters as much as the symmetric one:
+
+| source face | target face | what happens |
+| --- | --- | --- |
+| free | free | both move to a shared x between them (the midpoint, clamped into the overlap of their two slidable ranges) |
+| free | fixed | the **free end moves onto the fixed end's drop x** |
+| fixed | free | mirror image |
+| fixed | fixed | nothing to do |
+
+```text
+   before                                  after
+
+   ┌───────┐                               ┌───────┐
+   │   A   ├──┐  fixed at A.right+stub     │   A   ├──┐
+   └───────┘  │                            └───────┘  │
+              │                                       │
+   ═══════╗   │                                       │
+          ║   │                                       │
+   ┌──────╨┐  │   B's top port is free       ┌────────┴┐
+   │   B   │  ┘                              │    B    │
+   └───────┘                                 └─────────┘
+
+   2 bends                                   0 bends
+```
+
+### When a snap is refused
+
+A snap is refused unless the moved port stays inside `[x + portEndpointPadding, x + width −
+portEndpointPadding]` **and** at least `port_pitch` away from the ports on either side of it.
+
+That second condition is load-bearing. Those neighbours are what §5 sorted into a locally
+crossing-free order; keeping the moved port strictly between them is what stops the alignment from
+re-introducing the crossings the sort removed. A face already packed tighter than `port_pitch` —
+which happens when Phase 0's degree-driven width growth clamped at `max_node_width` — therefore never
+straightens at all, because crowding it further is worse than a dog-leg.
+
+### Order, and multi-rank chains
+
+Chains are processed by **descending edge `weight`, then ascending edge index**. Weight is the
+caller's statement of which edges matter, and the ordering is total, so the result is byte-identical
+across processes.
+
+Multi-rank chains straighten too — each free end snaps onto the centre x of its adjacent chain item —
+but only when **every interior item is a `Dummy`**. A `Label` item is traversed at an x that depends
+on `label_placement` (§7), and that rule belongs to the router rather than being worth duplicating
+here for an alignment that would rarely fire.
 
 ---
 
-## 4. Port order along a side is a sort — and that is the whole crossing story
+## 5. Port order along a side is a sort — and that is the whole crossing story
 
 Once you know an edge uses a node's bottom side, you still have to pick *where* along that side.
 This single rule does almost all the work:
@@ -208,7 +423,7 @@ the result is byte-identical across runs.
 
 ---
 
-## 5. Port spacing, and where node growth actually happens
+## 6. Port spacing, and where node growth actually happens
 
 With `n` ports to place on a side of length `L`:
 
@@ -254,7 +469,7 @@ before it turns.
 
 ---
 
-## 6. Materialising the polyline
+## 7. Materialising the polyline
 
 Now the actual drawing, in
 [`route_chain_with_bands`](../../crates/gvui/src/5_edge_routing/5_2_lane_router.rs).
@@ -299,12 +514,14 @@ special case in the loop.
 | item kind | `pass_x` |
 | --- | --- |
 | dummy | `center_x` — this is what keeps a Brandes–Köpf-aligned chain perfectly straight |
-| label, `BesideEdge` (default) | `item.x + item.width / 4` — down the middle of the reserved **left half**; the badge occupies the right half |
-| label, `OnEdge` / `AboveEdge` | `center_x` |
+| label, `OnEdge` (default) / `AboveEdge` | `center_x` |
+| label, `BesideEdge` | `item.x + item.width / 4` — down the middle of the reserved **left half**; the badge occupies the right half |
 
 Under `BesideEdge`, Phase 4 reserves a **double-width** label item: the left half is the edge's own
 lane, the right half is the badge. That is why `label_box_width()` exists — a caller wanting the
-badge's own width must not read `item.width`.
+badge's own width must not read `item.width`. Under the default `OnEdge` the item is single-width,
+the line runs straight through its centre, and the badge is drawn over the line — see
+[chapter 06 §7](./06-layering-and-labels.md#7-the-three-placements).
 
 ### Simplification
 
@@ -375,7 +592,7 @@ $7 \times 12 + 40 = 124 > 120$. Below that, channels sit in space the layout alr
 
 ---
 
-## 7. Self-loops
+## 8. Self-loops
 
 A self-loop has no ordering, no rank span and no lane. Its geometry is a direct function of the
 node's rectangle and a stacking index, computed in
@@ -413,7 +630,7 @@ can fix, which the caller should surface as a diagnostic rather than route aroun
 
 ---
 
-## 8. Flat edges
+## 9. Flat edges
 
 A flat edge joins two items in the **same rank**. Its shape is always
 `port → stub → corridor → stub → port`: two horizontal runs at the two port heights, joined by one
@@ -444,7 +661,7 @@ zero length and simplification collapses the whole thing to a **straight two-poi
 
 ---
 
-## 9. Badges are a lookup
+## 10. Badges are a lookup
 
 In v1, badge placement was a ~1,000-line candidate generator: rotate the label through candidate
 offsets, score each one, build a disjoint-set conflict graph over all candidate pairs (up to
@@ -461,20 +678,39 @@ badge.anchor = nearest point on the polyline
 
 Phase 4 turned the label into a `Label` item, Phase 5 ordered it among its rank's siblings, Phase 6
 included it in the separations and Phase 7 gave it coordinates. The space is allocated by
-construction, so there is nothing to search for and nothing to retry. Under `BesideEdge` the badge
-takes the right half of the double-width item; `badge_clearance` is spent as a push away from the
-edge's lane, and only as far as the spare width allows, so the badge is never shrunk below its
-measured size.
+construction, so there is nothing to search for and nothing to retry. Under the default `OnEdge` the
+badge *is* the item box inset by `badge_clearance`, and the route runs through its centre. Under
+`BesideEdge` the badge takes the right half of the double-width item; `badge_clearance` is spent as a
+push away from the edge's lane, and only as far as the spare width allows, so the badge is never
+shrunk below its measured size.
 
 Flat-edge badges centre on the corridor's vertical run — the corridor was already widened by the
-label width. Self-loop badges hang off the loop's outer vertical run, which is the only part of a
-loop guaranteed clear of the node.
+label width. A flat edge between two rank *neighbours* has no vertical run at all, because it
+collapses to one straight horizontal segment; its badge then sits at the segment's midpoint, which is
+the middle of a gap Phase 6 widened by the badge width, so it clears both nodes by the same argument.
+Self-loop badges hang off the loop's outer vertical run, which is the only part of a loop guaranteed
+clear of the node.
+
+### The dashed connector is drawn only when it is honest
+
+The renderer ([`EdgeBadgeOverlay.tsx`](../../src/primitives/edges/GraphEdge/EdgeBadgeOverlay.tsx))
+joins a badge to its anchor with a dashed connector **only when the anchor falls outside the badge
+rect**. The test is containment, not distance from the badge centre: under `on-edge` the anchor is
+the point of the edge the badge covers, so it lies inside the rect and a connector would point at the
+thing it starts from. A wide badge whose anchor sits well off-centre but still under the rect is the
+same case, and a distance test would miss it.
+
+That rule is what makes `on-edge` the right default. The old `beside-edge` default put the badge in
+the right half of a double-width item and unconditionally drew a leader to the anchor — a drawing
+full of dotted connectors, every one of them redundant.
 
 ### The safety net, and what a leader line means
 
 There is one piece of search-shaped code, and it fires only for a **degenerate case**: an edge that
-carries a label but never received a `Label` item. (That happens for a labelled edge with
-`min_len = 1`, which Phase 3 is supposed to make impossible.) The net tries five fixed offsets
+carries a label but never received a `Label` item. That means a labelled edge drawn at **span 1** —
+the one span at which a badge has no home — which
+[Phase 3's `enforce_labelled_span`](./05-rank-assignment.md#8-the-span-1-rule-for-labelled-edges)
+exists to make impossible. The net tries five fixed offsets
 along the route — ratios `0.5, 0.35, 0.65, 0.2, 0.8`, most central first — perpendicular to the
 segment at the midpoint, checking each against a uniform spatial hash of nodes and already-placed
 badges. No rotation, no scoring, no backtracking. If none clears, the badge is left at the midpoint
@@ -490,9 +726,100 @@ the wire edges by `edge_id` and fills the display string in.
 
 ---
 
-## 10. Corner rounding happens at render time
+## 11. Octilinear edges are a post-pass, not a router
 
-The Rust engine emits axis-aligned waypoints and nothing else. Rounding is applied in TypeScript,
+`edgeStyle: "octilinear"` is the "8-direction" look: each right-angle corner of the finished route
+becomes a 45-degree chamfer.
+
+```text
+   orthogonal corner                 chamfered corner
+
+        │                                 │
+        │                                 │
+        │                                 ╲            entry = cur − c along the incoming leg
+        └────────────                      ╲───────    exit  = cur + c along the outgoing leg
+
+        2c of axis-aligned travel   →   c·√2 of diagonal, a saving of c(2 − √2) ≈ 0.59c
+```
+
+It is implemented in
+[`chamfer_corners`](../../crates/gvui/src/5_edge_routing/5_5_edge_style.rs), and it is deliberately
+**not** an eight-direction router. That distinction is the whole design decision, so it is worth
+being explicit about the alternative and what it would cost.
+
+### Why not a real octilinear router
+
+The lane model is what makes routing exact. Channels between rank bands are **axis-aligned
+intervals**; the set of edges wanting to share a channel is therefore an interval graph; and interval
+graphs are optimally colourable in a single sweep. That is the entire reason
+[Phase 6](./08-routing-demand.md) can reserve the exact space every segment will need *before any
+geometry exists*, and therefore the reason routing in this engine cannot fail — no rip-up, no
+reroute, no budget to exhaust (§13).
+
+Octilinear channels have no equivalent exact colouring. A diagonal corridor is not an interval on
+either axis, and the conflict graph of a set of diagonals is not perfect. A true eight-direction
+router would mean replacing an exact reservation with a search, and **giving up the guarantee that
+every edge routes** — which is the one property the whole v2/v3 architecture was built to obtain. A
+chamfer post-pass buys most of the visual benefit — softer turns, shorter paths — while keeping it.
+
+### Why the post-pass cannot fail
+
+For a corner `prev → cur → next`, the vertex `cur` becomes two vertices, each offset along its own
+leg by
+
+$$c = \min\bigl(\text{cornerCut},\; \tfrac{1}{2}\min(\text{len}_{\text{in}}, \text{len}_{\text{out}})\bigr)$$
+
+The "half the shorter leg" clamp is what lets every corner be decided **in isolation**: two
+neighbouring corners each claim at most half of the leg they share, so their chamfers can meet but
+never overlap, and the pass needs no lookahead. `prev` is read from the *input* polyline rather than
+from the output being built, which is what preserves that bound.
+
+A corner is left square when
+
+- it is not a right angle — either leg is diagonal, or the two legs are collinear;
+- the chamfer would be sub-epsilon; or
+- the resulting diagonal would touch a node's box, grown by `CHAMFER_NODE_CLEARANCE = 2.0`.
+
+Every rejection is local and independent, so **the worst case is the unmodified orthogonal
+polyline**. There is no state to roll back and no way for the pass to report failure; it degrades to
+plain orthogonal one corner at a time.
+
+The collision test uses a uniform spatial hash local to Phase 8 (`NodeRectIndex`) rather than Phase
+9's — routing must not depend on validation, because validation is allowed to be compiled out of a
+release build and routing is not. Every uncertain answer is `true` (blocked): a non-finite endpoint, a
+query box too large to bucket, or an index poisoned by a non-finite input rectangle. Over-reporting
+only leaves a corner square.
+
+Two smaller contract points:
+
+- **Endpoints survive bit-exactly.** `c` never exceeds half a leg, so the chamfer of the corner at
+  index 1 stops at the midpoint of the stub and can never reach the port point — which Phase 9
+  compares by exact equality.
+- **Length never increases.** Each applied chamfer trades `2c` of axis-aligned travel for `c·√2`.
+
+### Where it runs, and what drives its size
+
+The chamfer is the **last** thing the routing facade does, deliberately *after* badge placement.
+Badges are positioned against the orthogonal geometry Phase 4 reserved item space for, and a chamfer
+only ever removes area from inside the corner triangle it replaces, so no anchor a badge was measured
+against moves. Running it here also keeps badge output byte-identical between the orthogonal styles
+and this one.
+
+The chamfer size is `max(corner_radius, MIN_CORNER_CUT = 12.0)`. One knob drives both the rounded and
+the octilinear look; the floor exists because `corner_radius` defaults to 8, and an 8px chamfer on a
+120px-wide node reads as a rendering artefact rather than a diagonal.
+
+The renderer draws octilinear routes as a **plain polyline** and ignores `cornerRadius`: the engine
+has already replaced each right-angle corner with a chamfer, so the chamfer segments *are* the
+corners. Rounding them again would eat the very geometry that makes the style look different, and
+would round the chamfer's own two shallow joints into a wobble.
+
+---
+
+## 12. Corner rounding happens at render time
+
+The Rust engine emits axis-aligned waypoints and nothing else — `octilinear` (§11) excepted, and it
+is the only exception. Rounding is applied in TypeScript,
 in [`edgePath.ts`](../../src/engine/layout/custom/edgePath.ts), by replacing each interior corner
 with a quadratic Bézier of radius
 
@@ -508,25 +835,30 @@ rendering decisions** — they change no node position, no port assignment, no l
 the slider re-derives the path string from the cached `points` array and re-renders immediately,
 with no WASM call, no worker round trip, and no layout-cache invalidation.
 
-The four styles:
+The five styles:
 
 | `edgeStyle` | rendering |
 | --- | --- |
 | `orthogonal` | `M`/`L` through every waypoint, sharp corners |
 | `rounded` (default) | as above with quadratic corners at `cornerRadius = 8` |
 | `spline` | Catmull–Rom through the waypoints, converted to cubic Béziers |
+| `octilinear` | `M`/`L` through every waypoint — the chamfers of §11 *are* the corners, so `cornerRadius` is ignored |
 | `straight` | `M first L last` — interior waypoints ignored |
 
-`EngineMode::LayeredSpline` is **not a different layout**. It resolves to the same
-`layout_layered` function; only the path command differs. There is a test asserting the two produce
-byte-identical node geometry.
+Only `octilinear` changes the points the engine emits; the other four are pure render-time reads of
+the same array.
+
+**`edgeStyle` is not a mode.** v2 shipped a separate `layered-spline` engine mode that resolved to
+the same `layout_layered` function and differed only in the path command. v3 deletes it: there are
+[two modes](../modes/README.md), `layered` and `radial`, and the spline look is now just
+`edgeStyle: "spline"`.
 
 Rust does keep a `points_to_svg_path` helper, at fixed three-decimal precision. It exists solely so
 the native audit harness can render the same geometry the browser does and keep snapshots stable.
 
 ---
 
-## 11. The guarantee, and why there is no fallback
+## 13. The guarantee, and why there is no fallback
 
 Putting it together:
 
@@ -557,7 +889,7 @@ stacking index depends only on the order of `layered.self_loops` and never on ha
 
 ---
 
-## 12. What is recorded but not yet used
+## 14. What is recorded but not yet used
 
 Ingest groups parallel edges between the same unordered node pair into `Bundle`s, and
 `bundle_parallel_edges` defaults to `true`. Nothing in Phase 8 currently consumes them — bundled
@@ -566,19 +898,23 @@ rendering the design note describes is not implemented.
 
 ---
 
-## 13. Cost
+## 15. Cost
 
 | step | cost |
 | --- | --- |
 | Port collection | $O(E)$ |
+| Side scoring | $O(16E)$ — sixteen closed-form evaluations per chain, no search |
 | Port sorting | $O(\sum_v \deg(v) \log \deg(v))$ |
+| Straight-shot alignment | $O(E \log E)$ for the weight sort, then $O(1)$ per chain |
 | `rank_band_bottoms` | $O(V)$, computed once |
 | Polyline materialisation | $O(\text{bends})$ per edge — a table lookup per link |
 | Simplification | $O(\text{points})$ per edge |
 | Badge placement | $O(B)$ lookups; the safety net costs 5 spatial-hash queries per orphan |
+| Octilinear chamfering | $O(\text{points})$ per edge, one spatial-hash query per corner; skipped entirely for the other styles |
 
-No term in that table is quadratic and none of it iterates. Against v1's 4,979 ms of routing for a
-12-node graph, the entire v2 pipeline for that fixture is **0.14 ms**.
+No term in that table is quadratic and none of it iterates. The sixteen combinations are the constant
+16, not a branching factor: nothing is expanded, scored again, or revisited. Against v1's 4,979 ms of
+routing for a 12-node graph, the entire pipeline for that fixture is **0.14 ms**.
 
 ---
 

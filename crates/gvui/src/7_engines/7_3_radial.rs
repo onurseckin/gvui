@@ -26,7 +26,7 @@ use crate::types::{
     PhaseTimings, Point, Rect,
 };
 
-use super::organic::{
+use super::geometric_common::{
     build_routes, finish_geometric_layout, place_badges, remove_overlaps, undirected_adjacency,
 };
 

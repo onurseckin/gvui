@@ -153,7 +153,9 @@ The checks and what guarantees each:
 
 `NON_FINITE_COORDINATE` is checked first on purpose: a NaN poisons every comparison below it, so
 knowing it is present is what makes the rest of the report interpretable. `NON_ORTHOGONAL_SEGMENT`
-is skipped for the `Spline` and `Straight` edge styles, which are diagonal by design.
+is skipped for the three edge styles that are diagonal by design: `Spline`, `Straight` and
+`Octilinear` — the last of these emits a 45° segment in place of every corner it managed to cut, so
+"non-orthogonal" is the outcome it was asked for rather than a defect.
 
 Three implementation details that follow from "this is a bug report, not a score":
 
@@ -198,13 +200,18 @@ found during integration: the original spec told the audit to fail on any non-ze
 native gate only checked `is_valid` and reported none. The two gates disagreed because the *policy*
 was wrong, not because either was buggy.
 
+Since v3 there are two engines, and the split is between them.
+
 `EDGE_NODE_PENETRATION` and the badge overlaps are guaranteed absent in the **layered** pipeline
 because Phase 6 reserves a routing lane for every segment and the label item reserves badge area.
-Organic, radial and grid have neither mechanism — they draw a straight line between two boxes by
-design, so a line grazing a third box is a property of straight-line drawing, not a defect.
+**Radial** has neither mechanism. It places boxes on concentric rings and draws a direct line
+between two of them, so a line grazing a third box is a property of straight-line drawing rather
+than a defect; and its badge placement is an explicitly local pass that tries
+`BADGE_CANDIDATES` positions and then announces its own failure with a leader line. See
+[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs).
 
 ```text
-   layered                          organic / radial / grid
+   layered                          radial
 
    [A]                              [A]
     │                                 ╲
@@ -216,16 +223,29 @@ design, so a line grazing a third box is a property of straight-line drawing, no
 ```
 
 Asserting a guarantee an engine never made would have made the gate useless; deleting the assertion
-to make it pass would have made it dishonest. Both gates now encode the same split:
+to make it pass would have made it dishonest. Both gates encode the same split:
 
-| counter | layered / left-right | organic / radial / grid |
+| counter | `layered` (any `direction`) | `radial` |
 | --- | --- | --- |
-| `nodeNodeOverlaps` | **fail** | **fail** — overlap removal, grid cells and ring sizing all prevent it |
-| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail** | **fail** — no engine may drop an edge |
+| `nodeNodeOverlaps` | **fail** | **fail** — ring sizing and overlap removal both prevent it, so a non-zero value is still a bug |
+| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail** | **fail** — no engine may drop an edge or a badge |
 | `edgeNodePenetrations` | **fail** | reported, best-effort |
 | `badgeNodeOverlaps`, `badgeBadgeOverlaps` | **fail** | reported, best-effort |
 
-See [`audit.rs`](../../crates/gvui/examples/audit.rs) and `scripts/runLayoutAudit.ts`.
+Note that the split is by **engine**, not by direction. `left-right` and `bottom-up` are the layered
+pipeline with the frame transposed and/or mirrored; they make every promise `top-down` makes and are
+held to all of them.
+
+The two gates and what each covers:
+
+| gate | cases | fixtures | runs |
+| --- | --- | --- | ---: |
+| [`crates/gvui/examples/audit.rs`](../../crates/gvui/examples/audit.rs) | `layered`/`top-down`, `layered`/`left-right`, `layered`/`bottom-up`, `radial` | 10 datasets in `public/data/graphs/` | 40 |
+| [`scripts/runLayoutAudit.ts`](../../scripts/runLayoutAudit.ts) | `layered`/`top-down`, `layered`/`left-right`, `radial` | the same 10 datasets **plus** 26 graph-testing scenarios | 108 |
+
+The native harness runs the Rust directly and also checks a per-fixture time budget; the TypeScript
+gate runs the compiled WASM through the same measurement path the browser uses, which is what makes
+it the acceptance gate. Both currently report zero failures.
 
 ---
 
@@ -262,7 +282,7 @@ Every field of `LayoutMetrics`:
 | field | meaning |
 | --- | --- |
 | `node_count`, `edge_count` | Nodes emitted, routes emitted. |
-| `rank_count`, `dummy_count` | 0 for the non-layered engines, which have no layered graph. |
+| `rank_count`, `dummy_count` | 0 under `radial`, which builds no layered graph. |
 
 ### Constraint counters
 
@@ -281,9 +301,12 @@ blended into one:
 > failures that a single aggregate score would hide, which is precisely why they are reported
 > separately instead of being blended into one figure.
 
-Measured today: `straight_chain_ratio` is 1.00 on seven of eight layered fixtures and 0.96 on the
-dense mesh; `leader_count` is 0 on every layered fixture. On organic mode it is 18 on the dense mesh
-— expected, since organic has no layered structure in which to reserve label space.
+Measured today, from the native audit: `straight_chain_ratio` is 1.00 on nine of the ten layered
+datasets and 0.79 on `microservice_platform_topology` (identically in all three directions);
+`leader_count` is **0 on every layered fixture in every direction**. Radial reports leaders on three
+datasets — 1, 2 and 4 — which is expected rather than a regression: radial has no layered structure
+in which to reserve label space, so its badge pass is allowed to fall back, and the fallback is
+exactly what `leader_count` exists to make visible.
 
 ---
 

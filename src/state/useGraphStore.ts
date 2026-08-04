@@ -2,32 +2,55 @@ import { create } from "zustand";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../types/graphData";
 import {
   DEFAULT_CUSTOM_LAYOUT_CONFIG,
-  LAYOUT_PRESETS,
-  resolveCustomLayoutConfig,
   type CustomLayoutConfig,
-  type LayoutPresetName,
+  type Direction,
 } from "../engine/layout/custom/config";
 
 /**
- * v2 engine modes. `layered`/`layered-spline` replace the old direction-baked-into-mode values
- * (`top-down`, `top-down-dagre`, `left-right`, `right-left` all used to be separate modes);
- * direction is now an orthogonal `CustomLayoutConfig.direction` knob, not a mode.
+ * The two engines the v3 layout pipeline ships: a layered pipeline and a radial one.
+ *
+ * Flow direction is deliberately NOT part of this union. It used to be — `top-down`,
+ * `left-right`, `right-left` and `bottom-up` were separate "modes" — and because the client sends
+ * a fully resolved config the mode's direction was always discarded by the engine, so picking
+ * `left-right` silently drew top-down. Direction now lives in `layoutConfig.direction` and nowhere
+ * else. `layered-spline` is likewise gone: it was the layered engine with `edgeStyle: "spline"`.
  */
-export type LayoutMode = "layered" | "layered-spline" | "left-right" | "organic" | "radial" | "grid";
+export type LayoutMode = "layered" | "radial";
 
-const LEGACY_LAYOUT_MODE_MAP: Record<string, LayoutMode> = {
-  "top-down": "layered",
-  "top-down-dagre": "layered",
-  "left-right": "left-right",
-  "right-left": "left-right",
-  force: "organic",
-  stress: "organic",
-  organic: "organic",
-  radial: "radial",
-  grid: "grid",
-  layered: "layered",
-  "layered-spline": "layered-spline",
-};
+/**
+ * Every mode string any client has ever persisted, mapped onto the surviving two engines.
+ * Retired engines (`organic`, `grid`) and the retired stress aliases (`force`, `stress`) all land
+ * on `layered`, which is the only engine that can draw an arbitrary graph without collisions.
+ *
+ * A `Map`, not an object literal: the lookup key is arbitrary text out of localStorage or a URL,
+ * and an object would happily answer `"constructor"` with something off `Object.prototype`.
+ */
+const LEGACY_LAYOUT_MODE_MAP: ReadonlyMap<string, LayoutMode> = new Map<string, LayoutMode>([
+  ["layered", "layered"],
+  ["layered-spline", "layered"],
+  ["top-down", "layered"],
+  ["top-down-dagre", "layered"],
+  ["bottom-up", "layered"],
+  ["left-right", "layered"],
+  ["right-left", "layered"],
+  ["force", "layered"],
+  ["stress", "layered"],
+  ["organic", "layered"],
+  ["grid", "layered"],
+  ["radial", "radial"],
+]);
+
+/**
+ * The direction that a legacy, direction-bearing mode string used to stand for. Only the three
+ * non-default flows appear: `top-down` and every non-directional legacy value already resolve to
+ * the config default, so mapping them would only overwrite a deliberate user choice with the same
+ * value they would have got anyway.
+ */
+const LEGACY_MODE_DIRECTION_MAP: ReadonlyMap<string, Direction> = new Map<string, Direction>([
+  ["bottom-up", "bottom-up"],
+  ["left-right", "left-right"],
+  ["right-left", "right-left"],
+]);
 
 /**
  * Maps a possibly-legacy persisted layout mode string (from localStorage, a shared URL, or an
@@ -35,7 +58,19 @@ const LEGACY_LAYOUT_MODE_MAP: Record<string, LayoutMode> = {
  * rather than throwing, since a bad viewport string should degrade the layout, not the whole app.
  */
 export function normalizeLayoutMode(mode: string): LayoutMode {
-  return LEGACY_LAYOUT_MODE_MAP[mode] ?? "layered";
+  return LEGACY_LAYOUT_MODE_MAP.get(mode) ?? "layered";
+}
+
+/**
+ * Recovers the flow direction a legacy mode string carried, or `null` when it carried none.
+ *
+ * Persisted viewports store only the mode, never the config, so a user who saved `left-right`
+ * would otherwise come back to a top-down drawing after the modes collapsed to two. Callers that
+ * restore persisted state must feed the raw stored string through here (or through
+ * `setLayoutMode`, which does it for them) rather than through `normalizeLayoutMode` alone.
+ */
+export function directionFromLegacyLayoutMode(mode: string): Direction | null {
+  return LEGACY_MODE_DIRECTION_MAP.get(mode) ?? null;
 }
 
 export type FilterCategory = "all" | "success" | "error" | "tools";
@@ -50,7 +85,6 @@ export interface GraphState {
   activeFilter: FilterCategory;
   layoutMode: LayoutMode;
   layoutConfig: CustomLayoutConfig;
-  layoutPreset: LayoutPresetName;
   zoomLevel: number;
   panOffset: { x: number; y: number };
   collapsedNodeIds: Set<string>;
@@ -64,13 +98,15 @@ export interface GraphActions {
   setSelectedNodeId: (nodeId: string | null) => void;
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: FilterCategory) => void;
+  /**
+   * Accepts a raw string so persisted/shared values reach exactly one normalisation point. A
+   * legacy direction-bearing string additionally rewrites `layoutConfig.direction`.
+   */
   setLayoutMode: (mode: LayoutMode | string) => void;
   setLayoutConfig: (
     config: Partial<CustomLayoutConfig> | ((prev: CustomLayoutConfig) => CustomLayoutConfig),
   ) => void;
   resetLayoutConfig: () => void;
-  /** Replaces the layout config with the named preset merged over the defaults. */
-  applyPreset: (name: LayoutPresetName) => void;
   setZoomLevel: (zoom: number | ((prev: number) => number)) => void;
   setPanOffset: (
     offset:
@@ -97,7 +133,6 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   activeFilter: "all",
   layoutMode: "layered",
   layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG },
-  layoutPreset: "readable",
   zoomLevel: 1,
   panOffset: initialPanOffset,
   collapsedNodeIds: new Set<string>(),
@@ -109,7 +144,15 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveFilter: (filter) => set({ activeFilter: filter }),
-  setLayoutMode: (mode) => set({ layoutMode: normalizeLayoutMode(mode) }),
+  setLayoutMode: (mode) =>
+    set((state) => {
+      const direction = directionFromLegacyLayoutMode(mode);
+      return {
+        layoutMode: normalizeLayoutMode(mode),
+        layoutConfig:
+          direction === null ? state.layoutConfig : { ...state.layoutConfig, direction },
+      };
+    }),
   setLayoutConfig: (config) =>
     set((state) => ({
       layoutConfig:
@@ -117,13 +160,7 @@ export const useGraphStore = create<GraphStore>()((set) => ({
           ? config(state.layoutConfig)
           : { ...state.layoutConfig, ...config },
     })),
-  resetLayoutConfig: () =>
-    set({ layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG }, layoutPreset: "readable" }),
-  applyPreset: (name) =>
-    set({
-      layoutPreset: name,
-      layoutConfig: resolveCustomLayoutConfig(LAYOUT_PRESETS[name]),
-    }),
+  resetLayoutConfig: () => set({ layoutConfig: { ...DEFAULT_CUSTOM_LAYOUT_CONFIG } }),
   setZoomLevel: (zoom) =>
     set((state) => ({
       zoomLevel: typeof zoom === "function" ? zoom(state.zoomLevel) : zoom,
@@ -183,7 +220,6 @@ export const useSearchQuery = () => useGraphStore((state) => state.searchQuery);
 export const useActiveFilter = () => useGraphStore((state) => state.activeFilter);
 export const useLayoutMode = () => useGraphStore((state) => state.layoutMode);
 export const useLayoutConfig = () => useGraphStore((state) => state.layoutConfig);
-export const useLayoutPreset = () => useGraphStore((state) => state.layoutPreset);
 export const useZoomLevel = () => useGraphStore((state) => state.zoomLevel);
 export const usePanOffset = () => useGraphStore((state) => state.panOffset);
 export const useCollapsedNodeIds = () => useGraphStore((state) => state.collapsedNodeIds);

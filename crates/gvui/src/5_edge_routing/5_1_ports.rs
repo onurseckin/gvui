@@ -2,20 +2,40 @@
 //!
 //! Every attachment decision here is **determined or sorted, never searched**. The v1 engine tried
 //! all sixteen `(source_side, target_side)` combinations per edge and then searched again to repair
-//! the crossings that produced. Both searches disappear because:
+//! the crossings that produced. v3 still evaluates sixteen combinations, but it *scores* them with a
+//! closed-form cost and takes the minimum — one pass, no repair, no backtracking:
 //!
-//! 1. **The side is a table lookup.** In the engine's internal top-down frame a chain edge always
-//!    leaves the bottom and enters the top; a flat edge uses the two facing sides; a self-loop uses
-//!    the right side twice. Direction (`LeftRight`, `BottomUp`, ...) is a transposition applied
-//!    elsewhere, so this module never branches on it.
+//! 1. **The side is a scored choice** ([`plan_chain_sides`]). Under `flexible_port_sides` a chain
+//!    edge may attach to any face whose stub direction the lane model can realise, ranked
+//!    lexicographically by `(bends, flow_penalty + length / 1000, congestion, candidate order)`.
+//!    With `flexible_port_sides` off the side is the v2 table: every chain edge is `Bottom -> Top`.
 //! 2. **The order along a side is a sort by the neighbour's `order`.** Phase 5 already minimised
 //!    crossings *between* ranks; sorting the bottom ports by the order of the item they run to (and
 //!    the top ports by the order of the item they come from) makes the attachment locally
 //!    crossing-free as a consequence, with no counting and no repair pass.
+//! 3. **Straight-shot alignment** ([`apply_straight_shot_alignment`]) then slides ports onto a
+//!    common x wherever the slack allows, turning a dog-leg into one straight segment. It is the
+//!    other half of step 1: a vertical face is only ever chosen because the *other* end can come and
+//!    meet the fixed x it drops at, and this is the pass that makes it do so.
 //!
 //! Reversed (feedback) edges had their endpoints swapped by Phase 2, so in the internal frame they
 //! are ordinary `Bottom -> Top` edges and are deliberately *not* special-cased. Phase 9 flips the
 //! arrowhead back.
+//!
+//! ## Why a side port cannot break Phase 6's reservation
+//!
+//! Phase 6 reserved routing space in **order space**, before any coordinate existed: a channel below
+//! each rank sized by an interval colouring, and a corridor between each adjacent pair of items in a
+//! rank. Moving an attachment point from the bottom face to a side face does not touch either
+//! reservation, because a side port **still descends into the channel below its own rank** — Step
+//! 5.2 drops from `port.stub` straight to the channel y and runs horizontally from there. The
+//! travel direction through the layered structure is unchanged; only the last few pixels before the
+//! node boundary move. What *does* change is where that descent happens: `stub.x` is now
+//! `port_stub_length` outside a vertical face rather than inside the node's own width, so the
+//! descent lives in the gap between the node and its rank neighbour. That gap is Phase 6's corridor,
+//! and [`face_clearance`] refuses a side face unless the corridor is at least
+//! [`SIDE_FACE_CLEARANCE_FACTOR`] stub lengths wide — which is what keeps the descent out of the
+//! neighbour's interior and the "no edge-node penetration" invariant intact.
 
 use crate::config::CustomLayoutConfig;
 use crate::types::{GraphIr, Item, ItemKind, Layered, Point, PortRef, Rect, Side};
@@ -31,6 +51,43 @@ const CROWDED_MIN_PITCH: f64 = 2.0;
 
 /// Sides in a fixed, deterministic iteration order. Never iterate a `HashMap` to reach these.
 const SIDES: [Side; 4] = [Side::Top, Side::Right, Side::Bottom, Side::Left];
+
+/// Candidate faces for a chain's **source** end, best-guess first.
+///
+/// The order is the final tie-break of the side score, so it decides only genuine ties. It leads
+/// with the rank-flow face because a tie means "the geometry does not care", and when the geometry
+/// does not care a hierarchy should read top-to-bottom.
+const SOURCE_CANDIDATES: [Side; 4] = [Side::Bottom, Side::Right, Side::Left, Side::Top];
+
+/// Candidate faces for a chain's **target** end, best-guess first. Mirror of
+/// [`SOURCE_CANDIDATES`].
+const TARGET_CANDIDATES: [Side; 4] = [Side::Top, Side::Right, Side::Left, Side::Bottom];
+
+/// How many stub lengths of clearance a vertical face needs before a port may attach to it.
+///
+/// A port on a `Left`/`Right` face makes Step 5.2 descend at `port_stub_length` outside that face,
+/// so the whole departure — the horizontal stub *and* the vertical run down to the channel — lives
+/// in the gap between this node and its rank neighbour. One stub length would put the descent
+/// exactly on the neighbour's boundary; requiring twice that keeps it clear of the neighbour by as
+/// much again, which is the margin that makes "no edge-node penetration" hold by construction
+/// rather than by luck.
+const SIDE_FACE_CLEARANCE_FACTOR: f64 = 2.0;
+
+/// Chain ports one `Left`/`Right` face may carry.
+///
+/// Every port on a vertical face descends at the *same* x (`port_stub_length` outside the face is
+/// fixed by the stub contract Step 5.2 reads), so a second port on the same face would run
+/// collinear with the first from its own y down to the channel. One port per vertical face is the
+/// only cap under which that cannot happen.
+const SIDE_FACE_CAPACITY: usize = 1;
+
+/// Pixels of extra path length that cost as much as one unit of `flow_side_bias`.
+///
+/// This is what makes `(flow_penalty + length / LENGTH_PER_FLOW_UNIT)` a single comparable number:
+/// at the default bias of 1.0 an off-flow face has to save a kilopixel before it outranks the flow
+/// face on an otherwise equal-bend candidate, which in practice means side faces are chosen only
+/// when they strictly *reduce* the bend count.
+const LENGTH_PER_FLOW_UNIT: f64 = 1000.0;
 
 /// Source and target port for every non-self edge, keyed by edge index.
 ///
@@ -69,13 +126,18 @@ struct PortSlot {
     is_source: bool,
 }
 
+/// Where a materialised port lives: `(node * 4 + side_index, position along that face)`.
+type SlotAddress = (usize, usize);
+
 /// Assigns a source and target port to every chain edge and every flat edge.
 ///
 /// Contract subtleties a caller could get wrong:
 /// - The returned points are in the **internal top-down frame** and are final; nothing downstream
 ///   may move a node to make a port fit.
 /// - `stub` is exactly `config.port_stub_length` along the side's outward normal, so a router can
-///   emit `point -> stub` as its first segment without re-deriving the direction.
+///   emit `point -> stub` as its first segment without re-deriving the direction. This holds for
+///   side faces too, which is why a side port's descent x is `stub.x` and why [`face_clearance`]
+///   has to vet the gap it lands in.
 /// - An edge whose chain endpoint is not a `Real` item (which Phase 4 never produces) is skipped
 ///   rather than approximated; it will show up as a missing route, not as a wrong one.
 pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig) -> PortTable {
@@ -88,41 +150,47 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
         return table;
     }
 
+    let plan = plan_chain_sides(layered, ir, config);
+
     // `slots[node * 4 + side_index(side)]` — a dense Vec, so collection order is graph order and
     // never depends on hashing.
     let mut slots: Vec<Vec<PortSlot>> = vec![Vec::new(); node_count * 4];
 
-    for chain in &layered.chains {
+    for (chain_index, chain) in layered.chains.iter().enumerate() {
         if chain.items.len() < 2 {
             continue;
         }
         let last = chain.items.len() - 1;
+        let (source_side, target_side) = plan
+            .get(chain_index)
+            .copied()
+            .unwrap_or((Side::Bottom, Side::Top));
 
-        // Bottom side of the source node, keyed by the order of the item in rank r + 1.
+        // Source face, keyed by the order of the item in rank r + 1.
         if let (Some(node), Some(next)) = (
             real_node_of(layered, chain.items[0]),
             layered.items.get(chain.items[1] as usize),
         ) {
-            if let Some(list) = slots.get_mut(node as usize * 4 + side_index(Side::Bottom)) {
+            if let Some(list) = slots.get_mut(node as usize * 4 + side_index(source_side)) {
                 list.push(PortSlot {
                     edge: chain.edge,
                     order_key: next.order as u32,
-                    y_key: 0.0,
+                    y_key: next.center_y(),
                     is_source: true,
                 });
             }
         }
 
-        // Top side of the target node, keyed by the order of the item in rank r - 1.
+        // Target face, keyed by the order of the item in rank r - 1.
         if let (Some(node), Some(prev)) = (
             real_node_of(layered, chain.items[last]),
             layered.items.get(chain.items[last - 1] as usize),
         ) {
-            if let Some(list) = slots.get_mut(node as usize * 4 + side_index(Side::Top)) {
+            if let Some(list) = slots.get_mut(node as usize * 4 + side_index(target_side)) {
                 list.push(PortSlot {
                     edge: chain.edge,
                     order_key: prev.order as u32,
-                    y_key: 0.0,
+                    y_key: prev.center_y(),
                     is_source: false,
                 });
             }
@@ -147,13 +215,7 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
             continue;
         }
 
-        // Items within a rank never overlap, so comparing left edges is the same as comparing
-        // centres and is stable under differing widths.
-        let source_side = if from.x <= to.x {
-            Side::Right
-        } else {
-            Side::Left
-        };
+        let source_side = flat_source_side(from, to);
         let target_side = source_side.opposite();
 
         if let Some(list) = slots.get_mut(from_node as usize * 4 + side_index(source_side)) {
@@ -174,6 +236,11 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
         }
     }
 
+    // ---- distribute along each face ------------------------------------------------------------
+    let mut node_rects: Vec<Option<Rect>> = vec![None; node_count];
+    // Absolute coordinate of each port along its face: x for `Top`/`Bottom`, y for `Left`/`Right`.
+    let mut positions: Vec<Vec<f64>> = vec![Vec::new(); node_count * 4];
+
     for node in 0..node_count {
         let Some(item) = layered
             .item_of_node
@@ -182,10 +249,8 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
         else {
             continue;
         };
-        let Some(node_id) = ir.node_names.get(node) else {
-            continue;
-        };
         let rect = item.rect();
+        node_rects[node] = Some(rect);
 
         for (si, side) in SIDES.iter().copied().enumerate() {
             let Some(list) = slots.get_mut(node * 4 + si) else {
@@ -210,11 +275,62 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
                 Side::Top | Side::Bottom => rect.width,
                 Side::Left | Side::Right => rect.height,
             };
+            let origin = match side {
+                Side::Top | Side::Bottom => rect.x,
+                Side::Left | Side::Right => rect.y,
+            };
             let (pitch, base) = port_spacing(side_length, list.len(), config);
+            positions[node * 4 + si] = (0..list.len())
+                .map(|i| {
+                    origin + (base + (i as f64 + 1.0) * pitch).clamp(0.0, side_length.max(0.0))
+                })
+                .collect();
+        }
+    }
 
+    // ---- straight-shot alignment ---------------------------------------------------------------
+    if config.straight_shot_alignment {
+        let mut locate: Vec<Option<SlotAddress>> = vec![None; ir.edge_count() * 2];
+        for (face, list) in slots.iter().enumerate() {
             for (i, slot) in list.iter().enumerate() {
-                let offset = (base + (i as f64 + 1.0) * pitch).clamp(0.0, side_length.max(0.0));
-                let port = make_port(node_id, side, i, &rect, offset, config.port_stub_length);
+                let key = slot.edge as usize * 2 + usize::from(!slot.is_source);
+                if let Some(cell) = locate.get_mut(key) {
+                    *cell = Some((face, i));
+                }
+            }
+        }
+        apply_straight_shot_alignment(
+            layered,
+            ir,
+            &plan,
+            &locate,
+            &node_rects,
+            &mut positions,
+            config,
+        );
+    }
+
+    // ---- materialise ---------------------------------------------------------------------------
+    for node in 0..node_count {
+        let Some(rect) = node_rects.get(node).copied().flatten() else {
+            continue;
+        };
+        let Some(node_id) = ir.node_names.get(node) else {
+            continue;
+        };
+        for (si, side) in SIDES.iter().copied().enumerate() {
+            let Some(list) = slots.get(node * 4 + si) else {
+                continue;
+            };
+            for (i, slot) in list.iter().enumerate() {
+                let Some(coord) = positions
+                    .get(node * 4 + si)
+                    .and_then(|face| face.get(i))
+                    .copied()
+                else {
+                    continue;
+                };
+                let port = make_port(node_id, side, i, &rect, coord, config.port_stub_length);
                 if slot.is_source {
                     table.source.insert(slot.edge, port);
                 } else {
@@ -226,6 +342,647 @@ pub fn assign_ports(layered: &Layered, ir: &GraphIr, config: &CustomLayoutConfig
 
     table
 }
+
+// ------------------------------------------------------------------------------------------------
+// 8a — side selection
+// ------------------------------------------------------------------------------------------------
+
+/// One end of a chain, as the side scorer sees it.
+struct EndContext {
+    node: u32,
+    item_index: u32,
+    /// Box of the endpoint node itself.
+    rect: Rect,
+    /// Box of the adjacent chain item — the one the route reaches first (source end) or arrives
+    /// from (target end). For an adjacent-rank chain that is simply the other endpoint.
+    hop: Rect,
+}
+
+/// Chooses `(source_side, target_side)` for every chain, indexed by chain index.
+///
+/// With `flexible_port_sides` off this is the v2 table and nothing is scored. With it on, chains are
+/// visited in ascending **edge index** — not `layered.chains` order — so that the congestion term,
+/// which depends on what earlier edges claimed, is a function of the graph alone and not of how
+/// Phase 4 happened to emit chains.
+///
+/// Flat edges claim their faces first. A flat edge has no side choice (Step 5.3 routes it through
+/// the corridor between its endpoints), so letting a chain edge take a vertical face a flat edge
+/// needs would be trading a free decision for a forced one.
+fn plan_chain_sides(
+    layered: &Layered,
+    ir: &GraphIr,
+    config: &CustomLayoutConfig,
+) -> Vec<(Side, Side)> {
+    let mut plan = vec![(Side::Bottom, Side::Top); layered.chains.len()];
+    let node_count = ir.node_count();
+    if !config.flexible_port_sides || node_count == 0 {
+        return plan;
+    }
+
+    let mut used = vec![0usize; node_count * 4];
+
+    for flat in &layered.flat_edges {
+        let (Some(from), Some(to)) = (
+            layered.items.get(flat.from_item as usize),
+            layered.items.get(flat.to_item as usize),
+        ) else {
+            continue;
+        };
+        let (Some(from_node), Some(to_node)) = (
+            real_node_of(layered, flat.from_item),
+            real_node_of(layered, flat.to_item),
+        ) else {
+            continue;
+        };
+        if from_node == to_node {
+            continue;
+        }
+        let source_side = flat_source_side(from, to);
+        claim_face(&mut used, from_node, source_side);
+        claim_face(&mut used, to_node, source_side.opposite());
+    }
+
+    let mut order: Vec<(u32, usize)> = Vec::with_capacity(layered.chains.len());
+    for (chain_index, chain) in layered.chains.iter().enumerate() {
+        if chain.items.len() >= 2 {
+            order.push((chain.edge, chain_index));
+        }
+    }
+    order.sort_unstable();
+
+    for (_, chain_index) in order {
+        let Some(chain) = layered.chains.get(chain_index) else {
+            continue;
+        };
+        let last = chain.items.len() - 1;
+        let (Some(source_node), Some(target_node)) = (
+            real_node_of(layered, chain.items[0]),
+            real_node_of(layered, chain.items[last]),
+        ) else {
+            continue;
+        };
+        let (Some(source_item), Some(target_item)) = (
+            layered.items.get(chain.items[0] as usize),
+            layered.items.get(chain.items[last] as usize),
+        ) else {
+            continue;
+        };
+        let (Some(source_hop), Some(target_hop)) = (
+            layered.items.get(chain.items[1] as usize),
+            layered.items.get(chain.items[last - 1] as usize),
+        ) else {
+            continue;
+        };
+
+        let source = EndContext {
+            node: source_node,
+            item_index: chain.items[0],
+            rect: source_item.rect(),
+            hop: source_hop.rect(),
+        };
+        let target = EndContext {
+            node: target_node,
+            item_index: chain.items[last],
+            rect: target_item.rect(),
+            hop: target_hop.rect(),
+        };
+
+        let choice = best_side_pair(&source, &target, last == 1, layered, &used, config);
+        if let Some(cell) = plan.get_mut(chain_index) {
+            *cell = choice;
+        }
+        claim_face(&mut used, source_node, choice.0);
+        claim_face(&mut used, target_node, choice.1);
+    }
+
+    plan
+}
+
+/// Scores the sixteen `(source_side, target_side)` combinations and returns the cheapest.
+///
+/// The cost is closed form — evaluated, not searched — and ranked lexicographically by:
+///
+/// 1. **`bends`**: corners the lane router will actually emit at the two ends. A route leaves one
+///    end's face, drops to the channel, runs horizontally and rises to the other end; that
+///    horizontal run costs two corners and vanishes when the two ends can agree on one x. So a
+///    candidate scores 0 when the `Top`/`Bottom` face's port range overlaps the other end's, and 2
+///    when it cannot. Multi-rank chains score their two ends independently, because their ends sit
+///    in different channels and never have to agree with each other.
+/// 2. **`flow_penalty + length / 1000`**: `flow_side_bias` per end that is not on the rank-flow
+///    face, plus the Manhattan distance between the two candidate attachment points. This is where
+///    "keep the hierarchy readable" is priced against "take the shorter path".
+/// 3. **`congestion`**: ports already claimed on the two faces, so a fan-out spreads instead of
+///    piling onto one face once the first two keys stop discriminating.
+/// 4. **Candidate order** ([`SOURCE_CANDIDATES`] x [`TARGET_CANDIDATES`]), which makes the choice
+///    total and therefore byte-identical across processes.
+///
+/// Infeasible combinations are skipped rather than scored (see [`face_is_feasible`]); `(Bottom,
+/// Top)` is always feasible, so the fallback at the end is unreachable on well-formed input and is
+/// there only to keep the function total.
+fn best_side_pair(
+    source: &EndContext,
+    target: &EndContext,
+    single_link: bool,
+    layered: &Layered,
+    used: &[usize],
+    config: &CustomLayoutConfig,
+) -> (Side, Side) {
+    let pad = config.port_endpoint_padding.max(0.0);
+    let stub = config.port_stub_length.max(0.0);
+    let bias = config.flow_side_bias.max(0.0);
+
+    let mut best: Option<(u32, f64, usize)> = None;
+    let mut best_pair = (Side::Bottom, Side::Top);
+
+    for source_side in SOURCE_CANDIDATES {
+        if !face_is_feasible(source_side, true, source, layered, used, config) {
+            continue;
+        }
+        let source_span = drop_span(&source.rect, source_side, pad, stub);
+        let source_point = face_point(&source.rect, source_side, target.rect.center(), pad);
+
+        for target_side in TARGET_CANDIDATES {
+            if !face_is_feasible(target_side, false, target, layered, used, config) {
+                continue;
+            }
+            let target_span = drop_span(&target.rect, target_side, pad, stub);
+            let target_point = face_point(&target.rect, target_side, source.rect.center(), pad);
+
+            let bends = if single_link {
+                if spans_intersect(source_span, target_span) {
+                    0
+                } else {
+                    2
+                }
+            } else {
+                let head = if span_contains(source_span, source.hop.center().x) {
+                    0
+                } else {
+                    2
+                };
+                let tail = if span_contains(target_span, target.hop.center().x) {
+                    0
+                } else {
+                    2
+                };
+                head + tail
+            };
+
+            let off_flow = u32::from(source_side != Side::Bottom) + u32::from(target_side != Side::Top);
+            let length = manhattan(source_point, target_point);
+            let weighted = bias * off_flow as f64 + length / LENGTH_PER_FLOW_UNIT;
+            let congestion = face_usage(used, source.node, source_side)
+                + face_usage(used, target.node, target_side);
+
+            // Strictly-less, so the first candidate of an exact tie wins and the enumeration order
+            // is the documented final key.
+            let better = match best {
+                None => true,
+                Some((b_bends, b_weighted, b_congestion)) => {
+                    bends
+                        .cmp(&b_bends)
+                        .then_with(|| weighted.total_cmp(&b_weighted))
+                        .then_with(|| congestion.cmp(&b_congestion))
+                        == std::cmp::Ordering::Less
+                }
+            };
+            if better {
+                best = Some((bends, weighted, congestion));
+                best_pair = (source_side, target_side);
+            }
+        }
+    }
+
+    best_pair
+}
+
+/// True when a port may attach to `side` of this end.
+///
+/// Two rules, both of them about what Step 5.2 will draw:
+///
+/// - A source may not use `Top` and a target may not use `Bottom`. The router always descends from
+///   the source into the channel below its rank and rises into the target from that same channel,
+///   so a backward-facing stub would have to cross the node's own interior to get there.
+/// - A vertical face needs [`SIDE_FACE_CLEARANCE_FACTOR`] stub lengths of clearance to the rank
+///   neighbour on that side and must not already be claimed ([`SIDE_FACE_CAPACITY`]).
+fn face_is_feasible(
+    side: Side,
+    is_source: bool,
+    end: &EndContext,
+    layered: &Layered,
+    used: &[usize],
+    config: &CustomLayoutConfig,
+) -> bool {
+    match side {
+        Side::Top => !is_source,
+        Side::Bottom => is_source,
+        Side::Left | Side::Right => {
+            if face_usage(used, end.node, side) >= SIDE_FACE_CAPACITY {
+                return false;
+            }
+            let needed = SIDE_FACE_CLEARANCE_FACTOR * config.port_stub_length.max(0.0);
+            face_clearance(layered, end.item_index, side) >= needed
+        }
+    }
+}
+
+/// Horizontal gap between an item and its rank neighbour on `side`, or infinity when there is none.
+///
+/// This is the space a side port's stub and its descent to the channel have to live in. Phase 6
+/// guarantees the gap is at least `node_gap` wide, but `node_gap` is configurable and
+/// `port_stub_length` is configurable independently, so the two can be set into conflict — which is
+/// exactly the case this function exists to reject.
+fn face_clearance(layered: &Layered, item_index: u32, side: Side) -> f64 {
+    let Some(item) = layered.items.get(item_index as usize) else {
+        return 0.0;
+    };
+    let neighbour_order = match side {
+        Side::Right => item.order.checked_add(1),
+        Side::Left => item.order.checked_sub(1),
+        // A horizontal face has no rank neighbour in the order axis; the caller never asks.
+        Side::Top | Side::Bottom => return f64::INFINITY,
+    };
+    let Some(order) = neighbour_order else {
+        return f64::INFINITY;
+    };
+    let Some(neighbour) = item_at_order(layered, item.rank, order) else {
+        return f64::INFINITY;
+    };
+    let gap = match side {
+        Side::Right => neighbour.x - (item.x + item.width),
+        _ => item.x - (neighbour.x + neighbour.width),
+    };
+    if gap.is_finite() {
+        gap
+    } else {
+        0.0
+    }
+}
+
+/// Item at a given `(rank, order)`.
+///
+/// Phase 5 permutes each rank slice in place, so `order` is the position within the slice and the
+/// direct index is correct. The linear fallback covers an ordering implementation that assigns
+/// `order` without permuting; it is never hit on a well-formed `Layered` and costs nothing there.
+fn item_at_order(layered: &Layered, rank: u16, order: u16) -> Option<&Item> {
+    let range = layered.rank_ranges.get(rank as usize)?;
+    let start = (range.start as usize).min(layered.items.len());
+    let end = (range.end as usize).clamp(start, layered.items.len());
+    let slice = &layered.items[start..end];
+    if let Some(item) = slice.get(order as usize) {
+        if item.order == order {
+            return Some(item);
+        }
+    }
+    slice.iter().find(|item| item.order == order)
+}
+
+/// Side a flat edge leaves from. Items within a rank never overlap, so comparing left edges is the
+/// same as comparing centres and is stable under differing widths.
+fn flat_source_side(from: &Item, to: &Item) -> Side {
+    if from.x <= to.x {
+        Side::Right
+    } else {
+        Side::Left
+    }
+}
+
+/// Interval of x at which a port on `side` can enter or leave the routing channel.
+///
+/// A `Top`/`Bottom` port drops straight down from wherever it sits along the face, so its interval
+/// is the whole padded face. A `Left`/`Right` port drops at exactly one x — `port_stub_length`
+/// outside the face — so its interval is a point. Two ends can share a channel x, and thereby skip
+/// the horizontal run and its two corners, exactly when their intervals meet.
+fn drop_span(rect: &Rect, side: Side, pad: f64, stub: f64) -> (f64, f64) {
+    match side {
+        Side::Top | Side::Bottom => padded_range(rect.x, rect.right(), pad),
+        Side::Right => {
+            let x = rect.right() + stub;
+            (x, x)
+        }
+        Side::Left => {
+            let x = rect.x - stub;
+            (x, x)
+        }
+    }
+}
+
+/// Attachment point a port on `side` would take if it were free to slide toward `toward`.
+///
+/// Used only for the `length` term, so it is the *best case* for that face rather than the position
+/// the distribution will actually produce.
+fn face_point(rect: &Rect, side: Side, toward: Point, pad: f64) -> Point {
+    match side {
+        Side::Top | Side::Bottom => {
+            let (lo, hi) = padded_range(rect.x, rect.right(), pad);
+            Point {
+                x: clamp_finite(toward.x, lo, hi),
+                y: if side == Side::Top {
+                    rect.y
+                } else {
+                    rect.bottom()
+                },
+            }
+        }
+        Side::Left | Side::Right => {
+            let (lo, hi) = padded_range(rect.y, rect.bottom(), pad);
+            Point {
+                x: if side == Side::Left {
+                    rect.x
+                } else {
+                    rect.right()
+                },
+                y: clamp_finite(toward.y, lo, hi),
+            }
+        }
+    }
+}
+
+/// `[lo + pad, hi - pad]`, collapsed to the midpoint when the padding would invert it.
+fn padded_range(lo: f64, hi: f64, pad: f64) -> (f64, f64) {
+    let a = lo + pad;
+    let b = hi - pad;
+    if a <= b {
+        (a, b)
+    } else {
+        let mid = (lo + hi) / 2.0;
+        (mid, mid)
+    }
+}
+
+/// `clamp` that cannot panic on a non-finite input and never returns NaN for a finite range.
+fn clamp_finite(v: f64, lo: f64, hi: f64) -> f64 {
+    if !v.is_finite() {
+        return (lo + hi) / 2.0;
+    }
+    v.max(lo).min(hi)
+}
+
+fn spans_intersect(a: (f64, f64), b: (f64, f64)) -> bool {
+    a.0 <= b.1 && b.0 <= a.1
+}
+
+fn span_contains(a: (f64, f64), x: f64) -> bool {
+    a.0 <= x && x <= a.1
+}
+
+fn manhattan(a: Point, b: Point) -> f64 {
+    (a.x - b.x).abs() + (a.y - b.y).abs()
+}
+
+fn face_usage(used: &[usize], node: u32, side: Side) -> usize {
+    used.get(node as usize * 4 + side_index(side))
+        .copied()
+        .unwrap_or(0)
+}
+
+fn claim_face(used: &mut [usize], node: u32, side: Side) {
+    if let Some(slot) = used.get_mut(node as usize * 4 + side_index(side)) {
+        *slot += 1;
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// 8c — straight-shot alignment
+// ------------------------------------------------------------------------------------------------
+
+/// Slides ports onto a common x so their edge becomes one straight segment.
+///
+/// The lane router draws every chain end as "drop from the port into the channel". Two ends that
+/// drop at the same x need no horizontal run between them and therefore no corners, which is what
+/// this pass buys.
+///
+/// A port on `Top`/`Bottom` is **free**: it drops wherever it sits along the face, so it can be
+/// slid. A port on `Left`/`Right` is **fixed**: it drops exactly `port_stub_length` outside its
+/// face and there is nothing to slide. So there are three cases, and the mixed one matters as much
+/// as the symmetric one — [`best_side_pair`] only ever prefers a vertical face because it expects
+/// the *other*, free end to come and meet it:
+///
+/// - both free: both move to a shared x between them,
+/// - one free: the free end moves onto the fixed end's drop x,
+/// - both fixed: nothing to do.
+///
+/// Chains are processed by descending `weight` then ascending edge index. Weight is the caller's
+/// statement of which edges matter, and the ordering is total, so the result is byte-identical
+/// across processes.
+///
+/// A snap is refused unless the port stays inside `[x + padding, x + width - padding]` **and** at
+/// least `port_pitch` from the ports on either side of it. Those neighbours are what Phase 8b sorted
+/// into a crossing-free order, so keeping the moved port strictly between them is what stops the
+/// alignment from re-introducing the crossings the sort removed. A face already packed tighter than
+/// `port_pitch` — which happens when Phase 0's width growth clamped at `max_node_width` — therefore
+/// never straightens, because crowding it further is worse than a dog-leg.
+///
+/// Multi-rank chains straighten too, but only when every interior item is a `Dummy`: a `Label` item
+/// is traversed at an x that depends on `label_placement`, and that rule belongs to Step 5.2 rather
+/// than being worth duplicating here for an alignment that would rarely fire.
+#[allow(clippy::too_many_arguments)]
+fn apply_straight_shot_alignment(
+    layered: &Layered,
+    ir: &GraphIr,
+    plan: &[(Side, Side)],
+    locate: &[Option<SlotAddress>],
+    node_rects: &[Option<Rect>],
+    positions: &mut [Vec<f64>],
+    config: &CustomLayoutConfig,
+) {
+    let pad = config.port_endpoint_padding.max(0.0);
+    let pitch = config.port_pitch.max(0.0);
+    let stub = config.port_stub_length.max(0.0);
+
+    let mut order: Vec<(usize, u32, f64)> = Vec::with_capacity(layered.chains.len());
+    for (chain_index, chain) in layered.chains.iter().enumerate() {
+        if chain.items.len() < 2 {
+            continue;
+        }
+        let Some((source_side, target_side)) = plan.get(chain_index).copied() else {
+            continue;
+        };
+        if !is_free_face(source_side) && !is_free_face(target_side) {
+            continue;
+        }
+        let weight = ir
+            .edges
+            .get(chain.edge as usize)
+            .map(|e| e.weight)
+            .unwrap_or(1.0);
+        order.push((chain_index, chain.edge, weight));
+    }
+    order.sort_by(|a, b| b.2.total_cmp(&a.2).then(a.1.cmp(&b.1)));
+
+    for (chain_index, edge, _) in order {
+        let Some(chain) = layered.chains.get(chain_index) else {
+            continue;
+        };
+        let Some((source_side, target_side)) = plan.get(chain_index).copied() else {
+            continue;
+        };
+        let last = chain.items.len() - 1;
+
+        let (Some(&(source_face, source_slot)), Some(&(target_face, target_slot))) = (
+            locate.get(edge as usize * 2).and_then(|cell| cell.as_ref()),
+            locate
+                .get(edge as usize * 2 + 1)
+                .and_then(|cell| cell.as_ref()),
+        ) else {
+            continue;
+        };
+        let (Some(source_rect), Some(target_rect)) = (
+            node_rects.get(source_face / 4).copied().flatten(),
+            node_rects.get(target_face / 4).copied().flatten(),
+        ) else {
+            continue;
+        };
+
+        let source_span = slidable_range(
+            positions.get(source_face),
+            source_slot,
+            &source_rect,
+            pad,
+            pitch,
+        );
+        let target_span = slidable_range(
+            positions.get(target_face),
+            target_slot,
+            &target_rect,
+            pad,
+            pitch,
+        );
+
+        if last == 1 {
+            match (is_free_face(source_side), is_free_face(target_side)) {
+                (true, true) => {
+                    let (Some(source_span), Some(target_span)) = (source_span, target_span) else {
+                        continue;
+                    };
+                    let lo = source_span.0.max(target_span.0);
+                    let hi = source_span.1.min(target_span.1);
+                    if lo > hi {
+                        continue;
+                    }
+                    let (Some(&from), Some(&to)) = (
+                        positions
+                            .get(source_face)
+                            .and_then(|face| face.get(source_slot)),
+                        positions
+                            .get(target_face)
+                            .and_then(|face| face.get(target_slot)),
+                    ) else {
+                        continue;
+                    };
+                    let x = clamp_finite((from + to) / 2.0, lo, hi);
+                    set_position(positions, source_face, source_slot, x);
+                    set_position(positions, target_face, target_slot, x);
+                }
+                (true, false) => {
+                    let want = fixed_drop_x(&target_rect, target_side, stub);
+                    if let (Some(span), Some(want)) = (source_span, want) {
+                        if span_contains(span, want) {
+                            set_position(positions, source_face, source_slot, want);
+                        }
+                    }
+                }
+                (false, true) => {
+                    let want = fixed_drop_x(&source_rect, source_side, stub);
+                    if let (Some(span), Some(want)) = (target_span, want) {
+                        if span_contains(span, want) {
+                            set_position(positions, target_face, target_slot, want);
+                        }
+                    }
+                }
+                (false, false) => {}
+            }
+        } else {
+            let interior_is_dummy = chain.items[1..last].iter().all(|&ix| {
+                layered
+                    .items
+                    .get(ix as usize)
+                    .is_some_and(|item| item.kind.is_dummy())
+            });
+            if !interior_is_dummy {
+                continue;
+            }
+            let (Some(head), Some(tail)) = (
+                layered.items.get(chain.items[1] as usize),
+                layered.items.get(chain.items[last - 1] as usize),
+            ) else {
+                continue;
+            };
+            if is_free_face(source_side) {
+                if let Some(span) = source_span {
+                    let head_x = head.center_x();
+                    if span_contains(span, head_x) {
+                        set_position(positions, source_face, source_slot, head_x);
+                    }
+                }
+            }
+            if is_free_face(target_side) {
+                if let Some(span) = target_span {
+                    let tail_x = tail.center_x();
+                    if span_contains(span, tail_x) {
+                        set_position(positions, target_face, target_slot, tail_x);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// True when a port on `side` can be slid along its face without changing where it drops into the
+/// channel — i.e. when the face is horizontal.
+fn is_free_face(side: Side) -> bool {
+    matches!(side, Side::Top | Side::Bottom)
+}
+
+/// The single x at which a port on a vertical face drops into the channel, or `None` for a
+/// horizontal face, which has no single x.
+fn fixed_drop_x(rect: &Rect, side: Side, stub: f64) -> Option<f64> {
+    match side {
+        Side::Right => Some(rect.right() + stub),
+        Side::Left => Some(rect.x - stub),
+        Side::Top | Side::Bottom => None,
+    }
+}
+
+/// Interval the port at `slot` may be slid into without leaving its node or crowding a neighbour.
+///
+/// `None` means there is no room at all: either the node is narrower than twice the endpoint
+/// padding, or the face is already packed tighter than `port_pitch`.
+fn slidable_range(
+    face: Option<&Vec<f64>>,
+    slot: usize,
+    rect: &Rect,
+    pad: f64,
+    pitch: f64,
+) -> Option<(f64, f64)> {
+    let face = face?;
+    if slot >= face.len() {
+        return None;
+    }
+    let mut lo = rect.x + pad;
+    let mut hi = rect.right() - pad;
+    if slot > 0 {
+        lo = lo.max(face[slot - 1] + pitch);
+    }
+    if slot + 1 < face.len() {
+        hi = hi.min(face[slot + 1] - pitch);
+    }
+    if lo.is_finite() && hi.is_finite() && lo <= hi {
+        Some((lo, hi))
+    } else {
+        None
+    }
+}
+
+fn set_position(positions: &mut [Vec<f64>], face: usize, slot: usize, value: f64) {
+    if let Some(cell) = positions.get_mut(face).and_then(|face| face.get_mut(slot)) {
+        *cell = value;
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Shared helpers
+// ------------------------------------------------------------------------------------------------
 
 /// Node index behind an item, or `None` when the item is a dummy or a label.
 fn real_node_of(layered: &Layered, item_index: u32) -> Option<u32> {
@@ -268,32 +1025,32 @@ fn port_spacing(side_length: f64, n: usize, config: &CustomLayoutConfig) -> (f64
     }
 }
 
-/// Materialises a port at `offset` along `side`, measured from the side's start
-/// (left for `Top`/`Bottom`, top for `Left`/`Right`).
+/// Materialises a port at `coord` along `side`, where `coord` is an **absolute** coordinate on the
+/// face's axis: x for `Top`/`Bottom`, y for `Left`/`Right`.
 fn make_port(
     node_id: &str,
     side: Side,
     index: usize,
     rect: &Rect,
-    offset: f64,
+    coord: f64,
     stub_length: f64,
 ) -> PortRef {
     let point = match side {
         Side::Top => Point {
-            x: rect.x + offset,
+            x: coord,
             y: rect.y,
         },
         Side::Bottom => Point {
-            x: rect.x + offset,
+            x: coord,
             y: rect.bottom(),
         },
         Side::Left => Point {
             x: rect.x,
-            y: rect.y + offset,
+            y: coord,
         },
         Side::Right => Point {
             x: rect.right(),
-            y: rect.y + offset,
+            y: coord,
         },
     };
     let normal = side.normal();
@@ -324,6 +1081,16 @@ mod tests {
 
     fn cfg() -> CustomLayoutConfig {
         CustomLayoutConfig::default()
+    }
+
+    /// The v2 fixed-table baseline: sides come from the table and no port is ever slid. Tests that
+    /// pin the exact spacing formula use this, because both v3 features are allowed to move ports.
+    fn classic_cfg() -> CustomLayoutConfig {
+        CustomLayoutConfig {
+            flexible_port_sides: false,
+            straight_shot_alignment: false,
+            ..CustomLayoutConfig::default()
+        }
     }
 
     /// Rank ranges for a rank-major item list, given the number of items in each rank.
@@ -414,10 +1181,56 @@ mod tests {
         (layered, ir)
     }
 
+    /// A single adjacent-rank edge between two boxes the caller places.
+    fn one_hop(source: Rect, target: Rect) -> (Layered, GraphIr) {
+        let ir = mk_ir(2, &[(0, 1)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(
+                    ItemKind::Real(0),
+                    0,
+                    0,
+                    source.x,
+                    source.y,
+                    source.width,
+                    source.height,
+                ),
+                mk_item(
+                    ItemKind::Real(1),
+                    1,
+                    0,
+                    target.x,
+                    target.y,
+                    target.width,
+                    target.height,
+                ),
+            ],
+            rank_ranges: ranks(&[1, 1]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![chain(0, vec![0, 1])],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 1],
+        };
+        (layered, ir)
+    }
+
+    fn rect(x: f64, y: f64, w: f64, h: f64) -> Rect {
+        Rect {
+            x,
+            y,
+            width: w,
+            height: h,
+        }
+    }
+
+    // ---- v2 baseline ---------------------------------------------------------------------------
+
     #[test]
     fn bottom_port_order_follows_target_item_order() {
         let (layered, ir) = fan_out();
-        let ports = assign_ports(&layered, &ir, &cfg());
+        let ports = assign_ports(&layered, &ir, &classic_cfg());
 
         // edge 1 -> item order 0, edge 2 -> item order 1, edge 0 -> item order 2.
         assert_eq!(ports.source[&1].index, 0);
@@ -437,7 +1250,7 @@ mod tests {
     #[test]
     fn ports_lie_on_the_boundary_and_stubs_are_exactly_one_stub_length_out() {
         let (layered, ir) = fan_out();
-        let config = cfg();
+        let config = classic_cfg();
         let ports = assign_ports(&layered, &ir, &config);
 
         for e in 0..3u32 {
@@ -458,7 +1271,7 @@ mod tests {
     #[test]
     fn spacing_matches_the_pitch_formula() {
         let (layered, ir) = fan_out();
-        let config = cfg();
+        let config = classic_cfg();
         let ports = assign_ports(&layered, &ir, &config);
 
         let pitch = (300.0 - 2.0 * config.port_endpoint_padding) / 4.0;
@@ -542,6 +1355,382 @@ mod tests {
         assert!(ports.target.is_empty());
     }
 
+    // ---- geometric side selection --------------------------------------------------------------
+
+    #[test]
+    fn a_target_directly_below_keeps_the_flow_faces() {
+        let (layered, ir) = one_hop(rect(0.0, 0.0, 120.0, 40.0), rect(0.0, 200.0, 120.0, 40.0));
+        let ports = assign_ports(&layered, &ir, &cfg());
+        assert_eq!(ports.source[&0].side, Side::Bottom);
+        assert_eq!(ports.target[&0].side, Side::Top);
+        // Nothing to align: both ports are already the only port on their face and share an x.
+        assert_eq!(ports.source[&0].point.x, ports.target[&0].point.x);
+    }
+
+    #[test]
+    fn a_sideways_target_at_a_shallow_rank_delta_uses_a_vertical_face() {
+        // The source's padded bottom face spans [16, 104] and the target's left-face descent lands
+        // at 110 - port_stub_length = 90, so `Bottom -> Left` shares one x and costs a single
+        // corner, while `Bottom -> Top` cannot share any x at all ([16, 104] vs [126, 214]).
+        //
+        // `Right -> Top` scores identically here — the two boxes are the same width, so the mirror
+        // shape saves exactly as much — and the candidate order breaks that tie in favour of
+        // keeping the *source* on the rank-flow face, which is what preserves the top-down read.
+        let (layered, ir) = one_hop(rect(0.0, 0.0, 120.0, 40.0), rect(110.0, 120.0, 120.0, 40.0));
+
+        let flexible = assign_ports(&layered, &ir, &cfg());
+        assert_eq!(flexible.source[&0].side, Side::Bottom);
+        assert_eq!(flexible.target[&0].side, Side::Left);
+        assert_eq!(flexible.target[&0].point.x, 110.0);
+        assert_eq!(flexible.target[&0].stub.x, 90.0);
+        // And the alignment pass delivers what the side score promised: the free end slid onto the
+        // fixed end's drop x, so the whole route is `down, right` — one corner.
+        assert_eq!(flexible.source[&0].point.x, 90.0);
+        assert!(flexible.source[&0].point.x >= cfg().port_endpoint_padding);
+        assert!(flexible.source[&0].point.x <= 120.0 - cfg().port_endpoint_padding);
+
+        let fixed = assign_ports(&layered, &ir, &classic_cfg());
+        assert_eq!(fixed.source[&0].side, Side::Bottom);
+        assert_eq!(fixed.target[&0].side, Side::Top);
+    }
+
+    #[test]
+    fn a_fixed_departure_pulls_the_free_arrival_onto_its_drop_x() {
+        // The target's left face is blocked by a rank neighbour 20px away, so the mirror choice
+        // `Bottom -> Left` is unavailable and the source leaves through its own right face instead.
+        // The alignment then has to bring the target's top port to the source's drop x of 140.
+        let ir = mk_ir(3, &[(0, 1)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(ItemKind::Real(0), 0, 0, 0.0, 0.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(2), 1, 0, 0.0, 200.0, 90.0, 40.0),
+                mk_item(ItemKind::Real(1), 1, 1, 110.0, 200.0, 120.0, 40.0),
+            ],
+            rank_ranges: ranks(&[1, 2]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![chain(0, vec![0, 2])],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 2, 1],
+        };
+        let ports = assign_ports(&layered, &ir, &cfg());
+        assert_eq!(ports.source[&0].side, Side::Right);
+        assert_eq!(ports.target[&0].side, Side::Top);
+        assert_eq!(ports.source[&0].stub.x, 140.0);
+        assert_eq!(ports.target[&0].point.x, 140.0);
+    }
+
+    #[test]
+    fn a_crowded_rank_neighbour_forbids_the_vertical_face() {
+        // Same shape as the test above, but every vertical face that would win now has a rank
+        // neighbour less than two stub lengths away, so the descent has nowhere to go and the flow
+        // faces must win instead.
+        let ir = mk_ir(4, &[(0, 1)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(ItemKind::Real(0), 0, 0, 0.0, 0.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(2), 0, 1, 140.0, 0.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(3), 1, 0, 0.0, 120.0, 90.0, 40.0),
+                mk_item(ItemKind::Real(1), 1, 1, 110.0, 120.0, 120.0, 40.0),
+            ],
+            rank_ranges: ranks(&[2, 2]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![chain(0, vec![0, 3])],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 3, 1, 2],
+        };
+        let ports = assign_ports(&layered, &ir, &cfg());
+        assert_eq!(ports.source[&0].side, Side::Bottom);
+        assert_eq!(ports.target[&0].side, Side::Top);
+    }
+
+    /// One source fanning out to `count` targets laid out left to right in rank 1, the source
+    /// sitting above the middle one so that targets fall on both of its vertical faces.
+    fn fan(count: usize) -> (Layered, GraphIr) {
+        let edges: Vec<(u32, u32)> = (1..=count as u32).map(|t| (0, t)).collect();
+        let ir = mk_ir(count + 1, &edges);
+        let source_x = (count / 2) as f64 * 200.0;
+        let mut items = vec![mk_item(ItemKind::Real(0), 0, 0, source_x, 0.0, 120.0, 40.0)];
+        let mut item_of_node = vec![0u32];
+        for t in 0..count {
+            items.push(mk_item(
+                ItemKind::Real(t as u32 + 1),
+                1,
+                t as u16,
+                t as f64 * 200.0,
+                200.0,
+                120.0,
+                40.0,
+            ));
+            item_of_node.push(t as u32 + 1);
+        }
+        let chains = (0..count)
+            .map(|t| chain(t as u32, vec![0, t as u32 + 1]))
+            .collect();
+        let layered = Layered {
+            items,
+            rank_ranges: ranks(&[1, count as u32]),
+            up: Default::default(),
+            down: Default::default(),
+            chains,
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node,
+        };
+        (layered, ir)
+    }
+
+    #[test]
+    fn only_one_chain_port_may_claim_a_vertical_face() {
+        // With no flow bias the congestion term pushes each successive edge onto a fresh face. Both
+        // vertical faces get taken exactly once and everything after that falls back to the bottom,
+        // because two ports on one vertical face would descend at the same x.
+        let (layered, ir) = fan(6);
+        let mut config = cfg();
+        config.flow_side_bias = 0.0;
+        let ports = assign_ports(&layered, &ir, &config);
+
+        let count = |side: Side| (0..6u32).filter(|e| ports.source[e].side == side).count();
+        assert_eq!(count(Side::Right), 1);
+        assert_eq!(count(Side::Left), 1);
+        assert_eq!(count(Side::Bottom), 4);
+        assert_eq!(count(Side::Top), 0);
+    }
+
+    /// Fan-out wide enough that every child is off to one side. With no flow bias the congestion
+    /// term spreads the ports across faces; with a large bias every one of them stays on the flow
+    /// face.
+    fn wide_fan() -> (Layered, GraphIr) {
+        let ir = mk_ir(4, &[(0, 1), (0, 2), (0, 3)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(ItemKind::Real(0), 0, 0, 200.0, 0.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(1), 1, 0, 0.0, 200.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(2), 1, 1, 200.0, 200.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(3), 1, 2, 400.0, 200.0, 120.0, 40.0),
+            ],
+            rank_ranges: ranks(&[1, 3]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![
+                chain(0, vec![0, 1]),
+                chain(1, vec![0, 2]),
+                chain(2, vec![0, 3]),
+            ],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 1, 2, 3],
+        };
+        (layered, ir)
+    }
+
+    #[test]
+    fn zero_flow_bias_produces_more_side_faces_than_a_large_one() {
+        let (layered, ir) = wide_fan();
+        let count_sides = |config: &CustomLayoutConfig| {
+            let ports = assign_ports(&layered, &ir, config);
+            (0..3u32)
+                .filter(|e| {
+                    matches!(ports.source[e].side, Side::Left | Side::Right)
+                        || matches!(ports.target[e].side, Side::Left | Side::Right)
+                })
+                .count()
+        };
+
+        let mut loose = cfg();
+        loose.flow_side_bias = 0.0;
+        let mut strict = cfg();
+        strict.flow_side_bias = 10.0;
+
+        assert!(
+            count_sides(&loose) > count_sides(&strict),
+            "loose {} strict {}",
+            count_sides(&loose),
+            count_sides(&strict)
+        );
+        assert_eq!(count_sides(&strict), 0);
+    }
+
+    #[test]
+    fn a_source_never_leaves_from_the_top_and_a_target_never_enters_from_the_bottom() {
+        // Both flags on and a deliberately awkward geometry: the target is above-left of where the
+        // flow faces point, which is exactly the shape that would tempt a backward stub.
+        let (layered, ir) = one_hop(
+            rect(400.0, 0.0, 120.0, 40.0),
+            rect(0.0, 60.0, 120.0, 400.0),
+        );
+        let mut config = cfg();
+        config.flow_side_bias = 0.0;
+        let ports = assign_ports(&layered, &ir, &config);
+        assert_ne!(ports.source[&0].side, Side::Top);
+        assert_ne!(ports.target[&0].side, Side::Bottom);
+    }
+
+    // ---- straight-shot alignment ---------------------------------------------------------------
+
+    /// Source with two out-edges (so its bottom ports are off-centre) and two targets each with a
+    /// single in-port at their own centre: the classic dog-leg the alignment exists to remove.
+    fn dog_leg() -> (Layered, GraphIr) {
+        let ir = mk_ir(3, &[(0, 1), (0, 2)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(ItemKind::Real(0), 0, 0, 0.0, 0.0, 300.0, 40.0),
+                mk_item(ItemKind::Real(1), 1, 0, 20.0, 200.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(2), 1, 1, 180.0, 200.0, 120.0, 40.0),
+            ],
+            rank_ranges: ranks(&[1, 2]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![chain(0, vec![0, 1]), chain(1, vec![0, 2])],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 1, 2],
+        };
+        (layered, ir)
+    }
+
+    #[test]
+    fn alignment_puts_both_ends_of_a_near_aligned_link_on_one_x() {
+        let (layered, ir) = dog_leg();
+
+        let unaligned = assign_ports(&layered, &ir, &classic_cfg());
+        assert!(
+            (unaligned.source[&0].point.x - unaligned.target[&0].point.x).abs() > 1e-6,
+            "fixture must actually dog-leg"
+        );
+
+        let aligned = assign_ports(&layered, &ir, &cfg());
+        for e in 0..2u32 {
+            assert!(
+                (aligned.source[&e].point.x - aligned.target[&e].point.x).abs() < 1e-9,
+                "edge {} still dog-legs: {} vs {}",
+                e,
+                aligned.source[&e].point.x,
+                aligned.target[&e].point.x
+            );
+        }
+    }
+
+    #[test]
+    fn alignment_respects_port_pitch_and_the_node_box() {
+        let (layered, ir) = dog_leg();
+        let config = cfg();
+        let ports = assign_ports(&layered, &ir, &config);
+
+        let mut bottom: Vec<f64> = (0..2u32).map(|e| ports.source[&e].point.x).collect();
+        bottom.sort_by(f64::total_cmp);
+        assert!(
+            bottom[1] - bottom[0] >= config.port_pitch - 1e-9,
+            "ports {:?} are closer than port_pitch",
+            bottom
+        );
+        for x in bottom {
+            assert!(x >= config.port_endpoint_padding - 1e-9);
+            assert!(x <= 300.0 - config.port_endpoint_padding + 1e-9);
+        }
+        for e in 0..2u32 {
+            let t = &ports.target[&e];
+            let left = if e == 0 { 20.0 } else { 180.0 };
+            assert!(t.point.x >= left + config.port_endpoint_padding - 1e-9);
+            assert!(t.point.x <= left + 120.0 - config.port_endpoint_padding + 1e-9);
+        }
+    }
+
+    #[test]
+    fn alignment_refuses_a_snap_that_would_leave_the_node() {
+        // The target is far to the right of the source's whole width, so no common x exists and
+        // both ports must stay exactly where the distribution put them.
+        let (layered, ir) = one_hop(rect(0.0, 0.0, 120.0, 40.0), rect(900.0, 200.0, 120.0, 40.0));
+        let config = cfg();
+        let ports = assign_ports(&layered, &ir, &config);
+        let s = &ports.source[&0];
+        let t = &ports.target[&0];
+        assert!(s.point.x >= config.port_endpoint_padding - 1e-9);
+        assert!(s.point.x <= 120.0 - config.port_endpoint_padding + 1e-9);
+        assert!(t.point.x >= 900.0 + config.port_endpoint_padding - 1e-9);
+        assert!(t.point.x <= 1020.0 - config.port_endpoint_padding + 1e-9);
+    }
+
+    /// A span-2 chain whose dummy sits at x = 100.5, plus a second out-edge that keeps the source's
+    /// bottom ports off-centre so the alignment has something to correct.
+    fn dummy_chain() -> (Layered, GraphIr) {
+        let ir = mk_ir(3, &[(0, 1), (0, 2)]);
+        let layered = Layered {
+            items: vec![
+                mk_item(ItemKind::Real(0), 0, 0, 0.0, 0.0, 300.0, 40.0),
+                mk_item(ItemKind::Dummy { edge: 0, seq: 0 }, 1, 0, 100.0, 200.0, 1.0, 1.0),
+                mk_item(ItemKind::Real(2), 1, 1, 400.0, 200.0, 120.0, 40.0),
+                mk_item(ItemKind::Real(1), 2, 0, 60.0, 400.0, 120.0, 40.0),
+            ],
+            rank_ranges: ranks(&[1, 2, 1]),
+            up: Default::default(),
+            down: Default::default(),
+            chains: vec![chain(0, vec![0, 1, 3]), chain(1, vec![0, 2])],
+            flat_edges: Vec::new(),
+            self_loops: Vec::new(),
+            item_of_node: vec![0, 3, 2],
+        };
+        (layered, ir)
+    }
+
+    #[test]
+    fn a_dummy_chain_pulls_both_end_ports_onto_the_dummy_x() {
+        let (layered, ir) = dummy_chain();
+
+        let unaligned = assign_ports(&layered, &ir, &classic_cfg());
+        assert!(
+            (unaligned.source[&0].point.x - 100.5).abs() > 1e-6,
+            "fixture must actually start off the dummy's x"
+        );
+
+        let ports = assign_ports(&layered, &ir, &cfg());
+        assert_eq!(ports.source[&0].side, Side::Bottom);
+        assert_eq!(ports.target[&0].side, Side::Top);
+        assert!((ports.source[&0].point.x - 100.5).abs() < 1e-9);
+        assert!((ports.target[&0].point.x - 100.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_label_carrying_chain_is_left_alone() {
+        // Same shape as `dummy_chain`, but the interior item is a badge: where a chain crosses a
+        // `Label` is Step 5.2's rule, so the alignment declines rather than guessing at it.
+        let (mut layered, ir) = dummy_chain();
+        layered.items[1].kind = ItemKind::Label(0);
+
+        let aligned = assign_ports(&layered, &ir, &cfg());
+        let plain = assign_ports(&layered, &ir, &classic_cfg());
+        assert_eq!(aligned.source[&0].point.x, plain.source[&0].point.x);
+        assert_eq!(aligned.target[&0].point.x, plain.target[&0].point.x);
+    }
+
+    #[test]
+    fn alignment_order_is_stable_under_unequal_weights() {
+        let (layered, mut ir) = dog_leg();
+        ir.edges[1].weight = 9.0;
+
+        let first = assign_ports(&layered, &ir, &cfg());
+        for _ in 0..8 {
+            let again = assign_ports(&layered, &ir, &cfg());
+            for e in 0..2u32 {
+                assert_eq!(
+                    first.source[&e].point.x.to_bits(),
+                    again.source[&e].point.x.to_bits()
+                );
+                assert_eq!(
+                    first.target[&e].point.x.to_bits(),
+                    again.target[&e].point.x.to_bits()
+                );
+            }
+        }
+        // The heavier edge went first and still got a straight shot.
+        assert!((first.source[&1].point.x - first.target[&1].point.x).abs() < 1e-9);
+    }
+
+    // ---- determinism ---------------------------------------------------------------------------
+
     #[test]
     fn assignment_is_byte_stable_across_runs() {
         let (layered, ir) = fan_out();
@@ -550,6 +1739,25 @@ mod tests {
         for e in 0..3u32 {
             assert_eq!(a.source[&e], b.source[&e]);
             assert_eq!(a.target[&e], b.target[&e]);
+        }
+    }
+
+    #[test]
+    fn flexible_sides_and_alignment_are_byte_stable_across_runs() {
+        let (layered, ir) = wide_fan();
+        let mut config = cfg();
+        config.flow_side_bias = 0.0;
+        let first = assign_ports(&layered, &ir, &config);
+        for _ in 0..8 {
+            let again = assign_ports(&layered, &ir, &config);
+            for e in 0..3u32 {
+                assert_eq!(first.source[&e], again.source[&e]);
+                assert_eq!(first.target[&e], again.target[&e]);
+                assert_eq!(
+                    first.source[&e].point.x.to_bits(),
+                    again.source[&e].point.x.to_bits()
+                );
+            }
         }
     }
 }

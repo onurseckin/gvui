@@ -4,27 +4,24 @@
 //! here so no other module has to branch on [`EngineMode`].
 //!
 //! The empty-graph guard is deliberately *in front of* the dispatch rather than duplicated in each
-//! engine. It is the only pre-condition all four share, and hoisting it means an engine can assume
+//! engine. It is the only pre-condition both share, and hoisting it means an engine can assume
 //! it was handed at least one node — which is what lets them index `ir.nodes[0]` and reason about a
 //! root, a first row or an initial circle without a special case each.
 
 use crate::config::{CustomLayoutConfig, EngineMode};
 use crate::types::{CustomLayoutResult, NormalizedEdge, NormalizedNode};
 
-use super::grid::layout_grid;
 use super::layered::layout_layered;
-use super::organic::layout_organic;
 use super::radial::layout_radial;
 
 /// Runs the engine selected by `mode`.
 ///
 /// Contract subtleties worth knowing:
 ///
-/// - **`Layered` and `LayeredSpline` are the same layout.** The spline variant differs only in the
-///   path command the renderer emits, so both resolve to [`layout_layered`]; the choice reaches the
-///   renderer through `config.edge_style`, not through the engine.
-/// - **`config.direction` is honoured only by the layered engine.** Organic, radial and grid have no
-///   flow axis; setting a direction for them is meaningless rather than wrong, and is ignored.
+/// - **`config.direction` is honoured only by the layered engine.** Radial has no flow axis, so a
+///   direction is meaningless there rather than wrong, and is ignored.
+/// - **Edge style is a renderer concern, not an engine one.** `layered-spline` used to be a mode of
+///   its own; it is now `config.edge_style`, because the geometry was identical either way.
 /// - **An empty node list is a success, not an error.** It returns a well-formed empty result with
 ///   `stop_reason = "empty_graph"` so a caller rendering an empty dataset does not have to
 ///   distinguish "nothing to draw" from "layout failed".
@@ -42,10 +39,8 @@ pub fn compute_layout(
     }
 
     match mode {
-        EngineMode::Layered | EngineMode::LayeredSpline => layout_layered(nodes, edges, config),
-        EngineMode::Organic => layout_organic(nodes, edges, config),
+        EngineMode::Layered => layout_layered(nodes, edges, config),
         EngineMode::Radial => layout_radial(nodes, edges, config),
-        EngineMode::Grid => layout_grid(nodes, edges, config),
     }
 }
 
@@ -90,13 +85,7 @@ mod tests {
         (nodes, edges)
     }
 
-    const ALL_MODES: [EngineMode; 5] = [
-        EngineMode::Layered,
-        EngineMode::LayeredSpline,
-        EngineMode::Organic,
-        EngineMode::Radial,
-        EngineMode::Grid,
-    ];
+    const ALL_MODES: [EngineMode; 2] = [EngineMode::Layered, EngineMode::Radial];
 
     #[test]
     fn empty_input_short_circuits_for_every_mode() {
@@ -182,23 +171,6 @@ mod tests {
             let w1 = width(&compute_layout(&nodes, &edges, &wide, mode));
             assert!(w1 > w0, "{mode:?}: doubling node_gap must widen ({w0} -> {w1})");
         }
-    }
-
-    #[test]
-    fn layered_and_layered_spline_produce_the_same_geometry() {
-        let (nodes, edges) = small();
-        let a = compute_layout(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG, EngineMode::Layered);
-        let b = compute_layout(
-            &nodes,
-            &edges,
-            &DEFAULT_CUSTOM_LAYOUT_CONFIG,
-            EngineMode::LayeredSpline,
-        );
-        assert_eq!(
-            serde_json::to_string(&a.nodes).unwrap_or_default(),
-            serde_json::to_string(&b.nodes).unwrap_or_default(),
-            "the spline variant must not change the layout"
-        );
     }
 
     #[test]

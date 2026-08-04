@@ -1,0 +1,155 @@
+{
+  "id": "parallel-bundle-transports",
+  "title": "Parallel Bundles — Multiple Channels Between The Same Endpoints",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "app",
+      "name": "Trading Client",
+      "type": "start",
+      "description": "Desktop client that keeps every transport open simultaneously.",
+      "badges": [
+        {
+          "label": "sessions: 4",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "name": "Session Gateway",
+      "type": "service",
+      "description": "Multiplexes the client's transports onto internal buses.",
+      "badges": [
+        {
+          "label": "conns: 4",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "matching",
+      "name": "Matching Engine",
+      "type": "service",
+      "description": "Single-threaded order book; every input arrives pre-sequenced.",
+      "badges": [
+        {
+          "label": "p50: 38µs",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "market_data",
+      "name": "Market Data Fan",
+      "type": "service",
+      "description": "Replicates book updates onto the public and private feeds.",
+      "badges": [
+        {
+          "label": "subs: 9.2k",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "name": "Tick Archive",
+      "type": "end",
+      "description": "Write-once store of every message that crossed the gateway.",
+      "badges": [
+        {
+          "label": "wal",
+          "variant": "gray"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-app-gateway",
+      "source": "app",
+      "target": "gateway",
+      "label": "FIX 4.4 order session"
+    },
+    {
+      "id": "e-app-gateway-2",
+      "source": "app",
+      "target": "gateway",
+      "label": "WebSocket quote stream"
+    },
+    {
+      "id": "e-app-gateway-3",
+      "source": "app",
+      "target": "gateway",
+      "label": "gRPC admin channel"
+    },
+    {
+      "id": "e-app-gateway-4",
+      "source": "app",
+      "target": "gateway",
+      "label": "UDP heartbeat"
+    },
+    {
+      "id": "e-gateway-matching",
+      "source": "gateway",
+      "target": "matching",
+      "label": "new order single"
+    },
+    {
+      "id": "e-gateway-matching-2",
+      "source": "gateway",
+      "target": "matching",
+      "label": "cancel/replace"
+    },
+    {
+      "id": "e-gateway-market_data",
+      "source": "gateway",
+      "target": "market_data",
+      "label": "subscribe"
+    },
+    {
+      "id": "e-gateway-market_data-2",
+      "source": "gateway",
+      "target": "market_data",
+      "label": "unsubscribe"
+    },
+    {
+      "id": "e-matching-market_data",
+      "source": "matching",
+      "target": "market_data",
+      "label": "book delta"
+    },
+    {
+      "id": "e-matching-market_data-2",
+      "source": "matching",
+      "target": "market_data",
+      "label": "trade print"
+    },
+    {
+      "id": "e-market_data-archive",
+      "source": "market_data",
+      "target": "archive",
+      "label": "public feed"
+    },
+    {
+      "id": "e-market_data-archive-2",
+      "source": "market_data",
+      "target": "archive",
+      "label": "private feed"
+    },
+    {
+      "id": "e-matching-gateway",
+      "source": "matching",
+      "target": "gateway",
+      "label": "↺ execution report",
+      "isCycle": true
+    },
+    {
+      "id": "e-matching-gateway-2",
+      "source": "matching",
+      "target": "gateway",
+      "label": "↺ reject",
+      "isCycle": true
+    }
+  ]
+}

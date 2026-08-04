@@ -110,6 +110,10 @@ Phase 2's reversal, and dispatches:
 | `span == 0` (flat) | no chain; a `FlatEdge` record instead (§7) |
 | self-loop | no chain; carried through for Phase 8 to route against a fixed port pair |
 
+There is no row for `span == 1, labelled`, and that is the point: Phase 3 guarantees it cannot happen
+(§5). Such an edge falls through the table as a plain direct link and loses its reservation, which is
+why the case is treated as a defect rather than a shape.
+
 A reversed feedback edge is expanded exactly like a forward one. Nothing is dropped; only the
 arrowhead learns the truth, at emit time. A span that still comes out negative is a Phase 2 bug — it
 trips a `debug_assert` — but in release the endpoints are swapped so the chain is still built rather
@@ -191,8 +195,22 @@ Now the part everything else was building towards.
 
 An edge that carries a label reaches this phase with `minlen = 2` already applied by Phase 0
 ([chapter 05 §6](./05-rank-assignment.md#minlen-and-why-a-labelled-edge-gets-2)), so it spans at
-least two ranks and has at least one intermediate rank available. The builder picks the **middle**
-one:
+least two ranks and has at least one intermediate rank available — or it reaches this phase at span
+**0**, which is a flat edge and is drawable too (§8). Those are the only two possibilities, and that
+is a rule Phase 3 enforces rather than a coincidence:
+
+> **A labelled edge arrives at span 0 or span ≥ 2, never at span 1.**
+
+Span 1 has no intermediate rank to carry the item and no horizontal run to ride, so it is the one
+span at which a badge has nowhere to live. Phase 3 pushes any labelled edge left sitting there apart
+as its very last act — see
+[chapter 05 §8](./05-rank-assignment.md#8-the-span-1-rule-for-labelled-edges).
+
+The rest of this section is the span ≥ 2 case; the span 0 case is [§8 of this
+chapter](#8-flat-edges); and "the degenerate case" below is what the builder does if the invariant is
+ever broken upstream.
+
+For span ≥ 2 the builder picks the **middle** intermediate rank:
 
 $$label\_rank = \operatorname{clamp}\bigl(rank_{from} + \lfloor span/2 \rfloor,\; rank_{from}+1,\; rank_{to}-1\bigr)$$
 
@@ -307,12 +325,12 @@ With $lw = label.width + 2 \cdot badge\_clearance$ and $lh = label.height + 2 \c
 
 | `label_placement` | item $(w, h)$ | edge passes through | badge occupies |
 | --- | --- | --- | --- |
-| `on-edge` | $(lw,\; lh)$ | the item centre | the whole box, inset by `badge_clearance` |
-| `beside-edge` (default) | $(2lw,\; lh)$ | the item's **left face** | the **right half**, inset |
+| `on-edge` (default) | $(lw,\; lh)$ | the item centre | the whole box, inset by `badge_clearance` |
+| `beside-edge` | $(2lw,\; lh)$ | the item's **left face** | the **right half**, inset |
 | `above-edge` | $(lw,\; 2lh)$ | the item's **bottom face** | the **top half**, inset |
 
 ```text
-on-edge                 beside-edge (default)          above-edge
+on-edge (default)       beside-edge                    above-edge
                                                        +---------------+
 +-----------+           +-------+-----------+          |   [ badge ]   |
 |  [badge]  |           |       |  [badge]  |          +-------|-------+
@@ -322,6 +340,23 @@ on-edge                 beside-edge (default)          above-edge
    the line runs        the line runs down             the line runs along
    through the centre   the LEFT face                  the BOTTOM face
 ```
+
+### Why `on-edge` is the default
+
+`beside-edge` was the v2 default, and it was the wrong choice.
+
+A badge that sits *beside* its edge is not self-explaining: the reader has to be told which line it
+belongs to, so the renderer has to draw a **leader line** from the badge to the anchor on the edge.
+One dotted connector is fine. A drawing where every labelled edge has one is worse than a drawing
+where each label simply sits on the line it describes — the connectors are visual noise carrying
+information the geometry could have carried for free.
+
+Under `on-edge` the item is single-width, the edge runs through its centre, and the badge is drawn
+over the line. The anchor is then *inside* the badge rect, and the renderer's rule is containment:
+[a connector is drawn only when the anchor genuinely falls outside the badge
+rect](./10-edge-routing.md#the-dashed-connector-is-drawn-only-when-it-is-honest), which for
+`on-edge` never happens. The offset placements remain available for callers who want the line kept
+clear.
 
 ### Worked example
 
@@ -344,12 +379,19 @@ there cannot drift apart.
 
 ### The degenerate case
 
-If a labelled edge somehow arrives with span 1 — the host sent an explicit `minLen: 1`, which always
-wins over the automatic 2 — there is no intermediate rank and no `Label` item can exist. The builder
-degrades: `label_at` stays `None` and Phase 8's leader-line safety net places the badge locally.
+If a labelled edge somehow arrives with span 1 there is no intermediate rank, so no `Label` item can
+exist. The builder degrades: `label_at` stays `None`, and Phase 8's leader-line safety net places the
+badge locally against a spatial hash — with no reservation behind it, and possibly with a leader line
+drawn to it.
 
-It does **not** insert a rank to make room. Inserting a rank here would invalidate the ranking that
-five other phases have already treated as settled, to fix a case the caller explicitly asked for.
+That is a **defect signal, not a supported mode**. Phase 3's `enforce_labelled_span` exists precisely
+to make span 1 unreachable, including for a host that sent an explicit `minLen: 1` on a labelled edge
+(the one case where an explicit `minLen` is overridden — a badge with no reservation is the worse
+outcome). If this branch ever fires, `leader_count` goes above zero and the audit reports it.
+
+The builder does **not** insert a rank to make room. Inserting a rank here would invalidate the
+ranking that five other phases have already treated as settled, and it would paper over a Phase 3 bug
+in a phase that cannot see it.
 
 ---
 
@@ -364,6 +406,11 @@ rank 2      [ A ]  |  [ X ]  |  [ B ]
                    the flat edge A -> B runs through the
                    vertical corridors between A|X and X|B
 ```
+
+Until v3 this code had never run. Every edge carried `minlen ≥ 1`, so $span = 0$ was arithmetically
+impossible and `FlatEdge` was unreachable. It became reachable when Phase 3 started relaxing
+[peer edges](./05-rank-assignment.md#7-peer-edges-and-the-same-rank-relaxation) to `minlen = 0`,
+which is what lets two siblings sit side by side joined by a straight horizontal line.
 
 A `FlatEdge` record is emitted instead, carrying the rank, both endpoint item indices, and the
 measured `LabelBox`. Its badge lives in the **vertical corridor** between the endpoints, and so its
@@ -380,7 +427,17 @@ Different mechanism, same guarantee: the space is computed from the fixed orderi
 geometry exists, and the coordinate phase is told about it as a constraint it must satisfy. Nothing
 is placed and then checked.
 
-See [lane demand](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs).
+So a flat edge carries its badge **on its horizontal run**, not on a rank of its own. The common case
+— two rank *neighbours*, with nothing standing between them — collapses to a single straight
+horizontal segment, and the badge sits at its midpoint: the middle of a gap this same formula already
+widened by the label width, so it clears both nodes by construction. When the endpoints are not
+neighbours, the run steps out of the rank band to get past the items in between and comes back down
+in the reserved corridor beside the far endpoint; the badge then centres on that corridor's vertical
+run, which is again exactly where the width was reserved. Either way the badge sits on the line it
+describes and needs no leader.
+
+See [lane demand](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) and
+[flat-edge routing](../../crates/gvui/src/5_edge_routing/5_3_special_routes.rs).
 
 Self-loops are handled the same way — no chain, no items — and the edge list is copied straight
 through for Phase 8 to route against a fixed port pair on one side of the node.

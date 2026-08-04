@@ -572,9 +572,19 @@ mod tests {
         }
     }
 
-    /// A -> Label -> B. The badge must land inside the Label item's reserved box, with no leader.
+    /// A -> Label -> B under `BesideEdge`. The badge must land inside the Label item's reserved
+    /// box — specifically its right half — with no leader.
+    ///
+    /// `BesideEdge` is set explicitly rather than relied on as the default: the default is now
+    /// `OnEdge`, because a badge sitting beside its edge has to be joined to it by a leader line
+    /// and a drawing full of dotted connectors reads worse than labels sitting on their lines.
     #[test]
-    fn labelled_chain_badge_lands_inside_its_reservation() {
+    fn beside_edge_badge_lands_in_the_right_half_of_its_reservation() {
+        let beside_cfg = || {
+            let mut c = cfg();
+            c.label_placement = LabelPlacement::BesideEdge;
+            c
+        };
         let label = LabelBox {
             width: 80.0,
             height: 28.0,
@@ -606,7 +616,7 @@ mod tests {
             vec![Point { x: 140.0, y: 40.0 }, Point { x: 140.0, y: 400.0 }],
         )];
 
-        let result = place_badges(&layered, &ir, &routes, &cfg());
+        let result = place_badges(&layered, &ir, &routes, &beside_cfg());
         assert_eq!(result.leader_count, 0);
         assert_eq!(result.badges.len(), 1);
 
@@ -641,8 +651,9 @@ mod tests {
     }
 
     #[test]
-    fn an_oversized_measurement_is_clamped_into_the_reservation() {
-        let config = cfg();
+    fn an_oversized_beside_edge_measurement_is_clamped_into_the_reservation() {
+        let mut config = cfg();
+        config.label_placement = LabelPlacement::BesideEdge;
         let item = mk_item(ItemKind::Label(0), 1, 0, 0.0, 0.0, 40.0, 10.0);
         let measured = LabelBox {
             width: 500.0,

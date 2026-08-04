@@ -1,0 +1,236 @@
+{
+  "id": "feedback-retry-state-machine",
+  "title": "Feedback Heavy — Retries, Compensations And Long Loop-Backs",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "submit",
+      "name": "Submit Order",
+      "type": "start",
+      "description": "Accepts the order and assigns it an idempotency key.",
+      "badges": [
+        {
+          "label": "idempotent",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "reserve",
+      "name": "Reserve Stock",
+      "type": "stage",
+      "description": "Places a soft hold on every line item for fifteen minutes.",
+      "badges": [
+        {
+          "label": "hold: 15m",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "authorize",
+      "name": "Authorize Payment",
+      "type": "stage",
+      "description": "Requests an authorization hold from the acquiring bank.",
+      "badges": [
+        {
+          "label": "attempt: 2",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "risk",
+      "name": "Risk Review",
+      "type": "gate",
+      "description": "Scores the order and escalates anything above the manual threshold.",
+      "badges": [
+        {
+          "label": "score: 0.71",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "name": "Capture Funds",
+      "type": "stage",
+      "description": "Converts the authorization hold into a settled charge.",
+      "badges": [
+        {
+          "label": "settled",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "pick",
+      "name": "Pick & Pack",
+      "type": "stage",
+      "description": "Warehouse task that turns the reservation into a physical parcel.",
+      "badges": [
+        {
+          "label": "wave: 118",
+          "variant": "gray"
+        }
+      ]
+    },
+    {
+      "id": "ship",
+      "name": "Ship",
+      "type": "stage",
+      "description": "Hands the parcel to the carrier and emits the tracking number.",
+      "badges": [
+        {
+          "label": "carrier: DHL",
+          "variant": "info"
+        }
+      ]
+    },
+    {
+      "id": "deliver",
+      "name": "Deliver",
+      "type": "end",
+      "description": "Terminal success state; the order is closed and archived.",
+      "badges": [
+        {
+          "label": "closed",
+          "variant": "success"
+        }
+      ]
+    },
+    {
+      "id": "backoff",
+      "name": "Backoff Scheduler",
+      "type": "worker",
+      "description": "Re-enqueues failed steps on an exponential schedule with jitter.",
+      "badges": [
+        {
+          "label": "max: 6 tries",
+          "variant": "amber"
+        }
+      ]
+    },
+    {
+      "id": "compensate",
+      "name": "Compensating Txn",
+      "type": "worker",
+      "description": "Unwinds every step already applied when a later step is unrecoverable.",
+      "badges": [
+        {
+          "label": "saga",
+          "variant": "error"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-submit-reserve",
+      "source": "submit",
+      "target": "reserve",
+      "label": "line items"
+    },
+    {
+      "id": "e-reserve-authorize",
+      "source": "reserve",
+      "target": "authorize",
+      "label": "held"
+    },
+    {
+      "id": "e-authorize-risk",
+      "source": "authorize",
+      "target": "risk",
+      "label": "auth code"
+    },
+    {
+      "id": "e-risk-capture",
+      "source": "risk",
+      "target": "capture",
+      "label": "cleared"
+    },
+    {
+      "id": "e-capture-pick",
+      "source": "capture",
+      "target": "pick",
+      "label": "paid"
+    },
+    {
+      "id": "e-pick-ship",
+      "source": "pick",
+      "target": "ship",
+      "label": "parcel"
+    },
+    {
+      "id": "e-ship-deliver",
+      "source": "ship",
+      "target": "deliver",
+      "label": "in transit"
+    },
+    {
+      "id": "e-authorize-backoff",
+      "source": "authorize",
+      "target": "backoff",
+      "label": "gateway timeout"
+    },
+    {
+      "id": "e-pick-backoff",
+      "source": "pick",
+      "target": "backoff",
+      "label": "stock short"
+    },
+    {
+      "id": "e-ship-backoff",
+      "source": "ship",
+      "target": "backoff",
+      "label": "label rejected"
+    },
+    {
+      "id": "e-backoff-authorize",
+      "source": "backoff",
+      "target": "authorize",
+      "label": "↺ retry authorize",
+      "isCycle": true
+    },
+    {
+      "id": "e-backoff-pick",
+      "source": "backoff",
+      "target": "pick",
+      "label": "↺ retry pick",
+      "isCycle": true
+    },
+    {
+      "id": "e-risk-compensate",
+      "source": "risk",
+      "target": "compensate",
+      "label": "declined"
+    },
+    {
+      "id": "e-backoff-compensate",
+      "source": "backoff",
+      "target": "compensate",
+      "label": "retries exhausted"
+    },
+    {
+      "id": "e-compensate-reserve",
+      "source": "compensate",
+      "target": "reserve",
+      "label": "↺ release hold",
+      "isCycle": true
+    },
+    {
+      "id": "e-compensate-submit",
+      "source": "compensate",
+      "target": "submit",
+      "label": "↺ mark order failed",
+      "isCycle": true
+    },
+    {
+      "id": "e-deliver-submit",
+      "source": "deliver",
+      "target": "submit",
+      "label": "↺ return initiated",
+      "isCycle": true
+    }
+  ]
+}

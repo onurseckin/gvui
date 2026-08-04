@@ -1,39 +1,31 @@
 import React, { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
 import {
-  useGraphStore,
-  useLayoutConfig,
-  useLayoutPreset,
-  type LayoutMode,
-} from "../../state/useGraphStore";
-import { Button, LayoutSelectDropdown, Select, type SelectOption } from "../../ui";
+  Button,
+  DirectionSelectDropdown,
+  LayoutSelectDropdown,
+  Select,
+  type SelectOption,
+} from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
 import { exportGraphAsHTML } from "../../utils/htmlExporter";
 import {
-  LAYOUT_PRESETS,
   type CustomLayoutConfig,
   type Direction,
   type EdgeStyle,
   type LabelPlacement,
   type Compaction,
-  type LayoutPresetName,
 } from "../../engine/layout/custom/config";
 import "./Controls.css";
 
-// Tier-1 aesthetics only — see docs/planning/layout-engine-v2/04-config-and-quality.md §2. Every
-// other knob (Tier 2 algorithm selection, Tier 3 budgets) lives in EngineOptionsPanel; this is the
-// quick-access bar, not the full disclosure.
-
-const DIRECTION_OPTIONS: SelectOption<Direction>[] = [
-  { value: "top-down", label: "Top → Down" },
-  { value: "bottom-up", label: "Bottom → Up" },
-  { value: "left-right", label: "Left → Right" },
-  { value: "right-left", label: "Right → Left" },
-];
+// The most-reached-for knobs only. Everything else — and every knob in full — lives in the
+// Settings panel (`EngineOptionsPanel`); this is the quick-access bar, not the full disclosure.
 
 const EDGE_STYLE_OPTIONS: SelectOption<EdgeStyle>[] = [
   { value: "orthogonal", label: "Orthogonal" },
   { value: "rounded", label: "Rounded" },
   { value: "spline", label: "Spline" },
+  { value: "octilinear", label: "Octilinear" },
   { value: "straight", label: "Straight" },
 ];
 
@@ -49,23 +41,17 @@ const COMPACTION_OPTIONS: SelectOption<Compaction>[] = [
   { value: "airy", label: "Airy" },
 ];
 
-const PRESET_OPTIONS: SelectOption<LayoutPresetName>[] = (
-  Object.keys(LAYOUT_PRESETS) as LayoutPresetName[]
-).map((name) => ({ value: name, label: name.charAt(0).toUpperCase() + name.slice(1) }));
-
 export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   const dataset = useGraphStore((state) => state.dataset);
   const zoomLevel = useGraphStore((state) => state.zoomLevel);
   const layoutMode = useGraphStore((state) => state.layoutMode);
   const layoutConfig = useLayoutConfig();
-  const layoutPreset = useLayoutPreset();
 
   const setZoomLevel = useGraphStore((state) => state.setZoomLevel);
   const setPanOffset = useGraphStore((state) => state.setPanOffset);
   const setLayoutMode = useGraphStore((state) => state.setLayoutMode);
   const setLayoutConfig = useGraphStore((state) => state.setLayoutConfig);
   const resetLayoutConfig = useGraphStore((state) => state.resetLayoutConfig);
-  const applyPreset = useGraphStore((state) => state.applyPreset);
   const resetViewport = useGraphStore((state) => state.resetViewport);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -75,10 +61,7 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
     if (!isConfigOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        configWrapperRef.current &&
-        !configWrapperRef.current.contains(event.target as Node)
-      ) {
+      if (configWrapperRef.current && !configWrapperRef.current.contains(event.target as Node)) {
         setIsConfigOpen(false);
       }
     };
@@ -156,8 +139,8 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
     [setLayoutMode],
   );
 
-  // Quick controls apply immediately — unlike the full EngineOptionsPanel disclosure, this bar has
-  // no stage/apply workflow; it is meant for fast, low-ceremony tweaks.
+  // Toolbar controls apply immediately — unlike the Settings panel disclosure, this bar has no
+  // stage/apply workflow; it is meant for fast, low-ceremony tweaks.
   const updateConfig = useCallback(
     <K extends keyof CustomLayoutConfig>(key: K, value: CustomLayoutConfig[K]) => {
       setLayoutConfig({ [key]: value } as Partial<CustomLayoutConfig>);
@@ -165,11 +148,11 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
     [setLayoutConfig],
   );
 
-  const handlePresetChange = useCallback(
-    (name: LayoutPresetName) => {
-      applyPreset(name);
+  const handleDirectionChange = useCallback(
+    (direction: Direction) => {
+      updateConfig("direction", direction);
     },
-    [applyPreset],
+    [updateConfig],
   );
 
   return (
@@ -221,23 +204,18 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
       <div className="toolbar-divider" />
 
       <div className="layout-select-wrapper">
-        <label htmlFor="layout-select" className="layout-label">
-          Layout:
-        </label>
+        <span className="layout-label">Layout:</span>
         <LayoutSelectDropdown value={layoutMode} onLayoutChange={handleLayoutChange} size="sm" />
       </div>
 
+      {/* Direction is its own control, not a mode: `layoutConfig.direction` is the single source
+          of truth for which way ranks flow, and the engine reads nothing else. */}
       <div className="layout-select-wrapper">
-        <label htmlFor="preset-select" className="layout-label">
-          Preset:
-        </label>
-        <Select<LayoutPresetName>
-          id="preset-select"
+        <span className="layout-label">Direction:</span>
+        <DirectionSelectDropdown
+          value={layoutConfig.direction}
+          onDirectionChange={handleDirectionChange}
           size="sm"
-          options={PRESET_OPTIONS}
-          value={layoutPreset}
-          onValueChange={handlePresetChange}
-          aria-label="Layout preset"
         />
       </div>
 
@@ -246,17 +224,17 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
           variant="outline"
           size="sm"
           onClick={() => setIsConfigOpen((prev) => !prev)}
-          title="Quick Layout Settings"
+          title="Layout settings"
           className="toolbar-btn"
         >
-          ⚙ Quick Settings
+          ⚙ Settings
         </Button>
 
         {isConfigOpen && (
           <div className="layout-config-popover">
             <div className="layout-config-header">
               <div className="layout-config-header-left">
-                <span className="layout-config-title">⚙ Quick Layout Settings</span>
+                <span className="layout-config-title">⚙ Settings</span>
               </div>
               <div className="layout-config-actions">
                 <Button
@@ -274,17 +252,6 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
             <div className="layout-config-body">
               <div className="layout-config-section">
                 <span className="layout-config-section-title">📐 Layout & Spacing</span>
-
-                <div className="layout-config-item">
-                  <span className="layout-config-item-label">Direction</span>
-                  <Select<Direction>
-                    size="sm"
-                    options={DIRECTION_OPTIONS}
-                    value={layoutConfig.direction}
-                    onValueChange={(value) => updateConfig("direction", value)}
-                    aria-label="Layout direction"
-                  />
-                </div>
 
                 <div className="layout-config-item">
                   <span className="layout-config-item-label">Node Gap (px)</span>

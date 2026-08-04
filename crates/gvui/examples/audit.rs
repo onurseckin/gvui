@@ -234,9 +234,8 @@ fn main() {
     let engines: Vec<(&'static str, EngineMode, Direction)> = vec![
         ("layered", EngineMode::Layered, Direction::TopDown),
         ("left-right", EngineMode::Layered, Direction::LeftRight),
-        ("organic", EngineMode::Organic, Direction::TopDown),
+        ("bottom-up", EngineMode::Layered, Direction::BottomUp),
         ("radial", EngineMode::Radial, Direction::TopDown),
-        ("grid", EngineMode::Grid, Direction::TopDown),
     ];
 
     let mut rows: Vec<Row> = Vec::new();

@@ -13,11 +13,12 @@
 //!   is what Phase 9's `unresolved_route_count` metric is for.
 
 use super::badges::place_badges;
+use super::edge_style::{chamfer_corners, octilinear_corner_cut, NodeRectIndex};
 use super::lane_router::{rank_band_bottoms, route_chain_with_bands};
 use super::ports::assign_ports;
 use super::special_routes::{route_flat_edge, route_self_loop};
-use crate::config::CustomLayoutConfig;
-use crate::types::{BadgePlacement, GraphIr, Layered, RoutedPath, RoutingDemand};
+use crate::config::{CustomLayoutConfig, EdgeStyle};
+use crate::types::{BadgePlacement, GraphIr, Item, ItemKind, Layered, RoutedPath, RoutingDemand};
 
 /// Phase 8 output.
 pub struct RouteResult {
@@ -105,6 +106,26 @@ pub fn route_edges(
     }
 
     let badges = place_badges(layered, ir, &routes, config);
+
+    // `Octilinear` is the last thing that happens, deliberately after badge placement. Badges are
+    // positioned against the orthogonal geometry that Phase 4 reserved item space for, and a
+    // chamfer only ever removes area from inside the corner triangle it replaces, so no badge
+    // anchor it was measured against moves. Running it here also keeps badge output byte-identical
+    // between the orthogonal styles and this one.
+    if config.edge_style == EdgeStyle::Octilinear {
+        let index = NodeRectIndex::new(
+            layered
+                .items
+                .iter()
+                .filter(|item| matches!(item.kind, ItemKind::Real(_)))
+                .map(Item::rect),
+        );
+        let cut = octilinear_corner_cut(config);
+        for route in &mut routes {
+            route.points = chamfer_corners(&route.points, cut, &index, config.epsilon);
+        }
+    }
+
     RouteResult {
         routes,
         badges: badges.badges,
@@ -297,6 +318,10 @@ mod tests {
 
     #[test]
     fn a_labelled_chain_yields_one_badge_and_no_leader() {
+        // Pinned to BesideEdge: the assertion below checks the badge sits in the right half of the
+        // double-width reservation, which is that variant's geometry. The default is now OnEdge.
+        let mut config = cfg();
+        config.label_placement = crate::config::LabelPlacement::BesideEdge;
         let label = LabelBox {
             width: 80.0,
             height: 28.0,
@@ -317,7 +342,7 @@ mod tests {
             item_of_node: vec![0, 2],
         };
         let demand = RoutingDemand::default();
-        let result = route_edges(&layered, &ir, &demand, &[0.0, 200.0, 400.0], &cfg());
+        let result = route_edges(&layered, &ir, &demand, &[0.0, 200.0, 400.0], &config);
 
         assert_eq!(result.routes.len(), 1);
         assert_eq!(result.badges.len(), 1);

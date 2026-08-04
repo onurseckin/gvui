@@ -13,6 +13,11 @@
  * The v1 search-budget knobs (maxRipUpPasses, maxConflictPermutations, maxLayoutStates,
  * maxAStarStatesPerRoute, bendPenalty, crossingPenalty, initialLaneRings, ...) are gone: they
  * bounded a search that no longer exists in v2's construct-don't-search pipeline.
+ *
+ * `direction` is the ONLY source of flow direction. It used to be half-encoded in the engine mode
+ * string as well, and because the client always sends a fully resolved config the mode's direction
+ * was discarded every time — which is why `left-right` silently drew top-down. Nothing outside this
+ * field may decide which way ranks flow.
  */
 
 /** Mirrors `LayoutConfigurationError` (crates/gvui/src/0_common/0_2_config.rs). */
@@ -30,8 +35,15 @@ export class LayoutConfigurationError extends Error {
 /** Primary flow direction of a layered layout. */
 export type Direction = "top-down" | "bottom-up" | "left-right" | "right-left";
 
-/** How edge polylines are rendered. */
-export type EdgeStyle = "orthogonal" | "rounded" | "spline" | "straight";
+/**
+ * How edge polylines are rendered.
+ *
+ * `octilinear` is an orthogonal route whose right-angle corners the engine has already replaced
+ * with 45-degree chamfers, so the points it emits are no longer all axis-aligned. It is a post-pass
+ * on the orthogonal polyline rather than a different router: the lane model stays exact, and with
+ * it the guarantee that routing cannot fail.
+ */
+export type EdgeStyle = "orthogonal" | "rounded" | "spline" | "octilinear" | "straight";
 
 /** Where an edge badge sits relative to its edge. */
 export type LabelPlacement = "on-edge" | "beside-edge" | "above-edge";
@@ -46,7 +58,14 @@ export type OrderingHeuristic = "median" | "barycenter";
 export type Coordinator = "brandes-kopf" | "simple";
 
 /** Which of the four Brandes-Koepf candidate assignments to emit. */
-export type BkAlign = "median" | "leftmost" | "rightmost" | "up-left" | "up-right" | "down-left" | "down-right";
+export type BkAlign =
+  | "median"
+  | "leftmost"
+  | "rightmost"
+  | "up-left"
+  | "up-right"
+  | "down-left"
+  | "down-right";
 
 /** Preset over the spacing family. */
 export type Compaction = "tight" | "balanced" | "airy";
@@ -102,6 +121,29 @@ export interface CustomLayoutConfig {
   bundleParallelEdges: boolean;
   /** Spacing preset multiplier. */
   compaction: Compaction;
+  /**
+   * Let the router pick any of the four node sides per endpoint, scored geometrically, instead of
+   * forcing every forward edge onto Bottom -> Top. Sideways targets then leave sideways, which
+   * removes the dog-leg they would otherwise need.
+   */
+  flexiblePortSides: boolean;
+  /**
+   * How strongly a forward edge still prefers the rank-flow sides (Bottom/Top) when
+   * `flexiblePortSides` is on. 0 is purely geometric; larger values keep the hierarchy reading
+   * top-to-bottom even when a sideways exit would be marginally shorter (>= 0).
+   */
+  flowSideBias: number;
+  /**
+   * Snap a source and target port to a common coordinate when that turns a dog-leg into one
+   * straight segment. The largest single reducer of unnecessary corners.
+   */
+  straightShotAlignment: boolean;
+  /**
+   * Allow the ranker to place the endpoints of a peer edge on the same rank (`minLen = 0`), so two
+   * siblings can be joined by a straight horizontal line instead of being forced onto different
+   * ranks and connected vertically.
+   */
+  sameRankPeerEdges: boolean;
 
   // ---- Tier 2: algorithm selection ---------------------------------------------------------
   /** Rank assignment algorithm. */
@@ -161,7 +203,7 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   portEndpointPadding: 16,
   cornerRadius: 8,
   edgeStyle: "rounded",
-  labelPlacement: "beside-edge",
+  labelPlacement: "on-edge",
   badgeClearance: 10,
   maxLabelWidth: 220,
   maxLabelLines: 3,
@@ -172,6 +214,10 @@ export const DEFAULT_CUSTOM_LAYOUT_CONFIG: Readonly<CustomLayoutConfig> = Object
   balanceRanks: true,
   bundleParallelEdges: true,
   compaction: "balanced",
+  flexiblePortSides: true,
+  flowSideBias: 1,
+  straightShotAlignment: true,
+  sameRankPeerEdges: true,
 
   ranker: "network-simplex",
   ordering: "median",
@@ -220,7 +266,11 @@ const POSITIVE_F64_FIELDS: (keyof CustomLayoutConfig)[] = [
   "zoomSensitivity",
 ];
 
-const NON_NEGATIVE_F64_FIELDS: (keyof CustomLayoutConfig)[] = ["portEndpointPadding", "cornerRadius"];
+const NON_NEGATIVE_F64_FIELDS: (keyof CustomLayoutConfig)[] = [
+  "portEndpointPadding",
+  "cornerRadius",
+  "flowSideBias",
+];
 
 /** Mirrors Rust's `positive_usize` list; these must additionally be integers. */
 const POSITIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = [
@@ -232,7 +282,10 @@ const POSITIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = [
 ];
 
 /** Non-negative integer fields with no lower bound beyond zero (`0` is a valid "auto"/"off"). */
-const NON_NEGATIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = ["maxNodesPerRank", "overlapRemovalPasses"];
+const NON_NEGATIVE_INT_FIELDS: (keyof CustomLayoutConfig)[] = [
+  "maxNodesPerRank",
+  "overlapRemovalPasses",
+];
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
@@ -264,7 +317,9 @@ export function validateCustomLayoutConfig(config: CustomLayoutConfig): void {
   for (const field of POSITIVE_INT_FIELDS) {
     const v = config[field];
     if (!isFiniteNumber(v) || !Number.isInteger(v) || v <= 0) {
-      throw new LayoutConfigurationError(`Configuration property '${field}' must be greater than 0`);
+      throw new LayoutConfigurationError(
+        `Configuration property '${field}' must be greater than 0`,
+      );
     }
   }
 
@@ -312,35 +367,3 @@ export function resolveCustomLayoutConfig(
   validateCustomLayoutConfig(resolved);
   return resolved;
 }
-
-// -------------------------------------------------------------------------------------------
-// Presets — see docs/planning/layout-engine-v2/04-config-and-quality.md § 4
-// -------------------------------------------------------------------------------------------
-
-export type LayoutPresetName = "compact" | "readable" | "presentation" | "dense-mesh";
-
-/**
- * Named overrides over the default config. Because every Tier-1 knob now has a monotone,
- * predictable effect, presets are meaningful again: turning `compaction` to `tight` always makes
- * the drawing denser, never a different topology. `readable` is the default config itself.
- */
-export const LAYOUT_PRESETS: Readonly<Record<LayoutPresetName, Partial<CustomLayoutConfig>>> = Object.freeze({
-  compact: Object.freeze({
-    nodeGap: 36,
-    rankGap: 72,
-    laneSpacing: 8,
-    compaction: "tight",
-  }),
-  readable: Object.freeze({}),
-  presentation: Object.freeze({
-    nodeGap: 80,
-    rankGap: 160,
-    cornerRadius: 14,
-    labelPlacement: "beside-edge",
-  }),
-  "dense-mesh": Object.freeze({
-    targetAspectRatio: 2.2,
-    bundleParallelEdges: true,
-    edgeStyle: "rounded",
-  }),
-});
