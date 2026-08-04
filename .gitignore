@@ -44,7 +44,3 @@ lerna-debug.log*
 ehthumbs.db
 # Brainstorming Visual Companion
 .superpowers/
-
-# Root-level scratch planning only. Anchored with a leading slash so it does not also swallow
-# docs/planning/, which is where committed feature plans live.
-/planning/
