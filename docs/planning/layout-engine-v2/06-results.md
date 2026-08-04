@@ -165,20 +165,37 @@ that was actually load-bearing here.
 
 ## 5. Known gaps
 
-1. **Geometric crossings exceed combinatorial crossings on the dense mesh** (44 vs 28; 57 vs 27 in
-   LR).
+1. **Geometric crossings exceed combinatorial crossings, and the excess scales with channel depth.**
 
-   Some gap is inherent and not a defect: the combinatorial count measures order inversions between
-   adjacent ranks, whereas orthogonal lane routing also creates intersections where one edge's
-   vertical run passes through another's horizontal run in the same channel. Every lane-based
-   orthogonal router has this property. My earlier claim in
-   [04-config-and-quality.md](./04-config-and-quality.md) that "a mismatch is a bug" was too strong
-   — the correct statement is that the gap should be *small and stable*.
+   Measured across the layered fixtures:
 
-   A 57 % excess is larger than it should be, and the LR variant is worse on both counts
-   (57 vs 27, with `straight_chain_ratio` dropping to 0.87). That points at the lane-ordering
-   relabel step not fully honouring the left-edge discipline for reversed edges. Worth
-   investigating; it is a quality issue, not a correctness one.
+   | channel lanes | 1 | 1 | 2 | 3 | 3 | 6 | 10 |
+   | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+   | combinatorial | 0 | 0 | 0 | 0 | 0 | 6 | 28 |
+   | geometric | 0 | 0 | 0 | 2 | 2 | 6 | 44 |
+
+   The excess is **zero** on every shallow-channel fixture and only appears as channels deepen.
+   That is the signature of a structural property, not a defect: an edge descending to lane *k*
+   must cross the horizontal run of any shallower lane whose x-interval spans its descent. The
+   combinatorial count models order inversions between ranks and cannot see those.
+
+   This was tested rather than assumed. Swapping the lane-ordering heuristic (direction-aware
+   left-edge → ordering by left endpoint) moved the total across all layered fixtures from 121 to
+   122 — i.e. the lane *order* is not the lever. The lever is lane *count*, which is already the
+   minimum possible (optimal interval-graph colouring).
+
+   The real future improvement is to make Phase 5's objective include horizontal span, not just
+   crossings: shorter spans mean shallower channels mean fewer routing artefacts. That is a change
+   to the ordering objective, not to the router.
+
+   My earlier claim in [04-config-and-quality.md](./04-config-and-quality.md) that "a mismatch is a
+   bug" was wrong, and so was calling this a 57 % defect. Corrected in both places.
+
+   The LR variant's higher figures (57 vs 44 geometric, `straight_chain_ratio` 0.87 vs 0.96) are
+   also expected rather than a bug: `balance_ranks` derives its rank-width cap from the average box
+   aspect, and LR transposes every box, so the two directions genuinely balance differently. That
+   is the intended behaviour — a drawing that is wide by nature should not be balanced like a tall
+   one.
 2. **`clean_ring_10n_10e` produces 19 ranks for 10 nodes.** Correct given `min_len = 2` on labelled
    edges, but it means a 10-node ring draws as a very tall column. Rank balancing caps rank *width*
    and cannot compact *height*; see the note in [05-roadmap.md](./05-roadmap.md). Worth a follow-up

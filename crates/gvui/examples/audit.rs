@@ -137,6 +137,7 @@ struct Row {
     ranks: usize,
     crossings: usize,
     geo_crossings: usize,
+    lane_depth: usize,
     bends: usize,
     straight: f64,
     leaders: usize,
@@ -198,6 +199,7 @@ fn run(
         ranks: res.validation.metrics.rank_count,
         crossings: res.validation.metrics.crossings,
         geo_crossings: res.validation.metrics.geometric_crossings,
+        lane_depth: res.validation.metrics.lane_depth_max,
         bends: res.validation.metrics.bend_count,
         straight: res.validation.metrics.straight_chain_ratio,
         leaders: res.validation.metrics.leader_count,
@@ -260,8 +262,8 @@ fn main() {
 
     println!();
     println!(
-        "{:<30} {:<11} {:>4} {:>4} {:>9} {:>6} {:>6} {:>6} {:>6} {:>7} {:>4} {:>5} {:>5}",
-        "dataset", "engine", "N", "E", "ms", "ranks", "cross", "geo", "bends", "straight", "ldr",
+        "{:<30} {:<11} {:>4} {:>4} {:>9} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7} {:>4} {:>5} {:>5}",
+        "dataset", "engine", "N", "E", "ms", "ranks", "cross", "geo", "lanes", "bends", "straight", "ldr",
         "valid", "det"
     );
     println!("{}", "-".repeat(122));
@@ -271,7 +273,7 @@ fn main() {
 
     for r in &rows {
         println!(
-            "{:<30} {:<11} {:>4} {:>4} {:>9.2} {:>6} {:>6} {:>6} {:>6} {:>7.2} {:>4} {:>5} {:>5}",
+            "{:<30} {:<11} {:>4} {:>4} {:>9.2} {:>6} {:>6} {:>6} {:>5} {:>6} {:>7.2} {:>4} {:>5} {:>5}",
             r.name,
             r.engine,
             r.n,
@@ -280,6 +282,7 @@ fn main() {
             r.ranks,
             r.crossings,
             r.geo_crossings,
+            r.lane_depth,
             r.bends,
             r.straight,
             r.leaders,
