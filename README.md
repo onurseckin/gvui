@@ -26,7 +26,7 @@ bun start
 
 Builds the WASM engine and the production bundle, then serves it locally.
 
-Open **http://localhost:48180**
+Open **http://localhost:5555**
 
 ### Option 2: With Docker
 
@@ -36,7 +36,7 @@ bun run prod
 
 Builds the WASM engine on the host, then builds and runs an optimized Nginx container serving the production bundle.
 
-Open **http://localhost:48180**
+Open **http://localhost:5555**
 
 Other Docker prod commands:
 
@@ -56,7 +56,7 @@ bun run prod:logs     # tail logs
 bun run dev:host
 ```
 
-Open **http://localhost:48173**
+Open **http://localhost:4444**
 
 ### Option 2: With Docker (hot reload)
 
@@ -64,7 +64,7 @@ Open **http://localhost:48173**
 bun run dev
 ```
 
-- App access: **http://localhost:48173**
+- App access: **http://localhost:4444**
 - Logs: `bun run logs`
 - Stop server: `bun run stop`
 - Run in background: `bun run dev:daemon`
@@ -97,12 +97,12 @@ bun run dev
 
 ## 🔌 Ports
 
-| Mode                         | URL                     |
-| ----------------------------- | ------------------------ |
-| Production (Docker or not)   | http://localhost:48180  |
-| Development (Docker or not)  | http://localhost:48173  |
+| Mode                         | URL                    |
+| ----------------------------- | ---------------------- |
+| Production (Docker or not)   | http://localhost:5555  |
+| Development (Docker or not)  | http://localhost:4444  |
 
-These ports were chosen deliberately outside the common `3000`/`5173`/`8080` range so gvui can run alongside other local projects without colliding.
+These memorable repeated-digit ports were chosen so gvui can run alongside other local projects without colliding with common defaults like `3000`/`5173`/`8080`.
 
 ---
 

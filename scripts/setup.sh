@@ -65,9 +65,9 @@ log "Setup complete"
 cat <<'EOF'
 
 Next steps:
-  bun start        Build and run the app in production mode locally  (http://localhost:48180)
-  bun run dev:host  Run the dev server directly on your machine       (http://localhost:48173)
-  bun run prod      Build and run production mode inside Docker       (http://localhost:48180)
-  bun run dev       Run the dev server inside Docker with hot reload  (http://localhost:48173)
+  bun start        Build and run the app in production mode locally  (http://localhost:5555)
+  bun run dev:host  Run the dev server directly on your machine       (http://localhost:4444)
+  bun run prod      Build and run production mode inside Docker       (http://localhost:5555)
+  bun run dev       Run the dev server inside Docker with hot reload  (http://localhost:4444)
 
 EOF

@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     ports:
-      - "48180:80"
+      - "5555:80"
     environment:
       - NODE_ENV=production
     healthcheck:
