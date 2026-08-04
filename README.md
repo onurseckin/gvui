@@ -1,4 +1,4 @@
-# GVUI — Directed Graph Visualization UI
+# GVUI — Graph Visualization UI
 
 **GVUI** is a high-performance directed graph layout and visualization UI built with **React**, **TypeScript**, **Vite**, and a custom **Rust / WebAssembly (WASM)** layout engine.
 
