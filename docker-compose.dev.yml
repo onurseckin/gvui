@@ -28,19 +28,13 @@ services:
       start_period: 10s
     develop:
       watch:
-        - action: sync
-          path: .
-          target: /app
-          ignore:
-            - node_modules/
-            - .git/
-            - dist/
-            - docs/
-            - target/
-            - scratch/
-            - .tmp/
-            - "*.tsbuildinfo"
-            - "*.log"
+        # No `sync` action here on purpose. The `.:/app` bind mount above already makes the host
+        # tree live inside the container, so a sync would copy files onto themselves — it never
+        # fired once under observation, and all it can contribute is mtime churn for a watcher that
+        # is already polling. Hot reload comes from the bind mount plus Vite's polling watcher.
+        #
+        # A dependency change is the one thing the bind mount cannot handle: `node_modules` is
+        # masked by an anonymous volume, so a new package needs the image rebuilt to reinstall.
         - action: rebuild
           path: package.json
 
