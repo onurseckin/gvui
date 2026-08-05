@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useGraphStore } from "../../state/useGraphStore";
 import { Button } from "../../ui/atoms/Button";
-import type { TableName } from "../../utils/sqliteDb";
-import { TABLE_METADATA, sqliteDb } from "../../utils/sqliteDb";
+import type { TableName } from "../../utils/localDb";
+import { TABLE_METADATA, localDb } from "../../utils/localDb";
 import type { DeveloperSettingsProps, DeveloperSettingsTab } from "./DeveloperSettings.types";
 import "./DeveloperSettings.css";
 
@@ -110,8 +110,8 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
     }, []);
 
     const refreshDbData = useCallback(() => {
-      sqliteDb.reloadFromStorage();
-      const rows = sqliteDb.getTableRows<Record<string, unknown>>(selectedTable);
+      localDb.reloadFromStorage();
+      const rows = localDb.getTableRows<Record<string, unknown>>(selectedTable);
       setDbRows(rows);
     }, [selectedTable]);
 
@@ -162,7 +162,7 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
 
     const handleDeleteRow = useCallback(
       (primaryKeyValue: string) => {
-        const deleted = sqliteDb.deleteRow(selectedTable, primaryKeyValue);
+        const deleted = localDb.deleteRow(selectedTable, primaryKeyValue);
         if (deleted) {
           refreshDbData();
           showToast(`Deleted row '${primaryKeyValue}' from ${selectedTable}`);
@@ -200,7 +200,7 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
           return;
         }
 
-        sqliteDb.upsertRow(selectedTable, rowObj);
+        localDb.upsertRow(selectedTable, rowObj);
         refreshDbData();
         showToast(`Saved row '${String(rowObj[primaryKeyName])}' in ${selectedTable}`);
         setEditingRowKey(null);
@@ -212,16 +212,16 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
     }, [editingRowJson, selectedTable, refreshDbData, showToast]);
 
     const handleClearTable = useCallback(() => {
-      sqliteDb.clearTable(selectedTable);
+      localDb.clearTable(selectedTable);
       refreshDbData();
       showToast(`Cleared table '${selectedTable}'`);
     }, [selectedTable, refreshDbData, showToast]);
 
     const handleClearDatabase = useCallback(() => {
-      sqliteDb.clearDatabase();
+      localDb.clearDatabase();
       refreshDbData();
       refreshStorageData();
-      showToast("Cleared SQLite Database");
+      showToast("Cleared local database");
     }, [refreshDbData, refreshStorageData, showToast]);
 
     const formattedJson = useMemo(() => JSON.stringify(storageData, null, 2), [storageData]);
@@ -235,7 +235,7 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
         <div className="developer-settings-header">
           <div className="developer-settings-header-content">
             <p className="developer-settings-description">
-              Inspect application state, SQLite database tables, and local storage entries
+              Inspect the local layout cache and the raw local storage entries behind it
             </p>
           </div>
           <div className="developer-settings-header-actions">

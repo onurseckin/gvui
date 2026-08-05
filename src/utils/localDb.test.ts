@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "bun:test";
-import { sqliteDb } from "./sqliteDb";
+import { localDb } from "./localDb";
 import type { PositionedNode } from "../types/graphData";
 
 if (typeof window === "undefined") {
@@ -24,16 +24,16 @@ if (typeof window === "undefined") {
   (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
 
-describe("sqliteDb engine & table operations", () => {
+describe("localDb engine & table operations", () => {
   beforeEach(() => {
-    sqliteDb.clearDatabase();
+    localDb.clearDatabase();
   });
 
   it("exposes expected structured database table names and column metadata", () => {
-    const tables = sqliteDb.getTableNames();
+    const tables = localDb.getTableNames();
     expect(tables).toEqual(["graph_layouts"]);
 
-    const cols = sqliteDb.getTableColumns("graph_layouts");
+    const cols = localDb.getTableColumns("graph_layouts");
     expect(cols).toEqual([
       { name: "key", primaryKey: true },
       { name: "file_signature", primaryKey: false },
@@ -55,27 +55,27 @@ describe("sqliteDb engine & table operations", () => {
       width: 80,
       height: 40,
     };
-    sqliteDb.saveGraphLayout("sig-123", "layered", [node], []);
+    localDb.saveGraphLayout("sig-123", "layered", [node], []);
 
-    const loaded = sqliteDb.getGraphLayout("sig-123", "layered");
+    const loaded = localDb.getGraphLayout("sig-123", "layered");
     expect(loaded).not.toBeNull();
     expect(loaded?.file_signature).toBe("sig-123");
     expect(loaded?.nodes[0].name).toBe("Alpha");
 
-    const rows = sqliteDb.getTableRows("graph_layouts");
+    const rows = localDb.getTableRows("graph_layouts");
     expect(rows.length).toBe(1);
 
-    const updated = sqliteDb.updateRow("graph_layouts", "sig-123_layered", {
+    const updated = localDb.updateRow("graph_layouts", "sig-123_layered", {
       nodes: [{ id: "node-1", name: "Alpha Updated", x: 50, y: 60, width: 80, height: 40 }],
     });
     expect(updated).toBe(true);
 
-    const reloaded = sqliteDb.getGraphLayout("sig-123", "layered");
+    const reloaded = localDb.getGraphLayout("sig-123", "layered");
     expect(reloaded?.nodes[0].name).toBe("Alpha Updated");
 
-    const deleted = sqliteDb.deleteGraphLayout("sig-123", "layered");
+    const deleted = localDb.deleteGraphLayout("sig-123", "layered");
     expect(deleted).toBe(true);
-    expect(sqliteDb.getGraphLayout("sig-123", "layered")).toBeNull();
+    expect(localDb.getGraphLayout("sig-123", "layered")).toBeNull();
   });
 
   it("clears individual tables or the entire database", () => {
@@ -87,21 +87,21 @@ describe("sqliteDb engine & table operations", () => {
       width: 80,
       height: 40,
     };
-    sqliteDb.saveGraphLayout("sig-1", "layered", [node], []);
+    localDb.saveGraphLayout("sig-1", "layered", [node], []);
 
-    expect(sqliteDb.getTableRows("graph_layouts").length).toBe(1);
+    expect(localDb.getTableRows("graph_layouts").length).toBe(1);
 
-    sqliteDb.clearTable("graph_layouts");
-    expect(sqliteDb.getTableRows("graph_layouts").length).toBe(0);
+    localDb.clearTable("graph_layouts");
+    expect(localDb.getTableRows("graph_layouts").length).toBe(0);
 
     // "organic" is v2's replacement for the removed v1 "force"/"stress" modes (see
     // normalizeLayoutMode's LEGACY_LAYOUT_MODE_MAP) — using it here exercises a second, distinct
     // key under the same signature rather than re-exercising "layered".
-    sqliteDb.saveGraphLayout("sig-2", "organic", [node], []);
-    expect(sqliteDb.getTableRows("graph_layouts").length).toBe(1);
+    localDb.saveGraphLayout("sig-2", "organic", [node], []);
+    expect(localDb.getTableRows("graph_layouts").length).toBe(1);
 
-    sqliteDb.clearDatabase();
-    expect(sqliteDb.getTableRows("graph_layouts").length).toBe(0);
+    localDb.clearDatabase();
+    expect(localDb.getTableRows("graph_layouts").length).toBe(0);
   });
 
   it("keys distinct layout modes for the same signature separately", () => {
@@ -113,11 +113,11 @@ describe("sqliteDb engine & table operations", () => {
       width: 80,
       height: 40,
     };
-    sqliteDb.saveGraphLayout("sig-multi", "layered", [node], []);
-    sqliteDb.saveGraphLayout("sig-multi", "radial", [node], []);
+    localDb.saveGraphLayout("sig-multi", "layered", [node], []);
+    localDb.saveGraphLayout("sig-multi", "radial", [node], []);
 
-    expect(sqliteDb.getTableRows("graph_layouts").length).toBe(2);
-    expect(sqliteDb.getGraphLayout("sig-multi", "layered")).not.toBeNull();
-    expect(sqliteDb.getGraphLayout("sig-multi", "radial")).not.toBeNull();
+    expect(localDb.getTableRows("graph_layouts").length).toBe(2);
+    expect(localDb.getGraphLayout("sig-multi", "layered")).not.toBeNull();
+    expect(localDb.getGraphLayout("sig-multi", "radial")).not.toBeNull();
   });
 });

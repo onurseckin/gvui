@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { sqliteDb } from "../../utils/sqliteDb";
+import { localDb } from "../../utils/localDb";
 
 if (typeof window === "undefined") {
   (globalThis as unknown as { window: unknown }).window = globalThis;
@@ -24,20 +24,20 @@ const mockLocalStorage = {
 };
 (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 
-describe("DeveloperSettings Component with SQLite Database Viewer", () => {
+describe("DeveloperSettings Component with local database viewer", () => {
   beforeEach(() => {
-    sqliteDb.clearDatabase();
+    localDb.clearDatabase();
     store.clear();
   });
 
   it("stores and clears database layout records for DeveloperSettings viewer", () => {
-    sqliteDb.saveGraphLayout("sig-test", "layered", [], []);
-    const layout = sqliteDb.getGraphLayout("sig-test", "layered");
+    localDb.saveGraphLayout("sig-test", "layered", [], []);
+    const layout = localDb.getGraphLayout("sig-test", "layered");
 
     expect(layout).not.toBeNull();
     expect(layout?.file_signature).toBe("sig-test");
 
-    sqliteDb.clearDatabase();
-    expect(sqliteDb.getGraphLayout("sig-test", "layered")).toBeNull();
+    localDb.clearDatabase();
+    expect(localDb.getGraphLayout("sig-test", "layered")).toBeNull();
   });
 });

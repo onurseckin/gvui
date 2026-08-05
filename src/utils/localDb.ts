@@ -38,7 +38,7 @@ export const TABLE_METADATA: Record<TableName, TableMetaData> = {
   },
 };
 
-const DB_STORAGE_KEY = "gvui_sqlite_db_v1";
+const DB_STORAGE_KEY = "gvui_local_db_v1";
 
 type DatabaseStore = {
   graph_layouts: Record<string, Record<string, unknown>>;
@@ -59,7 +59,22 @@ function createEmptyDatabase(): DatabaseStore {
   };
 }
 
-export class SqliteDatabase {
+/**
+ * The local cache of computed layouts.
+ *
+ * Not SQLite, despite what this was called until now — it is an in-memory object with a
+ * table-shaped API (tables, primary keys, upsert) serialised as one JSON blob into localStorage.
+ * The old name implied a second storage engine that never existed, and `sql.js` sat in
+ * `package.json` for it without a single import.
+ *
+ * The whole point is to skip work: a layout is a pure function of a dataset plus a config, and the
+ * engine is deterministic, so a cache hit saves recomputing geometry the user has already seen.
+ * That also means every row here is disposable. `nodes` and `edges` are stored as opaque JSON so
+ * their shape can change freely, and if the table shape itself ever changes the answer is to clear
+ * the cache and let it refill — never to migrate it or to keep compatibility code around for an
+ * older layout of a cache.
+ */
+export class LocalDatabase {
   private memoryDb: DatabaseStore;
 
   constructor() {
@@ -256,4 +271,4 @@ export class SqliteDatabase {
   }
 }
 
-export const sqliteDb = new SqliteDatabase();
+export const localDb = new LocalDatabase();

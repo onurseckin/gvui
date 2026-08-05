@@ -5,7 +5,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { GraphDataset } from "../../types/graphData";
 import { generateDatasetSignature } from "../../utils/fileStorage";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
-import { sqliteDb } from "../../utils/sqliteDb";
+import { localDb } from "../../utils/localDb";
 import { useGraphStore } from "../../state/useGraphStore";
 import { DEFAULT_CUSTOM_LAYOUT_CONFIG } from "../layout/custom/config";
 import type { CustomLayoutConfig } from "../layout/custom/config";
@@ -121,7 +121,7 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
   let renderer: ReactTestRenderer | undefined;
 
   beforeEach(() => {
-    sqliteDb.clearDatabase();
+    localDb.clearDatabase();
     useGraphStore.setState(initialStoreState, true);
   });
 
@@ -135,7 +135,7 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
       renderer = undefined;
     }
     restoreCustomLayoutAdapterModule();
-    sqliteDb.clearDatabase();
+    localDb.clearDatabase();
     useGraphStore.setState(initialStoreState, true);
   });
 

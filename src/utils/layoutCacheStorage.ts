@@ -1,6 +1,6 @@
 import type { LayoutMode } from "../state/useGraphStore";
 import type { PositionedEdge, PositionedNode } from "../types/graphData";
-import { sqliteDb } from "./sqliteDb";
+import { localDb } from "./localDb";
 
 export interface StoredLayoutPayload {
   mode: LayoutMode;
@@ -17,7 +17,7 @@ export function loadStoredLayout(
   if (!signature) return null;
 
   try {
-    const row = sqliteDb.getGraphLayout(signature, mode);
+    const row = localDb.getGraphLayout(signature, mode);
     if (row && Array.isArray(row.nodes) && Array.isArray(row.edges)) {
       return { nodes: row.nodes, edges: row.edges };
     }
@@ -35,9 +35,9 @@ export function saveStoredLayout(
 ): void {
   if (!signature) return;
 
-  sqliteDb.saveGraphLayout(signature, mode, layout.nodes, layout.edges);
+  localDb.saveGraphLayout(signature, mode, layout.nodes, layout.edges);
 }
 
 export function clearStoredLayoutCache(): void {
-  sqliteDb.clearGraphLayouts();
+  localDb.clearGraphLayouts();
 }

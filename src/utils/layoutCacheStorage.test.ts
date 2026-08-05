@@ -24,7 +24,7 @@ if (typeof window === "undefined") {
   (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
 
-describe("layoutCacheStorage SQLite DB isolation", () => {
+describe("layoutCacheStorage local DB isolation", () => {
   beforeEach(() => {
     clearStoredLayoutCache();
   });
@@ -52,7 +52,7 @@ describe("layoutCacheStorage SQLite DB isolation", () => {
   });
 
   it("treats (mode, signature) as the whole key: same signature under a different mode misses", () => {
-    // The cache key is `${mode}_${signature}` (see sqliteDb.getGraphLayout). A layout computed
+    // The cache key is `${mode}_${signature}` (see localDb.getGraphLayout). A layout computed
     // for "layered" must never satisfy a request for "radial" against the identical signature —
     // different engine modes produce structurally different output for the same dataset.
     const sig = "sig_shared_across_modes";
