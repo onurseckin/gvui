@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+#
+# Blocks a commit whose staged files are not formatted.
+#
+# Why check rather than auto-format: re-staging files the hook rewrote would also stage hunks that
+# were deliberately left out of a partial `git add -p`, silently committing work you excluded. This
+# never touches the working tree — it only refuses, and tells you the one command that fixes it.
+#
+# Only *staged* paths are considered, so unformatted work-in-progress elsewhere in the tree cannot
+# block an unrelated commit. `git commit --no-verify` skips this, as usual.
+
+set -uo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root" || exit 1
+
+# Deletions have nothing left to format, hence --diff-filter=ACMR. `-z` and the read loop keep
+# paths with spaces intact, and the loop form works on the bash 3.2 that ships with macOS.
+staged=()
+while IFS= read -r -d '' path; do
+  staged+=("$path")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+[ ${#staged[@]} -eq 0 ] && exit 0
+
+js_files=()
+rust_files=()
+for path in "${staged[@]}"; do
+  case "$path" in
+    *.ts | *.tsx | *.js | *.jsx | *.mjs | *.cjs | *.json | *.md) js_files+=("$path") ;;
+    *.rs) rust_files+=("$path") ;;
+  esac
+done
+
+failed=0
+
+if [ ${#js_files[@]} -gt 0 ]; then
+  # Prefer the pinned local binary; fall back to bunx so the hook still works before `bun install`.
+  if [ -x "./node_modules/.bin/oxfmt" ]; then
+    oxfmt_cmd=("./node_modules/.bin/oxfmt")
+  elif command -v bunx >/dev/null 2>&1; then
+    oxfmt_cmd=(bunx oxfmt)
+  else
+    oxfmt_cmd=()
+    echo "pre-commit: oxfmt not found, skipping the JS/TS format check" >&2
+  fi
+
+  if [ ${#oxfmt_cmd[@]} -gt 0 ]; then
+    # oxfmt honours `ignorePatterns` from .oxfmtrc.json even when handed explicit paths, so the
+    # generated public/data/graphs/manifest.json stays exempt. `--no-error-on-unmatched-pattern` is
+    # required, not cosmetic: without it oxfmt exits 2 when *every* path it was given is excluded,
+    # so staging only manifest.json would fail this hook with nothing actually wrong. Verified that
+    # the flag still reports genuinely unformatted files.
+    if ! "${oxfmt_cmd[@]}" --check --no-error-on-unmatched-pattern "${js_files[@]}" >/dev/null 2>&1; then
+      echo "" >&2
+      echo "  ✗ Staged JS/TS/MD files are not formatted:" >&2
+      "${oxfmt_cmd[@]}" --list-different --no-error-on-unmatched-pattern "${js_files[@]}" 2>/dev/null |
+        sed 's/^/      /' >&2
+      echo "" >&2
+      echo "    Fix with:  bun run format" >&2
+      failed=1
+    fi
+  fi
+fi
+
+if [ ${#rust_files[@]} -gt 0 ]; then
+  if command -v cargo >/dev/null 2>&1; then
+    # rustfmt is configured per-crate, so this checks the crate rather than the individual files.
+    if ! cargo fmt --manifest-path crates/gvui/Cargo.toml --check >/dev/null 2>&1; then
+      echo "" >&2
+      echo "  ✗ Staged Rust files are not formatted." >&2
+      echo "" >&2
+      echo "    Fix with:  cargo fmt --manifest-path crates/gvui/Cargo.toml" >&2
+      failed=1
+    fi
+  else
+    echo "pre-commit: cargo not found, skipping the Rust format check" >&2
+  fi
+fi
+
+if [ "$failed" -ne 0 ]; then
+  echo "" >&2
+  echo "    (or bypass once with: git commit --no-verify)" >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0

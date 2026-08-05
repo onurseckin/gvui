@@ -55,6 +55,17 @@ else
   echo "Install Docker Desktop from https://www.docker.com/products/docker-desktop/ if you want the containerized dev/prod flow."
 fi
 
+log "Installing the git pre-commit hook"
+# `core.hooksPath` is per-clone local config, so a fresh clone has to opt in here. The hook itself
+# lives in .githooks/ and is version controlled; .git/hooks is not.
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  git config core.hooksPath .githooks
+  chmod +x .githooks/* 2>/dev/null || true
+  echo "Pre-commit hook installed (refuses unformatted commits; bypass with --no-verify)."
+else
+  echo "Not a git repository, skipping hook installation."
+fi
+
 log "Installing JS dependencies"
 bun install
 
