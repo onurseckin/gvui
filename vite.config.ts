@@ -6,6 +6,24 @@ import react from "@vitejs/plugin-react";
 
 const GRAPHS_DIR = path.resolve(import.meta.dirname, "public/data/graphs");
 const MANIFEST_PATH = path.join(GRAPHS_DIR, "manifest.json");
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // generous for a graph JSON file, small enough to bound memory
+
+/**
+ * The dev server binds `0.0.0.0` (so Docker's port mapping and LAN access work), which makes
+ * `/api/graphs` reachable by anything that can reach the host — including a malicious page open in
+ * another browser tab, via a plain cross-origin `fetch`. Browsers always attach `Origin` to a
+ * cross-origin request, so rejecting a mismatched one blocks that CSRF-style write without having
+ * to hardcode "localhost" and break LAN access.
+ */
+function isSameOriginRequest(req: { headers: { origin?: string; host?: string } }): boolean {
+  const origin = req.headers.origin;
+  if (!origin) return true; // no Origin header: curl, direct navigation, same-origin legacy clients
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
 
 function listGraphFiles(): string[] {
   if (!existsSync(GRAPHS_DIR)) return [];
@@ -32,6 +50,12 @@ function graphFilesApiPlugin(): Plugin {
       server.middlewares.use("/api/graphs", (req, res) => {
         res.setHeader("Content-Type", "application/json");
 
+        if (!isSameOriginRequest(req)) {
+          res.statusCode = 403;
+          res.end(JSON.stringify({ error: "Cross-origin requests are not allowed" }));
+          return;
+        }
+
         if (req.method === "GET") {
           const files = listGraphFiles();
           writeManifest(files);
@@ -41,17 +65,36 @@ function graphFilesApiPlugin(): Plugin {
         }
 
         if (req.method === "POST") {
-          let body = "";
+          const chunks: Buffer[] = [];
+          let receivedBytes = 0;
+          let rejectedForSize = false;
+
           req.on("data", (chunk: Buffer) => {
-            body += chunk.toString("utf-8");
+            if (rejectedForSize) return;
+            receivedBytes += chunk.length;
+            if (receivedBytes > MAX_UPLOAD_BYTES) {
+              rejectedForSize = true;
+              res.statusCode = 413;
+              res.end(JSON.stringify({ error: "Upload too large (5MB limit)" }));
+              req.destroy();
+              return;
+            }
+            chunks.push(chunk);
           });
           req.on("error", () => {
+            if (rejectedForSize) return;
             res.statusCode = 400;
             res.end(JSON.stringify({ error: "Request stream failed" }));
           });
           req.on("end", () => {
+            if (rejectedForSize) return;
             try {
-              const parsed = JSON.parse(body) as { filename?: unknown; content?: unknown };
+              const body = Buffer.concat(chunks).toString("utf-8");
+              const parsed = JSON.parse(body) as {
+                filename?: unknown;
+                content?: unknown;
+                overwrite?: unknown;
+              };
               const rawName = typeof parsed.filename === "string" ? parsed.filename.trim() : "";
               if (!rawName) throw new Error("filename is required");
 
@@ -65,8 +108,19 @@ function graphFilesApiPlugin(): Plugin {
               const content = typeof parsed.content === "string" ? parsed.content : "";
               JSON.parse(content); // validate it's parseable JSON before it touches disk
 
+              const targetPath = path.join(GRAPHS_DIR, `${baseName}.json`);
+              if (existsSync(targetPath) && parsed.overwrite !== true) {
+                res.statusCode = 409;
+                res.end(
+                  JSON.stringify({
+                    error: `"${baseName}.json" already exists. Remove it or rename the upload.`,
+                  }),
+                );
+                return;
+              }
+
               mkdirSync(GRAPHS_DIR, { recursive: true });
-              writeFileSync(path.join(GRAPHS_DIR, `${baseName}.json`), content, "utf-8");
+              writeFileSync(targetPath, content, "utf-8");
 
               const files = listGraphFiles();
               writeManifest(files);
