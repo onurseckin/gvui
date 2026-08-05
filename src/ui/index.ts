@@ -5,5 +5,4 @@ export * from "./atoms/Badge";
 export * from "./atoms/Spinner";
 
 export * from "./molecules/SearchInput";
-export * from "./molecules/FileUploadButton";
 export * from "./molecules/LayoutSelectDropdown";

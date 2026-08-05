@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { AppContent } from "../AppContent";
 import { GraphTestingPage } from "../features/GraphTesting/components/GraphTestingPage";
+import { fetchManifest } from "../api/graphFilesApi";
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -15,8 +16,9 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/graphs/$fileId", params: { fileId: "ai_agent_trace" } });
+  beforeLoad: async () => {
+    const files = await fetchManifest();
+    throw redirect({ to: "/graphs/$fileId", params: { fileId: files[0] ?? "welcome" } });
   },
 });
 

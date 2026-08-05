@@ -4,20 +4,14 @@ import { Dialog } from "@base-ui-components/react/dialog";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../../ui/atoms/Button";
 import { useGraphStore } from "../../state/useGraphStore";
+import { useGraphFilesStore } from "../../state/useGraphFilesStore";
 import type { GraphDataset } from "../../types/graphData";
 import type {
   CommandPaletteProps,
   CommandPaletteScope,
   SearchResultNode,
 } from "./CommandPalette.types";
-import { SAMPLE_GRAPHS } from "../Sidebar/sampleGraphs";
 import "./CommandPalette.css";
-
-// Derived from the single sidebar registry rather than duplicated. This list was a second,
-// independent copy of the dataset ids; when the sample data was replaced it went stale and every
-// entry prefetched a 404, which Vite serves as index.html — hence a JSON parse error per dataset
-// on every page load.
-const PRESET_FILES: string[] = SAMPLE_GRAPHS.map((sample) => sample.id);
 
 interface CommandPaletteItemProps {
   node: SearchResultNode;
@@ -75,6 +69,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
   const [datasetCache, setDatasetCache] = useState<Map<string, GraphDataset>>(new Map());
 
   const activeDataset = useGraphStore((state) => state.dataset);
+  const presetFiles = useGraphFilesStore((state) => state.files);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce input value changes to prevent main thread blocking during fast typing
@@ -94,7 +89,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     let isMounted = true;
     const fetchPresetDatasets = async () => {
       const cache = new Map<string, GraphDataset>();
-      for (const slug of PRESET_FILES) {
+      for (const slug of presetFiles) {
         try {
           const res = await fetch(`/data/graphs/${slug}.json`);
           if (res.ok) {
@@ -113,7 +108,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [presetFiles]);
 
   // Reset state when opening modal & auto-focus search input
   useEffect(() => {
@@ -137,7 +132,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
 
     if (scope === "current") {
       let currentNodes = activeDataset?.nodes ?? [];
-      const isCurrentPreset = PRESET_FILES.includes(cleanCurrentFile);
+      const isCurrentPreset = presetFiles.includes(cleanCurrentFile);
       if (
         isCurrentPreset &&
         datasetCache.has(cleanCurrentFile) &&
@@ -157,7 +152,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
       }
     } else {
       // "All Files" scope
-      for (const slug of PRESET_FILES) {
+      for (const slug of presetFiles) {
         let fileNodes = datasetCache.get(slug)?.nodes ?? [];
         if (
           activeDataset &&
@@ -187,7 +182,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
       }
     }
     return nodes;
-  }, [scope, currentFile, activeDataset, datasetCache]);
+  }, [scope, currentFile, activeDataset, datasetCache, presetFiles]);
 
   // Filter and sort nodes using debounced query
   const filteredResults = useMemo<SearchResultNode[]>(() => {

@@ -4,9 +4,10 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { CommandPalette } from "./components/CommandPalette";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
 import { SearchHeader } from "./components/Controls/SearchHeader";
-import { DeveloperSettings } from "./components/DeveloperSettings";
+import { UploadGraphButton } from "./components/Controls/UploadGraphButton";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
+import { useGraphFilesStore } from "./state/useGraphFilesStore";
 import { useCurrentFile, useGraphStore } from "./state/useGraphStore";
 import type { GraphDataset } from "./types/graphData";
 import { Button } from "./ui";
@@ -15,17 +16,18 @@ import "./index.css";
 
 export const AppContent: FC = () => {
   const params = useParams({ strict: false }) as { fileId?: string };
-  const fileIdFromRoute = params.fileId || "ai_agent_trace";
+  const fileIdFromRoute = params.fileId || "welcome";
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as { node?: string };
   const initialNodeId = searchParams.node ?? null;
 
   const currentFile = useCurrentFile();
   const centerNodeOnCanvas = useGraphStore((state) => state.centerNodeOnCanvas);
+  const fetchInitialFiles = useGraphFilesStore((state) => state.fetchInitial);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
-  const [isDeveloperSettingsOpen, setIsDeveloperSettingsOpen] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const loadGraphFile = useCallback(async (fileId: string, nodeId?: string | null) => {
     try {
@@ -63,12 +65,9 @@ export const AppContent: FC = () => {
     }
   }, []);
 
-  const handleClearStorage = useCallback(() => {
-    useGraphStore.setState({ shouldAutoFit: true });
-    if (currentFile) {
-      void loadGraphFile(currentFile);
-    }
-  }, [currentFile, loadGraphFile]);
+  useEffect(() => {
+    void fetchInitialFiles();
+  }, [fetchInitialFiles]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -121,45 +120,21 @@ export const AppContent: FC = () => {
     [navigate],
   );
 
-  const handleCustomUpload = useCallback((dataset: GraphDataset) => {
-    const fileId = dataset.id ? dataset.id.replace(/\.json$/, "") : "custom";
-    const signature = generateDatasetSignature(dataset);
-    const stored = loadStoredViewport(fileId, signature);
-
-    if (stored) {
-      const collapsedSet = new Set(stored.collapsedNodeIds ?? []);
-      useGraphStore.setState({
-        dataset,
-        currentFile: fileId,
-        zoomLevel: stored.zoomLevel,
-        panOffset: stored.panOffset,
-        selectedNodeId: stored.selectedNodeId,
-        layoutMode: stored.layoutMode,
-        collapsedNodeIds: collapsedSet,
-        shouldAutoFit: false,
-      });
-    } else {
-      useGraphStore.setState({
-        dataset,
-        currentFile: fileId,
-        selectedNodeId: null,
-        collapsedNodeIds: new Set<string>(),
-        shouldAutoFit: true,
-      });
-    }
-  }, []);
-
-  const handleOpenDeveloperSettings = useCallback(() => {
-    setIsDeveloperSettingsOpen(true);
-  }, []);
-
-  const handleCloseDeveloperSettings = useCallback(() => {
-    setIsDeveloperSettingsOpen(false);
-  }, []);
-
-  const handleOpenGraphTesting = useCallback(() => {
+  const handleOpenSettings = useCallback(() => {
     void navigate({ to: "/testing" });
   }, [navigate]);
+
+  const handleGraphFileUploaded = useCallback(
+    (fileId: string) => {
+      void navigate({ to: "/graphs/$fileId", params: { fileId } });
+    },
+    [navigate],
+  );
+
+  const handleGraphFileUploadError = useCallback((message: string) => {
+    setUploadError(message);
+    setTimeout(() => setUploadError(null), 5000);
+  }, []);
 
   const handleOpenCommandPalette = useCallback(() => {
     setIsCommandPaletteOpen(true);
@@ -187,7 +162,12 @@ export const AppContent: FC = () => {
           >
             ☰
           </Button>
+          <UploadGraphButton
+            onUploaded={handleGraphFileUploaded}
+            onError={handleGraphFileUploadError}
+          />
           <span className="navbar-file-title">📄 {currentFile || fileIdFromRoute}</span>
+          {uploadError && <span className="navbar-upload-error">{uploadError}</span>}
         </div>
         <div className="navbar-right">
           <CanvasToolbar />
@@ -199,9 +179,7 @@ export const AppContent: FC = () => {
           <Sidebar
             currentFile={currentFile || fileIdFromRoute}
             onSelectSample={handleSelectSample}
-            onCustomUpload={handleCustomUpload}
-            onOpenDeveloperSettings={handleOpenDeveloperSettings}
-            onOpenGraphTesting={handleOpenGraphTesting}
+            onOpenSettings={handleOpenSettings}
           />
         )}
         <main className="app-main">
@@ -215,11 +193,6 @@ export const AppContent: FC = () => {
         onClose={handleCloseCommandPalette}
         currentFile={currentFile || fileIdFromRoute}
         onNavigateNode={handleNavigateNode}
-      />
-      <DeveloperSettings
-        isOpen={isDeveloperSettingsOpen}
-        onClose={handleCloseDeveloperSettings}
-        onClearStorage={handleClearStorage}
       />
     </div>
   );

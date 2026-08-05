@@ -125,7 +125,7 @@ const initialPanOffset: { x: number; y: number } = { x: 0, y: 0 };
 
 export const useGraphStore = create<GraphStore>()((set) => ({
   dataset: null,
-  currentFile: "ai_agent_trace.json",
+  currentFile: "",
   positionedNodes: [],
   positionedEdges: [],
   selectedNodeId: null,

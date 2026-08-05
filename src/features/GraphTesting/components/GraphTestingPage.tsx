@@ -14,6 +14,7 @@ import {
 
 import { Button, Select, Spinner } from "../../../ui";
 import type { SelectOption } from "../../../ui";
+import { DeveloperSettings } from "../../../components/DeveloperSettings";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../data/customLayoutScenarios";
 import "../GraphTesting.css";
 import type { TestScenario } from "../types";
@@ -26,6 +27,8 @@ import { type CustomLayoutConfig } from "../../../engine/layout/custom/config";
 import { useLayoutConfig } from "../../../state/useGraphStore";
 
 import { useNavigate } from "@tanstack/react-router";
+
+type WorkspaceTab = "graph-testing" | "developer-settings";
 
 interface GraphTestingPageProps {
   onBackToApp?: () => void;
@@ -40,6 +43,7 @@ const CANVAS_STAGE_PADDING = 48;
 
 export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => {
   const navigate = useNavigate();
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<WorkspaceTab>("graph-testing");
   // Default to Scenario #20 (Full DevOps Microservice Mesh)
   const [selectedScenarioId, setSelectedScenarioId] = useState<number>(20);
   // Read from the store rather than holding a local copy: `EngineOptionsPanel` writes straight to
@@ -172,30 +176,47 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
   return (
     <div className="graph-testing-page-container">
-      {/* Page Header */}
+      {/* Page Header: the tab switch is the page's only navigation between Graph Testing and
+          Developer Settings, replacing what used to be a dedicated title/URL/badge readout that
+          just restated where the page already was. */}
       <header className="graph-testing-page-header">
-        <div className="graph-testing-header-left">
+        <div className="workspace-tabs" role="tablist">
           <Button
-            variant="outline"
-            onClick={() => (onBackToApp ? onBackToApp() : void navigate({ to: "/" }))}
-            className="back-to-app-btn"
+            variant={activeWorkspaceTab === "graph-testing" ? "outline" : "ghost"}
+            role="tab"
+            aria-selected={activeWorkspaceTab === "graph-testing"}
+            className="workspace-tab-btn"
+            onClick={() => setActiveWorkspaceTab("graph-testing")}
           >
-            ← Back to Graph App
+            Graph Testing
           </Button>
-          <h1 className="graph-testing-title">🧪 Graph Layout Playground</h1>
-          <span className="graph-testing-subtitle">
-            URL: <code>/testing</code> (Custom Directed Layout & Routing Engine Workspace)
-          </span>
+          <Button
+            variant={activeWorkspaceTab === "developer-settings" ? "outline" : "ghost"}
+            role="tab"
+            aria-selected={activeWorkspaceTab === "developer-settings"}
+            className="workspace-tab-btn"
+            onClick={() => setActiveWorkspaceTab("developer-settings")}
+          >
+            Developer Settings
+          </Button>
         </div>
-        <div className="graph-testing-header-right">
-          <span className="page-mode-badge">Custom Layout Engine</span>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => (onBackToApp ? onBackToApp() : void navigate({ to: "/" }))}
+          className="back-to-app-btn"
+        >
+          ← Back to Graph App
+        </Button>
       </header>
 
-      {/* Everything below the header scrolls as one page: the canvas is too tall to fit a fixed
-          shell, and clipping it is what hid the bottom of the larger scenarios. */}
-      <div className="graph-testing-page-scroll">
-        {error && layoutResult && (
+      {activeWorkspaceTab === "developer-settings" ? (
+        <DeveloperSettings className="workspace-developer-settings" />
+      ) : (
+        <>
+          {/* Everything below the header scrolls as one page: the canvas is too tall to fit a
+              fixed shell, and clipping it is what hid the bottom of the larger scenarios. */}
+          <div className="graph-testing-page-scroll">
+            {error && layoutResult && (
           <div className="graph-layout-worker-warning" role="alert">
             <span>Layout worker failed: {error.message}</span>
             <button type="button" onClick={recalculate}>
@@ -341,7 +362,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                             markerHeight="6"
                             orient="auto-start-reverse"
                           >
-                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-color)" />
                           </marker>
                         </defs>
 
@@ -351,7 +372,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                             <path
                               key={`edge-path-${routedPath.edgeId}`}
                               d={dPath}
-                              stroke="#38bdf8"
+                              stroke="var(--accent-color)"
                               strokeWidth="2.5"
                               fill="none"
                               strokeDasharray={origEdge?.isCycle ? "5,5" : undefined}
@@ -482,7 +503,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                                 {badge.leaderPoints && badge.leaderPoints.length >= 2 ? (
                                   <path
                                     d={pointsToSvgPath(badge.leaderPoints)}
-                                    stroke="#38bdf8"
+                                    stroke="var(--accent-color)"
                                     strokeWidth="1"
                                     strokeDasharray="3,3"
                                     fill="none"
@@ -494,7 +515,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                                       y1={badge.anchorPoint.y}
                                       x2={badgeCenterX}
                                       y2={badgeCenterY}
-                                      stroke="#38bdf8"
+                                      stroke="var(--accent-color)"
                                       strokeWidth="1"
                                       strokeDasharray="3,3"
                                     />
@@ -507,7 +528,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
                                   height={badge.rect.height}
                                   rx={6}
                                   fill="#09090b"
-                                  stroke="#38bdf8"
+                                  stroke="var(--accent-color)"
                                   strokeWidth="1.5"
                                 />
                                 <text
@@ -530,15 +551,17 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
               </div>
             </LayoutErrorBoundary>
           </>
-        )}
-      </div>
+            )}
+          </div>
 
-      {/* Footer */}
-      <footer className="graph-testing-page-footer">
-        📌 <strong>Graph Layout Laboratory:</strong> Connected to <code>computeCustomLayout</code>.
-        Scenarios #1 through #{scenarioOptions.length} powered by the custom layered layout &
-        orthogonal edge router.
-      </footer>
+          {/* Footer */}
+          <footer className="graph-testing-page-footer">
+            📌 <strong>Graph Layout Laboratory:</strong> Connected to{" "}
+            <code>computeCustomLayout</code>. Scenarios #1 through #{scenarioOptions.length}{" "}
+            powered by the custom layered layout & orthogonal edge router.
+          </footer>
+        </>
+      )}
     </div>
   );
 };

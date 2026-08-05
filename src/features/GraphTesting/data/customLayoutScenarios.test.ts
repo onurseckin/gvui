@@ -25,8 +25,8 @@ function toGraphDataset(scenario: TestScenario): GraphDataset {
 
 describe("CUSTOM_LAYOUT_SCENARIOS", () => {
   it("covers 1..N contiguously with non-empty metadata", () => {
-    // Contiguity is load-bearing, not cosmetic: `GraphTestingPage`/`GraphTestingModal` index this
-    // record by number and fall back to a fixed id, so a hole here renders an empty picker entry.
+    // Contiguity is load-bearing, not cosmetic: `GraphTestingPage` indexes this record by number
+    // and falls back to a fixed id, so a hole here renders an empty picker entry.
     const scenarioKeys = Object.keys(CUSTOM_LAYOUT_SCENARIOS).map(Number);
     expect(scenarioKeys.length).toBe(SCENARIO_COUNT);
 
