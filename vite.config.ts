@@ -145,21 +145,56 @@ function graphFilesApiPlugin(): Plugin {
   };
 }
 
+/**
+ * Quiet period before a Rust change triggers a rebuild. Anything under this window collapses into a
+ * single build, which is the whole point: one `cargo fmt`, `git checkout` or editor save-all touches
+ * dozens of `.rs` files at once.
+ */
+const WASM_REBUILD_DEBOUNCE_MS = 300;
+
+/**
+ * Is this a Rust *source* file, as opposed to something a Rust build produces?
+ *
+ * The previous test included `file.includes("/crates/")`, which matched every path under the crate
+ * — build output and `Cargo.lock` included. Anything cargo rewrote during a build therefore matched
+ * the trigger that started it, which is a rebuild loop with no exit. `target/` happens to be
+ * excluded by the watcher today, so this stayed latent; the check no longer depends on that.
+ */
+function isRustSource(file: string): boolean {
+  const normalized = file.replace(/\\/g, "/");
+  if (normalized.includes("/target/") || normalized.includes("/wasm_pkg/")) return false;
+  return normalized.endsWith(".rs") || normalized.endsWith("/Cargo.toml");
+}
+
 function wasmAutoRebuildPlugin(): Plugin {
+  let pending: ReturnType<typeof setTimeout> | null = null;
+
   return {
     name: "wasm-auto-rebuild",
     handleHotUpdate({ file, server }) {
-      if (file.endsWith(".rs") || file.endsWith("Cargo.toml") || file.includes("/crates/")) {
-        console.log("\n⚡ Rust source file changed. Rebuilding WASM package...");
+      if (!isRustSource(file)) return;
+
+      // Debounce rather than build inline. `handleHotUpdate` fires once per changed file, and the
+      // build is a blocking ~10s `execSync`, so building here meant N files cost N sequential
+      // rebuilds — 12 touched files measured as 12 rebuilds and ~2 minutes of the dev server being
+      // unresponsive while the browser reloaded over and over. Deferring past the current tick lets
+      // every event in the batch land first and collapse into one build.
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => {
+        pending = null;
+        console.log("\n⚡ Rust source changed. Rebuilding WASM package...");
         try {
           execSync("bun run build:wasm", { stdio: "inherit" });
           console.log("✨ WASM package rebuilt successfully! Triggering browser reload...");
           server.ws.send({ type: "full-reload" });
-          return [];
         } catch (error) {
           console.error("❌ WASM rebuild failed:", error);
         }
-      }
+      }, WASM_REBUILD_DEBOUNCE_MS);
+
+      // A `.rs` file is not a module in the graph; returning an empty array stops Vite trying to
+      // apply its own update for it. The reload is sent above, once the rebuild has landed.
+      return [];
     },
   };
 }
@@ -172,7 +207,17 @@ export default defineConfig({
     port: 4444,
     watch: {
       usePolling: true,
-      ignored: ["**/target/**", "**/scratch/**", "**/.git/**", "**/.tmp/**"],
+      ignored: [
+        "**/target/**",
+        "**/scratch/**",
+        "**/.git/**",
+        "**/.tmp/**",
+        // Build output of `build:wasm`, which lives under `src/` and is deleted and recreated
+        // wholesale on every Rust change. Watching it turned one rebuild into a burst of reloads
+        // for files the browser was about to re-fetch anyway — `wasmAutoRebuildPlugin` sends the
+        // single reload that actually matters once the build finishes.
+        "**/wasm_pkg/**",
+      ],
     },
   },
   preview: {
