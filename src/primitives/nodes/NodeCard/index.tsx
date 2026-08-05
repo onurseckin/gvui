@@ -1,44 +1,28 @@
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback } from "react";
-import type { PositionedNode } from "../../../types/graphData";
-import { NodeCardBadges } from "./NodeCardBadges";
 
 import "./NodeCard.css";
-import type { NodeCardProps, NodeStatusVariant } from "./NodeCard.types";
-import { NodeCardContext } from "./NodeCardContext";
-import { NodeCardDetails } from "./NodeCardDetails";
+import type { NodeCardProps } from "./NodeCard.types";
+import { NodeCardDescription } from "./NodeCardDescription";
+import { NodeCardFiles } from "./NodeCardFiles";
 import { NodeCardHeader } from "./NodeCardHeader";
+import { NodeCardMetrics } from "./NodeCardMetrics";
 import { NodeCardTools } from "./NodeCardTools";
+import { describeNodeKind, resolveNodeStatus } from "./nodeKinds";
 
 export type { NodeCardProps, NodeStatusVariant } from "./NodeCard.types";
 export { NodeCardHeader } from "./NodeCardHeader";
 export type { NodeCardHeaderProps } from "./NodeCardHeader";
-export { NodeCardBadges } from "./NodeCardBadges";
-export type { NodeCardBadgesProps } from "./NodeCardBadges";
+export { NodeCardDescription } from "./NodeCardDescription";
+export type { NodeCardDescriptionProps } from "./NodeCardDescription";
 export { NodeCardTools } from "./NodeCardTools";
 export type { NodeCardToolsProps } from "./NodeCardTools";
-export { NodeCardContext } from "./NodeCardContext";
-export type { NodeCardContextProps } from "./NodeCardContext";
-export { NodeCardDetails } from "./NodeCardDetails";
-export type { NodeCardDetailsProps } from "./NodeCardDetails";
-
-function deriveStatusVariant(node: PositionedNode): NodeStatusVariant {
-  const statusBadge = node.badges?.find((b) => b.variant);
-  if (statusBadge?.variant) {
-    return statusBadge.variant;
-  }
-  const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-  if (statusStr.includes("complete") || statusStr.includes("success")) {
-    return "success";
-  }
-  if (statusStr.includes("error") || statusStr.includes("fail")) {
-    return "error";
-  }
-  if (statusStr.includes("running") || statusStr.includes("pending")) {
-    return "amber";
-  }
-  return "info";
-}
+export { NodeCardFiles } from "./NodeCardFiles";
+export type { NodeCardFilesProps } from "./NodeCardFiles";
+export { NodeCardMetrics } from "./NodeCardMetrics";
+export type { NodeCardMetricsProps } from "./NodeCardMetrics";
+export { NodeCardBadges } from "./NodeCardBadges";
+export type { NodeCardBadgesProps } from "./NodeCardBadges";
 
 const areNodeCardPropsEqual = (prevProps: NodeCardProps, nextProps: NodeCardProps): boolean => {
   return (
@@ -51,10 +35,16 @@ const areNodeCardPropsEqual = (prevProps: NodeCardProps, nextProps: NodeCardProp
   );
 };
 
+/**
+ * A node as it appears on the canvas.
+ *
+ * The card holds only what fits in the box the layout engine reserved: identity, one line of
+ * purpose, capped chip rows, and a metrics footer. Everything unbounded — the full prompt, the
+ * context that crossed each edge, logs, raw payload — is deliberately absent and lives in the
+ * detail drawer, which opens on selection. A graph node is a label, not a document.
+ */
 export const NodeCard: FC<NodeCardProps> = memo(
   ({ node, isSelected, isFiltered, isCollapsed, onSelect, onToggleCollapse }) => {
-    const statusVariant = deriveStatusVariant(node);
-
     const handleClick = useCallback(
       (e: MouseEvent<HTMLDivElement>): void => {
         e.stopPropagation();
@@ -73,11 +63,15 @@ export const NodeCard: FC<NodeCardProps> = memo(
       [node.id, onSelect],
     );
 
+    const kind = describeNodeKind(node);
+    const status = resolveNodeStatus(node);
+
     const cardClasses = [
       "node-card",
+      `kind-${node.kind ?? "agent"}`,
+      `status-${status}`,
       isSelected ? "selected" : "",
       isFiltered ? "filtered" : "",
-      `status-${statusVariant}`,
     ]
       .filter(Boolean)
       .join(" ");
@@ -85,34 +79,28 @@ export const NodeCard: FC<NodeCardProps> = memo(
     return (
       <div
         className={cardClasses}
-        style={{
-          width: node.width ? `${node.width}px` : undefined,
-          height: node.height ? `${node.height}px` : undefined,
-        }}
+        // The accent is data, not theme: it comes from the kind registry rather than a per-kind CSS
+        // rule so adding a node kind never means touching the stylesheet.
+        style={
+          {
+            width: node.width ? `${node.width}px` : undefined,
+            height: node.height ? `${node.height}px` : undefined,
+            "--node-kind-accent": kind.accent,
+          } as React.CSSProperties
+        }
         onClick={handleClick}
         role="button"
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
-        <NodeCardHeader
-          id={node.id}
-          name={node.name}
-          type={node.type}
-          statusVariant={statusVariant}
-          isCollapsed={isCollapsed}
-          onToggleCollapse={onToggleCollapse}
-        />
+        <NodeCardHeader node={node} isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />
         {!isCollapsed ? (
-          <>
-            <NodeCardBadges badges={node.badges} />
-            <NodeCardTools tools={node.tools} />
-            <NodeCardContext context={node.context} metadata={node.metadata} />
-            <NodeCardDetails
-              details={node.metadata}
-              prompt={typeof node.metadata?.prompt === "string" ? node.metadata.prompt : undefined}
-              logs={typeof node.metadata?.logs === "string" ? node.metadata.logs : undefined}
-            />
-          </>
+          <div className="node-card-body">
+            <NodeCardDescription node={node} />
+            <NodeCardTools node={node} />
+            <NodeCardFiles node={node} />
+            <NodeCardMetrics node={node} />
+          </div>
         ) : null}
       </div>
     );

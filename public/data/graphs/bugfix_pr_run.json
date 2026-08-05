@@ -1,0 +1,283 @@
+{
+  "id": "bugfix_pr_run",
+  "title": "Bugfix Run — Reproduce, Locate, Patch, Verify",
+  "description": "A scoped defect worked end to end: a large model triages and plans, cheap models do the searching, and the patch loops through the test suite until it holds before a human is asked for anything.",
+  "directed": true,
+  "entry": "report",
+  "exits": ["pr_opened"],
+  "nodes": [
+    {
+      "id": "report",
+      "name": "Bug #4821",
+      "kind": "input",
+      "status": "success",
+      "type": "trigger",
+      "description": "Session tokens survive logout on the mobile web client, so a shared device keeps the previous user signed in.",
+      "files": [{ "path": "reports/4821.md", "mode": "attach" }],
+      "output": "Reported by: support triage rotation\nSeverity: S2 (security-adjacent)\nAffected: web client >= 3.14.0, mobile Safari + Chrome Android\n\nSteps:\n  1. Sign in as user A on mobile web\n  2. Tap Log out; confirm redirect to /login\n  3. Navigate directly to /dashboard\n  4. Observe: user A's dashboard renders, API calls succeed\n\nExpected: redirect back to /login with a cleared session."
+    },
+    {
+      "id": "triage",
+      "name": "Triage & plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Reads the report, decides this is a token-lifecycle bug rather than a routing bug, and splits the work into a cheap breadth pass and a focused depth pass.",
+      "tools": [{ "name": "Read" }, { "name": "Glob" }],
+      "metrics": { "tokensIn": 12400, "tokensOut": 2180, "costUsd": 0.284, "durationMs": 21400 },
+      "prompt": "You are triaging bug #4821 in a React + Node monorepo.\n\nDecide whether this is a routing/guard problem or a token-lifecycle problem, then produce a plan that spends as little of the expensive budget as possible: delegate breadth-first search to a small model and reserve deeper reasoning for the one or two files that actually matter.\n\nReturn: a hypothesis, a file-scope guess, and a task split.",
+      "output": "Hypothesis: logout clears the in-memory auth store but never revokes or clears the persisted refresh token, so the next bootstrap silently re-mints an access token.\n\nScope guess: src/auth/** plus whatever writes to localStorage.\n\nSplit:\n  1. Haiku — map every read/write of the auth storage keys. Breadth only, no reasoning.\n  2. Sonnet — reproduce against the real client so we are not fixing a phantom.\n  3. Sonnet — trace the token lifecycle through the files Haiku surfaces.",
+      "io": {
+        "inputs": [{ "kind": "prompt", "label": "Bug report + repro steps", "tokens": 480 }],
+        "outputs": [
+          {
+            "node": "map_auth",
+            "kind": "decision",
+            "label": "Search scope: src/auth/**",
+            "tokens": 120
+          },
+          { "node": "reproduce", "kind": "decision", "label": "Repro assignment", "tokens": 240 }
+        ]
+      }
+    },
+    {
+      "id": "map_auth",
+      "name": "Map auth surface",
+      "kind": "agent",
+      "status": "success",
+      "model": "Haiku 4.5",
+      "tier": "s",
+      "description": "Breadth-first sweep for every site that touches the auth storage keys. No reasoning asked for — just an exhaustive list.",
+      "tools": [{ "name": "Grep" }, { "name": "Glob" }, { "name": "Read" }],
+      "files": [
+        { "path": "src/auth/tokenStore.ts", "mode": "read" },
+        { "path": "src/auth/useLogout.ts", "mode": "read" },
+        { "path": "src/auth/bootstrap.ts", "mode": "read" },
+        { "path": "src/api/client.ts", "mode": "read" },
+        { "path": "src/auth/session.ts", "mode": "read" }
+      ],
+      "metrics": { "tokensIn": 3900, "tokensOut": 720, "costUsd": 0.006, "durationMs": 4100 },
+      "output": "5 files touch the auth storage keys:\n  src/auth/tokenStore.ts     — read+write  gv.access, gv.refresh\n  src/auth/useLogout.ts      — write       gv.access (clears)\n  src/auth/bootstrap.ts      — read        gv.refresh\n  src/api/client.ts          — read        gv.access\n  src/auth/session.ts        — write       gv.refresh\n\nNote: useLogout.ts clears gv.access but never touches gv.refresh."
+    },
+    {
+      "id": "reproduce",
+      "name": "Reproduce failure",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Drives the real client to confirm the bug exists before anyone edits code, and captures the exact network sequence that re-mints the token.",
+      "tools": [{ "name": "Bash" }, { "name": "browser_navigate" }, { "name": "Read" }],
+      "metrics": { "tokensIn": 8600, "tokensOut": 1450, "costUsd": 0.058, "durationMs": 38200 },
+      "output": "Reproduced on the first attempt.\n\nNetwork trace after clicking Log out:\n  POST /api/auth/logout          204\n  GET  /dashboard                200   (should have redirected)\n  POST /api/auth/refresh         200   <- re-mints an access token\n  GET  /api/me                   200\n\nlocalStorage after logout: gv.access removed, gv.refresh STILL PRESENT.\nConfirms the orchestrator's hypothesis."
+    },
+    {
+      "id": "trace_lifecycle",
+      "name": "Trace token lifecycle",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Reads only the five files the breadth pass surfaced and works out precisely which write is missing and why the guard never fires.",
+      "tools": [{ "name": "Read" }, { "name": "Grep" }],
+      "files": [
+        { "path": "src/auth/useLogout.ts", "mode": "read", "lines": "18-46" },
+        { "path": "src/auth/bootstrap.ts", "mode": "read", "lines": "1-64" }
+      ],
+      "metrics": { "tokensIn": 11200, "tokensOut": 1980, "costUsd": 0.071, "durationMs": 26800 },
+      "output": "Root cause, two independent defects:\n\n1. useLogout.ts:31 calls tokenStore.clearAccess() where it must call tokenStore.clearAll().\n   The refresh token is left in localStorage.\n\n2. bootstrap.ts:22 treats the presence of a refresh token as sufficient to restore a session,\n   without checking the server-side revocation list. So even a correct client-side clear would\n   still be re-mintable from a stale token captured earlier.\n\nFixing only (1) closes the reported bug but leaves the weaker property. Recommend both."
+    },
+    {
+      "id": "consolidate",
+      "name": "Consolidate findings",
+      "kind": "join",
+      "status": "success",
+      "description": "Merges the repro trace and the lifecycle analysis into one patch brief, dropping the raw transcripts.",
+      "metrics": { "tokensIn": 2400, "tokensOut": 610, "costUsd": 0.011, "durationMs": 5200 },
+      "output": "Patch brief:\n  - useLogout.ts:31   clearAccess() -> clearAll()\n  - bootstrap.ts:22   verify refresh token against /api/auth/introspect before restoring\n  - regression test: logout must leave zero gv.* keys in localStorage"
+    },
+    {
+      "id": "implement",
+      "name": "Implement fix",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Applies both fixes and adds the regression test. Took two passes — the first attempt broke a test that asserted the old, weaker behaviour.",
+      "tools": [{ "name": "Read" }, { "name": "Edit" }, { "name": "Write" }],
+      "files": [
+        { "path": "src/auth/useLogout.ts", "mode": "write", "lines": "31" },
+        { "path": "src/auth/bootstrap.ts", "mode": "write", "lines": "22-38" },
+        { "path": "src/auth/__tests__/logout.spec.ts", "mode": "write" }
+      ],
+      "metrics": {
+        "tokensIn": 18400,
+        "tokensOut": 3120,
+        "costUsd": 0.124,
+        "durationMs": 61300,
+        "retries": 1
+      },
+      "logs": "attempt 1  patch applied, 3 specs failing\n           session.spec.ts expected a surviving refresh token — that assertion encoded the bug\n attempt 2  updated session.spec.ts to assert full clearing, all specs green"
+    },
+    {
+      "id": "run_tests",
+      "name": "bun test",
+      "kind": "tool",
+      "status": "success",
+      "type": "tool",
+      "description": "Runs the auth suite plus the new regression spec.",
+      "tools": [{ "name": "Bash" }],
+      "metrics": { "durationMs": 12600 },
+      "output": "bun test v1.3.14\n\n src/auth/__tests__/logout.spec.ts       6 pass\n src/auth/__tests__/session.spec.ts     11 pass\n src/auth/__tests__/bootstrap.spec.ts    9 pass\n\n 26 pass\n 0 fail"
+    },
+    {
+      "id": "verdict",
+      "name": "Suite green?",
+      "kind": "router",
+      "status": "success",
+      "description": "Gates the human's attention: nobody is asked to review until the suite is clean.",
+      "metrics": { "durationMs": 180 }
+    },
+    {
+      "id": "review",
+      "name": "Human review",
+      "kind": "gate",
+      "status": "success",
+      "description": "The one human checkpoint in the run. Sees the patch brief and the diff, not the transcripts.",
+      "metrics": { "durationMs": 1840000 },
+      "output": "Approved by @onurseckin — asked for the introspect call to be behind the existing auth feature flag before merge; the agent applied it in the same PR."
+    },
+    {
+      "id": "pr_opened",
+      "name": "PR #4830",
+      "kind": "terminal",
+      "status": "success",
+      "description": "fix(auth): clear refresh token on logout and verify on restore",
+      "files": [{ "path": "PR-4830.diff", "mode": "write" }],
+      "metrics": { "durationMs": 3400 },
+      "output": "https://github.com/example/app/pull/4830\n\n3 files changed, +58 −9\nRun totals: 6 model calls, 57.3k tokens in, 10.1k out, $0.554, 4m 21s of machine time."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-report-triage",
+      "source": "report",
+      "target": "triage",
+      "kind": "sequence",
+      "label": "report",
+      "handoff": { "kind": "prompt", "summary": "Bug report and repro steps", "tokens": 480 }
+    },
+    {
+      "id": "e-triage-map",
+      "source": "triage",
+      "target": "map_auth",
+      "kind": "spawn",
+      "label": "scope",
+      "handoff": {
+        "kind": "decision",
+        "summary": "Search src/auth/** for storage-key access",
+        "tokens": 120
+      }
+    },
+    {
+      "id": "e-triage-repro",
+      "source": "triage",
+      "target": "reproduce",
+      "kind": "spawn",
+      "label": "verify first",
+      "handoff": { "kind": "decision", "summary": "Confirm the bug before any edit", "tokens": 240 }
+    },
+    {
+      "id": "e-map-trace",
+      "source": "map_auth",
+      "target": "trace_lifecycle",
+      "kind": "data",
+      "label": "5 files",
+      "handoff": {
+        "kind": "artifact",
+        "summary": "File list with the storage keys each one touches",
+        "tokens": 310
+      }
+    },
+    {
+      "id": "e-repro-consolidate",
+      "source": "reproduce",
+      "target": "consolidate",
+      "kind": "sequence",
+      "label": "trace",
+      "handoff": {
+        "kind": "summary",
+        "summary": "Confirmed repro + network sequence",
+        "tokens": 420
+      }
+    },
+    {
+      "id": "e-trace-consolidate",
+      "source": "trace_lifecycle",
+      "target": "consolidate",
+      "kind": "join",
+      "label": "root cause",
+      "handoff": { "kind": "summary", "summary": "Two defects with file and line", "tokens": 380 }
+    },
+    {
+      "id": "e-consolidate-implement",
+      "source": "consolidate",
+      "target": "implement",
+      "kind": "sequence",
+      "label": "patch brief",
+      "handoff": {
+        "kind": "artifact",
+        "summary": "Three-line patch brief, transcripts dropped",
+        "tokens": 190
+      }
+    },
+    {
+      "id": "e-implement-tests",
+      "source": "implement",
+      "target": "run_tests",
+      "kind": "sequence",
+      "label": "diff",
+      "handoff": { "kind": "artifact", "summary": "Working tree with the patch applied" }
+    },
+    {
+      "id": "e-tests-verdict",
+      "source": "run_tests",
+      "target": "verdict",
+      "kind": "sequence",
+      "label": "results",
+      "handoff": { "kind": "artifact", "summary": "Suite output", "tokens": 260 }
+    },
+    {
+      "id": "e-verdict-implement",
+      "source": "verdict",
+      "target": "implement",
+      "kind": "loop",
+      "isCycle": true,
+      "condition": "specs failing",
+      "label": "3 failing",
+      "handoff": {
+        "kind": "summary",
+        "summary": "Failing spec names and assertions",
+        "tokens": 340
+      }
+    },
+    {
+      "id": "e-verdict-review",
+      "source": "verdict",
+      "target": "review",
+      "kind": "conditional",
+      "condition": "all green",
+      "label": "26 pass",
+      "handoff": { "kind": "artifact", "summary": "Patch brief plus final diff", "tokens": 900 }
+    },
+    {
+      "id": "e-review-pr",
+      "source": "review",
+      "target": "pr_opened",
+      "kind": "sequence",
+      "label": "approved",
+      "handoff": { "kind": "decision", "summary": "Approved with one flag-gating request" }
+    }
+  ]
+}

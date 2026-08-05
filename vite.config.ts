@@ -172,12 +172,7 @@ export default defineConfig({
     port: 4444,
     watch: {
       usePolling: true,
-      ignored: [
-        "**/target/**",
-        "**/scratch/**",
-        "**/.git/**",
-        "**/.tmp/**",
-      ],
+      ignored: ["**/target/**", "**/scratch/**", "**/.git/**", "**/.tmp/**"],
     },
   },
   preview: {

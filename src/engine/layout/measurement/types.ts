@@ -63,6 +63,7 @@ export const FONT_KEYS = {
   nodeTypeTag: "node-type-tag",
   nodeBody: "node-body",
   nodeChip: "node-chip",
+  nodeMetrics: "node-metrics",
   edgeLabel: "edge-label",
 } as const;
 
@@ -71,9 +72,11 @@ export type FontKey = (typeof FONT_KEYS)[keyof typeof FONT_KEYS];
 /** Sizes/weights mirror `NodeCard.css` and `GraphEdge.css`; drift here shows up as clipped text. */
 export const FONT_SPECS: Readonly<Record<string, FontSpec | undefined>> = Object.freeze({
   [FONT_KEYS.nodeTitle]: { weight: 600, sizePx: 14, family: "sans" },
-  [FONT_KEYS.nodeTypeTag]: { weight: 700, sizePx: 10, family: "mono" },
+  // Shared by `.node-card-type-tag` and `.node-card-model-chip`, which are the same 10px mono.
+  [FONT_KEYS.nodeTypeTag]: { weight: 600, sizePx: 10, family: "mono" },
   [FONT_KEYS.nodeBody]: { weight: 400, sizePx: 11, family: "sans" },
   [FONT_KEYS.nodeChip]: { weight: 600, sizePx: 11, family: "mono" },
+  [FONT_KEYS.nodeMetrics]: { weight: 500, sizePx: 10, family: "mono" },
   [FONT_KEYS.edgeLabel]: { weight: 600, sizePx: 11, family: "mono" },
 });
 

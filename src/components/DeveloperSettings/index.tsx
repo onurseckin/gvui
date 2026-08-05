@@ -196,9 +196,7 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
         const primaryKeyName = TABLE_METADATA[selectedTable].primaryKey;
         const rowObj = parsed as Record<string, unknown>;
         if (!rowObj[primaryKeyName]) {
-          setJsonParseError(
-            `Object is missing required primary key field '${primaryKeyName}'.`,
-          );
+          setJsonParseError(`Object is missing required primary key field '${primaryKeyName}'.`);
           return;
         }
 
@@ -269,262 +267,239 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
           </div>
         </div>
 
-            <div className="developer-settings-tabs" role="tablist">
-              <Button
-                variant={activeTab === "database" ? "outline" : "ghost"}
-                size="sm"
-                role="tab"
-                aria-selected={activeTab === "database"}
-                className="developer-settings-tab"
-                onClick={handleSelectDatabaseTab}
+        <div className="developer-settings-tabs" role="tablist">
+          <Button
+            variant={activeTab === "database" ? "outline" : "ghost"}
+            size="sm"
+            role="tab"
+            aria-selected={activeTab === "database"}
+            className="developer-settings-tab"
+            onClick={handleSelectDatabaseTab}
+          >
+            Database Viewer
+          </Button>
+          <Button
+            variant={activeTab === "local-storage" ? "outline" : "ghost"}
+            size="sm"
+            role="tab"
+            aria-selected={activeTab === "local-storage"}
+            className="developer-settings-tab"
+            onClick={handleSelectLocalStorageTab}
+          >
+            Local Storage
+          </Button>
+        </div>
+
+        <div className="developer-settings-body">
+          {toastMessage && (
+            <div className="developer-settings-toast">
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                Database Viewer
-              </Button>
-              <Button
-                variant={activeTab === "local-storage" ? "outline" : "ghost"}
-                size="sm"
-                role="tab"
-                aria-selected={activeTab === "local-storage"}
-                className="developer-settings-tab"
-                onClick={handleSelectLocalStorageTab}
-              >
-                Local Storage
-              </Button>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{toastMessage}</span>
             </div>
+          )}
 
-            <div className="developer-settings-body">
-              {toastMessage && (
-                <div className="developer-settings-toast">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="14"
-                    height="14"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>{toastMessage}</span>
+          {activeTab === "database" && (
+            <div className="db-viewer-container">
+              <div className="developer-settings-toolbar">
+                <div className="developer-settings-info">
+                  <span>Table: </span>
+                  <strong className="db-table-name">{selectedTable}</strong>
+                  <span className="developer-settings-count-badge">
+                    {dbRows.length} {dbRows.length === 1 ? "row" : "rows"}
+                  </span>
+                  <span className="db-pk-badge">PK: {currentTableMeta.primaryKey}</span>
                 </div>
-              )}
 
-              {activeTab === "database" && (
-                <div className="db-viewer-container">
-                  <div className="developer-settings-toolbar">
-                    <div className="developer-settings-info">
-                      <span>Table: </span>
-                      <strong className="db-table-name">{selectedTable}</strong>
-                      <span className="developer-settings-count-badge">
-                        {dbRows.length} {dbRows.length === 1 ? "row" : "rows"}
-                      </span>
-                      <span className="db-pk-badge">PK: {currentTableMeta.primaryKey}</span>
-                    </div>
+                <div className="db-toolbar-actions">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="db-action-btn"
+                    onClick={handleClearTable}
+                    disabled={dbRows.length === 0}
+                  >
+                    Clear Table
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="developer-settings-clear-btn"
+                    onClick={handleClearDatabase}
+                  >
+                    Clear Database
+                  </Button>
+                </div>
+              </div>
 
-                    <div className="db-toolbar-actions">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="db-action-btn"
-                        onClick={handleClearTable}
-                        disabled={dbRows.length === 0}
-                      >
-                        Clear Table
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="developer-settings-clear-btn"
-                        onClick={handleClearDatabase}
-                      >
-                        Clear Database
-                      </Button>
-                    </div>
+              {editingRowKey !== null && (
+                <div className="db-json-editor-card">
+                  <div className="db-json-editor-header">
+                    <span>
+                      Editing Row (PK: <code>{editingRowKey}</code>)
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingRowKey(null);
+                        setJsonParseError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
                   </div>
 
-                  {editingRowKey !== null && (
-                    <div className="db-json-editor-card">
-                      <div className="db-json-editor-header">
-                        <span>
-                          Editing Row (PK: <code>{editingRowKey}</code>)
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingRowKey(null);
-                            setJsonParseError(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-
-                      {jsonParseError && (
-                        <div className="db-error-banner">
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="14"
-                            height="14"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                          </svg>
-                          <span>{jsonParseError}</span>
-                        </div>
-                      )}
-
-                      <textarea
-                        className="db-json-textarea"
-                        value={editingRowJson}
-                        onChange={(e) => setEditingRowJson(e.target.value)}
-                        rows={10}
-                        spellCheck={false}
-                      />
-
-                      <div className="db-json-editor-actions">
-                        <Button variant="outline" size="sm" onClick={handleSaveRowJson}>
-                          Save Row Changes
-                        </Button>
-                      </div>
+                  {jsonParseError && (
+                    <div className="db-error-banner">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{jsonParseError}</span>
                     </div>
                   )}
 
-                  <div className="db-table-wrapper">
-                    {dbRows.length === 0 ? (
-                      <div className="db-empty-state">
-                        <span>No rows found in table `{selectedTable}`.</span>
-                      </div>
-                    ) : (
-                      <table className="db-data-table">
-                        <thead>
-                          <tr>
-                            <th className="db-th db-th-actions-left">Actions</th>
-                            {currentTableMeta.columns.map((col) => (
-                              <th key={col} className="db-th">
-                                {col} {col === currentTableMeta.primaryKey && "(PK)"}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dbRows.map((row) => {
-                            const pkVal = String(row[currentTableMeta.primaryKey] ?? "");
-                            return (
-                              <tr key={pkVal} className="db-tr">
-                                <td className="db-td db-td-actions-left">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="db-row-icon-btn db-row-edit-icon"
-                                    onClick={() => handleEditRow(row)}
-                                    title="Edit JSON"
-                                    aria-label="Edit JSON"
-                                  >
-                                    <svg
-                                      viewBox="0 0 24 24"
-                                      width="14"
-                                      height="14"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="db-row-icon-btn db-row-delete-icon"
-                                    onClick={() => handleDeleteRow(pkVal)}
-                                    title="Delete row"
-                                    aria-label="Delete row"
-                                  >
-                                    <svg
-                                      viewBox="0 0 24 24"
-                                      width="14"
-                                      height="14"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <polyline points="3 6 5 6 21 6" />
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                      <line x1="10" y1="11" x2="10" y2="17" />
-                                      <line x1="14" y1="11" x2="14" y2="17" />
-                                    </svg>
-                                  </Button>
-                                </td>
-                                {currentTableMeta.columns.map((col) => {
-                                  const val = row[col];
-                                  let displayVal = "";
-                                  if (typeof val === "object" && val !== null) {
-                                    displayVal = JSON.stringify(val);
-                                  } else {
-                                    displayVal = String(val ?? "");
-                                  }
-                                  return (
-                                    <td key={col} className="db-td" title={displayVal}>
-                                      {displayVal.length > 50
-                                        ? `${displayVal.substring(0, 50)}...`
-                                        : displayVal}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
+                  <textarea
+                    className="db-json-textarea"
+                    value={editingRowJson}
+                    onChange={(e) => setEditingRowJson(e.target.value)}
+                    rows={10}
+                    spellCheck={false}
+                  />
+
+                  <div className="db-json-editor-actions">
+                    <Button variant="outline" size="sm" onClick={handleSaveRowJson}>
+                      Save Row Changes
+                    </Button>
                   </div>
                 </div>
               )}
 
-              {activeTab === "local-storage" && (
-                <>
-                  <div className="developer-settings-toolbar">
-                    <div className="developer-settings-info">
-                      <span>Stored Entries</span>
-                      <span className="developer-settings-count-badge">
-                        {keyCount} {keyCount === 1 ? "item" : "items"}
-                      </span>
-                      {clearedToast && (
-                        <span className="developer-settings-cleared-toast">
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="14"
-                            height="14"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          Cleared
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="developer-settings-clear-btn"
-                      onClick={handleClearLocalStorage}
-                      disabled={keyCount === 0}
-                    >
+              <div className="db-table-wrapper">
+                {dbRows.length === 0 ? (
+                  <div className="db-empty-state">
+                    <span>No rows found in table `{selectedTable}`.</span>
+                  </div>
+                ) : (
+                  <table className="db-data-table">
+                    <thead>
+                      <tr>
+                        <th className="db-th db-th-actions-left">Actions</th>
+                        {currentTableMeta.columns.map((col) => (
+                          <th key={col} className="db-th">
+                            {col} {col === currentTableMeta.primaryKey && "(PK)"}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dbRows.map((row) => {
+                        const pkVal = String(row[currentTableMeta.primaryKey] ?? "");
+                        return (
+                          <tr key={pkVal} className="db-tr">
+                            <td className="db-td db-td-actions-left">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="db-row-icon-btn db-row-edit-icon"
+                                onClick={() => handleEditRow(row)}
+                                title="Edit JSON"
+                                aria-label="Edit JSON"
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="14"
+                                  height="14"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="db-row-icon-btn db-row-delete-icon"
+                                onClick={() => handleDeleteRow(pkVal)}
+                                title="Delete row"
+                                aria-label="Delete row"
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="14"
+                                  height="14"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  <line x1="10" y1="11" x2="10" y2="17" />
+                                  <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                              </Button>
+                            </td>
+                            {currentTableMeta.columns.map((col) => {
+                              const val = row[col];
+                              let displayVal = "";
+                              if (typeof val === "object" && val !== null) {
+                                displayVal = JSON.stringify(val);
+                              } else {
+                                displayVal = String(val ?? "");
+                              }
+                              return (
+                                <td key={col} className="db-td" title={displayVal}>
+                                  {displayVal.length > 50
+                                    ? `${displayVal.substring(0, 50)}...`
+                                    : displayVal}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "local-storage" && (
+            <>
+              <div className="developer-settings-toolbar">
+                <div className="developer-settings-info">
+                  <span>Stored Entries</span>
+                  <span className="developer-settings-count-badge">
+                    {keyCount} {keyCount === 1 ? "item" : "items"}
+                  </span>
+                  {clearedToast && (
+                    <span className="developer-settings-cleared-toast">
                       <svg
                         viewBox="0 0 24 24"
                         width="14"
@@ -535,24 +510,47 @@ export const DeveloperSettings: React.FC<DeveloperSettingsProps> = React.memo(
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        <line x1="10" y1="11" x2="10" y2="17" />
-                        <line x1="14" y1="11" x2="14" y2="17" />
+                        <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Clear Local Storage
-                    </Button>
-                  </div>
+                      Cleared
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="developer-settings-clear-btn"
+                  onClick={handleClearLocalStorage}
+                  disabled={keyCount === 0}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                  Clear Local Storage
+                </Button>
+              </div>
 
-                  <div className="developer-settings-json-container">
-                    <pre className="developer-settings-json-code">
-                      <code>{colorizedJson}</code>
-                    </pre>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+              <div className="developer-settings-json-container">
+                <pre className="developer-settings-json-code">
+                  <code>{colorizedJson}</code>
+                </pre>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     );
   },
 );

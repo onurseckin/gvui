@@ -121,6 +121,9 @@ body,
   width: 100%;
   height: calc(100vh - 48px);
   overflow: hidden;
+  /* Containing block for the node detail drawer, which overlays the canvas rather than taking
+     width from it (see `NodeDetailDrawer.css`). */
+  position: relative;
 }
 
 .app-main {

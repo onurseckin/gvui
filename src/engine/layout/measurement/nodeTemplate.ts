@@ -6,8 +6,22 @@
  * time the card gained a row. Here the rows are data: the measurer walks them, so adding a row to
  * `NodeCard` means adding one entry below and nothing else.
  *
- * Constants are read off `src/primitives/nodes/NodeCard/NodeCard.css`.
+ * The `select` functions are *imported from the card's own model* rather than reimplemented. That
+ * is deliberate and load-bearing: this file once measured a `description` row and a `model` row
+ * that `NodeCard` had stopped rendering, so every node in every graph reserved height for content
+ * nobody could see. Two hand-maintained lists of fields will drift; one shared list cannot.
+ *
+ * Geometry constants are read off `src/primitives/nodes/NodeCard/NodeCard.css`.
  */
+import {
+  MAX_DESCRIPTION_LINES,
+  formatOverflowLabel,
+  selectDescription,
+  selectFileChips,
+  selectMetricsLine,
+  selectModelChip,
+  selectToolChips,
+} from "../../../primitives/nodes/NodeCard/nodeCardModel";
 import type { GraphNodeData } from "../../../types/graphData";
 import { FONT_KEYS } from "./types";
 
@@ -34,7 +48,7 @@ export interface NodeRowSpec {
   maxLines: number;
   /** Horizontal gap between `flow` items. Unused by `wrap`. */
   itemGap: number;
-  /** Chrome that never wraps and always reserves width (status dot, collapse button). */
+  /** Chrome that never wraps and always reserves width (status dot, kind icon, collapse button). */
   fixedChrome: number;
   /**
    * Rows painted inside the card header contribute *width* but not *height*: `headerHeight`
@@ -53,70 +67,46 @@ export interface NodeTemplate {
   rows: readonly NodeRowSpec[];
 }
 
-function nonEmpty(value: string | undefined): string[] {
-  const trimmed = value?.trim();
-  return trimmed ? [trimmed] : [];
+/** A capped chip row renders its overflow counter as one extra, narrower pill. */
+function selectToolOverflow(node: GraphNodeData): string[] {
+  const { overflow } = selectToolChips(node);
+  return overflow > 0 ? [formatOverflowLabel(overflow)] : [];
 }
 
-function selectModel(node: GraphNodeData): string[] {
-  const parts = [node.model, node.harnessModel].filter(
-    (p): p is string => typeof p === "string" && p.trim().length > 0,
-  );
-  return parts.length > 0 ? [parts.join(" · ")] : [];
+function selectFileOverflow(node: GraphNodeData): string[] {
+  const { overflow } = selectFileChips(node);
+  return overflow > 0 ? [formatOverflowLabel(overflow)] : [];
 }
 
-/**
- * Mirrors `NodeCardContext`, which flattens context and metadata into `key: value` rows and skips
- * non-scalar values. Long-form metadata (`prompt`, `logs`, ...) lives in a collapsed `<details>`
- * and must not inflate the resting size of the card.
- */
-const SKIPPED_METADATA_KEYS = new Set(["prompt", "logs", "payload", "rawPayload", "status"]);
-
-function selectContext(node: GraphNodeData): string[] {
-  const rows: string[] = [];
-  const context = node.context;
-
-  if (context) {
-    if (context.repoPath) {
-      rows.push(`Repo Path: ${context.repoPath}`);
-    }
-    for (const [key, value] of Object.entries(context)) {
-      if (key === "repoPath" || key === "previousOutputs") continue;
-      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-        rows.push(`${key}: ${String(value)}`);
-      }
-    }
-  }
-
-  if (node.metadata) {
-    for (const [key, value] of Object.entries(node.metadata)) {
-      if (SKIPPED_METADATA_KEYS.has(key)) continue;
-      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-        rows.push(`${key}: ${String(value)}`);
-      }
-    }
-  }
-
-  return rows;
-}
+/** `.node-chip`: 8px padding and a 1px border per side, plus a 12px icon and its 4px gap. */
+const CHIP_CHROME_WITH_ICON = 34;
+/** The `+N` pill carries no icon. */
+const CHIP_CHROME_BARE = 18;
 
 export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
   padding: 10,
-  headerHeight: 34,
+  // 8px top padding + an 18px title line + 8px bottom padding + a 1px bottom border.
+  headerHeight: 35,
   rowGap: 8,
   rows: Object.freeze([
     {
-      id: "name",
+      id: "identity",
       kind: "flow",
-      // 8px status dot + 8px gap + 26px collapse button + 8px gap to the title block.
-      fixedChrome: 50,
-      itemGap: 8,
+      // 8px status dot + 6px gap + 14px kind icon + 6px gap, then 8px header gap + 6px aside gap
+      // + an 18px collapse button on the right.
+      fixedChrome: 66,
+      itemGap: 6,
       lineHeight: 18,
       maxLines: 1,
       inHeader: true,
       segments: [
-        { fontKey: FONT_KEYS.nodeTitle, itemChrome: 0, select: (n) => nonEmpty(n.name) },
-        { fontKey: FONT_KEYS.nodeTypeTag, itemChrome: 14, select: (n) => nonEmpty(n.type) },
+        { fontKey: FONT_KEYS.nodeTitle, itemChrome: 0, select: (n) => [n.name].filter(Boolean) },
+        {
+          fontKey: FONT_KEYS.nodeTypeTag,
+          itemChrome: 12,
+          select: (n) => (n.type ? [n.type] : []),
+        },
+        { fontKey: FONT_KEYS.nodeTypeTag, itemChrome: 14, select: selectModelChip },
       ],
     },
     {
@@ -125,60 +115,58 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 0,
       lineHeight: 15,
-      maxLines: 3,
-      segments: [
-        { fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: (n) => nonEmpty(n.description) },
-      ],
-    },
-    {
-      id: "badges",
-      kind: "flow",
-      fixedChrome: 0,
-      itemGap: 4,
-      lineHeight: 22,
-      maxLines: 3,
-      segments: [
-        {
-          fontKey: FONT_KEYS.nodeChip,
-          // 9px horizontal padding + 1px border, both sides.
-          itemChrome: 20,
-          select: (n) => (n.badges ?? []).map((b) => b.label ?? ""),
-        },
-      ],
+      maxLines: MAX_DESCRIPTION_LINES,
+      segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
     },
     {
       id: "tools",
       kind: "flow",
       fixedChrome: 0,
       itemGap: 4,
+      // An 18px chip plus the 4px gap to the row below it.
       lineHeight: 22,
-      maxLines: 3,
+      maxLines: 2,
       segments: [
         {
           fontKey: FONT_KEYS.nodeChip,
-          // 8px padding + 1px border both sides, plus a 12px icon and its 4px gap.
-          itemChrome: 34,
-          select: (n) => (n.tools ?? []).map((t) => t.name ?? ""),
+          itemChrome: CHIP_CHROME_WITH_ICON,
+          select: (n) => selectToolChips(n).shown,
+        },
+        {
+          fontKey: FONT_KEYS.nodeChip,
+          itemChrome: CHIP_CHROME_BARE,
+          select: selectToolOverflow,
         },
       ],
     },
     {
-      id: "model",
-      kind: "wrap",
+      id: "files",
+      kind: "flow",
       fixedChrome: 0,
-      itemGap: 0,
-      lineHeight: 16,
-      maxLines: 1,
-      segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectModel }],
+      itemGap: 4,
+      lineHeight: 22,
+      maxLines: 2,
+      segments: [
+        {
+          fontKey: FONT_KEYS.nodeChip,
+          itemChrome: CHIP_CHROME_WITH_ICON,
+          select: (n) => selectFileChips(n).shown,
+        },
+        {
+          fontKey: FONT_KEYS.nodeChip,
+          itemChrome: CHIP_CHROME_BARE,
+          select: selectFileOverflow,
+        },
+      ],
     },
     {
-      id: "context",
+      id: "metrics",
       kind: "wrap",
       fixedChrome: 0,
       itemGap: 0,
-      lineHeight: 15,
-      maxLines: 4,
-      segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectContext }],
+      lineHeight: 14,
+      maxLines: 1,
+      segments: [{ fontKey: FONT_KEYS.nodeMetrics, itemChrome: 0, select: selectMetricsLine }],
     },
   ] satisfies NodeRowSpec[]),
 });

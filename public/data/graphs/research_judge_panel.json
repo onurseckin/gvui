@@ -1,0 +1,382 @@
+{
+  "id": "research_judge_panel",
+  "title": "Research Fan-Out — Four Lenses, Three Judges, One Call",
+  "description": "An open question answered by deliberate disagreement: four researchers work independent lenses in parallel, cheap probes do the fetching, and three judges score the synthesis before a recommendation is allowed out.",
+  "directed": true,
+  "entry": "question",
+  "exits": ["recommendation"],
+  "nodes": [
+    {
+      "id": "question",
+      "name": "Question",
+      "kind": "input",
+      "status": "success",
+      "type": "trigger",
+      "description": "Should the ingest pipeline move off Kafka to Redpanda before the Q3 traffic step-up?",
+      "output": "Asked by: platform team\nDeadline: decision needed before Q3 capacity planning closes\nConstraint: ingest currently peaks at 240k msg/s; Q3 forecast is 600k msg/s\nExisting: 3-broker Kafka on MSK, 14 consumer groups, 2 engineers who know it well"
+    },
+    {
+      "id": "plan",
+      "name": "Decompose question",
+      "kind": "orchestrator",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Splits the question into four lenses chosen to disagree with each other, so the answer is not just one model's first instinct restated four times.",
+      "tools": [{ "name": "Read" }],
+      "metrics": { "tokensIn": 6800, "tokensOut": 2640, "costUsd": 0.243, "durationMs": 28600 },
+      "prompt": "Decompose this migration question into independent research lenses.\n\nThe lenses must be capable of reaching different conclusions — pick angles that pull against each other rather than four flavours of the same analysis. For each lens, state what evidence would change its mind.",
+      "output": "Four lenses, deliberately opposed:\n\n  ops    — what does day-two operation cost, who carries the pager\n  perf   — does Kafka actually fail at 600k msg/s on this hardware, or do we assume it does\n  cost   — total cost of ownership including the migration itself, not just steady state\n  risk   — what breaks during cutover, and what is the blast radius\n\nFalsifiers stated per lens so a null result is still a result."
+    },
+    {
+      "id": "lens_ops",
+      "name": "Lens: operations",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Day-two operational burden: upgrades, rebalancing, on-call load, and how much of the team's Kafka knowledge transfers.",
+      "tools": [{ "name": "WebFetch" }, { "name": "Read" }],
+      "metrics": { "tokensIn": 14200, "tokensOut": 2380, "costUsd": 0.092, "durationMs": 44700 },
+      "output": "Redpanda removes ZooKeeper/KRaft operational surface and is genuinely simpler to run.\n\nBut: the team's accumulated Kafka knowledge is mostly about *consumers*, and that transfers unchanged (wire-compatible). The operational win is real but smaller than vendor material implies — it lands on the 2 engineers who already handle brokers, roughly 3 hrs/week each.\n\nVerdict: mild pro-migration. Would flip if we were adding a third broker operator."
+    },
+    {
+      "id": "lens_perf",
+      "name": "Lens: performance",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Tests the premise itself — whether the current cluster genuinely cannot reach the Q3 target, rather than accepting that framing.",
+      "tools": [{ "name": "Bash" }, { "name": "WebFetch" }],
+      "metrics": { "tokensIn": 16800, "tokensOut": 3010, "costUsd": 0.118, "durationMs": 71200 },
+      "output": "The premise does not hold.\n\nReplayed a peak-hour capture against the staging cluster: 240k msg/s sustained at 31% broker CPU. Extrapolating conservatively, the current 3-broker setup reaches ~700k msg/s before CPU saturation. The Q3 forecast fits inside existing hardware.\n\nThe p99 latency complaints that started this conversation trace to consumer-side batching in two services, not to broker throughput.\n\nVerdict: strongly anti-migration. The stated problem is not a broker problem."
+    },
+    {
+      "id": "lens_cost",
+      "name": "Lens: cost",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Total cost of ownership counting the migration itself as a cost, not only the steady state after it.",
+      "tools": [{ "name": "WebFetch" }, { "name": "Read" }],
+      "metrics": { "tokensIn": 12900, "tokensOut": 2140, "costUsd": 0.084, "durationMs": 39800 },
+      "output": "Steady state: Redpanda ~18% cheaper at this volume, roughly $1.4k/mo saved.\n\nMigration: 2 engineers × ~7 weeks, dual-running both clusters for 3 of those weeks. Call it $95k fully loaded plus $4.2k of duplicate infrastructure.\n\nPayback: ~5.6 years at current volume. Shortens to ~2 years only if volume triples and stays there.\n\nVerdict: anti-migration on this volume."
+    },
+    {
+      "id": "lens_risk",
+      "name": "Lens: risk",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "description": "Cutover blast radius: what breaks, who notices, and how reversible each step is.",
+      "tools": [{ "name": "Read" }, { "name": "Grep" }],
+      "metrics": { "tokensIn": 13400, "tokensOut": 2260, "costUsd": 0.087, "durationMs": 41500 },
+      "output": "Wire compatibility makes consumer cutover genuinely low-risk and reversible per consumer group.\n\nThe unreversible part is retained history: 14 days of retention would have to be either replayed or abandoned, and 3 of the 14 consumer groups do historical replay as part of normal recovery. Those 3 are the risk.\n\nVerdict: neutral. Manageable, but it concentrates on the 3 groups we least want to disturb."
+    },
+    {
+      "id": "probe_bench",
+      "name": "Fetch benchmarks",
+      "kind": "agent",
+      "status": "success",
+      "model": "Haiku 4.5",
+      "tier": "s",
+      "description": "Cheap retrieval pass — pulls published benchmark numbers and hardware profiles for the performance lens to reason over.",
+      "tools": [{ "name": "WebFetch" }],
+      "metrics": { "tokensIn": 5200, "tokensOut": 1180, "costUsd": 0.009, "durationMs": 8900 },
+      "output": "6 sources retrieved, 2 discarded as vendor-authored without methodology.\nUsable: OpenMessaging 2024 run, two independent blog reproductions, one conference talk with raw data."
+    },
+    {
+      "id": "probe_incidents",
+      "name": "Scan incident history",
+      "kind": "agent",
+      "status": "success",
+      "model": "Haiku 4.5",
+      "tier": "s",
+      "description": "Reads 18 months of internal incident reports for anything broker-attributed, so the ops lens argues from this cluster's actual history.",
+      "tools": [{ "name": "Grep" }, { "name": "Read" }],
+      "files": [{ "path": "docs/incidents/", "mode": "read" }],
+      "metrics": { "tokensIn": 7400, "tokensOut": 940, "costUsd": 0.011, "durationMs": 11200 },
+      "output": "41 incidents in 18 months. 4 touched Kafka:\n  2 consumer lag from a downstream stall (not broker)\n  1 disk pressure after a retention misconfiguration (operator error)\n  1 genuine broker failure, recovered automatically in 90s\n\nBroker-attributed downtime over 18 months: 90 seconds."
+    },
+    {
+      "id": "synthesize",
+      "name": "Synthesize",
+      "kind": "join",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Reconciles four lenses that do not agree, and preserves the disagreement rather than averaging it away.",
+      "metrics": { "tokensIn": 21600, "tokensOut": 3480, "costUsd": 0.372, "durationMs": 47300 },
+      "output": "Three of four lenses land anti-migration, and the fourth is only mildly pro.\n\nThe decisive finding is the performance lens overturning the premise: the question assumed a capacity ceiling that measurement does not support. Cost and risk then have nothing to buy.\n\nDisagreement worth preserving: the ops lens's simplification argument stands on its own merits and will still be true later. This is a 'not now', not a 'never'."
+    },
+    {
+      "id": "judge_evidence",
+      "name": "Judge: evidence",
+      "kind": "agent",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Scores whether each claim is actually supported, with the benchmark replay held to the highest bar since the whole recommendation turns on it.",
+      "metrics": { "tokensIn": 18200, "tokensOut": 1620, "costUsd": 0.298, "durationMs": 33100 },
+      "output": "Score 8/10. The replay is the strongest evidence in the set — real capture, real hardware, stated method.\n\nDeduction: extrapolation from 31% CPU to saturation assumes linearity that was not tested above 240k. The headroom claim is directionally safe but numerically soft."
+    },
+    {
+      "id": "judge_counter",
+      "name": "Judge: steelman",
+      "kind": "agent",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Adversarial pass — argues the migration case as strongly as possible to see whether the synthesis survives contact with its best opposition.",
+      "metrics": { "tokensIn": 17600, "tokensOut": 1880, "costUsd": 0.291, "durationMs": 35400 },
+      "output": "Score 7/10. Best pro-migration case: this defers a migration that gets harder as consumer count grows, and 14 groups is already awkward.\n\nBut that argument does not beat a 5.6-year payback. The synthesis survives. Its 'not now, not never' framing is the right shape and I could not break it."
+    },
+    {
+      "id": "judge_decision",
+      "name": "Judge: decision quality",
+      "kind": "agent",
+      "status": "success",
+      "model": "Opus 5",
+      "tier": "l",
+      "description": "Ignores the content and scores the decision itself — is it actionable, reversible, and does it name what would change the answer.",
+      "metrics": { "tokensIn": 16400, "tokensOut": 1540, "costUsd": 0.271, "durationMs": 31800 },
+      "output": "Score 9/10. Actionable, cheap to revisit, and it names its own falsifier (sustained volume above ~500k msg/s).\n\nDeduction: it should name a review date rather than leaving the revisit implicit."
+    },
+    {
+      "id": "tally",
+      "name": "Tally panel",
+      "kind": "join",
+      "status": "success",
+      "description": "Averages the three scores and folds each judge's deduction into the final wording.",
+      "metrics": { "tokensIn": 3200, "tokensOut": 520, "costUsd": 0.014, "durationMs": 4600 },
+      "output": "8.0 / 10 — accepted, with two amendments carried forward:\n  · soften the headroom claim to the measured range\n  · attach an explicit review trigger"
+    },
+    {
+      "id": "recommendation",
+      "name": "Recommendation",
+      "kind": "terminal",
+      "status": "success",
+      "description": "Stay on Kafka through Q3. Fix consumer-side batching instead, and revisit if sustained volume passes 500k msg/s.",
+      "files": [{ "path": "docs/decisions/0031-kafka-vs-redpanda.md", "mode": "write" }],
+      "metrics": { "durationMs": 6200 },
+      "output": "ADR-0031 — Stay on Kafka through Q3\n\nMeasured headroom to ~700k msg/s on existing hardware (extrapolated from a 240k replay at 31% CPU; linearity untested above that point). The latency complaints that prompted this are consumer-side batching in checkout-ingest and audit-sink.\n\nActions:\n  1. Fix batching in the two named services (owner: platform, this sprint)\n  2. Re-run the replay at 400k to firm up the headroom number\n\nReview trigger: sustained peak above 500k msg/s, or a third broker operator joining the team.\n\nRun totals: 12 model calls, 153.7k tokens in, 23.6k out, $1.890, 6m 54s."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-question-plan",
+      "source": "question",
+      "target": "plan",
+      "kind": "sequence",
+      "label": "question",
+      "handoff": {
+        "kind": "prompt",
+        "summary": "Question plus current cluster shape and forecast",
+        "tokens": 320
+      }
+    },
+    {
+      "id": "e-plan-ops",
+      "source": "plan",
+      "target": "lens_ops",
+      "kind": "spawn",
+      "label": "ops lens",
+      "handoff": { "kind": "decision", "summary": "Lens brief + stated falsifier", "tokens": 410 }
+    },
+    {
+      "id": "e-plan-perf",
+      "source": "plan",
+      "target": "lens_perf",
+      "kind": "spawn",
+      "label": "perf lens",
+      "handoff": {
+        "kind": "decision",
+        "summary": "Lens brief — instructed to test the premise itself",
+        "tokens": 460
+      }
+    },
+    {
+      "id": "e-plan-cost",
+      "source": "plan",
+      "target": "lens_cost",
+      "kind": "spawn",
+      "label": "cost lens",
+      "handoff": { "kind": "decision", "summary": "Lens brief + stated falsifier", "tokens": 390 }
+    },
+    {
+      "id": "e-plan-risk",
+      "source": "plan",
+      "target": "lens_risk",
+      "kind": "spawn",
+      "label": "risk lens",
+      "handoff": { "kind": "decision", "summary": "Lens brief + stated falsifier", "tokens": 400 }
+    },
+    {
+      "id": "e-perf-probe",
+      "source": "lens_perf",
+      "target": "probe_bench",
+      "kind": "spawn",
+      "label": "fetch",
+      "handoff": {
+        "kind": "decision",
+        "summary": "Retrieve published benchmarks, discard vendor-authored",
+        "tokens": 90
+      }
+    },
+    {
+      "id": "e-probe-perf",
+      "source": "probe_bench",
+      "target": "lens_perf",
+      "kind": "data",
+      "label": "4 sources",
+      "handoff": {
+        "kind": "artifact",
+        "summary": "Filtered benchmark set with methodology notes",
+        "tokens": 1180
+      }
+    },
+    {
+      "id": "e-ops-probe",
+      "source": "lens_ops",
+      "target": "probe_incidents",
+      "kind": "spawn",
+      "label": "scan",
+      "handoff": {
+        "kind": "decision",
+        "summary": "Grep 18 months of incidents for broker attribution",
+        "tokens": 80
+      }
+    },
+    {
+      "id": "e-probe-ops",
+      "source": "probe_incidents",
+      "target": "lens_ops",
+      "kind": "data",
+      "label": "41 incidents",
+      "handoff": {
+        "kind": "artifact",
+        "summary": "4 Kafka-touching incidents, 90s total downtime",
+        "tokens": 940
+      }
+    },
+    {
+      "id": "e-ops-synth",
+      "source": "lens_ops",
+      "target": "synthesize",
+      "kind": "join",
+      "label": "mild pro",
+      "handoff": { "kind": "summary", "summary": "Ops verdict + falsifier", "tokens": 620 }
+    },
+    {
+      "id": "e-perf-synth",
+      "source": "lens_perf",
+      "target": "synthesize",
+      "kind": "join",
+      "label": "strong anti",
+      "handoff": {
+        "kind": "summary",
+        "summary": "Premise overturned — measured headroom",
+        "tokens": 810
+      }
+    },
+    {
+      "id": "e-cost-synth",
+      "source": "lens_cost",
+      "target": "synthesize",
+      "kind": "join",
+      "label": "anti",
+      "handoff": { "kind": "summary", "summary": "5.6-year payback", "tokens": 540 }
+    },
+    {
+      "id": "e-risk-synth",
+      "source": "lens_risk",
+      "target": "synthesize",
+      "kind": "join",
+      "label": "neutral",
+      "handoff": {
+        "kind": "summary",
+        "summary": "Reversible except for 3 replay-dependent groups",
+        "tokens": 570
+      }
+    },
+    {
+      "id": "e-synth-j1",
+      "source": "synthesize",
+      "target": "judge_evidence",
+      "kind": "spawn",
+      "label": "score it",
+      "handoff": {
+        "kind": "full-context",
+        "summary": "Synthesis plus all four lens reports verbatim",
+        "tokens": 14800
+      }
+    },
+    {
+      "id": "e-synth-j2",
+      "source": "synthesize",
+      "target": "judge_counter",
+      "kind": "spawn",
+      "label": "break it",
+      "handoff": {
+        "kind": "full-context",
+        "summary": "Synthesis plus all four lens reports verbatim",
+        "tokens": 14800
+      }
+    },
+    {
+      "id": "e-synth-j3",
+      "source": "synthesize",
+      "target": "judge_decision",
+      "kind": "spawn",
+      "label": "is it usable",
+      "handoff": {
+        "kind": "summary",
+        "summary": "Synthesis only — content deliberately withheld",
+        "tokens": 1240
+      }
+    },
+    {
+      "id": "e-j1-tally",
+      "source": "judge_evidence",
+      "target": "tally",
+      "kind": "join",
+      "label": "8/10",
+      "handoff": { "kind": "decision", "summary": "Score + one deduction", "tokens": 380 }
+    },
+    {
+      "id": "e-j2-tally",
+      "source": "judge_counter",
+      "target": "tally",
+      "kind": "join",
+      "label": "7/10",
+      "handoff": {
+        "kind": "decision",
+        "summary": "Score + strongest surviving counter-argument",
+        "tokens": 420
+      }
+    },
+    {
+      "id": "e-j3-tally",
+      "source": "judge_decision",
+      "target": "tally",
+      "kind": "join",
+      "label": "9/10",
+      "handoff": { "kind": "decision", "summary": "Score + review-date deduction", "tokens": 340 }
+    },
+    {
+      "id": "e-tally-rec",
+      "source": "tally",
+      "target": "recommendation",
+      "kind": "sequence",
+      "label": "8.0 accepted",
+      "handoff": {
+        "kind": "artifact",
+        "summary": "Accepted synthesis with two amendments",
+        "tokens": 760
+      }
+    }
+  ]
+}

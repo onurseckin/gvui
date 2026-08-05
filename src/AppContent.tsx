@@ -5,6 +5,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
 import { SearchHeader } from "./components/Controls/SearchHeader";
 import { UploadGraphButton } from "./components/Controls/UploadGraphButton";
+import { NodeDetailDrawer } from "./components/NodeDetailDrawer";
 import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
 import { useGraphFilesStore } from "./state/useGraphFilesStore";
@@ -187,6 +188,7 @@ export const AppContent: FC = () => {
             <GraphCanvas />
           </div>
         </main>
+        <NodeDetailDrawer />
       </div>
       <CommandPalette
         isOpen={isCommandPaletteOpen}

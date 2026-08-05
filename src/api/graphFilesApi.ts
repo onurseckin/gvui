@@ -19,7 +19,9 @@ export async function fetchManifest(): Promise<string[]> {
     const res = await fetch("/data/graphs/manifest.json", { cache: "no-store" });
     if (!res.ok) return [];
     const data: unknown = await res.json();
-    return Array.isArray(data) ? data.filter((entry): entry is string => typeof entry === "string") : [];
+    return Array.isArray(data)
+      ? data.filter((entry): entry is string => typeof entry === "string")
+      : [];
   } catch {
     return [];
   }

@@ -1,12 +1,31 @@
 import { resolveCustomLayoutConfig, type CustomLayoutConfig } from "../engine/layout/custom/config";
 import { buildEdgePath } from "../engine/layout/custom/edgePath";
 import { computeGraphLayout } from "../engine/layout/layoutDispatcher";
+import {
+  classifyTool,
+  formatFileChipLabel,
+  formatOverflowLabel,
+  MAX_DESCRIPTION_LINES,
+  selectDescription,
+  selectFileRefs,
+  selectMetricsLine,
+  selectModelChip,
+  selectToolChips,
+  type ToolIconKind,
+} from "../primitives/nodes/NodeCard/nodeCardModel";
+import {
+  describeNodeKind,
+  describeNodeStatus,
+  resolveModelTier,
+  resolveNodeKind,
+  resolveNodeStatus,
+} from "../primitives/nodes/NodeCard/nodeKinds";
 import type { LayoutMode } from "../state/useGraphStore";
 import type {
+  FileMode,
   GraphDataset,
   GraphNodeData,
-  NodeBadge,
-  NodeTool,
+  NodeKind,
   PositionedEdge,
   PositionedNode,
 } from "../types/graphData";
@@ -27,137 +46,176 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-function deriveStatusVariant(node: GraphNodeData): string {
-  const statusBadge = node.badges?.find((b) => b.variant);
-  if (statusBadge?.variant) {
-    return statusBadge.variant;
-  }
-  const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-  if (statusStr.includes("complete") || statusStr.includes("success")) {
-    return "success";
-  }
-  if (statusStr.includes("error") || statusStr.includes("fail")) {
-    return "error";
-  }
-  if (statusStr.includes("running") || statusStr.includes("pending")) {
-    return "amber";
-  }
-  return "info";
+/*
+ * Card glyphs as raw SVG markup.
+ *
+ * These mirror `nodeKinds.tsx` (kind icons) and `NodeCardTools.tsx` / `NodeCardFiles.tsx` (chip
+ * icons) path for path. The duplication is deliberate and is the *only* thing duplicated: those
+ * modules store their icons as React nodes, and a standalone file needs strings, so the two
+ * consumers genuinely need different representations of the same drawing. Everything that could
+ * silently disagree — which chips survive the caps, how a tool name maps to a glyph, how a file
+ * path or a metrics line is formatted — is imported from `nodeCardModel`, so the export and the
+ * canvas can never show a different set of chips.
+ *
+ * Typed by the schema unions on purpose: adding a `NodeKind` or a `FileMode` breaks this build
+ * until its glyph exists here too.
+ */
+const KIND_ICON_MARKUP: Readonly<Record<NodeKind, string>> = Object.freeze({
+  orchestrator:
+    '<circle cx="12" cy="5" r="2.5" /><circle cx="5" cy="19" r="2.5" /><circle cx="19" cy="19" r="2.5" /><path d="M12 7.5v3.5M12 11H5v5.5M12 11h7v5.5" />',
+  agent: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />',
+  tool: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />',
+  router: '<path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6" />',
+  join: '<path d="M12 21v-6M12 15L6 9V3M12 15l6-6V3" />',
+  gate: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" />',
+  terminal: '<path d="M4 21V4M4 4h13l-2.5 4L17 12H4" />',
+  input:
+    '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5M15 12H3" />',
+});
+
+const TOOL_ICON_MARKUP: Readonly<Record<ToolIconKind, string>> = Object.freeze({
+  search: '<circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />',
+  shell: '<path d="M4 17l6-5-6-5M12 19h8" />',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />',
+  web: '<circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18-2.5-2.7-2.5-15.3 0-18z" />',
+  generic: '<circle cx="12" cy="12" r="3" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3" />',
+});
+
+const FILE_ICON_MARKUP: Readonly<Record<FileMode, string>> = Object.freeze({
+  read: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" />',
+  write: '<path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />',
+  attach:
+    '<path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />',
+});
+
+/** The expanded chevron. A static export has no collapse state, so only this half is ever drawn. */
+const CHEVRON_DOWN_MARKUP = '<path d="M6 9l6 6 6-6" />';
+
+const DEFAULT_FILE_MODE: FileMode = "read";
+
+interface IconOptions {
+  size: number;
+  stroke: string;
+  className?: string;
+  strokeWidth?: number;
 }
 
-/** Mirrors `NodeCardTools`' icon rules so a chip carries the same glyph it does on screen. */
-function resolveToolIcon(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.includes("grep") || lower.includes("search") || lower.includes("find")) {
-    return "🔧";
-  }
-  if (
-    lower.includes("script") ||
-    lower.includes(".sh") ||
-    lower.includes("bash") ||
-    lower.includes("exec")
-  ) {
-    return "📜";
-  }
-  if (lower.includes("read") || lower.includes("write") || lower.includes("file")) {
-    return "📁";
-  }
-  if (lower.includes("http") || lower.includes("fetch") || lower.includes("web")) {
-    return "🌐";
-  }
-  return "🛠️";
+function renderIcon(markup: string, options: IconOptions): string {
+  const classAttr = options.className ? ` class="${options.className}"` : "";
+  return `<svg${classAttr} viewBox="0 0 24 24" width="${options.size}" height="${options.size}" fill="none" stroke="${options.stroke}" stroke-width="${options.strokeWidth ?? 2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${markup}</svg>`;
 }
 
+function renderChipIcon(markup: string): string {
+  return renderIcon(markup, { className: "node-chip-icon", size: 12, stroke: "currentColor" });
+}
+
+/** The `+N` chip both rows share once their cap is exceeded. */
+function renderOverflowChip(overflow: number): string {
+  if (overflow <= 0) return "";
+  return `<span class="node-chip node-chip--overflow" title="${overflow} more"><span class="node-chip-label">${escapeHtml(formatOverflowLabel(overflow))}</span></span>`;
+}
+
+/** Mirrors `NodeCardHeader`: `[status] [kind] Title [type] … [model] [collapse]`. */
+function generateNodeHeaderHtml(node: GraphNodeData): string {
+  const kind = describeNodeKind(node);
+  const status = describeNodeStatus(node);
+  const tier = resolveModelTier(node);
+  const [model] = selectModelChip(node);
+
+  const dotClass = `node-card-status-dot${status.animated ? " is-animated" : ""}`;
+  const statusDot = `<span class="${dotClass}" style="color: ${status.color};" title="Status: ${escapeHtml(status.label)}"></span>`;
+  const kindIcon = renderIcon(KIND_ICON_MARKUP[resolveNodeKind(node)], {
+    className: "node-card-kind-icon",
+    size: 14,
+    stroke: kind.accent,
+  });
+  const typeTag = node.type
+    ? `<span class="node-card-type-tag">${escapeHtml(node.type)}</span>`
+    : "";
+
+  const modelTitle = node.harnessModel ? `${model} · harness: ${node.harnessModel}` : (model ?? "");
+  const modelChip = model
+    ? `<span class="node-card-model-chip${tier ? ` tier-${tier}` : ""}" title="${escapeHtml(modelTitle)}">${escapeHtml(model)}</span>`
+    : "";
+  // A span, not a button: the export is a static snapshot, so the chevron is here for visual parity
+  // with the canvas and must not look or behave like something the reader can press.
+  const collapseGlyph = `<span class="node-card-toggle-btn" aria-hidden="true">${renderIcon(
+    CHEVRON_DOWN_MARKUP,
+    { size: 12, stroke: "currentColor", strokeWidth: 2.5 },
+  )}</span>`;
+
+  return `<header class="node-card-header">
+          <div class="node-card-header-main">${statusDot}${kindIcon}<h3 class="node-card-title" title="${escapeHtml(node.name)}">${escapeHtml(node.name)}</h3>${typeTag}</div>
+          <div class="node-card-header-aside">${modelChip}${collapseGlyph}</div>
+        </header>`;
+}
+
+function generateDescriptionHtml(node: GraphNodeData): string {
+  const [description] = selectDescription(node);
+  if (!description) return "";
+  return `<p class="node-card-description" style="-webkit-line-clamp: ${MAX_DESCRIPTION_LINES};" title="${escapeHtml(description)}">${escapeHtml(description)}</p>`;
+}
+
+function generateToolsHtml(node: GraphNodeData): string {
+  const { shown, overflow } = selectToolChips(node);
+  if (shown.length === 0) return "";
+
+  const chips = shown
+    .map(
+      (name) =>
+        `<span class="node-chip node-chip--tool" title="${escapeHtml(name)}">${renderChipIcon(TOOL_ICON_MARKUP[classifyTool(name)])}<span class="node-chip-label">${escapeHtml(name)}</span></span>`,
+    )
+    .join("");
+
+  return `<div class="node-card-chip-row">${chips}${renderOverflowChip(overflow)}</div>`;
+}
+
+function generateFilesHtml(node: GraphNodeData): string {
+  const { shown, overflow } = selectFileRefs(node);
+  if (shown.length === 0) return "";
+
+  const chips = shown
+    .map((file) => {
+      const mode = file.mode ?? DEFAULT_FILE_MODE;
+      const title = `${mode}: ${file.path}${file.lines ? `:${file.lines}` : ""}`;
+      return `<span class="node-chip node-chip--file node-chip--file-${mode}" title="${escapeHtml(title)}">${renderChipIcon(FILE_ICON_MARKUP[mode])}<span class="node-chip-label">${escapeHtml(formatFileChipLabel(file))}</span></span>`;
+    })
+    .join("");
+
+  return `<div class="node-card-chip-row">${chips}${renderOverflowChip(overflow)}</div>`;
+}
+
+function generateMetricsHtml(node: GraphNodeData): string {
+  const [line] = selectMetricsLine(node);
+  if (!line) return "";
+  const hasRetries = typeof node.metrics?.retries === "number" && node.metrics.retries > 0;
+  return `<div class="node-card-metrics${hasRetries ? " has-retries" : ""}" title="${escapeHtml(line)}">${escapeHtml(line)}</div>`;
+}
+
+/**
+ * One card, mirroring `NodeCard`'s DOM exactly.
+ *
+ * Only what the canvas draws is emitted: identity, one clamped line of purpose, the capped chip
+ * rows, and the metrics footer. The long-form fields (`prompt`, `output`, `logs`, `io`, raw
+ * metadata) are drawer-only in the app and have no place in a static file either — an export is a
+ * picture of the graph, not a dump of it, and the card's height here is the height the layout
+ * engine reserved for exactly this content.
+ */
 function generateNodeHtml(node: PositionedNode): string {
-  const statusVariant = deriveStatusVariant(node);
-  const escapedName = escapeHtml(node.name);
-  const escapedType = node.type ? escapeHtml(node.type) : null;
-
-  let badgesHtml = "";
-  if (node.badges && node.badges.length > 0) {
-    const badgeItems = node.badges
-      .map((b: NodeBadge) => {
-        const v = b.variant ?? "gray";
-        return `<span class="node-card-badge-pill badge-${v}">${escapeHtml(b.label)}</span>`;
-      })
-      .join("");
-    badgesHtml = `<div class="node-card-badges">${badgeItems}</div>`;
-  }
-
-  let toolsHtml = "";
-  if (node.tools && node.tools.length > 0) {
-    const toolItems = node.tools
-      .map((t: NodeTool) => {
-        const icon = resolveToolIcon(t.name);
-        return `<span class="node-card-tool-chip"><span class="tool-icon">${icon}</span><code class="tool-name">${escapeHtml(t.name)}</code></span>`;
-      })
-      .join("");
-    toolsHtml = `<div class="node-card-tools">${toolItems}</div>`;
-  }
-
-  // Same flattening rules as `NodeCardContext`: repo path first, then scalar context entries, then
-  // scalar metadata minus the long-form keys that belong in the disclosure below.
-  const contextRows: Array<{ key: string; value: string }> = [];
-  if (node.context?.repoPath) {
-    contextRows.push({ key: "Repo Path", value: String(node.context.repoPath) });
-  }
-  if (node.context) {
-    for (const [k, v] of Object.entries(node.context)) {
-      if (k === "repoPath" || k === "previousOutputs") continue;
-      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-        contextRows.push({ key: k, value: String(v) });
-      }
-    }
-  }
-  if (node.metadata) {
-    const skippedKeys = new Set(["prompt", "logs", "payload", "rawPayload", "status"]);
-    for (const [k, v] of Object.entries(node.metadata)) {
-      if (skippedKeys.has(k)) continue;
-      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-        contextRows.push({ key: k, value: String(v) });
-      }
-    }
-  }
-
-  let contextHtml = "";
-  if (contextRows.length > 0) {
-    const rowsStr = contextRows
-      .map(
-        (r) =>
-          `<div class="node-card-context-row"><span class="context-key">${escapeHtml(r.key)}:</span><span class="context-value" title="${escapeHtml(r.value)}">${escapeHtml(r.value)}</span></div>`,
-      )
-      .join("");
-    contextHtml = `<div class="node-card-context">${rowsStr}</div>`;
-  }
-
-  let detailsHtml = "";
-  const prompt = typeof node.metadata?.prompt === "string" ? node.metadata.prompt : null;
-  const logs = typeof node.metadata?.logs === "string" ? node.metadata.logs : null;
-  const hasPayload = Boolean(node.metadata && Object.keys(node.metadata).length > 0);
-
-  if (prompt || logs || hasPayload) {
-    const parts: string[] = [];
-    if (prompt) parts.push(`--- PROMPT ---\n${prompt}`);
-    if (logs) parts.push(`--- LOGS ---\n${logs}`);
-    if (hasPayload && node.metadata)
-      parts.push(`--- PAYLOAD ---\n${JSON.stringify(node.metadata, null, 2)}`);
-    const content = escapeHtml(parts.join("\n\n"));
-    detailsHtml = `<details class="node-card-details"><summary class="node-card-details-toggle">Raw Payload / Logs</summary><pre class="node-card-details-content"><code>${content}</code></pre></details>`;
-  }
+  const kind = describeNodeKind(node);
+  const bodyHtml = [
+    generateDescriptionHtml(node),
+    generateToolsHtml(node),
+    generateFilesHtml(node),
+    generateMetricsHtml(node),
+  ]
+    .filter(Boolean)
+    .join("");
 
   return `<div class="graph-node-wrapper" style="transform: translate(${node.x}px, ${node.y}px); width: ${node.width}px; height: ${node.height}px;">
-      <div class="node-card status-${statusVariant}" data-node-id="${escapeHtml(node.id)}" style="width: ${node.width}px; height: ${node.height}px;">
-        <header class="node-card-header">
-          <div class="node-card-header-main">
-            <span class="node-card-status-dot status-${statusVariant}" title="Status: ${statusVariant}"></span>
-            <h3 class="node-card-title">${escapedName}</h3>
-            ${escapedType ? `<span class="node-card-type-tag">${escapedType}</span>` : ""}
-          </div>
-        </header>
-        ${badgesHtml}
-        ${toolsHtml}
-        ${contextHtml}
-        ${detailsHtml}
+      <div class="node-card kind-${resolveNodeKind(node)} status-${resolveNodeStatus(node)}" data-node-id="${escapeHtml(node.id)}" style="width: ${node.width}px; height: ${node.height}px; --node-kind-accent: ${kind.accent};">
+        ${generateNodeHeaderHtml(node)}
+        <div class="node-card-body">${bodyHtml}</div>
       </div>
     </div>`;
 }
@@ -312,7 +370,7 @@ const VIEWER_SCRIPT = `
 
     viewport.addEventListener('mousedown', function (event) {
       if (event.button !== 0) return;
-      if (event.target.closest && event.target.closest('details, summary, button, a')) return;
+      if (event.target.closest && event.target.closest('button, a')) return;
       dragging = true;
       dragMoved = 0;
       dragStartX = event.clientX - tx;
@@ -436,9 +494,8 @@ const VIEWER_SCRIPT = `
 
     for (var c = 0; c < cards.length; c++) {
       (function (card) {
-        card.addEventListener('click', function (event) {
+        card.addEventListener('click', function () {
           if (dragMoved > DRAG_THRESHOLD_PX) return;
-          if (event.target.closest && event.target.closest('details')) return;
           var wasSelected = card.classList.contains('selected');
           clearSelection();
           if (!wasSelected) {
@@ -480,13 +537,11 @@ function buildViewerCss(): string {
       --bg-card: #18181b;
       --bg-hover: #27272a;
       --border-card: #27272a;
-      --border-subtle: #18181b;
       --accent-color: #818cf8;
       --radius-sm: 4px;
       --radius-md: 8px;
       --radius-lg: 12px;
       --radius-pill: 9999px;
-      --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -628,141 +683,226 @@ function buildViewerCss(): string {
     }
     .edge-badge-group.cycle .edge-badge-text { fill: #fbbf24; font-weight: 700; }
 
+    /* ------------------------------------------------------------------------------------------
+     * Node card. Mirrors src/primitives/nodes/NodeCard/NodeCard.css — same greys, same spacing,
+     * same accent mechanics — so an export is indistinguishable from the canvas it came from.
+     * Text uses the explicit grey ramp (#fafafa / #a1a1aa / #71717a) rather than the all-white
+     * chrome colour above: a card needs title, prose, and metrics at visibly different weights or
+     * it reads as one flat block.
+     * ---------------------------------------------------------------------------------------- */
+
     .node-card {
+      --node-kind-accent: #a78bfa;
+
       box-sizing: border-box;
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-card);
+      background-color: #161619;
+      border: 1px solid #27272a;
       border-radius: var(--radius-lg);
       padding: 10px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      transition: background-color 0.2s ease, border-color 0.2s ease;
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
       cursor: pointer;
       user-select: none;
       position: relative;
+      /* The card height is the height the layout engine reserved, so it clips exactly as on screen. */
       overflow: hidden;
-      color: #ffffff;
-    }
-    .node-card:hover { background-color: var(--bg-hover); }
-    .node-card.selected {
-      outline: 2px solid var(--accent-color);
-      outline-offset: 2px;
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 2px var(--accent-color), 0 0 15px rgba(129, 140, 248, 0.4);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: geometricPrecision;
     }
 
-    /* The card height is the height the layout engine reserved, so it is clipped exactly as on
-       screen — except while the payload disclosure is open, where clipping would hide the very
-       thing the reader just asked to see. */
-    .node-card:has(details[open]) {
-      height: auto !important;
-      overflow: visible;
-      z-index: 20;
+    /* Kind accent. Absolutely positioned rather than a border-left so it takes no part in the box
+       model — a 3px border would eat 3px of the width the measurer already committed to. */
+    .node-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      background-color: var(--node-kind-accent);
+      z-index: 2;
     }
+
+    .node-card:hover { background-color: #1b1b1f; border-color: #3f3f46; }
+    .node-card.selected {
+      border-color: var(--node-kind-accent);
+      box-shadow: 0 0 0 1px var(--node-kind-accent), 0 8px 28px -10px rgba(0, 0, 0, 0.9);
+    }
+
+    /* A failed node earns a tint; nothing else does. */
+    .node-card.status-error { border-color: rgba(248, 113, 113, 0.45); }
+    .node-card.status-skipped { opacity: 0.55; }
 
     .node-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      background-color: var(--bg-header);
+      background-color: #101013;
       margin: -10px -10px 0 -10px;
       padding: 8px 10px;
-      border-bottom: 1px solid var(--border-card);
+      border-bottom: 1px solid #232327;
+      position: relative;
+      z-index: 1;
     }
-    .node-card-header-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .node-card-header-main {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      min-height: 18px;
+    }
+    .node-card-header-aside { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    .node-card-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .node-card-status-dot.status-success { background-color: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
-    .node-card-status-dot.status-error { background-color: #f87171; box-shadow: 0 0 8px rgba(248, 113, 113, 0.6); }
-    .node-card-status-dot.status-amber { background-color: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
-    .node-card-status-dot.status-info { background-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
-    .node-card-status-dot.status-gray { background-color: #94a3b8; }
+    /* The dot paints itself and its glow from currentColor, so the inline colour drives both. */
+    .node-card-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background-color: currentColor;
+      box-shadow: 0 0 7px currentColor;
+    }
+    .node-card-status-dot.is-animated { animation: node-status-pulse 1.4s ease-in-out infinite; }
+
+    @keyframes node-status-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 7px currentColor; }
+      50% { opacity: 0.45; box-shadow: 0 0 2px currentColor; }
+    }
+
+    .node-card-kind-icon { flex-shrink: 0; display: block; }
 
     .node-card-title {
       margin: 0;
       font-size: 14px;
       font-weight: 600;
-      color: #ffffff;
+      line-height: 18px;
+      color: #fafafa;
+      letter-spacing: -0.01em;
       white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
       flex-shrink: 0;
     }
+
     .node-card-type-tag {
       font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 2px 6px;
-      border-radius: var(--radius-sm);
-      background-color: var(--bg-hover);
-      color: #e2e8f0;
-      font-family: var(--font-mono);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .node-card-badges, .node-card-tools { display: flex; flex-wrap: wrap; gap: 4px; }
-
-    .node-card-badge-pill {
-      font-size: 11px;
-      padding: 3px 9px;
-      border-radius: var(--radius-pill);
       font-weight: 600;
+      line-height: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0 6px;
+      border-radius: var(--radius-sm);
+      background-color: rgba(255, 255, 255, 0.06);
+      color: #a1a1aa;
       font-family: var(--font-mono);
-      line-height: 1.3;
+      flex-shrink: 0;
     }
-    .node-card-badge-pill.badge-success { background-color: rgba(6, 78, 59, 0.5); border: 1px solid #059669; color: #34d399; }
-    .node-card-badge-pill.badge-error { background-color: rgba(127, 29, 29, 0.5); border: 1px solid #dc2626; color: #f87171; }
-    .node-card-badge-pill.badge-amber { background-color: rgba(120, 53, 15, 0.5); border: 1px solid #d97706; color: #fbbf24; }
-    .node-card-badge-pill.badge-info { background-color: rgba(30, 58, 138, 0.5); border: 1px solid #0284c7; color: #38bdf8; }
-    .node-card-badge-pill.badge-gray { background-color: rgba(30, 41, 59, 0.7); border: 1px solid #475569; color: #ffffff; }
 
-    .node-card-tool-chip {
+    .node-card-model-chip {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 16px;
+      padding: 0 6px;
+      border-radius: var(--radius-sm);
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #d4d4d8;
+      white-space: nowrap;
+    }
+    /* Tier, not model name, drives weight — so a graph keeps ranking correctly when models are
+       renamed or swapped for custom ones. Larger tier reads heavier. */
+    .node-card-model-chip.tier-l {
+      background-color: rgba(129, 140, 248, 0.16);
+      border-color: rgba(129, 140, 248, 0.45);
+      color: #c7d2fe;
+    }
+    .node-card-model-chip.tier-m {
+      background-color: rgba(167, 139, 250, 0.12);
+      border-color: rgba(167, 139, 250, 0.32);
+      color: #ddd6fe;
+    }
+    .node-card-model-chip.tier-s,
+    .node-card-model-chip.tier-xs {
+      background-color: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #a1a1aa;
+    }
+
+    /* Inert in a static export: drawn for parity with the canvas, never pressable. */
+    .node-card-toggle-btn {
+      color: #71717a;
+      padding: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .node-card-body { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; min-height: 0; }
+
+    .node-card-description {
+      margin: 0;
+      font-size: 11px;
+      line-height: 15px;
+      color: #a1a1aa;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .node-card-chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .node-chip {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 11px;
-      padding: 3px 8px;
+      height: 18px;
+      padding: 0 8px;
       border-radius: var(--radius-sm);
-      background-color: rgba(88, 28, 135, 0.45);
-      border: 1px solid #7e22ce;
-      color: #e9d5ff;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background-color: rgba(255, 255, 255, 0.04);
+      color: #d4d4d8;
       font-family: var(--font-mono);
-      font-weight: 600;
-    }
-
-    .node-card-context { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #cbd5e1; }
-    .node-card-context-row { display: flex; align-items: flex-start; gap: 6px; }
-    .node-card-context-row .context-key { font-weight: 600; flex-shrink: 0; color: #94a3b8; }
-    .node-card-context-row .context-value { font-family: var(--font-mono); color: #ffffff; word-break: break-word; }
-
-    .node-card-details { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-    .node-card-details-toggle {
       font-size: 11px;
       font-weight: 600;
-      color: #94a3b8;
-      cursor: pointer;
-      padding: 4px 0;
-      list-style: none;
+      line-height: 18px;
+      max-width: 100%;
+      box-sizing: border-box;
     }
-    .node-card-details-toggle::-webkit-details-marker { display: none; }
-    .node-card-details-toggle::before { content: "\\25BA "; }
-    .node-card-details[open] .node-card-details-toggle::before { content: "\\25BC "; }
-    .node-card-details-toggle:hover { color: #ffffff; }
-    .node-card-details-content {
-      margin: 0;
-      padding: 8px 10px;
-      background-color: var(--bg-header);
-      border: 1px solid var(--border-card);
-      border-radius: var(--radius-sm);
-      font-size: 11px;
+    .node-chip-icon { flex-shrink: 0; color: #71717a; display: block; }
+    .node-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Writes are the thing you scan a trace for, so they get the only tinted chip on the card. */
+    .node-chip--file-write {
+      background-color: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.28);
+      color: #fcd34d;
+    }
+    .node-chip--file-write .node-chip-icon { color: #fbbf24; }
+
+    .node-chip--overflow {
+      background-color: transparent;
+      border-style: dashed;
+      border-color: rgba(255, 255, 255, 0.16);
+      color: #71717a;
+    }
+
+    .node-card-metrics {
       font-family: var(--font-mono);
-      color: #ffffff;
-      max-height: 240px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 14px;
+      color: #71717a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    .node-card-metrics.has-retries { color: #d97706; }
   `;
 }
 

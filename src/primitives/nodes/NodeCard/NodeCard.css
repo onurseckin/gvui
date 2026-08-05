@@ -1,17 +1,36 @@
+/*
+ * Node card.
+ *
+ * Two rules govern everything here:
+ *
+ * 1. Nothing in this file may grow the card. The layout engine sized the box from
+ *    `nodeTemplate.ts`; any row that can wrap without a cap, or any padding not mirrored in that
+ *    template, shows up as clipped text on the canvas.
+ * 2. Text uses an explicit grey ramp rather than the `--text-*` tokens. Those tokens are all pure
+ *    white by design (a deliberate high-contrast choice for chrome), but a card needs title,
+ *    prose, and metrics to sit at visibly different weights or it reads as one flat block.
+ */
+
 .node-card {
+  --node-kind-accent: #a78bfa;
+
   width: 100%;
   height: auto;
   min-height: 0;
   box-sizing: border-box;
-  background-color: var(--bg-card, #18181b);
-  border: 1px solid var(--border-card, #27272a);
+  background-color: #161619;
+  border: 1px solid #27272a;
   border-radius: var(--radius-lg);
   padding: 10px;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 8px 24px -12px rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: all 0.2s ease-in-out;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
   cursor: pointer;
   user-select: none;
   position: relative;
@@ -19,42 +38,80 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
-  color: #ffffff;
+}
+
+/*
+ * Kind accent. Absolutely positioned rather than a `border-left` so it takes no part in the box
+ * model — a 3px border would eat 3px of the content width the measurer already committed to, and
+ * long titles would clip. Sits above the header band, which spans the full card width.
+ */
+.node-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background-color: var(--node-kind-accent);
+  z-index: 2;
 }
 
 .node-card:hover {
-  background-color: var(--bg-card-hover, #27272a);
-  border-color: var(--border-card, #27272a);
+  background-color: #1b1b1f;
+  border-color: #3f3f46;
 }
 
 .node-card.selected {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-  border-color: var(--accent-color);
-  box-shadow: var(--accent-glow);
+  border-color: var(--node-kind-accent);
+  box-shadow:
+    0 0 0 1px var(--node-kind-accent),
+    0 8px 28px -10px rgba(0, 0, 0, 0.9);
 }
 
 .node-card.filtered {
-  opacity: 0.3;
-  filter: grayscale(0.5);
+  opacity: 0.28;
+  filter: grayscale(0.6);
 }
+
+/* A failed node earns a tint; nothing else does. */
+.node-card.status-error {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.node-card.status-skipped {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Header
+ * ------------------------------------------------------------------------------------------- */
 
 .node-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background-color: var(--bg-header, #121212);
+  background-color: #101013;
   margin: -10px -10px 0 -10px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-card, #27272a);
+  border-bottom: 1px solid #232327;
+  position: relative;
+  z-index: 1;
 }
 
 .node-card-header-main {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  min-height: 18px;
+}
+
+.node-card-header-aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .node-card-status-dot {
@@ -62,37 +119,39 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  background-color: currentColor;
+  box-shadow: 0 0 7px currentColor;
 }
 
-.node-card-status-dot.status-success {
-  background-color: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+/* Only an in-flight node moves. Motion is expensive attention; nothing settled should spend it. */
+.node-card-status-dot.is-animated {
+  animation: node-status-pulse 1.4s ease-in-out infinite;
 }
 
-.node-card-status-dot.status-error {
-  background-color: #f87171;
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+@keyframes node-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 7px currentColor;
+  }
+  50% {
+    opacity: 0.45;
+    box-shadow: 0 0 2px currentColor;
+  }
 }
 
-.node-card-status-dot.status-amber {
-  background-color: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-}
-
-.node-card-status-dot.status-info {
-  background-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-}
-
-.node-card-status-dot.status-gray {
-  background-color: #94a3b8;
+.node-card-kind-icon {
+  flex-shrink: 0;
+  display: block;
 }
 
 .node-card-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  line-height: 18px;
+  color: #fafafa;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
@@ -101,164 +160,160 @@
 
 .node-card-type-tag {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 14px;
   text-transform: uppercase;
-  padding: 2px 6px;
+  letter-spacing: 0.04em;
+  padding: 0 6px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-hover);
-  color: #e2e8f0;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #a1a1aa;
   font-family: var(--font-mono);
-  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.node-card-model-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d4d4d8;
+  white-space: nowrap;
+}
+
+/* Tier, not model name, drives weight — so a graph keeps ranking correctly when models are renamed
+   or swapped for custom ones. Larger tier reads heavier. */
+.node-card-model-chip.tier-l {
+  background-color: rgba(129, 140, 248, 0.16);
+  border-color: rgba(129, 140, 248, 0.45);
+  color: #c7d2fe;
+}
+
+.node-card-model-chip.tier-m {
+  background-color: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.32);
+  color: #ddd6fe;
+}
+
+.node-card-model-chip.tier-s,
+.node-card-model-chip.tier-xs {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
 }
 
 .node-card-toggle-btn {
   background: none;
   border: none;
-  color: #cbd5e1;
-  font-size: 12px;
+  color: #71717a;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 3px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .node-card-toggle-btn:hover {
-  background-color: var(--bg-hover);
-  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fafafa;
 }
 
-/* High-Contrast Badge Pills */
-.node-card-badges {
+/* ---------------------------------------------------------------------------------------------
+ * Body
+ * ------------------------------------------------------------------------------------------- */
+
+.node-card-body {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  min-height: 0;
 }
 
-.node-card-badge-pill {
+.node-card-description {
+  margin: 0;
   font-size: 11px;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-family: var(--font-mono);
-  line-height: 1.3;
+  line-height: 15px;
+  color: #a1a1aa;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.node-card-badge-pill.badge-success {
-  background-color: rgba(6, 78, 59, 0.5);
-  border: 1px solid #059669;
-  color: #34d399;
-}
-
-.node-card-badge-pill.badge-error {
-  background-color: rgba(127, 29, 29, 0.5);
-  border: 1px solid #dc2626;
-  color: #f87171;
-}
-
-.node-card-badge-pill.badge-amber {
-  background-color: rgba(120, 53, 15, 0.5);
-  border: 1px solid #d97706;
-  color: #fbbf24;
-}
-
-.node-card-badge-pill.badge-info {
-  background-color: rgba(30, 58, 138, 0.5);
-  border: 1px solid #0284c7;
-  color: #38bdf8;
-}
-
-.node-card-badge-pill.badge-gray {
-  background-color: rgba(30, 41, 59, 0.7);
-  border: 1px solid #475569;
-  color: #ffffff;
-}
-
-/* Tools & Scripts */
-.node-card-tools {
+.node-card-chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.node-card-tool-chip {
+.node-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  padding: 3px 8px;
+  height: 18px;
+  padding: 0 8px;
   border-radius: var(--radius-sm);
-  background-color: rgba(88, 28, 135, 0.45);
-  border: 1px solid #7e22ce;
-  color: #e9d5ff;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #d4d4d8;
   font-family: var(--font-mono);
-  font-weight: 600;
-}
-
-.node-card-context {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
   font-size: 11px;
-  color: #cbd5e1;
-}
-
-.node-card-context-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.node-card-context-row .context-key {
   font-weight: 600;
+  line-height: 18px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.node-chip-icon {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: #71717a;
+  display: block;
 }
 
-.node-card-context-row .context-value {
+.node-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Writes are the thing you scan a trace for, so they get the only tinted chip on the card. */
+.node-chip--file-write {
+  background-color: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.28);
+  color: #fcd34d;
+}
+
+.node-chip--file-write .node-chip-icon {
+  color: #fbbf24;
+}
+
+.node-chip--overflow {
+  background-color: transparent;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #71717a;
+}
+
+.node-card-metrics {
   font-family: var(--font-mono);
-  color: #ffffff;
-  word-break: break-word;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  color: #71717a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.node-card-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.node-card-details-toggle {
-  background: none;
-  border: none;
-  padding: 4px 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  cursor: pointer;
-  text-align: left;
-}
-
-.node-card-details-toggle:hover {
-  color: #ffffff;
-}
-
-.node-card-details-content {
-  margin: 0;
-  padding: 8px 10px;
-  background-color: var(--bg-header, #121212);
-  border: 1px solid var(--border-card, #27272a);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: #ffffff;
-  max-height: 140px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
+.node-card-metrics.has-retries {
+  color: #d97706;
 }
