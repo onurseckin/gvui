@@ -8,13 +8,13 @@ Sequencing, with a working engine at every step. No milestone requires the next 
 
 Five changes against the current engine. Independent of the redesign; ship first.
 
-| # | Change | Expected effect |
-| --- | --- | --- |
-| 1 | `assign_ranks(nodes, &active_edges, Some(&edge_role_map))` | **Measured:** `dense_kubernetes_mesh` 2 ranks → 8 balanced ranks. Largest single quality win in the codebase. |
-| 2 | `build_layer_graph`: include reversed feedback edges | Ordering and crossing counting stop being blind to a third of the graph |
-| 3 | `minimize_crossings`: remove the `best_crossings == 0` early return | The crossing-minimization stage runs for the first time |
-| 4 | `minimize_crossings` transpose: compare against current, not global best | The transpose pass stops giving up after its first improvement |
-| 5 | `GraphCanvas`: delete the synchronous main-thread fallback on worker timeout | A 30 s wait stops becoming a multi-minute browser freeze |
+| #   | Change                                                                       | Expected effect                                                                                               |
+| --- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1   | `assign_ranks(nodes, &active_edges, Some(&edge_role_map))`                   | **Measured:** `dense_kubernetes_mesh` 2 ranks → 8 balanced ranks. Largest single quality win in the codebase. |
+| 2   | `build_layer_graph`: include reversed feedback edges                         | Ordering and crossing counting stop being blind to a third of the graph                                       |
+| 3   | `minimize_crossings`: remove the `best_crossings == 0` early return          | The crossing-minimization stage runs for the first time                                                       |
+| 4   | `minimize_crossings` transpose: compare against current, not global best     | The transpose pass stops giving up after its first improvement                                                |
+| 5   | `GraphCanvas`: delete the synchronous main-thread fallback on worker timeout | A 30 s wait stops becoming a multi-minute browser freeze                                                      |
 
 Also worth doing here, purely defensively, until Milestone 3 removes the router:
 `maxRouteOrderVariants: 1`, `maxConflictPermutations: 1`. **Measured:** 12× faster on
@@ -22,7 +22,7 @@ Also worth doing here, purely defensively, until Milestone 3 removes the router:
 
 **Exit:** all 8 datasets produce `valid = true`; no dataset exceeds ~2 s native.
 
-**Risk:** low. Changes 1–4 make stages that currently no-op start working, so *some* fixture
+**Risk:** low. Changes 1–4 make stages that currently no-op start working, so _some_ fixture
 geometry will shift. Snapshot metrics before and after and inspect the diffs; the ranking change in
 particular is a large visual change on cyclic graphs (correctly so).
 
@@ -57,8 +57,8 @@ The combinatorial core. Still uses the **existing** router at the end, so the en
 - Phase 5: Barth–Mutzel–Jünger counting; median sweeps; corrected local transpose; dummy priority;
   k seeds.
 
-**Exit:** crossing count on `dense_kubernetes_mesh` drops from 191 to a small number *before routing
-runs at all*. This is the checkpoint that proves the thesis — if crossings do not fall here, the
+**Exit:** crossing count on `dense_kubernetes_mesh` drops from 191 to a small number _before routing
+runs at all_. This is the checkpoint that proves the thesis — if crossings do not fall here, the
 routing rewrite will not save it.
 
 **Measurement to take:** geometric crossings after the old router, with the new ordering. Compare to
@@ -119,13 +119,13 @@ organic mode than layered.
 
 ## Deferred / explicitly not now
 
-| Item | Why not |
-| --- | --- |
-| WASM threading (COOP/COEP + `wasm-bindgen-rayon`) | The only parallelizable phase is Phase 5's seeds, worth ≤5 ms. Revisit only if profiling on 2,000-node graphs shows it dominating. |
-| Incremental / animated re-layout | Needs a stable identity mapping across layouts. Valuable, but only once one layout is fast. |
-| Clusters / nested subgraphs (`group` field) | A real feature with its own design (compound ranking, cluster-aware ordering). The `group` field is reserved in the contract so it can land without a breaking change. |
-| Interactive node dragging with constraint preservation | Depends on Phase 7 exposing its constraint graph. |
-| Edge label placement by ILP | The label-node approach makes it unnecessary. |
+| Item                                                   | Why not                                                                                                                                                                |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WASM threading (COOP/COEP + `wasm-bindgen-rayon`)      | The only parallelizable phase is Phase 5's seeds, worth ≤5 ms. Revisit only if profiling on 2,000-node graphs shows it dominating.                                     |
+| Incremental / animated re-layout                       | Needs a stable identity mapping across layouts. Valuable, but only once one layout is fast.                                                                            |
+| Clusters / nested subgraphs (`group` field)            | A real feature with its own design (compound ranking, cluster-aware ordering). The `group` field is reserved in the contract so it can land without a breaking change. |
+| Interactive node dragging with constraint preservation | Depends on Phase 7 exposing its constraint graph.                                                                                                                      |
+| Edge label placement by ILP                            | The label-node approach makes it unnecessary.                                                                                                                          |
 
 ---
 
@@ -154,14 +154,14 @@ Three choices worth settling explicitly, since they change the design rather tha
 
 Rough relative sizing, not calendar time:
 
-| Milestone | Size | New code | Deleted code |
-| --- | --- | --- | --- |
-| 0 — bleeding | XS | ~20 lines | ~0 |
-| 1 — measurement + IR | M | ~600 lines | ~200 |
-| 2 — combinatorial core | L | ~1,200 lines | ~800 |
-| 3 — coordinates + routing | L | ~1,000 lines | **~4,500** |
-| 4 — emit + gate + config | M | ~600 lines | ~400 |
-| 5 — organic | M | ~700 lines | ~120 |
+| Milestone                 | Size | New code     | Deleted code |
+| ------------------------- | ---- | ------------ | ------------ |
+| 0 — bleeding              | XS   | ~20 lines    | ~0           |
+| 1 — measurement + IR      | M    | ~600 lines   | ~200         |
+| 2 — combinatorial core    | L    | ~1,200 lines | ~800         |
+| 3 — coordinates + routing | L    | ~1,000 lines | **~4,500**   |
+| 4 — emit + gate + config  | M    | ~600 lines   | ~400         |
+| 5 — organic               | M    | ~700 lines   | ~120         |
 
 Net: the engine ends up roughly 30–40 % smaller than it is today, with better guarantees and around
 three orders of magnitude more speed. Milestone 3 is the one that carries the risk and also the one

@@ -55,11 +55,7 @@ pub fn assign_rank_bands(
     let floor_gap = config.effective_rank_gap();
     let mut tops = vec![0.0f64; rank_count];
     for r in 1..rank_count {
-        let raw = demand
-            .rank_gap_min
-            .get(r - 1)
-            .copied()
-            .unwrap_or(floor_gap);
+        let raw = demand.rank_gap_min.get(r - 1).copied().unwrap_or(floor_gap);
         let gap = if raw.is_finite() {
             raw.max(floor_gap)
         } else {

@@ -23,19 +23,27 @@ its guarantee, and the invariant it establishes for downstream phases.
 
 ```jsonc
 {
-  "nodes": [{
-    "id": "n1", "name": "…",
-    "w": 240, "h": 96,           // explicit size, skips measurement
-    "rank": 3,                   // pin to a rank
-    "group": "control-plane"     // future: cluster/subgraph support
-  }],
-  "edges": [{
-    "id": "e1", "source": "n1", "target": "n2",
-    "label": "…",
-    "role": "forward|cross|feedback",   // override classification
-    "weight": 2,                        // ranking + ordering priority
-    "minlen": 2                         // force ≥2 ranks of span
-  }]
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "…",
+      "w": 240,
+      "h": 96, // explicit size, skips measurement
+      "rank": 3, // pin to a rank
+      "group": "control-plane", // future: cluster/subgraph support
+    },
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2",
+      "label": "…",
+      "role": "forward|cross|feedback", // override classification
+      "weight": 2, // ranking + ordering priority
+      "minlen": 2, // force ≥2 ranks of span
+    },
+  ],
 }
 ```
 
@@ -49,8 +57,8 @@ ambiguity.
 **In:** `GraphIR` + a `MeasurementProvider`. **Out:** `Vec<Size>` for nodes, `Vec<Option<LabelBox>>`
 for edges.
 
-This directly answers *"know our boundaries and the size of the elements upfront before drawing
-them"*. The key architectural decision is that **measurement is a pluggable, cacheable phase whose
+This directly answers _"know our boundaries and the size of the elements upfront before drawing
+them"_. The key architectural decision is that **measurement is a pluggable, cacheable phase whose
 output is a flat array of boxes, and the layout engine never sees text.** Changing the node card
 design cannot break the layout engine — you change the measurer, not the algorithm.
 
@@ -74,10 +82,10 @@ hand-rolled arithmetic:
 const NODE_TEMPLATE = {
   padding: 12,
   rows: [
-    { key: "name",        font: "--font-node-title",  minH: 24 },
-    { key: "description", font: "--font-node-body",   wrap: true, maxLines: 3 },
-    { key: "badges",      font: "--font-node-badge",  flow: "wrap", gap: 6 },
-    { key: "tools",       font: "--font-node-badge",  flow: "wrap", gap: 6 },
+    { key: "name", font: "--font-node-title", minH: 24 },
+    { key: "description", font: "--font-node-body", wrap: true, maxLines: 3 },
+    { key: "badges", font: "--font-node-badge", flow: "wrap", gap: 6 },
+    { key: "tools", font: "--font-node-badge", flow: "wrap", gap: 6 },
   ],
 };
 ```
@@ -107,7 +115,7 @@ LabelBox { w, h, lines: string[] }
 **Wrapping is mandatory, not optional.** Today a 200-character edge label becomes a ~1,400 px badge
 that can never fit anywhere, and the engine then burns its entire budget failing to place it. Bound
 it: wrap at `maxLabelWidth` (default ~220 px) up to `maxLabelLines` (default 3), then ellipsize with
-the full text in a tooltip. A label that cannot fit is a *content* problem; solving it in the layout
+the full text in a tooltip. A label that cannot fit is a _content_ problem; solving it in the layout
 search is solving the wrong problem.
 
 ### 1d. Caching
@@ -158,7 +166,7 @@ within `4·|V|` pivots.
 Two parameters that matter here:
 
 - **`ω` (weight).** Default 1. Set `ω = 8` for the chain edges of a bundle so parallel edges stay
-  adjacent. Honour a per-edge `weight` from JSON. Network simplex is *optimal* for this objective,
+  adjacent. Honour a per-edge `weight` from JSON. Network simplex is _optimal_ for this objective,
   so weights are a precise, predictable steering mechanism — unlike the current penalty knobs, which
   feed a search that does not converge.
 
@@ -201,14 +209,14 @@ makes wide meshes and long chains both look reasonable.
 
 For each edge `u → v` with `span = rank(v) − rank(u)`:
 
-| case | expansion |
-| --- | --- |
-| `span == 1`, no label | direct `up`/`down` link |
-| `span == 1`, labelled | cannot occur — Phase 3 forced `minlen = 2` |
-| `span ≥ 2`, no label | `Dummy` at every intermediate rank |
-| `span ≥ 2`, labelled | `Dummy` at every intermediate rank **except** the middle one, which is a `Label` item carrying `(label.w, label.h)` |
-| `span == 0` (flat) | no chain; recorded as a flat edge for Phase 6/8. Its label's **width becomes a separation constraint** between the two nodes. |
-| self-loop | no chain; a fixed port pair on the right side, routed in Phase 8 |
+| case                  | expansion                                                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `span == 1`, no label | direct `up`/`down` link                                                                                                       |
+| `span == 1`, labelled | cannot occur — Phase 3 forced `minlen = 2`                                                                                    |
+| `span ≥ 2`, no label  | `Dummy` at every intermediate rank                                                                                            |
+| `span ≥ 2`, labelled  | `Dummy` at every intermediate rank **except** the middle one, which is a `Label` item carrying `(label.w, label.h)`           |
+| `span == 0` (flat)    | no chain; recorded as a flat edge for Phase 6/8. Its label's **width becomes a separation constraint** between the two nodes. |
+| self-loop             | no chain; a fixed port pair on the right side, routed in Phase 8                                                              |
 
 ### The label-node trick, stated precisely
 
@@ -249,7 +257,7 @@ for each edge in order:
 ```
 
 Cheap counting is what makes everything else affordable. The current `count_layer_crossings` is
-O(E²) *and* clones a `Vec<String>` per layer per call (defect from §2 of the diagnosis), which is
+O(E²) _and_ clones a `Vec<String>` per layer per call (defect from §2 of the diagnosis), which is
 why `max_crossing_sweeps = 24` had to be paired with an early-return that made it a no-op.
 
 ### 5b. Initialization: k seeds
@@ -261,7 +269,7 @@ Run the whole ordering from `orderingSeeds` (default 4) distinct starting permut
 3. reverse of (1)
 4. input order
 
-Keep the best. These are independent, cheap, and diverse — the *correct* place for the "try several
+Keep the best. These are independent, cheap, and diverse — the _correct_ place for the "try several
 things and pick the best" instinct that the current outer search applies to a 4-second black box.
 
 ### 5c. Sweep
@@ -322,7 +330,7 @@ phase creates or removes a crossing.
 **In:** ordered `Layered`. **Out:** lane counts and lane indices for every channel and corridor.
 
 **This is the phase that replaces the retry loop.** The insight: once ordering is fixed, the
-*topology* of every route is determined, even though no coordinates exist yet. Which channel each
+_topology_ of every route is determined, even though no coordinates exist yet. Which channel each
 segment traverses, and in which corridor it turns, is combinatorics on the layered structure.
 
 ### 6a. Collect segment intervals
@@ -392,12 +400,12 @@ item.y   = y(rank) + (h(rank) − item.h) / 2       # or top-aligned, per config
 Replace the current PAVA/isotonic sweep with Brandes–Köpf. Four passes over
 {upward, downward} × {leftmost, rightmost}:
 
-1. **Mark type-1 conflicts.** An *inner segment* has dummy nodes at both ends. Mark any
+1. **Mark type-1 conflicts.** An _inner segment_ has dummy nodes at both ends. Mark any
    non-inner segment that crosses an inner segment. Marked segments are forbidden from aligning —
    this is precisely what guarantees dummy chains stay straight.
 2. **Vertical alignment.** Sweep the ranks; align each item with its median upper (or lower)
    neighbour if that does not create a marked conflict and does not violate the order. Builds
-   *blocks* of items that will share an x coordinate.
+   _blocks_ of items that will share an x coordinate.
 3. **Horizontal compaction.** Place blocks by longest-path in the block graph, respecting per-pair
    separations `sep(i, i+1)` from Phase 6d; then merge classes.
 4. **Balance.** Align the four candidate assignments to a common reference and take the average of
@@ -421,15 +429,15 @@ Nothing here searches. Every decision is a sort or a table lookup.
 
 ### 8a. Port sides — determined, not searched
 
-| edge kind (TB mode) | source side | target side |
-| --- | --- | --- |
-| forward, `span ≥ 1` | Bottom | Top |
-| flat (`span == 0`) | Right / Left by relative x | the other one |
-| reversed (feedback) | Bottom | Bottom, entering via a side corridor |
-| self-loop | Right | Right |
+| edge kind (TB mode) | source side                | target side                          |
+| ------------------- | -------------------------- | ------------------------------------ |
+| forward, `span ≥ 1` | Bottom                     | Top                                  |
+| flat (`span == 0`)  | Right / Left by relative x | the other one                        |
+| reversed (feedback) | Bottom                     | Bottom, entering via a side corridor |
+| self-loop           | Right                      | Right                                |
 
 Feedback edges deliberately exit and re-enter from the bottom and loop around the side. That is a
-*semantic* signal — "this goes backwards" should be visible — and it is the standard convention.
+_semantic_ signal — "this goes backwards" should be visible — and it is the standard convention.
 LR mode is TB on the transposed problem with sides rotated (see [03-modes.md](./03-modes.md)).
 
 The current engine searches over 16 `(src_side, tgt_side)` combinations per edge, then searches
@@ -445,7 +453,7 @@ determined choice is what a human would draw anyway.
 
 O(deg log deg). Two edges leaving the same node toward targets at orders 3 and 7 attach in that
 left-to-right sequence, so they cannot cross each other at the node. Because Phase 5 already
-minimized crossings *between* ranks, this makes the attachment locally crossing-free too.
+minimized crossings _between_ ranks, this makes the attachment locally crossing-free too.
 
 ### 8c. Port spacing — and node growth
 
@@ -503,7 +511,7 @@ badge.anchor = nearest point on the edge polyline
 For flat edges, the badge sits in the corridor at the edge's lane; the corridor width already
 accounts for it (Phase 6d).
 
-**Safety net only** — for the rare case where a badge overlaps an *unrelated* edge passing nearby:
+**Safety net only** — for the rare case where a badge overlaps an _unrelated_ edge passing nearby:
 slide it along the edge across ~5 discrete positions and take the first clear one; if none, keep the
 midpoint and draw a short leader. Candidates are found via a uniform spatial hash, not all-pairs.
 This should fire rarely enough that its frequency is a **quality metric**, not a routine path.

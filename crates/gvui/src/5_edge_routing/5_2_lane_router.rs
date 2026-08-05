@@ -238,12 +238,10 @@ fn collapse_jogs(points: &[Point], eps: f64) -> Vec<Point> {
             let b = points[i + 1];
             let c = points[i + 2];
             let d = points[i + 3];
-            let flat_y = (b.y - a.y).abs() <= eps
-                && (c.y - a.y).abs() <= eps
-                && (d.y - a.y).abs() <= eps;
-            let flat_x = (b.x - a.x).abs() <= eps
-                && (c.x - a.x).abs() <= eps
-                && (d.x - a.x).abs() <= eps;
+            let flat_y =
+                (b.y - a.y).abs() <= eps && (c.y - a.y).abs() <= eps && (d.y - a.y).abs() <= eps;
+            let flat_x =
+                (b.x - a.x).abs() <= eps && (c.x - a.x).abs() <= eps && (d.x - a.x).abs() <= eps;
             if flat_y || flat_x {
                 out.push(a);
                 // Resume at `D`, which is kept: dropping only interior vertices is what preserves
@@ -485,10 +483,26 @@ mod tests {
         let rank_tops = [0.0, 200.0];
         let bands = rank_band_bottoms(&layered, &rank_tops);
 
-        let a = route_chain_with_bands(0, &layered, &ir, &demand.lane_of_link, &ports, &bands, &config)
-            .expect("routes");
-        let b = route_chain_with_bands(1, &layered, &ir, &demand.lane_of_link, &ports, &bands, &config)
-            .expect("routes");
+        let a = route_chain_with_bands(
+            0,
+            &layered,
+            &ir,
+            &demand.lane_of_link,
+            &ports,
+            &bands,
+            &config,
+        )
+        .expect("routes");
+        let b = route_chain_with_bands(
+            1,
+            &layered,
+            &ir,
+            &demand.lane_of_link,
+            &ports,
+            &bands,
+            &config,
+        )
+        .expect("routes");
 
         let horiz_y = |r: &RoutedPath| -> f64 {
             r.points
@@ -601,7 +615,12 @@ mod tests {
     #[test]
     fn corner_reduction_never_changes_the_first_or_last_point() {
         let cases: Vec<Vec<Point>> = vec![
-            vec![pt(1.5, 2.5), pt(1.5, 90.0), pt(200.0, 90.0), pt(200.0, 300.25)],
+            vec![
+                pt(1.5, 2.5),
+                pt(1.5, 90.0),
+                pt(200.0, 90.0),
+                pt(200.0, 300.25),
+            ],
             vec![
                 pt(0.0, 0.0),
                 pt(120.0, 0.0),

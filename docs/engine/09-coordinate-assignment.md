@@ -8,10 +8,10 @@ at least 68 pixels. Neither of them produced a single coordinate.
 
 This is the phase that turns those decisions into pixels. It has two independent halves:
 
-| half | decides | algorithm | file |
-| --- | --- | --- | --- |
-| **Y** | which horizontal band each rank occupies | one forward pass | [`4_2_rank_bands.rs`](../../crates/gvui/src/4_coordinate_assignment/4_2_rank_bands.rs) |
-| **X** | where each item sits inside its rank | Brandes–Köpf | [`4_3_brandes_kopf.rs`](../../crates/gvui/src/4_coordinate_assignment/4_3_brandes_kopf.rs) |
+| half  | decides                                  | algorithm        | file                                                                                       |
+| ----- | ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| **Y** | which horizontal band each rank occupies | one forward pass | [`4_2_rank_bands.rs`](../../crates/gvui/src/4_coordinate_assignment/4_2_rank_bands.rs)     |
+| **X** | where each item sits inside its rank     | Brandes–Köpf     | [`4_3_brandes_kopf.rs`](../../crates/gvui/src/4_coordinate_assignment/4_3_brandes_kopf.rs) |
 
 They are independent because ranks are already stacked along one axis and orders already run along
 the other. Y is easy. X is the interesting one.
@@ -105,7 +105,7 @@ $$\text{top}(0) = 0, \qquad \text{top}(r) = \text{top}(r-1) + h(r-1) + \text{gap
 `r-1` derived from that channel's lane count. Two details from the code:
 
 - The gap is clamped **up** to `config.effective_rank_gap()` (default `rank_gap = 120`, times the
-  compaction multiplier). `rank_gap` is documented as a minimum that routing may only *raise*, and
+  compaction multiplier). `rank_gap` is documented as a minimum that routing may only _raise_, and
   Phase 6 derives its number from lane counts alone — an empty channel would report a tiny gap and
   collapse two ranks onto each other.
 - A missing or non-finite entry falls back to the configured minimum rather than propagating a NaN.
@@ -167,14 +167,14 @@ compact. Then a fourth step balances the four candidates against each other.
 Before any of that, [`BkLayout::build`](../../crates/gvui/src/4_coordinate_assignment/4_3_brandes_kopf.rs)
 denormalizes everything the four passes need into dense slices, exactly once:
 
-| field | meaning |
-| --- | --- |
-| `pos[v]` | position of item `v` inside its rank |
-| `width[v]` | item width, or 0 if not finite/positive |
-| `ranks[r]` | item indices of rank `r`, left to right |
-| `sep[r][o]` | required **centre-to-centre** distance between `ranks[r][o]` and `ranks[r][o+1]` |
-| `up_*`, `down_*` | predecessor / successor adjacency, each list sorted by rank position |
-| `inner[v]` | `true` when `v` is **not** a `Real` node — a dummy or a label |
+| field            | meaning                                                                          |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `pos[v]`         | position of item `v` inside its rank                                             |
+| `width[v]`       | item width, or 0 if not finite/positive                                          |
+| `ranks[r]`       | item indices of rank `r`, left to right                                          |
+| `sep[r][o]`      | required **centre-to-centre** distance between `ranks[r][o]` and `ranks[r][o+1]` |
+| `up_*`, `down_*` | predecessor / successor adjacency, each list sorted by rank position             |
+| `inner[v]`       | `true` when `v` is **not** a `Real` node — a dummy or a label                    |
 
 `sep` is where Phase 6 enters:
 
@@ -192,7 +192,7 @@ the next step from a scan into an O(1) index.
 ### Step 1 — type-1 conflicts, and what an inner segment is
 
 A **segment** is a link between two items on adjacent ranks. An **inner segment** is a segment
-whose *both* endpoints are non-`Real` items — dummies or labels. It is, in other words, a piece of
+whose _both_ endpoints are non-`Real` items — dummies or labels. It is, in other words, a piece of
 the interior of a long edge.
 
 Now consider a long edge and a short path competing for the same horizontal space:
@@ -218,7 +218,7 @@ ranks. Brandes–Köpf resolves this by **marking** the non-inner segment:
 
 This one rule is the entire mechanism that keeps dummy chains straight. It is not a tie-break or a
 preference: a dummy chain can always win the alignment fight against a node-to-node segment, and
-never the other way round. `mark_type1_conflicts` also skips the case where *both* endpoints are
+never the other way round. `mark_type1_conflicts` also skips the case where _both_ endpoints are
 inner — two crossing dummy chains do not mark each other, because neither has any claim over the
 other.
 
@@ -260,7 +260,7 @@ For the diagram above, the marked segment `B → C` is refused, so `C` is free t
 
 Now place the blocks. Each block is placed by **longest path in the block graph**: a block cannot
 start until every block to its left in every rank it touches has been placed, and it must clear
-each of them by the relevant `sep` value. Blocks that end up in different *classes* (they never
+each of them by the relevant `sep` value. Blocks that end up in different _classes_ (they never
 directly constrain each other) are then merged by shifting one class relative to the other, using
 the classic `sink`/`shift` bookkeeping.
 
@@ -276,16 +276,16 @@ Two implementation notes that are real decisions, not incidentals:
 
 Writing the alignment routine four times would be four chances to get it subtly different. Instead
 [`BkPass`](../../crates/gvui/src/4_coordinate_assignment/4_3_brandes_kopf.rs) transforms the
-*layering* and lets one generic routine always sweep "downward" and pack "left":
+_layering_ and lets one generic routine always sweep "downward" and pack "left":
 
-| pass | transformation |
-| --- | --- |
-| `Down` | reverse the rank order; read the **successor** adjacency instead of the predecessor one |
-| `Right` | reverse every rank (and every `sep` row, since a row has one entry per adjacent pair) |
+| pass    | transformation                                                                          |
+| ------- | --------------------------------------------------------------------------------------- |
+| `Down`  | reverse the rank order; read the **successor** adjacency instead of the predecessor one |
+| `Right` | reverse every rank (and every `sep` row, since a row has one entry per adjacent pair)   |
 
 A `Right` pass runs on a mirrored layering, so the caller negates the resulting x afterwards. The
 `nth()` helper reads neighbour lists back-to-front when mirrored, because the base lists are sorted
-by *base* position. That is also what makes the even-median rule come out as "lower median for
+by _base_ position. That is also what makes the even-median rule come out as "lower median for
 leftmost, upper median for rightmost" without any explicit branch.
 
 ### Step 5 — balance, and the unconditional repair
@@ -300,14 +300,14 @@ Then, per item, sort the four values and take the mean of the two middle ones:
 
 $$x(v) = \frac{x_{(2)}(v) + x_{(3)}(v)}{2}$$
 
-Averaging the *innermost two* rather than all four discards the two extremes, which is what removes
+Averaging the _innermost two_ rather than all four discards the two extremes, which is what removes
 the directional bias each individual pass has. `bk_align` exposes the choice as a Tier-2 knob:
 
-| `bkAlign` | result |
-| --- | --- |
-| `median` (default) | the average above |
-| `leftmost` / `rightmost` | the narrowest / widest single candidate |
-| `up-left`, `up-right`, `down-left`, `down-right` | one specific candidate, for debugging |
+| `bkAlign`                                        | result                                  |
+| ------------------------------------------------ | --------------------------------------- |
+| `median` (default)                               | the average above                       |
+| `leftmost` / `rightmost`                         | the narrowest / widest single candidate |
+| `up-left`, `up-right`, `down-left`, `down-right` | one specific candidate, for debugging   |
 
 Finally, `repair_rank_order` walks every rank left to right and enforces
 
@@ -321,13 +321,13 @@ the average.
 
 ### What the phase guarantees
 
-| guarantee | mechanism |
-| --- | --- |
-| At most 2 bends per adjacent-rank edge | block alignment |
-| Dummy chains perfectly vertical | type-1 conflict marking |
-| Arbitrary per-item widths respected | half-widths folded into `sep` |
-| Every Phase 6 separation holds exactly | compaction + the unconditional repair |
-| $O(V + E)$ | four linear passes, no iteration to convergence |
+| guarantee                              | mechanism                                       |
+| -------------------------------------- | ----------------------------------------------- |
+| At most 2 bends per adjacent-rank edge | block alignment                                 |
+| Dummy chains perfectly vertical        | type-1 conflict marking                         |
+| Arbitrary per-item widths respected    | half-widths folded into `sep`                   |
+| Every Phase 6 separation holds exactly | compaction + the unconditional repair           |
+| $O(V + E)$                             | four linear passes, no iteration to convergence |
 
 "Exactly" is literal. From the tests: two nodes of width 100 and 60 with
 `separation_min[(0,0)] = 37.5` come out `117.5` apart centre-to-centre — $50 + 30 + 37.5$, not a
@@ -382,7 +382,7 @@ because it cost 184 errors before it was found.
 3. **Translates the whole drawing** so its bounding corner lands at `config.graph_padding`.
 
 Step 3 moves the coordinate space. The band tops from step 1 live in that space. So a caller who
-computes the band tops themselves, *before* calling `assign_coordinates`, holds a table that is
+computes the band tops themselves, _before_ calling `assign_coordinates`, holds a table that is
 stale by exactly the translation delta.
 
 Phase 8 uses those band tops to locate routing channels. Getting them wrong by `dy` moves every
@@ -428,14 +428,14 @@ Two smaller contract points in the same function:
 
 ## Cost
 
-| step | cost |
-| --- | --- |
-| Rank bands | $O(V)$ — one pass over items, one running sum |
-| `BkLayout::build` | $O(V \log V + E)$ — the per-rank sorts and adjacency sorts |
-| Type-1 conflict marking | $O(V + E)$ |
-| Vertical alignment × 4 | $O(V + E)$ each |
-| Horizontal compaction × 4 | $O(V + E)$ each |
-| Balance + repair | $O(V)$ |
+| step                      | cost                                                       |
+| ------------------------- | ---------------------------------------------------------- |
+| Rank bands                | $O(V)$ — one pass over items, one running sum              |
+| `BkLayout::build`         | $O(V \log V + E)$ — the per-rank sorts and adjacency sorts |
+| Type-1 conflict marking   | $O(V + E)$                                                 |
+| Vertical alignment × 4    | $O(V + E)$ each                                            |
+| Horizontal compaction × 4 | $O(V + E)$ each                                            |
+| Balance + repair          | $O(V)$                                                     |
 
 Overall $O(V \log V + E)$, dominated in practice by the initial sorts. On the 30-node / 45-edge
 `dense_kubernetes_mesh` fixture the entire layered pipeline — all nine phases — runs in 1.79 ms.

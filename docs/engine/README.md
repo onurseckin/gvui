@@ -11,7 +11,7 @@ compiled to WebAssembly. The entry point is
 [`compute_custom_layout_wasm`](../../crates/gvui/src/lib.rs).
 
 If you are new to graphs, start with [Foundations](./01-foundations.md). If you want to understand
-*why* the engine is shaped the way it is, [The Pipeline](./02-the-pipeline.md) is the chapter that
+_why_ the engine is shaped the way it is, [The Pipeline](./02-the-pipeline.md) is the chapter that
 matters most; everything after it is detail.
 
 ---
@@ -33,7 +33,7 @@ Two mechanisms carry almost all the weight:
   See [Layering and Labels](./06-layering-and-labels.md).
 - **Routing lane demand is computed before any geometry exists.** Once the order of items within
   each rank is fixed, the set of edges crossing each gap is pure combinatorics. Lane counts come
-  from interval-graph colouring and are fed *into* node separation, not discovered after the fact.
+  from interval-graph colouring and are fed _into_ node separation, not discovered after the fact.
   See [Routing Demand](./08-routing-demand.md).
 
 ### P2 — Discrete before continuous.
@@ -58,7 +58,7 @@ A **scored choice is not a search**, and Phase 8 is where the distinction earns 
 selection evaluates all sixteen `(source_side, target_side)` combinations for an edge and takes the
 minimum of a closed-form cost. Sixteen is a constant, the cost is arithmetic on coordinates that are
 already final, and nothing is re-evaluated afterwards. v1 also tried sixteen combinations — and then
-searched again to repair the crossings that produced. The sixteen evaluations are now the *entire*
+searched again to repair the crossings that produced. The sixteen evaluations are now the _entire_
 budget for the decision, which is what makes it a determination rather than a search.
 
 ---
@@ -133,25 +133,25 @@ with an invalid drawing. The current engine takes 1.79 ms on the same graph and 
 valid. [The Pipeline](./02-the-pipeline.md) explains exactly how the loops were removed.
 
 Phase 6 is the only place where a downstream requirement (space to route edges) influences an
-upstream decision (how far apart nodes sit), and it is resolved by *computing the requirement ahead
-of time* rather than by iterating.
+upstream decision (how far apart nodes sit), and it is resolved by _computing the requirement ahead
+of time_ rather than by iterating.
 
 ---
 
 ## Phase table
 
-| # | Phase | Chapter | Source module | Output |
-| ---: | --- | --- | --- | --- |
-| 0 | Ingest | [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | [`0_common/0_5_ingest.rs`](../../crates/gvui/src/0_common/0_5_ingest.rs) | `GraphIr` |
-| 1 | Measure | [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | [`src/engine/layout/measurement/`](../../src/engine/layout/measurement/index.ts) | `Size[]`, `LabelBox` |
-| 2 | Structure | [04 — Structure](./04-structure.md) | [`1_cycle_breaking/1_6_structure.rs`](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs) | `StructureResult` |
-| 3 | Rank | [05 — Rank Assignment](./05-rank-assignment.md) | [`2_rank_assignment/2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs) | `RankResult` |
-| 4 | Layer | [06 — Layering and Labels](./06-layering-and-labels.md) | [`3_crossing_minimization/3_1_layer_builder.rs`](../../crates/gvui/src/3_crossing_minimization/3_1_layer_builder.rs) | `Layered` |
-| 5 | Order | [07 — Crossing Minimization](./07-crossing-minimization.md) | [`3_crossing_minimization/3_4_order_facade.rs`](../../crates/gvui/src/3_crossing_minimization/3_4_order_facade.rs) | `OrderingOutcome` (+ `Item::order` in place) |
-| 6 | Demand | [08 — Routing Demand](./08-routing-demand.md) | [`4_coordinate_assignment/4_1_lane_demand.rs`](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) | `RoutingDemand` |
-| 7 | Coordinates | [09 — Coordinate Assignment](./09-coordinate-assignment.md) | [`4_coordinate_assignment/4_4_coordinate_facade.rs`](../../crates/gvui/src/4_coordinate_assignment/4_4_coordinate_facade.rs) | `Vec<f64>` rank tops (+ `Item::x`/`y` in place) |
-| 8 | Route | [10 — Edge Routing](./10-edge-routing.md) | [`5_edge_routing/5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs) | `RouteResult` |
-| 9 | Emit | [11 — Emit and Quality](./11-emit-and-quality.md) | [`6_validation/6_3_emit.rs`](../../crates/gvui/src/6_validation/6_3_emit.rs) | `CustomLayoutResult` |
+|   # | Phase       | Chapter                                                       | Source module                                                                                                                | Output                                          |
+| --: | ----------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+|   0 | Ingest      | [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | [`0_common/0_5_ingest.rs`](../../crates/gvui/src/0_common/0_5_ingest.rs)                                                     | `GraphIr`                                       |
+|   1 | Measure     | [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | [`src/engine/layout/measurement/`](../../src/engine/layout/measurement/index.ts)                                             | `Size[]`, `LabelBox`                            |
+|   2 | Structure   | [04 — Structure](./04-structure.md)                           | [`1_cycle_breaking/1_6_structure.rs`](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs)                               | `StructureResult`                               |
+|   3 | Rank        | [05 — Rank Assignment](./05-rank-assignment.md)               | [`2_rank_assignment/2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs)                         | `RankResult`                                    |
+|   4 | Layer       | [06 — Layering and Labels](./06-layering-and-labels.md)       | [`3_crossing_minimization/3_1_layer_builder.rs`](../../crates/gvui/src/3_crossing_minimization/3_1_layer_builder.rs)         | `Layered`                                       |
+|   5 | Order       | [07 — Crossing Minimization](./07-crossing-minimization.md)   | [`3_crossing_minimization/3_4_order_facade.rs`](../../crates/gvui/src/3_crossing_minimization/3_4_order_facade.rs)           | `OrderingOutcome` (+ `Item::order` in place)    |
+|   6 | Demand      | [08 — Routing Demand](./08-routing-demand.md)                 | [`4_coordinate_assignment/4_1_lane_demand.rs`](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs)             | `RoutingDemand`                                 |
+|   7 | Coordinates | [09 — Coordinate Assignment](./09-coordinate-assignment.md)   | [`4_coordinate_assignment/4_4_coordinate_facade.rs`](../../crates/gvui/src/4_coordinate_assignment/4_4_coordinate_facade.rs) | `Vec<f64>` rank tops (+ `Item::x`/`y` in place) |
+|   8 | Route       | [10 — Edge Routing](./10-edge-routing.md)                     | [`5_edge_routing/5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs)                             | `RouteResult`                                   |
+|   9 | Emit        | [11 — Emit and Quality](./11-emit-and-quality.md)             | [`6_validation/6_3_emit.rs`](../../crates/gvui/src/6_validation/6_3_emit.rs)                                                 | `CustomLayoutResult`                            |
 
 Phase 1 is the only phase that does not live in Rust. Measurement is where text becomes a box, and
 it must happen where the fonts are — in the browser. Every type in the table is declared in
@@ -161,7 +161,7 @@ Two ordering details inside those phases are load-bearing and easy to get wrong:
 
 - **Phase 3 ends with `enforce_labelled_span`, after balancing.** A labelled edge is drawable at
   span 0 (flat, badge on the horizontal run) or span $\ge 2$ (an intermediate rank carries the
-  `Label` item) and at *no other value* — span 1 has no rank for the label item, so the badge falls
+  `Label` item) and at _no other value_ — span 1 has no rank for the label item, so the badge falls
   through to Phase 8's positional safety net, which may emit a leader line and is covered by no
   reservation. Peer relaxation makes span 0 reachable and balancing is the step most likely to then
   push an endpoint down by exactly one, so the repair has to observe the rank vector balancing
@@ -180,19 +180,19 @@ one-to-one: directory `3_crossing_minimization/` holds Phases 4 and 5, directory
 
 ## Chapters
 
-| Chapter | What it covers |
-| --- | --- |
-| [01 — Foundations](./01-foundations.md) | Graphs from zero: nodes, edges, degree, paths, cycles, DAGs, components, planarity. Then ranks, layered drawings and dummy nodes. |
-| [02 — The Pipeline](./02-the-pipeline.md) | The design argument. Why the naive loop fails, what replaces it, and why the phase order is forced. |
-| [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | Wire format to `GraphIr`. Interning, CSR adjacency, bundles, components, and the text/geometry boundary. |
-| [04 — Structure](./04-structure.md) | Strongly connected components, the feedback arc set, and why feedback edges are reversed rather than dropped. |
-| [05 — Rank Assignment](./05-rank-assignment.md) | Longest path, tight trees, and network simplex. What "optimal ranking" means and what it costs. |
-| [06 — Layering and Labels](./06-layering-and-labels.md) | Dummy chains, and the label-item trick that makes badge space allocation impossible to fail. |
-| [07 — Crossing Minimization](./07-crossing-minimization.md) | The only search. BMJ counting, median sweeps, transpose, seeds and dummy priority. |
-| [08 — Routing Demand](./08-routing-demand.md) | Channels, corridors, interval graphs, greedy colouring, and the separations that make routing safe. |
-| [09 — Coordinate Assignment](./09-coordinate-assignment.md) | Rank bands for $y$, Brandes–Köpf for $x$, and the four-candidate alignment. |
-| [10 — Edge Routing](./10-edge-routing.md) | Scored port sides, port order and destination affinity, straight-shot alignment, coordinate-space lane assignment, lane index to polyline, bundling, self-loops, flat peer edges, octilinear chamfering, and badge geometry. |
-| [11 — Emit and Quality](./11-emit-and-quality.md) | Constraints that are asserted, metrics that are reported, and the difference between the two. |
+| Chapter                                                       | What it covers                                                                                                                                                                                                               |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [01 — Foundations](./01-foundations.md)                       | Graphs from zero: nodes, edges, degree, paths, cycles, DAGs, components, planarity. Then ranks, layered drawings and dummy nodes.                                                                                            |
+| [02 — The Pipeline](./02-the-pipeline.md)                     | The design argument. Why the naive loop fails, what replaces it, and why the phase order is forced.                                                                                                                          |
+| [03 — Ingest and Measurement](./03-ingest-and-measurement.md) | Wire format to `GraphIr`. Interning, CSR adjacency, bundles, components, and the text/geometry boundary.                                                                                                                     |
+| [04 — Structure](./04-structure.md)                           | Strongly connected components, the feedback arc set, and why feedback edges are reversed rather than dropped.                                                                                                                |
+| [05 — Rank Assignment](./05-rank-assignment.md)               | Longest path, tight trees, and network simplex. What "optimal ranking" means and what it costs.                                                                                                                              |
+| [06 — Layering and Labels](./06-layering-and-labels.md)       | Dummy chains, and the label-item trick that makes badge space allocation impossible to fail.                                                                                                                                 |
+| [07 — Crossing Minimization](./07-crossing-minimization.md)   | The only search. BMJ counting, median sweeps, transpose, seeds and dummy priority.                                                                                                                                           |
+| [08 — Routing Demand](./08-routing-demand.md)                 | Channels, corridors, interval graphs, greedy colouring, and the separations that make routing safe.                                                                                                                          |
+| [09 — Coordinate Assignment](./09-coordinate-assignment.md)   | Rank bands for $y$, Brandes–Köpf for $x$, and the four-candidate alignment.                                                                                                                                                  |
+| [10 — Edge Routing](./10-edge-routing.md)                     | Scored port sides, port order and destination affinity, straight-shot alignment, coordinate-space lane assignment, lane index to polyline, bundling, self-loops, flat peer edges, octilinear chamfering, and badge geometry. |
+| [11 — Emit and Quality](./11-emit-and-quality.md)             | Constraints that are asserted, metrics that are reported, and the difference between the two.                                                                                                                                |
 
 Related reading:
 

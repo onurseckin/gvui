@@ -139,7 +139,15 @@ pub fn layout_radial(
     };
 
     finish_geometric_layout(
-        &ir, &rects, &placement, routes, badges, leader_count, stats, t_start, config,
+        &ir,
+        &rects,
+        &placement,
+        routes,
+        badges,
+        leader_count,
+        stats,
+        t_start,
+        config,
     )
 }
 
@@ -607,7 +615,11 @@ mod tests {
         let a_rank = out.nodes.iter().find(|n| n.id == "a").map(|n| n.rank);
         let island_rank = out.nodes.iter().find(|n| n.id == "island").map(|n| n.rank);
         assert_eq!(a_rank, Some(1));
-        assert_eq!(island_rank, Some(2), "an unreachable node goes one ring out");
+        assert_eq!(
+            island_rank,
+            Some(2),
+            "an unreachable node goes one ring out"
+        );
     }
 
     #[test]
@@ -669,7 +681,11 @@ mod tests {
         let tree_edge = out.edges.iter().find(|e| e.edge_id == "e0").expect("e0");
         let chord = out.edges.iter().find(|e| e.edge_id == "e2").expect("e2");
         assert_eq!(tree_edge.points.len(), 2, "tree edges are straight");
-        assert_eq!(chord.points.len(), 3, "chords bend through one control point");
+        assert_eq!(
+            chord.points.len(),
+            3,
+            "chords bend through one control point"
+        );
     }
 
     #[test]
@@ -715,7 +731,10 @@ mod tests {
 
         let w0 = bbox_width(&layout_radial(&nodes, &edges, &base));
         let w1 = bbox_width(&layout_radial(&nodes, &edges, &wide));
-        assert!(w1 > w0, "doubling node_gap must widen the drawing: {w0} -> {w1}");
+        assert!(
+            w1 > w0,
+            "doubling node_gap must widen the drawing: {w0} -> {w1}"
+        );
     }
 
     #[test]

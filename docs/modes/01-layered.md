@@ -24,7 +24,7 @@ that follows goes on the row below, and edges run downhill.
 
 The pipeline that produces this — cycle breaking, rank assignment, layering, crossing minimization,
 routing demand, coordinate assignment, edge routing, emit — is nine phases and has its own section:
-**[docs/engine/](../engine/README.md)**. Start there if you want to know *how* the drawing is
+**[docs/engine/](../engine/README.md)**. Start there if you want to know _how_ the drawing is
 computed.
 
 This page covers only what is specific to the mode as a user-facing choice: the `direction` knob,
@@ -40,12 +40,12 @@ See [the implementation](../../crates/gvui/src/7_engines/7_1_layered.rs).
 Four values, declared in
 [the config](../../crates/gvui/src/0_common/0_2_config.rs):
 
-| value | ranks increase | reads as |
-| --- | --- | --- |
-| `top-down` (default) | downward | a flowchart |
-| `bottom-up` | upward | a dependency tree, roots at the bottom |
-| `left-right` | rightward | a timeline or swimlane |
-| `right-left` | leftward | a timeline for a right-to-left script |
+| value                | ranks increase | reads as                               |
+| -------------------- | -------------- | -------------------------------------- |
+| `top-down` (default) | downward       | a flowchart                            |
+| `bottom-up`          | upward         | a dependency tree, roots at the bottom |
+| `left-right`         | rightward      | a timeline or swimlane                 |
+| `right-left`         | leftward       | a timeline for a right-to-left script  |
 
 **`direction` is a config field and nothing else.** It is not part of the mode. Until v3 it was
 both — `left-right` and `bottom-up` were also mode strings — and because the client sends a fully
@@ -99,11 +99,11 @@ way out.
 The full table, from
 [`layout_layered`](../../crates/gvui/src/7_engines/7_1_layered.rs):
 
-| direction | on the way in | on the way out |
-| --- | --- | --- |
-| `top-down` | — | — |
-| `bottom-up` | — | mirror on the vertical axis |
-| `left-right` | swap every box's $(w, h)$ | transpose |
+| direction    | on the way in             | on the way out                                |
+| ------------ | ------------------------- | --------------------------------------------- |
+| `top-down`   | —                         | —                                             |
+| `bottom-up`  | —                         | mirror on the vertical axis                   |
+| `left-right` | swap every box's $(w, h)$ | transpose                                     |
 | `right-left` | swap every box's $(w, h)$ | transpose, then mirror on the horizontal axis |
 
 **Why swap the boxes before ingest rather than after?** Because then every number the pipeline
@@ -116,7 +116,7 @@ gap you carefully computed would now be a vertical one.
 The mirror for `bottom-up`/`right-left` reflects across the **midline of the drawing's own bounding
 box**, not across the origin. That keeps the result inside the same rectangle, so `graph_padding`
 survives on all four sides and no renormalization pass is needed. A mirror also has to move the port
-*sides* — a `Bottom` port becomes a `Top` port under a vertical mirror — but it deliberately does
+_sides_ — a `Bottom` port becomes a `Top` port under a vertical mirror — but it deliberately does
 **not** reverse polyline point order, because source-to-target is a property of the edge, not of the
 frame it is drawn in.
 
@@ -132,12 +132,12 @@ two directions cannot disagree, because there is only one of them.
 
 ### One contract subtlety
 
-Because the boxes are swapped *before* ingest, the clamps `min_node_width` (default 120) and
+Because the boxes are swapped _before_ ingest, the clamps `min_node_width` (default 120) and
 `max_node_width` (default 420), and the port-pitch driven width growth, all run **after** the swap.
 In `left-right` and `right-left` they therefore constrain what the viewer perceives as node
 **height**.
 
-That is deliberate, not an oversight. Those knobs bound the *along-rank extent* — the axis that
+That is deliberate, not an oversight. Those knobs bound the _along-rank extent_ — the axis that
 ports are distributed along, and therefore the axis that has to grow when a node is busy. A caller
 who wants a hard bound on the drawn horizontal size in LR mode must clamp the input boxes
 themselves. This is documented on
@@ -151,15 +151,15 @@ many times two lines cross.
 
 `left-right` is a different story, because it transposes the input:
 
-| dataset | `top-down` | `left-right` |
-| --- | --- | --- |
-| `multi_component_tenants` | 7 ranks, 24 bends | **5 ranks, 12 bends** |
-| `feedback_retry_state_machine` | 2 geometric crossings | 6 geometric crossings |
+| dataset                          | `top-down`             | `left-right`           |
+| -------------------------------- | ---------------------- | ---------------------- |
+| `multi_component_tenants`        | 7 ranks, 24 bends      | **5 ranks, 12 bends**  |
+| `feedback_retry_state_machine`   | 2 geometric crossings  | 6 geometric crossings  |
 | `microservice_platform_topology` | 22 geometric crossings | 24 geometric crossings |
-| `peer_mesh_service_registry` | 78 bends | 76 bends |
+| `peer_mesh_service_registry`     | 78 bends               | 76 bends               |
 
 That spread is expected rather than a defect. `balance_ranks` derives its rank-width cap from the
-*average box aspect ratio*, and LR transposes every box — so a 240×76 box becomes a 76×240 box and
+_average box aspect ratio_, and LR transposes every box — so a 240×76 box becomes a 76×240 box and
 the balancer legitimately reaches a different conclusion about how wide a rank should be. A drawing
 that is wide by nature should not be balanced like a tall one. On `multi_component_tenants` that
 conclusion happens to be much better; on `feedback_retry_state_machine` it is worse. Neither is a
@@ -210,13 +210,13 @@ The same single corner, zoomed in, is what actually distinguishes them:
      `L` command             radius r                the join is a real 45° segment
 ```
 
-| value | what the renderer emits | notes |
-| --- | --- | --- |
-| `orthogonal` | `M`/`L` through every waypoint | crispest; every segment axis-aligned |
+| value               | what the renderer emits                                                                                                                                  | notes                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orthogonal`        | `M`/`L` through every waypoint                                                                                                                           | crispest; every segment axis-aligned                                                                                                          |
 | `rounded` (default) | `M`/`L` with each interior corner replaced by a quadratic arc of radius $\min(\texttt{corner\_radius},\ \tfrac{1}{2}\ell_{in},\ \tfrac{1}{2}\ell_{out})$ | `corner_radius` defaults to 8; clamping against half of each adjacent segment means two neighbouring corners can never claim overlapping arcs |
-| `spline` | Catmull-Rom through the waypoints, converted to cubic Béziers | smooth; the waypoints are unchanged, so the edge still respects its routing lane |
-| `octilinear` | `M`/`L` through every waypoint — **a plain polyline** | the diagonals are already *in* the points; see below |
-| `straight` | `M first L last`, interior waypoints discarded | draws the chord; will cut through whatever the router was avoiding |
+| `spline`            | Catmull-Rom through the waypoints, converted to cubic Béziers                                                                                            | smooth; the waypoints are unchanged, so the edge still respects its routing lane                                                              |
+| `octilinear`        | `M`/`L` through every waypoint — **a plain polyline**                                                                                                    | the diagonals are already _in_ the points; see below                                                                                          |
+| `straight`          | `M first L last`, interior waypoints discarded                                                                                                           | draws the chord; will cut through whatever the router was avoiding                                                                            |
 
 The renderer draws `octilinear` with the same code path as `orthogonal`, and that is not a
 shortcut. The engine has already replaced each right-angle corner with a 45-degree chamfer, so the
@@ -260,8 +260,8 @@ rendering artefact rather than as a diagonal.
    are optimally colourable in one sweep      not perfect — no exact colouring
 ```
 
-That colouring is why Phase 6 can reserve the exact space every segment will need *before any
-geometry exists*, and therefore why routing in this engine **cannot fail**: there is no rip-up, no
+That colouring is why Phase 6 can reserve the exact space every segment will need _before any
+geometry exists_, and therefore why routing in this engine **cannot fail**: there is no rip-up, no
 reroute, no budget to exhaust. A true eight-direction router would replace that exact reservation
 with a search, and hand back the guarantee that every edge routes.
 
@@ -281,7 +281,7 @@ segment really is axis-aligned. That check is skipped when `edge_style` is `spli
 
 The radial engine exploits the same rule from the other side: it evaluates its own constraints
 against a config clone whose `edge_style` is forced to `straight`, so a caller's `rounded` setting —
-which is about how the *layered* engine renders — cannot turn a correct radial drawing into a hard
+which is about how the _layered_ engine renders — cannot turn a correct radial drawing into a hard
 failure.
 
 ---
@@ -295,22 +295,22 @@ default **on**; each is explained where it is implemented, in
 ### `flexible_port_sides` and `flow_side_bias`
 
 Before v3, port side was a fixed table: every forward edge left the source's `Bottom` face and
-entered the target's `Top` face. A target that is mostly *sideways* therefore had to dog-leg to get
+entered the target's `Top` face. A target that is mostly _sideways_ therefore had to dog-leg to get
 there. Now all four faces are candidates and
 [`best_side_pair`](../../crates/gvui/src/5_edge_routing/5_1_ports.rs) scores the sixteen
 `(source_side, target_side)` combinations with a closed-form cost, lexicographically by
 `(bends, flow_penalty + length/1000, congestion, candidate order)`, and takes the minimum. Sixteen
-combinations *evaluated*, not searched — v1 also tried sixteen, then searched again to repair the
+combinations _evaluated_, not searched — v1 also tried sixteen, then searched again to repair the
 crossings that produced.
 
 `flow_side_bias` (default 1.0) is what keeps a hierarchy reading top-to-bottom: it charges one unit
 per end that is not on the rank-flow face, and one unit is worth a kilopixel of path. In practice a
-side face is chosen only when it strictly *reduces* the bend count.
+side face is chosen only when it strictly _reduces_ the bend count.
 
 **Why this cannot break Phase 6's reservation.** A side port still descends into the channel below
 its own rank — Step 5.2 drops from the port stub straight to the channel and runs horizontally from
 there. The travel through the layered structure is unchanged; only the last few pixels before the
-node boundary move. What does change is *where* the descent happens: outside a vertical face rather
+node boundary move. What does change is _where_ the descent happens: outside a vertical face rather
 than inside the node's own width, i.e. in the gap between the node and its rank neighbour. That gap
 is Phase 6's corridor, and a vertical face is refused unless the corridor is at least two stub
 lengths wide, which keeps the descent out of the neighbour's interior by construction.
@@ -318,12 +318,12 @@ lengths wide, which keeps the descent out of the neighbour's interior by constru
 ### `straight_shot_alignment`
 
 Slides a source and a target port onto a common coordinate when that collapses a dog-leg into one
-straight segment. A `Top`/`Bottom` port is *free* — it drops wherever it sits along the face — while
-a `Left`/`Right` port is *fixed*, dropping exactly `port_stub_length` outside its face. So both-free
+straight segment. A `Top`/`Bottom` port is _free_ — it drops wherever it sits along the face — while
+a `Left`/`Right` port is _fixed_, dropping exactly `port_stub_length` outside its face. So both-free
 ends meet in the middle, one-free ends move onto the fixed drop, and both-fixed ends do nothing.
 
 It is the other half of `flexible_port_sides`: a vertical face is only ever chosen because the
-scorer expects the *other* end to come and meet the x it drops at, and this is the pass that makes
+scorer expects the _other_ end to come and meet the x it drops at, and this is the pass that makes
 it do so. Measured during the v3 pass: **92 → 61 bends on a 24-node graph.**
 
 A snap is refused unless the moved port stays inside the face's padding and at least `port_pitch`
@@ -335,7 +335,7 @@ crossings the sort removed.
 
 Two siblings joined by an edge used to be forced onto different ranks and connected vertically,
 because every edge carried `min_len >= 1`. Peer edges — endpoints that share a predecessor, with no
-other directed path between them — now get `min_len = 0`, so the ranker is *allowed* to put them
+other directed path between them — now get `min_len = 0`, so the ranker is _allowed_ to put them
 side by side and join them with a straight horizontal line.
 
 This made `FlatEdge` reachable for the first time. It was dead code: `span == 0` was impossible, so
@@ -343,11 +343,11 @@ the flat-edge router had never run on a real graph.
 
 Measured, by turning it off:
 
-| dataset | peers on | peers off |
-| --- | ---: | ---: |
-| `peer_mesh_service_registry` | 7 ranks, 78 bends | 15 ranks, 98 bends |
-| `heavy_label_data_contracts` | 4 bends | 12 bends |
-| `ai_agent_trace` | 28 bends | 36 bends |
+| dataset                        |           peers on |          peers off |
+| ------------------------------ | -----------------: | -----------------: |
+| `peer_mesh_service_registry`   |  7 ranks, 78 bends | 15 ranks, 98 bends |
+| `heavy_label_data_contracts`   |            4 bends |           12 bends |
+| `ai_agent_trace`               |           28 bends |           36 bends |
 | `feedback_retry_state_machine` | 15 ranks, 44 bends | 17 ranks, 50 bends |
 
 **The subtlety worth documenting.** A labelled edge is drawable at span 0 or span ≥ 2, and at no
@@ -386,25 +386,25 @@ the whole suite.
 
 All defaults from [the config](../../crates/gvui/src/0_common/0_2_config.rs).
 
-| knob | default | effect |
-| --- | ---: | --- |
-| `direction` | `top-down` | flow direction; the only place it is set |
-| `edge_style` | `rounded` | how waypoints are joined; only `octilinear` costs a re-layout |
-| `corner_radius` | 8 | arc radius for `rounded`; also the chamfer size for `octilinear`, floored at 12 |
-| `label_placement` | `on-edge` | badge centred on the edge, the line passing behind it. The old `beside-edge` default put the badge in the right half of a double-width label item and needed a dashed connector to reach the anchor; the renderer now draws that connector only when the anchor genuinely falls outside the badge rect |
-| `node_gap` | 56 | minimum separation between adjacent items in a rank |
-| `rank_gap` | 120 | minimum separation between rank bands; routing channels may raise it |
-| `compaction` | `balanced` | multiplies every gap by 0.65 (`tight`), 1.0, or 1.45 (`airy`) |
-| `target_aspect_ratio` | 1.6 | drives the rank-width cap when `max_nodes_per_rank` is 0 |
-| `balance_ranks` | `true` | whether rank balancing runs at all |
-| `flexible_port_sides` | `true` | score all four faces per endpoint instead of forcing Bottom → Top |
-| `flow_side_bias` | 1.0 | how strongly a forward edge still prefers the rank-flow faces |
-| `straight_shot_alignment` | `true` | snap two ports to a common coordinate to collapse a dog-leg |
-| `same_rank_peer_edges` | `true` | let peer edges relax to `min_len = 0` and route flat |
-| `bundle_parallel_edges` | `true` | route parallel edges between one node pair as a single bus |
-| `ranker` | `network-simplex` | rank assignment algorithm |
-| `ordering` | `median` | two-layer ordering heuristic |
-| `coordinator` | `brandes-kopf` | horizontal coordinate assignment |
+| knob                      |           default | effect                                                                                                                                                                                                                                                                                                 |
+| ------------------------- | ----------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `direction`               |        `top-down` | flow direction; the only place it is set                                                                                                                                                                                                                                                               |
+| `edge_style`              |         `rounded` | how waypoints are joined; only `octilinear` costs a re-layout                                                                                                                                                                                                                                          |
+| `corner_radius`           |                 8 | arc radius for `rounded`; also the chamfer size for `octilinear`, floored at 12                                                                                                                                                                                                                        |
+| `label_placement`         |         `on-edge` | badge centred on the edge, the line passing behind it. The old `beside-edge` default put the badge in the right half of a double-width label item and needed a dashed connector to reach the anchor; the renderer now draws that connector only when the anchor genuinely falls outside the badge rect |
+| `node_gap`                |                56 | minimum separation between adjacent items in a rank                                                                                                                                                                                                                                                    |
+| `rank_gap`                |               120 | minimum separation between rank bands; routing channels may raise it                                                                                                                                                                                                                                   |
+| `compaction`              |        `balanced` | multiplies every gap by 0.65 (`tight`), 1.0, or 1.45 (`airy`)                                                                                                                                                                                                                                          |
+| `target_aspect_ratio`     |               1.6 | drives the rank-width cap when `max_nodes_per_rank` is 0                                                                                                                                                                                                                                               |
+| `balance_ranks`           |            `true` | whether rank balancing runs at all                                                                                                                                                                                                                                                                     |
+| `flexible_port_sides`     |            `true` | score all four faces per endpoint instead of forcing Bottom → Top                                                                                                                                                                                                                                      |
+| `flow_side_bias`          |               1.0 | how strongly a forward edge still prefers the rank-flow faces                                                                                                                                                                                                                                          |
+| `straight_shot_alignment` |            `true` | snap two ports to a common coordinate to collapse a dog-leg                                                                                                                                                                                                                                            |
+| `same_rank_peer_edges`    |            `true` | let peer edges relax to `min_len = 0` and route flat                                                                                                                                                                                                                                                   |
+| `bundle_parallel_edges`   |            `true` | route parallel edges between one node pair as a single bus                                                                                                                                                                                                                                             |
+| `ranker`                  | `network-simplex` | rank assignment algorithm                                                                                                                                                                                                                                                                              |
+| `ordering`                |          `median` | two-layer ordering heuristic                                                                                                                                                                                                                                                                           |
+| `coordinator`             |    `brandes-kopf` | horizontal coordinate assignment                                                                                                                                                                                                                                                                       |
 
 Each is explained where it is used, in [docs/engine/](../engine/README.md).
 

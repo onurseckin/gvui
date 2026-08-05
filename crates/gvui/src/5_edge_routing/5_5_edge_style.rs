@@ -191,7 +191,10 @@ impl NodeRectIndex {
         let expanded: Vec<Rect> = rects
             .into_iter()
             .map(|r| {
-                if !(r.x.is_finite() && r.y.is_finite() && r.width.is_finite() && r.height.is_finite())
+                if !(r.x.is_finite()
+                    && r.y.is_finite()
+                    && r.width.is_finite()
+                    && r.height.is_finite())
                 {
                     poisoned = true;
                 }
@@ -335,7 +338,14 @@ pub fn chamfer_corners(
         // `prev` is read from the *input*, not from `out`. Using the already-chamfered predecessor
         // would shrink the measured leg and break the "at most half of each leg" bound that makes
         // neighbouring corners independent.
-        match chamfer_at(points[i - 1], points[i], points[i + 1], corner_cut, nodes, eps) {
+        match chamfer_at(
+            points[i - 1],
+            points[i],
+            points[i + 1],
+            corner_cut,
+            nodes,
+            eps,
+        ) {
             Some((entry, exit)) => {
                 out.push(entry);
                 out.push(exit);
@@ -467,8 +477,12 @@ fn axis_cells(a: f64, b: f64, cell: f64) -> Option<(i64, i64)> {
     }
     let lo = a.min(b);
     let hi = a.max(b);
-    let c0 = (lo / cell).floor().clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
-    let c1 = (hi / cell).floor().clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
+    let c0 = (lo / cell)
+        .floor()
+        .clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
+    let c1 = (hi / cell)
+        .floor()
+        .clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
     if c1 - c0 + 1 > MAX_AXIS_CELLS {
         return None;
     }
@@ -605,8 +619,10 @@ mod tests {
 
     #[test]
     fn corner_cut_is_driven_by_corner_radius_but_never_below_the_floor() {
-        let mut config = CustomLayoutConfig::default();
-        config.corner_radius = 0.0;
+        let mut config = CustomLayoutConfig {
+            corner_radius: 0.0,
+            ..Default::default()
+        };
         assert_eq!(octilinear_corner_cut(&config), MIN_CORNER_CUT);
         config.corner_radius = 8.0;
         assert_eq!(octilinear_corner_cut(&config), MIN_CORNER_CUT);
@@ -648,14 +664,17 @@ mod tests {
         // to 10 each, so they meet at its midpoint and never cross.
         let pts = [p(0.0, 0.0), p(0.0, 100.0), p(20.0, 100.0), p(20.0, 200.0)];
         let out = chamfer_corners(&pts, 12.0, &no_nodes(), EPS);
-        assert_eq!(out, vec![
-            p(0.0, 0.0),
-            p(0.0, 90.0),
-            p(10.0, 100.0),
-            p(10.0, 100.0),
-            p(20.0, 110.0),
-            p(20.0, 200.0),
-        ]);
+        assert_eq!(
+            out,
+            vec![
+                p(0.0, 0.0),
+                p(0.0, 90.0),
+                p(10.0, 100.0),
+                p(10.0, 100.0),
+                p(20.0, 110.0),
+                p(20.0, 200.0),
+            ]
+        );
         // Monotone in x along the shared leg: no backtracking was introduced.
         assert!(out.windows(2).all(|w| w[1].x >= w[0].x - 1e-9));
     }
@@ -675,12 +694,7 @@ mod tests {
 
     #[test]
     fn one_blocked_corner_does_not_stop_the_others() {
-        let pts = [
-            p(0.0, 0.0),
-            p(0.0, 100.0),
-            p(200.0, 100.0),
-            p(200.0, 300.0),
-        ];
+        let pts = [p(0.0, 0.0), p(0.0, 100.0), p(200.0, 100.0), p(200.0, 300.0)];
         // Sits on the second corner's chamfer only.
         let nodes = NodeRectIndex::new([rect(186.0, 104.0, 20.0, 20.0)]);
         let out = chamfer_corners(&pts, 12.0, &nodes, EPS);
@@ -755,7 +769,10 @@ mod tests {
         );
         // Legs shorter than epsilon leave nothing worth cutting.
         let tiny = [p(0.0, 0.0), p(0.0, 0.0005), p(0.0005, 0.0005)];
-        assert_eq!(chamfer_corners(&tiny, 12.0, &no_nodes(), EPS), tiny.to_vec());
+        assert_eq!(
+            chamfer_corners(&tiny, 12.0, &no_nodes(), EPS),
+            tiny.to_vec()
+        );
     }
 
     #[test]
@@ -872,8 +889,10 @@ mod tests {
             .map(|(i, &(s, t, l))| edge(i, s, t, l))
             .collect();
 
-        let mut config = CustomLayoutConfig::default();
-        config.edge_style = EdgeStyle::Octilinear;
+        let config = CustomLayoutConfig {
+            edge_style: EdgeStyle::Octilinear,
+            ..Default::default()
+        };
 
         let result = crate::compute_layout(&nodes, &edges, &config, EngineMode::Layered);
         let m = &result.validation.metrics;
@@ -895,9 +914,7 @@ mod tests {
             .edges
             .iter()
             .flat_map(|r| r.points.windows(2))
-            .filter(|w| {
-                (w[1].x - w[0].x).abs() > 1.0 && (w[1].y - w[0].y).abs() > 1.0
-            })
+            .filter(|w| (w[1].x - w[0].x).abs() > 1.0 && (w[1].y - w[0].y).abs() > 1.0)
             .count();
         assert!(diagonals > 0, "octilinear produced no diagonal segments");
 

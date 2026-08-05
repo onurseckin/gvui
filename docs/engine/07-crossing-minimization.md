@@ -6,7 +6,7 @@ At the end of [Phase 4](./06-layering-and-labels.md) the drawing is a stack of r
 real node, dummy bend point, or edge badge — sits in exactly one rank, and every edge has been
 expanded into a chain of links, each connecting one rank to the next one down.
 
-What is *not* yet decided is the left-to-right sequence within each rank. That is this phase's only
+What is _not_ yet decided is the left-to-right sequence within each rank. That is this phase's only
 job, and it is the whole ballgame: the number of times edges cross each other is completely
 determined by those sequences.
 
@@ -82,7 +82,7 @@ This is what
 [`count_all`](../../crates/gvui/src/3_crossing_minimization/3_2_crossing_counting.rs) computes, and
 it is exact — not an estimate.
 
-### Why this is *combinatorial* and not *geometric*
+### Why this is _combinatorial_ and not _geometric_
 
 The count above is a property of a permutation. It is the number the search minimizes. It is not the
 number of places where two ink lines happen to intersect in the final SVG, which is a different
@@ -91,7 +91,7 @@ quantity measured much later by `detect_geometric_crossings` for the metrics rep
 The two numbers agree for shallow drawings and diverge slightly for dense ones. That gap is a real,
 characterised property of orthogonal lane routing, and it is explained at the end of
 [the next chapter](./08-routing-demand.md#8-the-measured-consequence). What matters here is that the
-combinatorial count is the *only* thing Phase 5 optimizes, and that no later phase can change it.
+combinatorial count is the _only_ thing Phase 5 optimizes, and that no later phase can change it.
 
 > **Invariant leaving Phase 5:** every rank is a fixed permutation. All crossing decisions are
 > final. Phase 6 derives lane demand from the ordering, Phase 7 derives coordinates from that, and
@@ -107,7 +107,7 @@ two-sided version, where both ranks are free, is harder still. And a real graph 
 all interact.
 
 That is not a statement about implementation effort. It means there is no known rule of the form
-"sort each rank by *X*" that is guaranteed to produce the optimum, and — unless P = NP — there never
+"sort each rank by _X_" that is guaranteed to produce the optimum, and — unless P = NP — there never
 will be. Anything short of exhaustive enumeration is a heuristic, and enumeration is $O(n!)$ per
 rank.
 
@@ -119,7 +119,7 @@ So the engine does what you do when a problem is genuinely hard and you have a m
 4. Do all of that from several different starting permutations and keep the best result.
 5. Never spend the budget anywhere else.
 
-Point 5 is the design rule of the whole engine restated. v1 wrapped a search around the *entire*
+Point 5 is the design rule of the whole engine restated. v1 wrapped a search around the _entire_
 pipeline — route everything, score it, mutate a port, route everything again. v2 confines search to
 this one phase, where the objective is exact and costs $O(E \log V)$ to evaluate, and lets every
 other phase run once.
@@ -159,12 +159,12 @@ There is a much better way, and it comes from noticing that the naive loop is re
 **inversions** in a sequence.
 
 Sort the arcs by `(source order, target order)`. Now read off just the target orders, in that sorted
-sequence. A pair of arcs crosses exactly when an earlier entry in this sequence is *strictly
-greater* than a later one. That is the textbook inversion count — and counting inversions is a
+sequence. A pair of arcs crosses exactly when an earlier entry in this sequence is _strictly
+greater_ than a later one. That is the textbook inversion count — and counting inversions is a
 solved problem with a binary indexed tree.
 
 Sorting by source-then-target is doing double duty. It puts the arcs in the order the inversion
-count needs, *and* it makes shared endpoints handle themselves: two arcs from the same source appear
+count needs, _and_ it makes shared endpoints handle themselves: two arcs from the same source appear
 consecutively with non-decreasing targets, so the earlier one is never strictly greater than the
 later one, so they are never counted. No special case needed.
 
@@ -196,12 +196,12 @@ One arc costs one root-to-leaf walk, so the whole rank pair is $O(E \log V)$.
 Two ranks of four items each, five arcs. Sorted by `(source, target)`:
 
 | arc | source order | target order |
-| --- | ---: | ---: |
-| a | 0 | 2 |
-| b | 1 | 0 |
-| c | 1 | 3 |
-| d | 2 | 1 |
-| e | 3 | 1 |
+| --- | -----------: | -----------: |
+| a   |            0 |            2 |
+| b   |            1 |            0 |
+| c   |            1 |            3 |
+| d   |            2 |            1 |
+| e   |            3 |            1 |
 
 The target sequence is `[2, 0, 3, 1, 1]`. Brute force says 5 crossings: `a×b`, `a×d`, `a×e`, `c×d`,
 `c×e`. (`b` and `c` share source 1, so they never cross; `d` and `e` share target 1, likewise.)
@@ -220,17 +220,17 @@ Now the tree. $q = 4$, so `size = 4` and leaf $k$ lives at array index $k + 3$:
 
 Insert the targets in sequence:
 
-| step | target | leaf idx | walk | sibling sums added | running total |
-| --- | ---: | ---: | --- | --- | ---: |
-| 1 | 2 | 5 | 5 (left) → 2 → 0 | `tree[6] = 0` | 0 |
-| 2 | 0 | 3 | 3 (left) → 1 (left) → 0 | `tree[4] = 0`, `tree[2] = 1` | 1 |
-| 3 | 3 | 6 | 6 (right) → 2 (right) → 0 | — | 1 |
-| 4 | 1 | 4 | 4 (right) → 1 (left) → 0 | `tree[2] = 2` | 3 |
-| 5 | 1 | 4 | 4 (right) → 1 (left) → 0 | `tree[2] = 2` | 5 |
+| step | target | leaf idx | walk                      | sibling sums added           | running total |
+| ---- | -----: | -------: | ------------------------- | ---------------------------- | ------------: |
+| 1    |      2 |        5 | 5 (left) → 2 → 0          | `tree[6] = 0`                |             0 |
+| 2    |      0 |        3 | 3 (left) → 1 (left) → 0   | `tree[4] = 0`, `tree[2] = 1` |             1 |
+| 3    |      3 |        6 | 6 (right) → 2 (right) → 0 | —                            |             1 |
+| 4    |      1 |        4 | 4 (right) → 1 (left) → 0  | `tree[2] = 2`                |             3 |
+| 5    |      1 |        4 | 4 (right) → 1 (left) → 0  | `tree[2] = 2`                |             5 |
 
 Total **5**, matching brute force, in five short walks instead of ten pairwise tests. Read step 4
-carefully because it is the crux: inserting target 1 arrives at leaf index 4, which is a *right*
-child, so nothing is added there — but its parent (node 1) is a *left* child, and node 2's subtree
+carefully because it is the crux: inserting target 1 arrives at leaf index 4, which is a _right_
+child, so nothing is added there — but its parent (node 1) is a _left_ child, and node 2's subtree
 covers leaves 2 and 3, both strictly greater than 1. At that moment node 2 holds 2 (arc `a` at
 target 2 and arc `c` at target 3). Those are exactly the two crossings `a×d` and `c×d`.
 
@@ -246,14 +246,14 @@ if best_crossings == 0 || has_custom_orders { return ...; }
 
 And then a separate bug made that condition always true. v1's layer graph only admitted edges whose
 role was `Forward`; feedback and cross edges were dropped entirely, so the counter never saw them.
-Measured across all eight datasets, the number of crossings the ordering stage *saw* was:
+Measured across all eight datasets, the number of crossings the ordering stage _saw_ was:
 
-| dataset | forward | cross | feedback | crossings ordering saw | crossings the optimizer saw |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `ai_agent_trace` | 4 | 0 | 2 | 0 | 0 |
-| `crossing_mesh_10n_10e` | 5 | 0 | 5 | **0** | 7 |
-| `dense_kubernetes_mesh` | 30 | 2 | 13 | **0** | **433** |
-| `kubernetes_cluster_topology` | 11 | 0 | 2 | 0 | 2 |
+| dataset                       | forward | cross | feedback | crossings ordering saw | crossings the optimizer saw |
+| ----------------------------- | ------: | ----: | -------: | ---------------------: | --------------------------: |
+| `ai_agent_trace`              |       4 |     0 |        2 |                      0 |                           0 |
+| `crossing_mesh_10n_10e`       |       5 |     0 |        5 |                  **0** |                           7 |
+| `dense_kubernetes_mesh`       |      30 |     2 |       13 |                  **0** |                     **433** |
+| `kubernetes_cluster_topology` |      11 |     0 |        2 |                      0 |                           2 |
 
 Zero on every dataset. The early return fired every time. **Crossing minimization never executed on
 real input, ever.** The 191 crossings v1 produced on the dense mesh were not the result of a search
@@ -328,7 +328,7 @@ adjacencies, the edge chains, and `item_of_node` all address items by their **gl
 Physically permuting a rank would invalidate every one of them.
 
 So every pass here works in two steps: mutate `Item::order` only, then call `materialize` once at
-the end, which permutes the slices *and* rewrites every item-index reference to match. Crossing
+the end, which permutes the slices _and_ rewrites every item-index reference to match. Crossing
 counting deliberately reads `order` and never the slice position, so the graph stays countable the
 whole time a pass is mid-permutation. That is what makes the transpose pass's local re-count legal.
 
@@ -350,7 +350,7 @@ Two details make this both correct and cheap.
 
 ### 5.1 The count is local
 
-Swapping two items *within* rank $r$ can only change crossings in the two rank pairs that touch
+Swapping two items _within_ rank $r$ can only change crossings in the two rank pairs that touch
 rank $r$: $(r-1, r)$ and $(r, r+1)$. Every other rank pair is untouched. So a candidate swap costs
 two calls to `count_between_ranks`, not a full-graph recount:
 
@@ -362,8 +362,8 @@ fn local_pair_count(layered: &Layered, rank: usize) -> usize {
 ```
 
 `count_between_ranks` returns 0 for an out-of-range rank rather than panicking, which is exactly why
-the caller can probe rank boundaries without branching. And because the count *after* accepting a
-decision is the count *before* the next candidate, the running value is carried forward — each
+the caller can probe rank boundaries without branching. And because the count _after_ accepting a
+decision is the count _before_ the next candidate, the running value is carried forward — each
 candidate costs one re-count, not two. v1 recounted the entire graph for every candidate swap.
 
 ### 5.2 The comparison bug, in detail
@@ -391,7 +391,7 @@ across the whole search.
 Walk through why that fails. Suppose the rank starts at local count 7. A swap takes it to 5, and 5
 is recorded as the global best. The next candidate swap takes 5 down to 4 — a genuine improvement —
 but it is compared against `best = 5`… and it is only accepted if it beats the best, which it does,
-so `best` becomes 4. Fine so far. Now consider a *different* rank whose local count is 9, and a swap
+so `best` becomes 4. Fine so far. Now consider a _different_ rank whose local count is 9, and a swap
 that would bring it to 6. That is a two-crossing improvement to a real part of the drawing. But
 $6 > 4$, so measured against the global best it looks like a regression, and it is rejected.
 
@@ -432,25 +432,25 @@ Keeping a chain at one order index across all its ranks is the single largest ae
 available in this phase, and it is bought with a priority ordering
 ([`priority`](../../crates/gvui/src/3_crossing_minimization/3_3_ordering.rs)):
 
-| item kind | priority | reasoning |
-| --- | ---: | --- |
-| `Dummy` | `u32::MAX` | immovable — a straight long edge is worth more than any local nudge |
-| `Label` | `1_000_000` | a badge must not be pushed off the line it annotates |
-| `Real` | `min(degree, 999_999)` | high-degree nodes are more expensive to move |
+| item kind |               priority | reasoning                                                           |
+| --------- | ---------------------: | ------------------------------------------------------------------- |
+| `Dummy`   |             `u32::MAX` | immovable — a straight long edge is worth more than any local nudge |
+| `Label`   |            `1_000_000` | a badge must not be pushed off the line it annotates                |
+| `Real`    | `min(degree, 999_999)` | high-degree nodes are more expensive to move                        |
 
 The clamp is deliberate: a real node with a million neighbours still cannot outrank a badge.
 
-**Priority only decides contests.** When two items compute the *same* position, the higher-priority
+**Priority only decides contests.** When two items compute the _same_ position, the higher-priority
 one takes the lower slot. It explicitly does **not** let a high-priority item claim a slot away from
 an item with a strictly better position. The reason is worth stating, because it looks like a missed
-opportunity: positions live in the *adjacent* rank's index space. A rank of 3 fed by a rank of 10
+opportunity: positions live in the _adjacent_ rank's index space. A rank of 3 fed by a rank of 10
 produces positions in $[0, 9]$ that must be interpreted as slots in $[0, 2]$, and any rescale that
 does so re-invents the very ordering the median heuristic just computed. Making a dummy chain
 perfectly vertical is [Phase 7's job](./09-coordinate-assignment.md) — Brandes–Köpf marks type-1
 conflicts precisely so inner segments stay straight. This phase only has to avoid handing Phase 7 an
 ordering that makes straightness impossible.
 
-Priority appears in one more place: in transpose, when a swap leaves the crossing count *unchanged*,
+Priority appears in one more place: in transpose, when a swap leaves the crossing count _unchanged_,
 it is rejected if it strictly worsens how well a dummy or label lines up with its chain neighbours.
 An equal-crossing swap that bends a long edge is pure loss.
 
@@ -469,13 +469,13 @@ chain.
 `apply_seed` overwrites the within-rank order from one of several deterministic starting
 permutations. Items never move between ranks; only the order within a rank changes.
 
-| seed | permutation |
-| ---: | --- |
-| 0 | keep the current order (i.e. whatever Phase 4 produced) |
-| 1 | DFS pre-order over `down`, from the rank-0 items sorted by descending out-degree |
-| 2 | BFS level order from the same roots |
-| 3 | reverse of seed 1 |
-| ≥ 4 | rotate rank $r$ by $(\text{seed} + r) \bmod \text{len}$ |
+| seed | permutation                                                                      |
+| ---: | -------------------------------------------------------------------------------- |
+|    0 | keep the current order (i.e. whatever Phase 4 produced)                          |
+|    1 | DFS pre-order over `down`, from the rank-0 items sorted by descending out-degree |
+|    2 | BFS level order from the same roots                                              |
+|    3 | reverse of seed 1                                                                |
+|  ≥ 4 | rotate rank $r$ by $(\text{seed} + r) \bmod \text{len}$                          |
 
 `config.ordering_seeds` defaults to 4, so the default run uses exactly seeds 0–3. The rotation seeds
 exist so that raising the knob produces structurally unrelated starting permutations without ever
@@ -550,7 +550,7 @@ Things to notice:
 Worst case the phase runs $\text{seeds} \times \text{sweeps} = 4 \times 16 = 64$ rounds, each a
 median sweep plus a transpose pass plus one $O(E \log V)$ full count. In practice `STALL_LIMIT` and
 the zero-crossing exit cut it far shorter. Measured on the `dense_kubernetes_mesh` fixture (30 nodes,
-45 edges, 15 ranks), the *entire* layered pipeline runs in 1.79 ms.
+45 edges, 15 ranks), the _entire_ layered pipeline runs in 1.79 ms.
 
 Identical input yields byte-identical output, with exactly one documented exception:
 `config.time_budget_ms` (default 250 ms). If that fires, the search stops at a machine-dependent
@@ -562,15 +562,15 @@ envelope. See [Determinism](../concepts/determinism.md) for the full contract.
 
 On the eight audit fixtures, v1 versus v2 combinatorial crossings:
 
-| dataset | N | E | v1 | v2 |
-| --- | ---: | ---: | ---: | ---: |
-| `kubernetes_cluster_topology` | 12 | 13 | 2 | **0** |
-| `dense_kubernetes_mesh` | 30 | 45 | 191 | **28** |
+| dataset                       |   N |   E |  v1 |     v2 |
+| ----------------------------- | --: | --: | --: | -----: |
+| `kubernetes_cluster_topology` |  12 |  13 |   2 |  **0** |
+| `dense_kubernetes_mesh`       |  30 |  45 | 191 | **28** |
 
 The dense mesh number has two causes, and it is worth separating them. Part of the improvement is
 this phase actually running. The other part is upstream: v1 dropped the edge-role map on the way
 into rank assignment, which put 28 of 30 nodes into a single rank. A 2-rank layout of a 30-node mesh
-has nowhere to *put* the crossings but on top of each other. With the role map passed through, the
+has nowhere to _put_ the crossings but on top of each other. With the role map passed through, the
 same graph ranks into 15 ranks — and then Phase 5 has something it can actually improve. See
 [Rank Assignment](./05-rank-assignment.md).
 

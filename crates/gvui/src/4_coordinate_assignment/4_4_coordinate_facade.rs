@@ -175,11 +175,7 @@ mod tests {
     #[test]
     fn empty_layered_is_a_no_op() {
         let mut layered = make_layered(&[], &[]);
-        assign_coordinates(
-            &mut layered,
-            &demand_for(0),
-            &CustomLayoutConfig::default(),
-        );
+        assign_coordinates(&mut layered, &demand_for(0), &CustomLayoutConfig::default());
         assert!(layered.items.is_empty());
     }
 
@@ -251,10 +247,7 @@ mod tests {
 
     #[test]
     fn x_is_the_top_left_corner_not_the_centre() {
-        let mut layered = make_layered(
-            &[vec![real(100.0, 40.0), real(300.0, 40.0)]],
-            &[],
-        );
+        let mut layered = make_layered(&[vec![real(100.0, 40.0), real(300.0, 40.0)]], &[]);
         let cfg = CustomLayoutConfig::default();
         assign_coordinates(&mut layered, &demand_for(1), &cfg);
 
@@ -305,7 +298,10 @@ mod tests {
                 .copied()
                 .unwrap_or(cfg.effective_node_gap());
             let facing = cur.x - (prev.x + prev.width);
-            assert!(facing >= gap - 1e-9, "pair {i}: facing {facing}, need {gap}");
+            assert!(
+                facing >= gap - 1e-9,
+                "pair {i}: facing {facing}, need {gap}"
+            );
         }
     }
 
@@ -349,8 +345,10 @@ mod tests {
             .fold(f64::INFINITY, f64::min);
         assert_eq!(min_x, cfg.graph_padding);
         // The lone item of rank 1 is centred under the two-item rank.
-        assert_eq!(layered.items[2].center_x(),
-            (layered.items[0].center_x() + layered.items[1].center_x()) / 2.0);
+        assert_eq!(
+            layered.items[2].center_x(),
+            (layered.items[0].center_x() + layered.items[1].center_x()) / 2.0
+        );
     }
 
     #[test]

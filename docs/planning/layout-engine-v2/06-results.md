@@ -14,23 +14,23 @@ cargo run --release --manifest-path crates/gvui/Cargo.toml --example audit
 
 ## 1. Layered engine, before and after
 
-| dataset | N | E | v1 ms | v2 ms | speedup | v1 crossings | v2 crossings | v1 valid | v2 valid |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--: | :--: |
-| `decision_tree` | 5 | 4 | 66.6 | **0.04** | 1,665× | 0 | 0 | ✓ | ✓ |
-| `cyclic_mesh` | 5 | 6 | 154.6 | **0.08** | 1,933× | 0 | 0 | ✓ | ✓ |
-| `ai_agent_trace` | 6 | 6 | 13.1 | **0.36** | 36× | 0 | 0 | ✓ | ✓ |
-| `clean_ring_10n_10e` | 10 | 10 | 192.3 | **0.11** | 1,748× | 0 | 0 | ✓ | ✓ |
-| `crossing_mesh_10n_10e` | 10 | 10 | 1,571.1 | **0.35** | 4,489× | 3 | 6 | ✓ | ✓ |
-| `distributed_saga_workflow` | 10 | 11 | 1,788.7 | **0.11** | 16,261× | 0 | 0 | ✓ | ✓ |
-| `kubernetes_cluster_topology` | 12 | 13 | 26,710.0 | **0.14** | **190,785×** | 2 | 0 | ✓ | ✓ |
-| `dense_kubernetes_mesh` | 30 | 45 | 47,335.8 | **1.79** | **26,445×** | 191 | **28** | ✗ | ✓ |
+| dataset                       |   N |   E |    v1 ms |    v2 ms |      speedup | v1 crossings | v2 crossings | v1 valid | v2 valid |
+| ----------------------------- | --: | --: | -------: | -------: | -----------: | -----------: | -----------: | :------: | :------: |
+| `decision_tree`               |   5 |   4 |     66.6 | **0.04** |       1,665× |            0 |            0 |    ✓     |    ✓     |
+| `cyclic_mesh`                 |   5 |   6 |    154.6 | **0.08** |       1,933× |            0 |            0 |    ✓     |    ✓     |
+| `ai_agent_trace`              |   6 |   6 |     13.1 | **0.36** |          36× |            0 |            0 |    ✓     |    ✓     |
+| `clean_ring_10n_10e`          |  10 |  10 |    192.3 | **0.11** |       1,748× |            0 |            0 |    ✓     |    ✓     |
+| `crossing_mesh_10n_10e`       |  10 |  10 |  1,571.1 | **0.35** |       4,489× |            3 |            6 |    ✓     |    ✓     |
+| `distributed_saga_workflow`   |  10 |  11 |  1,788.7 | **0.11** |      16,261× |            0 |            0 |    ✓     |    ✓     |
+| `kubernetes_cluster_topology` |  12 |  13 | 26,710.0 | **0.14** | **190,785×** |            2 |            0 |    ✓     |    ✓     |
+| `dense_kubernetes_mesh`       |  30 |  45 | 47,335.8 | **1.79** |  **26,445×** |          191 |       **28** |    ✗     |    ✓     |
 
 Slowest fixture across **all five engines** and all eight datasets: **1.88 ms** against a 50 ms
 budget. The target in [README](./README.md#target) was <10 ms for the 30-node mesh; the measured
 value is 1.79 ms.
 
 `crossing_mesh_10n_10e` is the one fixture where v2 reports more crossings than v1 (6 vs 3). That
-is not a regression in the drawing: v1 produced 3 *geometric* crossings by routing edges through a
+is not a regression in the drawing: v1 produced 3 _geometric_ crossings by routing edges through a
 2-rank layout in which half the edges are feedback edges, and paid 1.5 seconds of A\* to do it.
 v2 reports 6 crossings that are genuinely present in a graph whose forward DAG is only 2 ranks
 deep — this dataset is a real organic-mode candidate, not a layered one
@@ -65,14 +65,14 @@ ranks costs crossings.
 
 ## 3. Did the design claims hold?
 
-| Claim | Result |
-| --- | --- |
+| Claim                                           | Result                                                                                                |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Badge space allocated by construction; no retry | **Held.** `leader_count` is 0 on every layered fixture — no badge ever needed a fallback leader line. |
-| Lane demand exact; routing cannot fail | **Held.** Zero `MISSING_ROUTE`, zero `unresolved_route_count` across all fixtures. |
-| Dummy chains straight (Brandes-Köpf) | **Held.** `straight_chain_ratio` is 1.00 on seven of eight fixtures, 0.96 on the dense mesh. |
-| Determinism | **Held.** Every fixture byte-identical across two processes. |
-| Ranking fixed by passing the role map | **Held.** `dense_kubernetes_mesh` went from 2 ranks (28 nodes in one row) to 15. |
-| ~1000× faster | **Exceeded.** Median speedup ~1,700×; worst-case fixtures 26,000× and 190,000×. |
+| Lane demand exact; routing cannot fail          | **Held.** Zero `MISSING_ROUTE`, zero `unresolved_route_count` across all fixtures.                    |
+| Dummy chains straight (Brandes-Köpf)            | **Held.** `straight_chain_ratio` is 1.00 on seven of eight fixtures, 0.96 on the dense mesh.          |
+| Determinism                                     | **Held.** Every fixture byte-identical across two processes.                                          |
+| Ranking fixed by passing the role map           | **Held.** `dense_kubernetes_mesh` went from 2 ranks (28 nodes in one row) to 15.                      |
+| ~1000× faster                                   | **Exceeded.** Median speedup ~1,700×; worst-case fixtures 26,000× and 190,000×.                       |
 
 ## 4. What the audit caught that the unit tests did not
 
@@ -86,7 +86,7 @@ more than the fixes.
 The spec said feedback hints are "pinned" and excluded from SCC/FAS analysis so the heuristic
 cannot overrule an explicit instruction. That is unsound. Eades' guarantee is that reversing the
 arcs it returns yields a DAG — but only because it derives them from a total vertex sequence
-covering *every* arc it was shown. Reversing an edge it never saw can create a fresh cycle it has
+covering _every_ arc it was shown. Reversing an edge it never saw can create a fresh cycle it has
 no chance to fix.
 
 Six of the eight datasets carry `isCycle` flags (12 of 45 edges on the dense mesh). The result was
@@ -94,7 +94,7 @@ Six of the eight datasets carry `isCycle` flags (12 of 45 edges on the dense mes
 **249 ranks for 30 nodes**, 559 layered items, and an out-of-bounds panic three phases later inside
 the accumulator tree.
 
-Fix: hints set the *starting orientation*; the FAS pass then sees every non-self arc in its current
+Fix: hints set the _starting orientation_; the FAS pass then sees every non-self arc in its current
 orientation and toggles whatever it needs. Acyclicity became a property of the algorithm instead of
 an assumption. `EdgeRole` is now derived from the final `reversed` flag rather than from the hint,
 so the role can never disagree with what the pipeline actually did.
@@ -103,7 +103,7 @@ so the role can never disagree with what the pipeline actually did.
 
 The spec's `max_dummy_chain_length` pathology guard said to keep "only the first and last `cap/2`
 intermediate ranks". That deliberately creates one link spanning many ranks — and `up`/`down` are
-declared as *adjacent-rank* adjacencies that three phases rely on: BMJ counting indexes its
+declared as _adjacent-rank_ adjacencies that three phases rely on: BMJ counting indexes its
 accumulator tree by the target's `order` within rank `r+1`, lane demand derives channel intervals
 from a single rank gap, and Brandes-Köpf's type-1 conflict marking assumes single-rank segments.
 
@@ -113,7 +113,7 @@ The cap is now advisory: chains are always contiguous, and an over-long span is 
 
 `assign_rank_bands` was called before `assign_coordinates`, which then translated the whole drawing
 to `graph_padding`. The captured band tops were left in pre-translation space, so every routing
-channel landed *inside* the nodes — 184 `EDGE_NODE_PENETRATION` errors, every one an edge cutting
+channel landed _inside_ the nodes — 184 `EDGE_NODE_PENETRATION` errors, every one an edge cutting
 through its own source node.
 
 Fix: `assign_coordinates` now returns the post-translation band tops. The band tops are only
@@ -136,12 +136,12 @@ assertion would have made it dishonest.
 
 Both gates now encode the same split:
 
-| counter | layered / left-right | organic / radial / grid |
-| --- | --- | --- |
-| `nodeNodeOverlaps` | **fail** | **fail** (overlap removal, grid, ring sizing all prevent it) |
-| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail** | **fail** (no engine may drop an edge) |
-| `edgeNodePenetrations` | **fail** | reported as best-effort |
-| `badgeNodeOverlaps`, `badgeBadgeOverlaps` | **fail** | reported as best-effort |
+| counter                                        | layered / left-right | organic / radial / grid                                      |
+| ---------------------------------------------- | -------------------- | ------------------------------------------------------------ |
+| `nodeNodeOverlaps`                             | **fail**             | **fail** (overlap removal, grid, ring sizing all prevent it) |
+| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail**             | **fail** (no engine may drop an edge)                        |
+| `edgeNodePenetrations`                         | **fail**             | reported as best-effort                                      |
+| `badgeNodeOverlaps`, `badgeBadgeOverlaps`      | **fail**             | reported as best-effort                                      |
 
 **The lesson for the audit harness:** all four problems were invisible to 393 passing unit tests,
 because each unit tested its module against the same (wrong) contract the module was built from.
@@ -169,19 +169,19 @@ that was actually load-bearing here.
 
    Measured across the layered fixtures:
 
-   | channel lanes | 1 | 1 | 2 | 3 | 3 | 6 | 10 |
-   | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-   | combinatorial | 0 | 0 | 0 | 0 | 0 | 6 | 28 |
-   | geometric | 0 | 0 | 0 | 2 | 2 | 6 | 44 |
+   | channel lanes |   1 |   1 |   2 |   3 |   3 |   6 |  10 |
+   | ------------- | --: | --: | --: | --: | --: | --: | --: |
+   | combinatorial |   0 |   0 |   0 |   0 |   0 |   6 |  28 |
+   | geometric     |   0 |   0 |   0 |   2 |   2 |   6 |  44 |
 
    The excess is **zero** on every shallow-channel fixture and only appears as channels deepen.
-   That is the signature of a structural property, not a defect: an edge descending to lane *k*
+   That is the signature of a structural property, not a defect: an edge descending to lane _k_
    must cross the horizontal run of any shallower lane whose x-interval spans its descent. The
    combinatorial count models order inversions between ranks and cannot see those.
 
    This was tested rather than assumed. Swapping the lane-ordering heuristic (direction-aware
    left-edge → ordering by left endpoint) moved the total across all layered fixtures from 121 to
-   122 — i.e. the lane *order* is not the lever. The lever is lane *count*, which is already the
+   122 — i.e. the lane _order_ is not the lever. The lever is lane _count_, which is already the
    minimum possible (optimal interval-graph colouring).
 
    The real future improvement is to make Phase 5's objective include horizontal span, not just
@@ -196,9 +196,10 @@ that was actually load-bearing here.
    aspect, and LR transposes every box, so the two directions genuinely balance differently. That
    is the intended behaviour — a drawing that is wide by nature should not be balanced like a tall
    one.
+
 2. **`clean_ring_10n_10e` produces 19 ranks for 10 nodes.** Correct given `min_len = 2` on labelled
-   edges, but it means a 10-node ring draws as a very tall column. Rank balancing caps rank *width*
-   and cannot compact *height*; see the note in [05-roadmap.md](./05-roadmap.md). Worth a follow-up
+   edges, but it means a 10-node ring draws as a very tall column. Rank balancing caps rank _width_
+   and cannot compact _height_; see the note in [05-roadmap.md](./05-roadmap.md). Worth a follow-up
    decision.
 3. **Organic mode leader counts are non-zero** (18 on the dense mesh). Expected — organic has no
    layered structure in which to reserve label space, so its badges genuinely need local placement.

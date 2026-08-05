@@ -54,7 +54,7 @@ climbed monotonically from 0 ms to 24 ms.
 
 ### The retry loop
 
-And then the killer: because routing edges one at a time makes the *order* matter, v1 tried many
+And then the killer: because routing edges one at a time makes the _order_ matter, v1 tried many
 orders.
 
 ```text
@@ -66,13 +66,13 @@ orders.
 
 Config sweep on fixed node positions:
 
-| config | k8s topology | dense mesh |
-| --- | ---: | ---: |
-| default (4 variants, 12 rip-up, 32 perms) | 7,466 ms | 15,537 ms |
-| 1 variant | 1,810 ms | 3,044 ms |
-| 1 variant + `maxConflictPermutations = 1` | **150 ms** | 3,033 ms |
+| config                                    | k8s topology | dense mesh |
+| ----------------------------------------- | -----------: | ---------: |
+| default (4 variants, 12 rip-up, 32 perms) |     7,466 ms |  15,537 ms |
+| 1 variant                                 |     1,810 ms |   3,044 ms |
+| 1 variant + `maxConflictPermutations = 1` |   **150 ms** |   3,033 ms |
 
-For `kubernetes_cluster_topology` the permutation loop cost **12×** and produced an *identical*
+For `kubernetes_cluster_topology` the permutation loop cost **12×** and produced an _identical_
 result: 13 routes, 4 crossings, valid. The order-variant loop cost **4×** for no measured gain.
 
 ### The totals
@@ -93,7 +93,7 @@ Phase-level instrumentation of a single v1 pipeline pass:
 
 ### The actual diagnosis
 
-The interesting thing is not that A\* was slow. It is *why* there was a search at all.
+The interesting thing is not that A\* was slow. It is _why_ there was a search at all.
 
 v1 searched because **it did not know how much space it had**. Node positions were fixed before
 anyone asked how many edges would need to pass between them, so routing was handed a drawing that
@@ -102,7 +102,7 @@ you build when a route can fail. Order variants are what you build when a route 
 which route went first.
 
 v2 removes the search by removing the uncertainty. [Phase 6](./08-routing-demand.md) computes the
-exact lane demand from the fixed ordering *before any geometry exists*, and
+exact lane demand from the fixed ordering _before any geometry exists_, and
 [Phase 7](./09-coordinate-assignment.md) honours it exactly. By the time this phase runs, the space
 is already there.
 
@@ -126,18 +126,18 @@ Three inputs, all already fixed:
 
 The module doc in
 [`5_2_lane_router.rs`](../../crates/gvui/src/5_edge_routing/5_2_lane_router.rs) puts it as bluntly
-as it can be put: *"This module contains no search, no grid, no collision test and no repair."*
+as it can be put: _"This module contains no search, no grid, no collision test and no repair."_
 
 ---
 
 ## 3. Port sides are a scored choice, not a search
 
-An edge has to attach *somewhere* on its endpoints' boundaries. v1 tried all sixteen
+An edge has to attach _somewhere_ on its endpoints' boundaries. v1 tried all sixteen
 `(source_side, target_side)` combinations per edge, then searched again to repair the crossings that
 produced. v2 replaced the search with a fixed table: every chain edge left the source's **Bottom**
 face and entered the target's **Top** face, always.
 
-The table was too blunt, and it showed. A target that sits mostly *sideways* of its source was still
+The table was too blunt, and it showed. A target that sits mostly _sideways_ of its source was still
 made to leave downwards and come back up, so a route that wanted to be one straight segment became a
 dog-leg:
 
@@ -190,7 +190,7 @@ through the box it starts from.
 **A vertical face needs clearance for every port it carries.**
 
 - `SIDE_FACE_CLEARANCE_FACTOR = 2.0`. A port on a `Left`/`Right` face makes the router descend at
-  `port_stub_length` *outside* that face, so the whole departure — the horizontal stub and the
+  `port_stub_length` _outside_ that face, so the whole departure — the horizontal stub and the
   vertical run down to the channel — lives in the gap between this node and its rank neighbour. One
   stub length would put the descent exactly on the neighbour's boundary; requiring twice that keeps
   it clear of the neighbour by as much again. Phase 6 guarantees the gap is at least `node_gap`
@@ -198,10 +198,10 @@ through the box it starts from.
   conflict — `face_clearance` is the check that rejects that case rather than drawing through a
   node.
 - `side_face_capacity` (default 2). Ports on a vertical face used to be capped at one, because they
-  all descended at the *same* x — that x is fixed by the stub contract the router reads — so a second
+  all descended at the _same_ x — that x is fixed by the stub contract the router reads — so a second
   port would run collinear with the first from its own y all the way down to the channel. The cap is
-  now a setting because the descent lines are staggered: port *k* reaches `port_stub_length + k *
-  port_pitch` outside the face, so each gets its own line. `face_clearance` is charged for the port
+  now a setting because the descent lines are staggered: port _k_ reaches `port_stub_length + k *
+port_pitch` outside the face, so each gets its own line. `face_clearance` is charged for the port
   about to be added, not for the configured capacity, so a node with one narrow-ish gap can still use
   its side once.
 
@@ -223,10 +223,10 @@ need one horizontal run, which costs exactly two corners — one to turn into it
 
 So the question is whether the two ends' **drop-x intervals** meet (`drop_span`):
 
-| face | interval of x the port can drop at |
-| --- | --- |
+| face             | interval of x the port can drop at                                                  |
+| ---------------- | ----------------------------------------------------------------------------------- |
 | `Top` / `Bottom` | the whole padded face, `[x + padding, right − padding]` — it drops wherever it sits |
-| `Left` / `Right` | a **single point**, `port_stub_length` outside the face |
+| `Left` / `Right` | a **single point**, `port_stub_length` outside the face                             |
 
 ```text
    intervals meet  ->  bends = 0            intervals disjoint  ->  bends = 2
@@ -246,30 +246,30 @@ A multi-rank chain scores its two ends **independently**: they sit in different 
 have to agree with each other, so each end is tested against the x of the adjacent chain item it
 meets (`head + tail`, each 0 or 2).
 
-**Plus one corner per vertical face.** A port on `Left`/`Right` has to step *out* of its face
+**Plus one corner per vertical face.** A port on `Left`/`Right` has to step _out_ of its face
 horizontally before it can start descending, and that corner survives even when both ends agree on an
 x. So a side attachment costs exactly one more bend than a flow-face one, always. This is the single
 most important fact about side attachment in this engine and it is worth stating plainly:
 
-> In a Z-router, attaching to a node's side never *saves* a corner. It costs one.
+> In a Z-router, attaching to a node's side never _saves_ a corner. It costs one.
 
 ### 3.3 The rest of the cost
 
 Three keys, compared lexicographically:
 
-| # | key | what it prices |
-| --- | --- | --- |
-| 1 | `residual` | crossings against already-committed runs in the same channel that **no lane order could remove** |
-| 2 | `bends + flow_side_bias · off_flow + length / 1000` | corners, the side-face trade, and path length — one comparable number |
-| 3 | `congestion` | ports already claimed on the two faces, so a fan-out spreads instead of piling onto one face |
-| 4 | candidate order | `SOURCE_CANDIDATES × TARGET_CANDIDATES`, so the choice is total and byte-identical across processes |
+| #   | key                                                 | what it prices                                                                                      |
+| --- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1   | `residual`                                          | crossings against already-committed runs in the same channel that **no lane order could remove**    |
+| 2   | `bends + flow_side_bias · off_flow + length / 1000` | corners, the side-face trade, and path length — one comparable number                               |
+| 3   | `congestion`                                        | ports already claimed on the two faces, so a fan-out spreads instead of piling onto one face        |
+| 4   | candidate order                                     | `SOURCE_CANDIDATES × TARGET_CANDIDATES`, so the choice is total and byte-identical across processes |
 
 **Why `residual` and not a raw crossing count.** [§5.5](#55-lane-assignment-happens-in-coordinate-space)
 deletes every crossing the lane order can reach. Charging the side choice for those too would be
 double-counting, and would push it into contortions to avoid crossings that were about to disappear
 anyway. What is left is the pairwise minimum — the cost of putting `a` above `b` versus `b` above `a`,
 whichever is smaller — and that is the only part a side choice can still influence. This is the key
-that makes an edge arrive on a node's *side* when arriving at its top would have to cut across
+that makes an edge arrive on a node's _side_ when arriving at its top would have to cut across
 something.
 
 **Why keys 1 and 2 are one number each, not four.** They used to be lexicographic, with `bends`
@@ -283,17 +283,17 @@ Since a side always costs exactly one more corner, nothing at or above zero can 
 including `0`, which means "price the corner honestly and let geometry decide", and geometry decides
 against. Negative values buy side attachment at the price of that corner. Measured over the corpus:
 
-| `flow_side_bias` | ports on a side face | geometric crossings | bends |
-| --- | --- | --- | --- |
-| **1.0 (default)** | **5.1 %** | **40** | **368** |
-| 0.0 | 5.1 % | 40 | 368 |
-| −1.0 | 15.4 % | 69 | 404 |
-| −1.5 | 44.0 % | 146 | 508 |
+| `flow_side_bias`  | ports on a side face | geometric crossings | bends   |
+| ----------------- | -------------------- | ------------------- | ------- |
+| **1.0 (default)** | **5.1 %**            | **40**              | **368** |
+| 0.0               | 5.1 %                | 40                  | 368     |
+| −1.0              | 15.4 %               | 69                  | 404     |
+| −1.5              | 44.0 %               | 146                 | 508     |
 
 Using all four sides costs crossings rather than saving them, and the reason is not subtle: with
 [destination affinity](#6-port-spacing-and-where-node-growth-actually-happens) a flow-face port is
 placed at very nearly the x the edge is heading for, so its channel run is short or absent. A side
-port is *forced* to drop at a fixed x outside the node, which is generally further from where it is
+port is _forced_ to drop at a fixed x outside the node, which is generally further from where it is
 going — a longer run, and a longer run is a wider window for other edges' drops to cut. The setting
 is offered as an aesthetic choice, not an optimisation, and it is documented here with numbers so the
 choice can be made with open eyes.
@@ -307,10 +307,10 @@ term is a function of the graph alone and not of how Phase 4 happened to emit ch
 
 ### 3.4 The two edge kinds that do not get a choice
 
-| edge kind | source side | target side |
-| --- | --- | --- |
+| edge kind             | source side                                 | target side       |
+| --------------------- | ------------------------------------------- | ----------------- |
 | flat edge (same rank) | **Right** if `from.x ≤ to.x`, else **Left** | the opposite side |
-| self-loop | **Right** | **Right** |
+| self-loop             | **Right**                                   | **Right**         |
 
 Flat-edge sides compare `from.x ≤ to.x`. Items within a rank never overlap, so comparing left edges
 is the same as comparing centres and is stable under differing widths.
@@ -327,7 +327,7 @@ rank**. The router drops from `port.stub` straight to the channel y and runs hor
 The travel direction through the layered structure is unchanged; only the last few pixels before the
 node boundary move.
 
-What *does* change is where the descent happens: `stub.x` is now `port_stub_length` outside a
+What _does_ change is where the descent happens: `stub.x` is now `port_stub_length` outside a
 vertical face rather than somewhere inside the node's own width, so the descent lives in the gap
 between the node and its rank neighbour. That gap is Phase 6's corridor — and the two-stub-length
 clearance test of §3.1 is exactly what keeps the descent out of the neighbour's interior, and the
@@ -346,7 +346,7 @@ every single time.
 
 **Feedback edges.** Phase 2 reversed them — it swapped their endpoints — so by the time they reach
 this phase they are ordinary `Bottom → Top` chains in the internal frame, and they are deliberately
-*not* special-cased. [Phase 9](./11-emit-and-quality.md) flips the arrowhead back at the very end.
+_not_ special-cased. [Phase 9](./11-emit-and-quality.md) flips the arrowhead back at the very end.
 (The v2 design note proposed giving feedback edges a distinctive shape — out of the bottom and back
 into the bottom via a side corridor. The implementation does not do that; feedback edges are drawn
 like any other edge and are distinguished only by direction and by the renderer's styling.)
@@ -355,7 +355,7 @@ like any other edge and are distinguished only by direction and by the renderer'
 
 ## 4. Straight-shot alignment
 
-Choosing a side is only half of the decision, and on its own it is the *wrong* half.
+Choosing a side is only half of the decision, and on its own it is the _wrong_ half.
 
 Look again at the zero-bend case in §3.2. The scorer says a `Right` source face costs no bends
 because its drop x — a single point, `port_stub_length` outside the face — falls inside the target's
@@ -363,7 +363,7 @@ port range. But "falls inside the range" is not the same as "the target's port i
 Port distribution (§6) spreads ports evenly along a face; the odds of one landing exactly on that x
 are nil. Without something to close the gap, the route drops at the side's x, still needs its
 horizontal run and its two corners, **and** has paid for a stub sticking out sideways as well. The
-flexible side would have *added* a bend rather than removing one.
+flexible side would have _added_ a bend rather than removing one.
 
 `apply_straight_shot_alignment` is the pass that redeems the prediction. It slides ports onto a
 common x wherever the slack allows, which is also the single largest bend reducer in the phase in its
@@ -374,12 +374,12 @@ A port on `Top`/`Bottom` is **free**: it drops wherever it sits along its face, 
 port on `Left`/`Right` is **fixed**: it drops exactly `port_stub_length` outside its face and there is
 nothing to slide. Three cases follow, and the mixed one matters as much as the symmetric one:
 
-| source face | target face | what happens |
-| --- | --- | --- |
-| free | free | both move to a shared x between them (the midpoint, clamped into the overlap of their two slidable ranges) |
-| free | fixed | the **free end moves onto the fixed end's drop x** |
-| fixed | free | mirror image |
-| fixed | fixed | nothing to do |
+| source face | target face | what happens                                                                                               |
+| ----------- | ----------- | ---------------------------------------------------------------------------------------------------------- |
+| free        | free        | both move to a shared x between them (the midpoint, clamped into the overlap of their two slidable ranges) |
+| free        | fixed       | the **free end moves onto the fixed end's drop x**                                                         |
+| fixed       | free        | mirror image                                                                                               |
+| fixed       | fixed       | nothing to do                                                                                              |
 
 ```text
    before                                  after
@@ -423,14 +423,14 @@ here for an alignment that would rarely fire.
 
 ## 5. Port order along a side is a sort — and that is the whole crossing story
 
-Once you know an edge uses a node's bottom side, you still have to pick *where* along that side.
+Once you know an edge uses a node's bottom side, you still have to pick _where_ along that side.
 This single rule does almost all the work:
 
 > Sort the ports on a node's **bottom** side by the `order` of the item in rank `r+1` the chain
 > runs to. Sort the ports on the **top** side by the `order` of the item in rank `r-1` it comes
 > from.
 
-Why it works: [Phase 5](./07-crossing-minimization.md) already minimized crossings *between* ranks.
+Why it works: [Phase 5](./07-crossing-minimization.md) already minimized crossings _between_ ranks.
 If node A sends edges to items at orders 1, 4 and 6 in the next rank, and those ports are placed
 left-to-right in that same sequence, then those three edges leave A in the same left-to-right order
 they arrive in below. They cannot cross **each other** near the node.
@@ -470,7 +470,7 @@ comes from.
 
 **Every route crosses a channel as a Z.** It drops at `from_x` from the band above, runs horizontally
 at its lane's y, then drops again at `to_x` into the band below. Two such Zs can only meet in one
-place: where a *horizontal run* of one passes a *vertical drop* of the other. Horizontal runs never
+place: where a _horizontal run_ of one passes a _vertical drop_ of the other. Horizontal runs never
 meet each other — different lanes are different y, and same-lane runs are x-disjoint by construction.
 Vertical drops never meet each other — different x.
 
@@ -495,15 +495,15 @@ exactly two crossings are possible, and the mirror pair if you swap them:
          + [a.to_x   inside b's span]            + [b.to_x   inside a's span]
 ```
 
-A **fan-in** — fifteen shards converging on one reducer — wants its longest run *deepest*: every
+A **fan-in** — fifteen shards converging on one reducer — wants its longest run _deepest_: every
 other segment drops somewhere inside it, so anything shallower gets cut by all fourteen. A
 **fan-out** wants the exact opposite. Any single hand-picked sort key gets one of those two right and
 the other catastrophically wrong, which is why the order is derived from the pair cost itself:
 adjacent-swap descent, where exchanging two neighbours changes the total by exactly
 `cost(b,a) − cost(a,b)`, so a sweep that exchanges every improving pair is a descent step.
 
-The cost also charges a **merge**: when the shallower edge *leaves* the channel at the same x the
-deeper one *enters* it, their two verticals run along one line between the lanes and the deeper edge
+The cost also charges a **merge**: when the shallower edge _leaves_ the channel at the same x the
+deeper one _enters_ it, their two verticals run along one line between the lanes and the deeper edge
 is hidden. Weighted at 4 — worse than the two crossings a pair can otherwise produce, because a
 crossing stays readable and a merge does not. That term was missing from the first version of this
 pass, and the audit's collinear-overlap check found it within one run.
@@ -549,8 +549,8 @@ constraints allow: the sorted order from §5 must survive, and consecutive ports
 `port_pitch` apart inside `[x + padding, right − padding]`.
 
 **This is a projection, not a heuristic.** Substituting $q_i = p_i - i \cdot \text{pitch}$ turns "at
-least pitch apart" into plain "non-decreasing", so the problem becomes *find the non-decreasing
-sequence closest to the shifted wants* — isotonic regression, solved exactly in one pass by
+least pitch apart" into plain "non-decreasing", so the problem becomes _find the non-decreasing
+sequence closest to the shifted wants_ — isotonic regression, solved exactly in one pass by
 pool-adjacent-violators. It is therefore the **optimal** placement for the given order, and because
 the result is monotone in the input index it cannot permute the ports and undo the sort that made the
 attachment crossing-free.
@@ -564,7 +564,7 @@ crowded to hold `CROWDED_MIN_PITCH` falls back to.
 
 With `n` ports to place on a side of length `L`:
 
-$$\text{pitch} = \frac{L - 2 \cdot \text{portEndpointPadding}}{n + 1}, \qquad
+$$ \text{pitch} = \frac{L - 2 \cdot \text{portEndpointPadding}}{n + 1}, \qquad
 \text{offset}_i = \text{portEndpointPadding} + (i+1) \cdot \text{pitch}$$
 
 The `n + 1` divisor is what leaves a gap at both ends instead of parking the first and last port on
@@ -1057,3 +1057,4 @@ routing for a 12-node graph, the entire pipeline for that fixture is **0.14 ms**
 ---
 
 ← [Coordinate Assignment](./09-coordinate-assignment.md) | [Index](./README.md) | [Next: Emit and Quality →](./11-emit-and-quality.md)
+$$

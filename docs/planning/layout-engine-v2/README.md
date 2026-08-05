@@ -3,14 +3,14 @@
 Planning documents for a from-scratch redesign of the GVUI graph layout engine.
 **Design phase only.** No implementation is proposed here beyond sequencing.
 
-| Doc | Contents |
-| --- | --- |
-| [00-diagnosis.md](./00-diagnosis.md) | Measured behaviour of the current engine; root causes; confirmed defects |
-| [01-architecture.md](./01-architecture.md) | The three principles, the phase pipeline, the data model |
-| [02-algorithms.md](./02-algorithms.md) | Per-phase algorithm specification |
-| [03-modes.md](./03-modes.md) | The mode taxonomy and the non-hierarchical engines |
-| [04-config-and-quality.md](./04-config-and-quality.md) | Settings surface, quality model, diagnostics |
-| [05-roadmap.md](./05-roadmap.md) | Sequencing, milestones, decision points |
+| Doc                                                    | Contents                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [00-diagnosis.md](./00-diagnosis.md)                   | Measured behaviour of the current engine; root causes; confirmed defects |
+| [01-architecture.md](./01-architecture.md)             | The three principles, the phase pipeline, the data model                 |
+| [02-algorithms.md](./02-algorithms.md)                 | Per-phase algorithm specification                                        |
+| [03-modes.md](./03-modes.md)                           | The mode taxonomy and the non-hierarchical engines                       |
+| [04-config-and-quality.md](./04-config-and-quality.md) | Settings surface, quality model, diagnostics                             |
+| [05-roadmap.md](./05-roadmap.md)                       | Sequencing, milestones, decision points                                  |
 
 ---
 
@@ -23,15 +23,15 @@ layout is scored by re-running the entire pipeline — cycle breaking, ranking, 
 A\* edge routing on a ~5,000-vertex grid, badge backtracking, and O(E²) validation. Measured, native
 release build, on the repo's own datasets:
 
-| Dataset | Nodes | Edges | Custom engine | Crossings produced |
-| --- | ---: | ---: | ---: | ---: |
-| `decision_tree` | 5 | 4 | 67 ms | 0 |
-| `crossing_mesh_10n_10e` | 10 | 10 | 1,571 ms | 3 |
-| `kubernetes_cluster_topology` | 12 | 13 | **26,710 ms** | 2 |
-| `dense_kubernetes_mesh` | 30 | 45 | **47,336 ms** | **191** (invalid) |
+| Dataset                       | Nodes | Edges | Custom engine | Crossings produced |
+| ----------------------------- | ----: | ----: | ------------: | -----------------: |
+| `decision_tree`               |     5 |     4 |         67 ms |                  0 |
+| `crossing_mesh_10n_10e`       |    10 |    10 |      1,571 ms |                  3 |
+| `kubernetes_cluster_topology` |    12 |    13 | **26,710 ms** |                  2 |
+| `dense_kubernetes_mesh`       |    30 |    45 | **47,336 ms** |  **191** (invalid) |
 
 WASM in a browser is slower still. `GraphCanvas` sets a 30 s worker timeout and then falls back to
-running *the same computation synchronously on the main thread* — so the two worst datasets are
+running _the same computation synchronously on the main thread_ — so the two worst datasets are
 guaranteed to time out and then freeze the tab.
 
 **99.5 % of the time is edge routing.** Phase breakdown for `kubernetes_cluster_topology`:
@@ -65,7 +65,7 @@ being asked to repair damage done four stages earlier.
 Compounding it: `build_layer_graph` inserts **only** `EdgeRole::Forward` edges into the adjacency
 maps, so feedback and cross edges are invisible to ordering. The crossing count the ordering stage
 optimizes is therefore **0 on all eight datasets**, and `minimize_crossings` early-returns before
-doing any work. *The crossing-minimization stage has never executed in production.*
+doing any work. _The crossing-minimization stage has never executed in production._
 
 Fifteen further confirmed defects are catalogued in [00-diagnosis.md](./00-diagnosis.md).
 
@@ -77,24 +77,24 @@ The current engine discovers that a badge does not fit, then expands a gap, then
 The new engine **reserves the badge's space before routing exists**, by making every edge label a
 first-class node in the layered graph carrying its measured width and height. The ordering stage
 orders it, the coordinate stage separates it, the rank-height stage makes room for it. The space is
-allocated by construction, so *it cannot fail to fit, so there is nothing to retry*.
+allocated by construction, so _it cannot fail to fit, so there is nothing to retry_.
 
 The same inversion applies to routing. Once the ordering is fixed, you know exactly which edges
 traverse which inter-rank channel and which intra-rank corridor — pure combinatorics, computable
 before any geometry exists. Lane counts come from **interval-graph colouring** (optimal, greedy,
-O(k log k)), and those counts feed into node separations *before* coordinates are assigned. One
+O(k log k)), and those counts feed into node separations _before_ coordinates are assigned. One
 pass, exact, no iteration. Grid A\* disappears entirely.
 
 ### Target
 
-| | Today | Target |
-| --- | --- | --- |
-| 12 n / 13 e | 26,710 ms | **< 5 ms** |
-| 30 n / 45 e | 47,336 ms, invalid | **< 10 ms**, valid |
-| 200 n / 400 e | does not complete | **< 25 ms** |
+|               | Today              | Target             |
+| ------------- | ------------------ | ------------------ |
+| 12 n / 13 e   | 26,710 ms          | **< 5 ms**         |
+| 30 n / 45 e   | 47,336 ms, invalid | **< 10 ms**, valid |
+| 200 n / 400 e | does not complete  | **< 25 ms**        |
 
 This is not a 2× optimization. It is roughly three orders of magnitude, and it comes from deleting
-the search, not from tuning it. Aesthetic quality goes *up* at the same time, because lane-based
+the search, not from tuning it. Aesthetic quality goes _up_ at the same time, because lane-based
 orthogonal routing produces the parallel, bus-like structure that hand-drawn diagrams have and that
 per-edge A\* on a dense grid can never produce.
 

@@ -21,8 +21,9 @@ use crate::geometry::{pack_boxes, translate_points};
 use crate::step3_crossing_minimization::crossing_counting::detect_geometric_crossings;
 use crate::step5_edge_routing::RouteResult;
 use crate::types::{
-    BadgePlacement, CustomLayoutResult, EdgeRole, GraphIr, Layered, LayoutDiagnostic, LayoutMetrics,
-    LayoutValidationResult, OptimizationStats, PositionedNode, Rect, RoutedPath, RoutingDemand,
+    BadgePlacement, CustomLayoutResult, EdgeRole, GraphIr, Layered, LayoutDiagnostic,
+    LayoutMetrics, LayoutValidationResult, OptimizationStats, PositionedNode, Rect, RoutedPath,
+    RoutingDemand,
 };
 
 use super::constraints::check_constraints;
@@ -297,6 +298,9 @@ pub fn emit_from_parts(
     let mut nodes: Vec<PositionedNode> = Vec::with_capacity(ir.node_count());
     // Position of node `n` within `nodes`, or UNASSIGNED when it could not be emitted.
     let mut pos_of_node: Vec<usize> = vec![UNASSIGNED; ir.node_count()];
+    // `n` indexes four parallel collections here (item_of_node, node_names, node_labels and
+    // pos_of_node); iterating over any one of them still leaves the other three indexed.
+    #[allow(clippy::needless_range_loop)]
     for n in 0..ir.node_count() {
         let item = layered
             .item_of_node
@@ -483,9 +487,7 @@ pub fn resolve_status(is_valid: bool, metrics: &LayoutMetrics) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{
-        EdgeChain, IrEdge, IrNode, Item, ItemKind, Point, PortRef, Rect, Side,
-    };
+    use crate::types::{EdgeChain, IrEdge, IrNode, Item, ItemKind, Point, PortRef, Rect, Side};
 
     fn cfg() -> CustomLayoutConfig {
         CustomLayoutConfig::default()
@@ -658,7 +660,13 @@ mod tests {
         assert_eq!(nodes[1].y - nodes[0].y, 100.0);
         let dx = nodes[0].x - 0.0;
         let dy = nodes[0].y - 0.0;
-        assert_eq!(routes[0].points[0], Point { x: 50.0 + dx, y: 50.0 + dy });
+        assert_eq!(
+            routes[0].points[0],
+            Point {
+                x: 50.0 + dx,
+                y: 50.0 + dy
+            }
+        );
         assert_eq!(routes[0].source_port.point.x, 50.0 + dx);
         assert_eq!(routes[0].source_port.stub.y, 70.0 + dy);
     }
@@ -789,7 +797,10 @@ mod tests {
             labels_truncated: 2,
             ..Default::default()
         };
-        assert_eq!(resolve_status(true, &truncated), "unresolved_soft_conflicts");
+        assert_eq!(
+            resolve_status(true, &truncated),
+            "unresolved_soft_conflicts"
+        );
 
         // Invalidity outranks any soft signal.
         assert_eq!(resolve_status(false, &leaders), "invalid_hard_failure");

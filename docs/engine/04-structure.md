@@ -14,7 +14,7 @@ the [facade](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs) that seque
 ## Why cycles break layered drawing
 
 A layered drawing assigns every node an integer **rank**, and draws rank 0 at the top, rank 1 below
-it, and so on. The whole point is that an edge always points *down*: if you see an arrow, you know
+it, and so on. The whole point is that an edge always points _down_: if you see an arrow, you know
 the thing it points at is later.
 
 For that to be possible, every edge $u \to v$ must satisfy
@@ -62,7 +62,7 @@ The other failure mode showed up in v2 itself, during integration, and is descri
 ## Step 1 — Find the cycles: Tarjan's SCC algorithm
 
 You could break cycles by searching for them directly, but there are exponentially many. The useful
-question is not "where are the cycles" but "which *regions* of the graph contain any".
+question is not "where are the cycles" but "which _regions_ of the graph contain any".
 
 That region is a **strongly connected component** (SCC): a maximal set of nodes in which every node
 can reach every other node by following arrows.
@@ -84,8 +84,8 @@ Two facts make this the right decomposition:
    would be mutually reachable and would therefore be the same component.
 2. **A component with one node and no self-loop can contain no cycle at all.**
 
-So cycle breaking only has to run inside non-trivial components, and every arc *between* components
-can be left alone — those arcs form the *condensation*, which is a DAG by construction. Running the
+So cycle breaking only has to run inside non-trivial components, and every arc _between_ components
+can be left alone — those arcs form the _condensation_, which is a DAG by construction. Running the
 breaking heuristic on them anyway would be wasted work that could only make the drawing worse, by
 reversing an edge that was fine.
 
@@ -94,7 +94,7 @@ reversing an edge that was fine.
 A single depth-first search, with two numbers per node:
 
 - **`index[v]`** — the order `v` was first visited. Assigned once, never changes.
-- **`lowlink[v]`** — the smallest `index` reachable from `v` using tree edges plus *at most one*
+- **`lowlink[v]`** — the smallest `index` reachable from `v` using tree edges plus _at most one_
   arc back to a node still on the DFS stack.
 
 Nodes are pushed onto a stack when first visited and stay there until their component is emitted.
@@ -109,18 +109,18 @@ back to anything earlier, the search below `v` is self-contained and closes here
 
 Graph: `0→1`, `1→2`, `2→0`, `2→3`.
 
-| step | action | index | lowlink | stack | emitted |
-| --- | --- | --- | --- | --- | --- |
-| 1 | visit 0 | `0:0` | `0:0` | `[0]` | |
-| 2 | 0→1, visit 1 | `1:1` | `1:1` | `[0,1]` | |
-| 3 | 1→2, visit 2 | `2:2` | `2:2` | `[0,1,2]` | |
-| 4 | 2→0, 0 is on stack | | `2:0` ← min(2, index[0]=0) | `[0,1,2]` | |
-| 5 | 2→3, visit 3 | `3:3` | `3:3` | `[0,1,2,3]` | |
-| 6 | 3 done, `lowlink==index` | | | `[0,1,2]` | **{3}** |
-| 7 | back in 2: `lowlink[2]=min(0,3)=0` | | `2:0` | `[0,1,2]` | |
-| 8 | 2 done, `0 ≠ 2` → not a root | | `1:min(1,0)=0` | `[0,1,2]` | |
-| 9 | 1 done, `0 ≠ 1` → not a root | | `0:min(0,0)=0` | `[0,1,2]` | |
-| 10 | 0 done, `lowlink==index` → root | | | `[]` | **{0,1,2}** |
+| step | action                             | index | lowlink                    | stack       | emitted     |
+| ---- | ---------------------------------- | ----- | -------------------------- | ----------- | ----------- |
+| 1    | visit 0                            | `0:0` | `0:0`                      | `[0]`       |             |
+| 2    | 0→1, visit 1                       | `1:1` | `1:1`                      | `[0,1]`     |             |
+| 3    | 1→2, visit 2                       | `2:2` | `2:2`                      | `[0,1,2]`   |             |
+| 4    | 2→0, 0 is on stack                 |       | `2:0` ← min(2, index[0]=0) | `[0,1,2]`   |             |
+| 5    | 2→3, visit 3                       | `3:3` | `3:3`                      | `[0,1,2,3]` |             |
+| 6    | 3 done, `lowlink==index`           |       |                            | `[0,1,2]`   | **{3}**     |
+| 7    | back in 2: `lowlink[2]=min(0,3)=0` |       | `2:0`                      | `[0,1,2]`   |             |
+| 8    | 2 done, `0 ≠ 2` → not a root       |       | `1:min(1,0)=0`             | `[0,1,2]`   |             |
+| 9    | 1 done, `0 ≠ 1` → not a root       |       | `0:min(0,0)=0`             | `[0,1,2]`   |             |
+| 10   | 0 done, `lowlink==index` → root    |       |                            | `[]`        | **{0,1,2}** |
 
 Result: components `{3}` and `{0,1,2}`, with `cyclic = [false, true]` respectively. Only `{0,1,2}`
 goes to the next step. The arc `2→3` leaves its component and is never touched.
@@ -129,7 +129,7 @@ goes to the next step. The arc `2→3` leaves its component and is never touched
 
 **Components are sorted by their minimum member.** Tarjan naturally emits components in reverse
 topological order of the condensation, which depends on which node the outer loop happened to start
-from. Sorting by minimum member makes the component numbering a function of the *arc set* rather
+from. Sorting by minimum member makes the component numbering a function of the _arc set_ rather
 than of a traversal accident, which is what lets every downstream phase index by component and still
 be reproducible. Member lists are sorted ascending too.
 
@@ -146,7 +146,7 @@ Cost: $O(V + E)$, one pass.
 
 Inside a cyclic component, which arcs should be turned around?
 
-**Definition.** A *feedback arc set* (FAS) of a digraph is a set of arcs whose removal (or here,
+**Definition.** A _feedback arc set_ (FAS) of a digraph is a set of arcs whose removal (or here,
 reversal) leaves no directed cycle. The **minimum** FAS is the smallest such set.
 
 You want the minimum, because every reversed arc is an arrow that points the wrong way in the final
@@ -157,7 +157,7 @@ NP-complete problems in its decision form. No polynomial-time exact algorithm is
 were found it would settle P vs NP. For a graph with a few dozen nodes on a cycle you would be
 looking at exponential search.
 
-That is a hard stop, and it is *why* this phase uses a heuristic rather than an optimum. Which is
+That is a hard stop, and it is _why_ this phase uses a heuristic rather than an optimum. Which is
 fine, because a heuristic with a proven bound is available and runs in linear time.
 
 ### The Eades–Lin–Smyth greedy heuristic
@@ -166,7 +166,7 @@ Published in 1993. The idea is a change of viewpoint: instead of choosing arcs, 
 the vertices**, then declare every arc that points backwards in that order to be a feedback arc.
 
 That reframing is what makes the result safe. Whatever sequence you end up with, reversing exactly
-the backward arcs makes *every* arc point forward along the sequence — and a graph whose arcs all
+the backward arcs makes _every_ arc point forward along the sequence — and a graph whose arcs all
 agree with a total order cannot have a cycle. Acyclicity is a property of the construction, not
 something you have to check afterwards. (Hold on to that sentence; it is the crux of the last
 section of this chapter.)
@@ -183,7 +183,7 @@ while vertices remain:
 
 Why those three rules:
 
-- A **sink** has no outgoing arcs, so putting it last cannot create a backward arc *from* it. Every
+- A **sink** has no outgoing arcs, so putting it last cannot create a backward arc _from_ it. Every
   arc it touches is incoming, and all of those now point forward.
 - A **source** is the mirror image: no incoming arcs, so putting it first is free.
 - Otherwise every remaining vertex has arcs in both directions and something must be sacrificed.
@@ -211,21 +211,21 @@ Take a 5-ring with one chord: `0→1`, `1→2`, `2→3`, `3→4`, `4→0`, `3→
 
 Degrees to begin with:
 
-| v | out | in | out − in |
-| --- | ---: | ---: | ---: |
-| 0 | 1 | 1 | 0 |
-| 1 | 1 | 2 | −1 |
-| 2 | 1 | 1 | 0 |
-| 3 | **2** | 1 | **+1** |
-| 4 | 1 | 1 | 0 |
+| v   |   out |  in | out − in |
+| --- | ----: | --: | -------: |
+| 0   |     1 |   1 |        0 |
+| 1   |     1 |   2 |       −1 |
+| 2   |     1 |   1 |        0 |
+| 3   | **2** |   1 |   **+1** |
+| 4   |     1 |   1 |        0 |
 
-| step | no sink? | no source? | pick | side | remaining degrees after removal |
-| --- | --- | --- | --- | --- | --- |
-| 1 | none | none | **3** (max Δ = +1) | LEFT | 2 becomes a sink; 4 becomes a source |
-| 2 | **2** | | 2 | RIGHT | 1 becomes a sink |
-| 3 | **1** | | 1 | RIGHT | 0 becomes a sink |
-| 4 | **0** | | 0 | RIGHT | 4 becomes a sink |
-| 5 | **4** | | 4 | RIGHT | — |
+| step | no sink? | no source? | pick               | side  | remaining degrees after removal      |
+| ---- | -------- | ---------- | ------------------ | ----- | ------------------------------------ |
+| 1    | none     | none       | **3** (max Δ = +1) | LEFT  | 2 becomes a sink; 4 becomes a source |
+| 2    | **2**    |            | 2                  | RIGHT | 1 becomes a sink                     |
+| 3    | **1**    |            | 1                  | RIGHT | 0 becomes a sink                     |
+| 4    | **0**    |            | 0                  | RIGHT | 4 becomes a sink                     |
+| 5    | **4**    |            | 4                  | RIGHT | —                                    |
 
 `left = [3]`, sinks collected as `[2, 1, 0, 4]` and reversed to `[4, 0, 1, 2]`, giving the sequence
 
@@ -236,14 +236,14 @@ vertex:     3     4     0     1     2
 
 Now classify every arc by comparing positions:
 
-| arc | pos(from) | pos(to) | verdict |
-| --- | ---: | ---: | --- |
-| 0→1 | 2 | 3 | forward |
-| 1→2 | 3 | 4 | forward |
-| 2→3 | 4 | 0 | **backward → FAS** |
-| 3→4 | 0 | 1 | forward |
-| 4→0 | 1 | 2 | forward |
-| 3→1 | 0 | 3 | forward |
+| arc | pos(from) | pos(to) | verdict            |
+| --- | --------: | ------: | ------------------ |
+| 0→1 |         2 |       3 | forward            |
+| 1→2 |         3 |       4 | forward            |
+| 2→3 |         4 |       0 | **backward → FAS** |
+| 3→4 |         0 |       1 | forward            |
+| 4→0 |         1 |       2 | forward            |
+| 3→1 |         0 |       3 | forward            |
 
 One arc out of six. Reverse `2→3` into `3→2` and the graph becomes `3→4→0→1→2`, plus `3→1` and
 `3→2` as shortcuts — a DAG.
@@ -301,15 +301,15 @@ barycenter sweeps never saw them. And `count_total_graph_crossings` never counte
 
 From [00-diagnosis §3b](../planning/layout-engine-v2/00-diagnosis.md):
 
-| dataset | forward | feedback | adjacency entries in layer graph | crossings the ordering stage saw |
-| --- | ---: | ---: | ---: | ---: |
-| `ai_agent_trace` | 4 | 2 | 4 | 0 |
-| `clean_ring_10n_10e` | 9 | 1 | 9 | 0 |
-| `crossing_mesh_10n_10e` | 5 | 5 | 5 | **0** |
-| `cyclic_mesh` | 4 | 2 | 4 | 0 |
-| `dense_kubernetes_mesh` | 30 | 13 | 30 | **0** |
-| `distributed_saga_workflow` | 9 | 2 | 12 | 0 |
-| `kubernetes_cluster_topology` | 11 | 2 | 13 | 0 |
+| dataset                       | forward | feedback | adjacency entries in layer graph | crossings the ordering stage saw |
+| ----------------------------- | ------: | -------: | -------------------------------: | -------------------------------: |
+| `ai_agent_trace`              |       4 |        2 |                                4 |                                0 |
+| `clean_ring_10n_10e`          |       9 |        1 |                                9 |                                0 |
+| `crossing_mesh_10n_10e`       |       5 |        5 |                                5 |                            **0** |
+| `cyclic_mesh`                 |       4 |        2 |                                4 |                                0 |
+| `dense_kubernetes_mesh`       |      30 |       13 |                               30 |                            **0** |
+| `distributed_saga_workflow`   |       9 |        2 |                               12 |                                0 |
+| `kubernetes_cluster_topology` |      11 |        2 |                               13 |                                0 |
 
 Zero. On every dataset. And `minimize_crossings` opened with:
 
@@ -322,7 +322,7 @@ important combinatorial stage in a Sugiyama pipeline had never executed on real 
 mesh, the separate parallel optimiser — which counted differently — saw 433 crossings in the same
 drawing the ordering stage scored at 0.
 
-Then the router, which *did* have to draw those edges, had to invent a path for each one through a
+Then the router, which _did_ have to draw those edges, had to invent a path for each one through a
 layout that had never accounted for it. A* on a 5,000-vertex grid, rip-up, reroute, permutation
 search — an enormous amount of machinery spent solving a problem created three phases earlier by an
 omission.
@@ -368,7 +368,7 @@ Only at emit time does anything learn the truth. In
 swapped — so the arrowhead renders at the node the author actually pointed at. Nine phases of work
 happen on the flipped orientation, and the flip back is four lines.
 
-This is what "constraints flow forward" means concretely: the drawing is *complete* at every stage,
+This is what "constraints flow forward" means concretely: the drawing is _complete_ at every stage,
 so no stage has to guess about work another stage skipped.
 
 ### Nothing here is `Cross`
@@ -392,7 +392,7 @@ An edge whose source equals its target gets `EdgeRole::SelfLoop`, `reversed = fa
 `self_loops`. It takes no part in ranking, layering or ordering — there is nothing for it to
 constrain — and is routed directly in Phase 8 as a fixed port pair on one side of its node.
 
-Critically, it does not make the graph *look* cyclic. It is a genuine cycle, but reversing it
+Critically, it does not make the graph _look_ cyclic. It is a genuine cycle, but reversing it
 achieves nothing, so it is excluded from the arc set the DAG check runs on. Excluding it is what
 lets the check be a real assertion instead of a permanent false alarm.
 
@@ -402,7 +402,7 @@ lets the check be a real assertion instead of a permanent false alarm.
 
 An edge can arrive with `isCycle: true`, meaning "in my mental model, this is the edge that closes
 the loop". Ingest folds that into `IrEdge.hint = Feedback`, unless an explicit `layoutRole`
-overrides it — with the subtlety that `layoutRole: "auto"` means *no opinion* and must not shadow
+overrides it — with the subtlety that `layoutRole: "auto"` means _no opinion_ and must not shadow
 `isCycle`.
 
 The question is what Phase 2 should do with that hint. This is where v2 shipped a real bug, and the
@@ -421,7 +421,7 @@ an arc is hidden from it, the sequence says nothing about that arc — and rever
 create a brand-new cycle that the heuristic had no opportunity to fix. Then, because the arc is
 pinned, no repair is permitted either. The graph stays cyclic, and Phase 2 reports success.
 
-`isCycle` is a *human* claim about a mental model. It is not a proof about the arc set, and it is
+`isCycle` is a _human_ claim about a mental model. It is not a proof about the arc set, and it is
 frequently wrong at the level of precision an algorithm needs — an author marks the edge that feels
 like the back edge, not the one whose reversal happens to leave a DAG.
 
@@ -447,7 +447,7 @@ if edge.hint == Some(EdgeLayoutHint::Feedback) {
 ```
 
 Then **every** non-self edge — hinted or not — enters the SCC decomposition and the FAS pass **in
-its current orientation**. The FAS result is applied by *toggling*:
+its current orientation**. The FAS result is applied by _toggling_:
 
 ```rust
 for e in eades_feedback_arc_set(comp, &per_comp[ci]) {
@@ -456,7 +456,7 @@ for e in eades_feedback_arc_set(comp, &per_comp[ci]) {
 ```
 
 Toggling rather than setting is the other half of the fix. The arc list handed to Eades is already
-in its current orientation, so if Eades wants a hinted edge pointing the *other* way, toggling flips
+in its current orientation, so if Eades wants a hinted edge pointing the _other_ way, toggling flips
 it back. Setting `reversed = true` unconditionally would refuse to undo a hint, which reintroduces
 exactly the pin that caused the problem.
 
@@ -481,8 +481,8 @@ contract was wrong**, and every unit test was written against the same wrong con
 within minutes of running real datasets through the whole pipeline with invariant assertions
 enabled.
 
-The generalisable form: *when an algorithm's guarantee depends on the completeness of its input,
-letting a caller withhold input silently destroys the guarantee.* Eades does not promise "reversing
+The generalisable form: _when an algorithm's guarantee depends on the completeness of its input,
+letting a caller withhold input silently destroys the guarantee._ Eades does not promise "reversing
 these arcs helps". It promises "reversing these arcs yields a DAG, because they are precisely the
 arcs that disagree with a sequence covering all of them". Take away the coverage and there is no
 promise left — only a heuristic that happens to work most of the time, which is the worst kind of
@@ -492,8 +492,8 @@ dependency to have in a phase with no retry loop.
 
 ## Step 4 — Verify, and repair directly
 
-The contract Phase 2 owes everything downstream is one sentence: *after reversal, the non-self arc
-set is a DAG.* Ranking, layering and ordering all assume it, and none of them can detect or repair a
+The contract Phase 2 owes everything downstream is one sentence: _after reversal, the non-self arc
+set is a DAG._ Ranking, layering and ordering all assume it, and none of them can detect or repair a
 violation — it shows up as an unbounded rank chain or a silently truncated layering, three phases
 away from the cause.
 
@@ -507,7 +507,7 @@ in-degree-0 nodes early, whatever is left is on a cycle. The implementation pops
 over node indices**, so ties break by ascending index and the order is a function of the arc set
 alone.
 
-If the check fails, the repair is *direct*, not a retry:
+If the check fails, the repair is _direct_, not a retry:
 
 ```text
 loop at most (node_count + 1) times:
@@ -526,7 +526,7 @@ Two things to be precise about:
 - **This is verification with repair, not a second attempt at the heuristic.** It does not re-run
   Eades and hope for a different answer. It names the exact arcs that still close a cycle and flips
   one, then re-checks. Because it reverses one arc per iteration and the back-edge set is only
-  guaranteed to be a valid set *as a whole*, it must re-scan after each flip — hence the loop.
+  guaranteed to be a valid set _as a whole_, it must re-scan after each flip — hence the loop.
 - **It toggles.** Same reason as before: the arc that has to move may be one this pass already
   flipped, and refusing to flip it back is precisely what left `is_dag = false` in the failure
   above.
@@ -540,7 +540,7 @@ downstream phases cannot survive a violation, and a check that never fires costs
 `StructureResult.is_dag` is set to `true` when the verification loop succeeds. No phase in the
 current pipeline branches on it — ranking assumes the DAG. That is safe only because the loop above
 cannot exit with a live cycle except through its own bail-out, and it is worth knowing that the flag
-is presently a *report*, not a guard.
+is presently a _report_, not a guard.
 
 ---
 
@@ -565,12 +565,12 @@ Guarantees, in the order later phases depend on them:
 
 ### Cost
 
-| step | algorithm | cost |
-| --- | --- | --- |
-| SCC decomposition | Tarjan, explicit stack | $O(V + E)$ |
-| Feedback arc set, per cyclic component | Eades–Lin–Smyth, bucketed | $O(V + E)$ |
-| Verification | Kahn, min-heap ties | $O(V + E \log V)$ |
-| Repair (should never fire) | DFS back edges, ≤ 1 per iteration | $O(V(V+E))$ worst case |
+| step                                   | algorithm                         | cost                   |
+| -------------------------------------- | --------------------------------- | ---------------------- |
+| SCC decomposition                      | Tarjan, explicit stack            | $O(V + E)$             |
+| Feedback arc set, per cyclic component | Eades–Lin–Smyth, bucketed         | $O(V + E)$             |
+| Verification                           | Kahn, min-heap ties               | $O(V + E \log V)$      |
+| Repair (should never fire)             | DFS back edges, ≤ 1 per iteration | $O(V(V+E))$ worst case |
 
 In the measured runs the whole phase is a rounding error next to ordering. It is not fast because it
 was optimised; it is fast because nothing in it searches.

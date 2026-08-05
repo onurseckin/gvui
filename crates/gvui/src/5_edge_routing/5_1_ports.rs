@@ -480,14 +480,7 @@ fn plan_chain_sides(
         }
         claim_face(&mut used, source_node, choice.0);
         claim_face(&mut used, target_node, choice.1);
-        commit_runs(
-            &mut committed,
-            &source,
-            &target,
-            choice,
-            last == 1,
-            config,
-        );
+        commit_runs(&mut committed, &source, &target, choice, last == 1, config);
     }
 
     plan
@@ -1627,7 +1620,8 @@ mod tests {
         let hugged = assign_ports(&layered, &ir, &cfg());
 
         // Edge 1 runs to the leftmost child (centre 50) and edge 0 to the rightmost (centre 350).
-        let error = |ports: &PortTable, edge: u32, want: f64| (ports.source[&edge].point.x - want).abs();
+        let error =
+            |ports: &PortTable, edge: u32, want: f64| (ports.source[&edge].point.x - want).abs();
         assert!(
             error(&hugged, 1, 50.0) < error(&even, 1, 50.0),
             "left child: {} should beat {}",
@@ -2006,17 +2000,17 @@ mod tests {
         // means "price the corner honestly and let geometry decide", and geometry decides against.
         assert_eq!(count_sides(10.0), 0);
         assert_eq!(count_sides(0.0), 0);
-        assert!(count_sides(-2.0) > 0, "a negative bias must reach the sides");
+        assert!(
+            count_sides(-2.0) > 0,
+            "a negative bias must reach the sides"
+        );
     }
 
     #[test]
     fn a_source_never_leaves_from_the_top_and_a_target_never_enters_from_the_bottom() {
         // Both flags on and a deliberately awkward geometry: the target is above-left of where the
         // flow faces point, which is exactly the shape that would tempt a backward stub.
-        let (layered, ir) = one_hop(
-            rect(400.0, 0.0, 120.0, 40.0),
-            rect(0.0, 60.0, 120.0, 400.0),
-        );
+        let (layered, ir) = one_hop(rect(400.0, 0.0, 120.0, 40.0), rect(0.0, 60.0, 120.0, 400.0));
         let mut config = cfg();
         config.flow_side_bias = 0.0;
         let ports = assign_ports(&layered, &ir, &config);
@@ -2116,7 +2110,15 @@ mod tests {
         let layered = Layered {
             items: vec![
                 mk_item(ItemKind::Real(0), 0, 0, 0.0, 0.0, 300.0, 40.0),
-                mk_item(ItemKind::Dummy { edge: 0, seq: 0 }, 1, 0, 100.0, 200.0, 1.0, 1.0),
+                mk_item(
+                    ItemKind::Dummy { edge: 0, seq: 0 },
+                    1,
+                    0,
+                    100.0,
+                    200.0,
+                    1.0,
+                    1.0,
+                ),
                 mk_item(ItemKind::Real(2), 1, 1, 400.0, 200.0, 120.0, 40.0),
                 mk_item(ItemKind::Real(1), 2, 0, 60.0, 400.0, 120.0, 40.0),
             ],

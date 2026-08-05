@@ -474,7 +474,13 @@ mod tests {
             .map(|i| node(&format!("n{}", i), 160.0, 60.0))
             .collect();
         let edges: Vec<NormalizedEdge> = (0..len.saturating_sub(1))
-            .map(|i| edge(&format!("e{}", i), &format!("n{}", i), &format!("n{}", i + 1)))
+            .map(|i| {
+                edge(
+                    &format!("e{}", i),
+                    &format!("n{}", i),
+                    &format!("n{}", i + 1),
+                )
+            })
             .collect();
         (nodes, edges)
     }
@@ -485,7 +491,10 @@ mod tests {
             side,
             index: 0,
             point: Point { x, y },
-            stub: Point { x: x + 1.0, y: y + 2.0 },
+            stub: Point {
+                x: x + 1.0,
+                y: y + 2.0,
+            },
         }
     }
 
@@ -621,8 +630,14 @@ mod tests {
         assert_eq!(twice.nodes[0].y, original.nodes[0].y);
         assert_eq!(twice.nodes[0].width, original.nodes[0].width);
         assert_eq!(twice.edges[0].points, original.edges[0].points);
-        assert_eq!(twice.edges[0].source_port.side, original.edges[0].source_port.side);
-        assert_eq!(twice.validation.metrics.aspect_ratio, original.validation.metrics.aspect_ratio);
+        assert_eq!(
+            twice.edges[0].source_port.side,
+            original.edges[0].source_port.side
+        );
+        assert_eq!(
+            twice.validation.metrics.aspect_ratio,
+            original.validation.metrics.aspect_ratio
+        );
     }
 
     #[test]
@@ -694,12 +709,18 @@ mod tests {
         let mut td = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         td.direction = Direction::TopDown;
         let (w_td, h_td) = node_bbox(&layout_layered(&nodes, &edges, &td));
-        assert!(h_td > w_td, "top-down chain must be taller than wide: {w_td}x{h_td}");
+        assert!(
+            h_td > w_td,
+            "top-down chain must be taller than wide: {w_td}x{h_td}"
+        );
 
         let mut lr = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         lr.direction = Direction::LeftRight;
         let (w_lr, h_lr) = node_bbox(&layout_layered(&nodes, &edges, &lr));
-        assert!(w_lr > h_lr, "left-right chain must be wider than tall: {w_lr}x{h_lr}");
+        assert!(
+            w_lr > h_lr,
+            "left-right chain must be wider than tall: {w_lr}x{h_lr}"
+        );
     }
 
     #[test]

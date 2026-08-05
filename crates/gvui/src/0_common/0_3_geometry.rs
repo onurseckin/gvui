@@ -214,10 +214,12 @@ pub fn simplify_orthogonal_path(points: &[Point], epsilon: f64) -> Vec<Point> {
         let dx1 = curr.x - prev.x;
         let dx2 = next.x - curr.x;
 
-        let is_collinear_x =
-            (prev.x - curr.x).abs() <= epsilon && (curr.x - next.x).abs() <= epsilon && (dy1 * dy2 > 0.0);
-        let is_collinear_y =
-            (prev.y - curr.y).abs() <= epsilon && (curr.y - next.y).abs() <= epsilon && (dx1 * dx2 > 0.0);
+        let is_collinear_x = (prev.x - curr.x).abs() <= epsilon
+            && (curr.x - next.x).abs() <= epsilon
+            && (dy1 * dy2 > 0.0);
+        let is_collinear_y = (prev.y - curr.y).abs() <= epsilon
+            && (curr.y - next.y).abs() <= epsilon
+            && (dx1 * dx2 > 0.0);
 
         if !is_collinear_x && !is_collinear_y {
             result.push(*curr);
@@ -488,15 +490,24 @@ pub fn pack_boxes(boxes: &[Rect], gap: f64, target_aspect: f64) -> Vec<(f64, f64
         return Vec::new();
     }
 
-    let gap = if gap.is_finite() && gap >= 0.0 { gap } else { 0.0 };
+    let gap = if gap.is_finite() && gap >= 0.0 {
+        gap
+    } else {
+        0.0
+    };
     let aspect = if target_aspect.is_finite() && target_aspect > 0.0 {
         target_aspect
     } else {
         1.0
     };
 
-    let total_area: f64 = boxes.iter().map(|b| b.width.max(0.0) * b.height.max(0.0)).sum();
-    let max_width = boxes.iter().fold(0.0f64, |acc, b| acc.max(b.width.max(0.0)));
+    let total_area: f64 = boxes
+        .iter()
+        .map(|b| b.width.max(0.0) * b.height.max(0.0))
+        .sum();
+    let max_width = boxes
+        .iter()
+        .fold(0.0f64, |acc, b| acc.max(b.width.max(0.0)));
     let target_width = (total_area * aspect).sqrt().max(max_width);
 
     let mut order: Vec<usize> = (0..boxes.len()).collect();
@@ -774,8 +785,10 @@ mod tests {
 
         // Square target aspect over 9 equal boxes should settle into multiple shelves (rows),
         // i.e. not a single degenerate row.
-        let distinct_ys: std::collections::BTreeSet<i64> =
-            packed.iter().map(|r| (r.y * 1000.0).round() as i64).collect();
+        let distinct_ys: std::collections::BTreeSet<i64> = packed
+            .iter()
+            .map(|r| (r.y * 1000.0).round() as i64)
+            .collect();
         assert!(distinct_ys.len() > 1);
     }
 

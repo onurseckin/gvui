@@ -276,8 +276,10 @@ fn main() {
                     continue;
                 }
             }
-            let mut cfg = CustomLayoutConfig::default();
-            cfg.direction = *dir;
+            let cfg = CustomLayoutConfig {
+                direction: *dir,
+                ..Default::default()
+            };
             rows.push(run(&name, label, *mode, &cfg, &nodes, &edges));
         }
     }
@@ -326,13 +328,11 @@ fn main() {
         // the same counters as best-effort quality metrics — see `runLayoutAudit.ts` for the same
         // policy on the TypeScript side. Checking only `is_valid` here is what let this class of
         // defect through on the first pass.
-        if r.engine == "layered" || r.engine == "left-right" {
-            if r.strict_violations > 0 {
-                failures.push(format!(
-                    "{}/{}: {} guaranteed-constraint violation(s) ({})",
-                    r.name, r.engine, r.strict_violations, r.strict_detail
-                ));
-            }
+        if (r.engine == "layered" || r.engine == "left-right") && r.strict_violations > 0 {
+            failures.push(format!(
+                "{}/{}: {} guaranteed-constraint violation(s) ({})",
+                r.name, r.engine, r.strict_violations, r.strict_detail
+            ));
         }
         if !r.deterministic {
             failures.push(format!("{}/{}: NON-DETERMINISTIC", r.name, r.engine));
@@ -351,17 +351,17 @@ fn main() {
             let (nodes, edges) = load(f);
             let cfg = CustomLayoutConfig::default();
             let res = gvui::compute_layout(&nodes, &edges, &cfg, EngineMode::Layered);
-            let name = f.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+            let name = f
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default();
             for d in &res.validation.diagnostics {
                 println!("  [{}] {} {}: {}", name, d.severity, d.code, d.message);
             }
         }
     }
 
-    let layered_rows: Vec<&Row> = rows
-        .iter()
-        .filter(|r| r.engine == "layered")
-        .collect();
+    let layered_rows: Vec<&Row> = rows.iter().filter(|r| r.engine == "layered").collect();
     println!();
     println!(
         "layered totals: {} geometric crossings, {} combinatorial, {} bends, {} merged edge pairs",
@@ -370,10 +370,16 @@ fn main() {
         layered_rows.iter().map(|r| r.bends).sum::<usize>(),
         layered_rows.iter().map(|r| r.merged).sum::<usize>(),
     );
-    println!("slowest fixture: {:.2} ms (budget {:.0} ms)", slowest, TIME_BUDGET_MS);
+    println!(
+        "slowest fixture: {:.2} ms (budget {:.0} ms)",
+        slowest, TIME_BUDGET_MS
+    );
 
     if failures.is_empty() {
-        println!("AUDIT PASSED: {} fixture/engine combinations clean\n", rows.len());
+        println!(
+            "AUDIT PASSED: {} fixture/engine combinations clean\n",
+            rows.len()
+        );
     } else {
         println!("AUDIT FAILED ({} problems):", failures.len());
         for f in &failures {

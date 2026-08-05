@@ -13,10 +13,10 @@ downstream stages cannot repair. No stage may rely on "the outer loop will call 
 
 The current engine violates this in two places, and both are the source of its cost:
 
-- It routes edges, *then* discovers a badge does not fit, *then* widens a gap, *then* re-runs
+- It routes edges, _then_ discovers a badge does not fit, _then_ widens a gap, _then_ re-runs
   everything. (Designed but unreachable — defect #7.)
-- It routes edges, *then* counts geometric crossings, *then* flips port sides to try to repair them,
-  *then* re-routes.
+- It routes edges, _then_ counts geometric crossings, _then_ flips port sides to try to repair them,
+  _then_ re-routes.
 
 Both are inverted. A badge's space must be reserved **before** any route exists. Crossings must be
 resolved at the combinatorial level **before** any geometry exists.
@@ -24,13 +24,13 @@ resolved at the combinatorial level **before** any geometry exists.
 The mechanism for the first is the **label node**: every edge label becomes a real node in the
 layered graph, carrying its measured width and height. The ordering stage orders it; the coordinate
 stage separates it from its neighbours by `nodeGap`; the rank-height stage makes the rank tall
-enough for it. *The space is allocated by construction, so it cannot fail to fit, so there is
-nothing to retry.* (This is `dot`'s approach — `minlen` is doubled and labels occupy the odd ranks.)
+enough for it. _The space is allocated by construction, so it cannot fail to fit, so there is
+nothing to retry._ (This is `dot`'s approach — `minlen` is doubled and labels occupy the odd ranks.)
 
 The mechanism for the second is **lane demand pre-computation**: once ordering is fixed, the set of
 edges traversing each inter-rank channel and each intra-rank corridor is pure combinatorics on the
 layered structure. Compute lane counts by interval-graph colouring, then feed them into node
-separations *before* coordinate assignment runs. One pass, exact.
+separations _before_ coordinate assignment runs. One pass, exact.
 
 ### P2 — Discrete before continuous.
 
@@ -48,14 +48,14 @@ over a counting function that is O(E log V), so hundreds of evaluations cost und
 
 Everywhere else, use an algorithm with a guarantee:
 
-| Problem | Algorithm | Guarantee |
-| --- | --- | --- |
-| Feedback arc set | Eades–Lin–Smyth greedy | \|FAS\| ≤ m/2 − n/6, linear time |
-| Ranking | Network simplex (Gansner et al.) | **optimal** for Σ ω·(rank(v)−rank(u)) |
-| Two-layer ordering | Median + transpose | median is ≤ 3× optimal for the two-layer problem |
-| Crossing counting | Barth–Mutzel–Jünger accumulator tree | exact, O(E log V) |
-| Lane assignment | Greedy interval-graph colouring | **optimal** (interval graphs are perfect) |
-| X coordinates | Brandes–Köpf | ≤ 2 bends/edge, dummy chains straight, O(V+E) |
+| Problem            | Algorithm                            | Guarantee                                        |
+| ------------------ | ------------------------------------ | ------------------------------------------------ |
+| Feedback arc set   | Eades–Lin–Smyth greedy               | \|FAS\| ≤ m/2 − n/6, linear time                 |
+| Ranking            | Network simplex (Gansner et al.)     | **optimal** for Σ ω·(rank(v)−rank(u))            |
+| Two-layer ordering | Median + transpose                   | median is ≤ 3× optimal for the two-layer problem |
+| Crossing counting  | Barth–Mutzel–Jünger accumulator tree | exact, O(E log V)                                |
+| Lane assignment    | Greedy interval-graph colouring      | **optimal** (interval graphs are perfect)        |
+| X coordinates      | Brandes–Köpf                         | ≤ 2 bends/edge, dummy chains straight, O(V+E)    |
 
 ---
 
@@ -108,7 +108,7 @@ Everywhere else, use an algorithm with a guarantee:
 
 There is **no loop around this diagram.** Phase 6 is the only place where a downstream requirement
 (routing space) influences an upstream decision (node separation), and it is resolved by
-*computing the requirement ahead of time*, not by iterating.
+_computing the requirement ahead of time_, not by iterating.
 
 ## 3. Why this ordering is forced
 
@@ -221,17 +221,17 @@ Both are known **before** Phase 7 runs. That is the whole trick.
 
 ## 5. What this deletes
 
-| Deleted | Replaced by |
-| --- | --- |
-| `search_best_layout_state`, `LayoutSearchState`, `StateEvaluationResult` | nothing — the outer search is gone |
-| `3_4_trial_state_generator.rs` (1,111 lines) | nothing |
-| `5_1_routing_grid.rs`, `5_3_bounded_astar.rs`, `5_2_route_occupancy.rs` | Phase 6 lane assignment (~200 lines) |
-| Rip-up / reroute / order variants / conflict permutations | nothing |
-| `LayoutScore` 21-field lexicographic comparator | constraints (asserted) + metrics (reported) |
-| `ExactSpacingDemand`, `BadgeSpacingRequest`, `SpacingOverrides` | label nodes + lane demand |
-| ~15 search-budget config knobs | see [04-config-and-quality.md](./04-config-and-quality.md) |
+| Deleted                                                                  | Replaced by                                                |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `search_best_layout_state`, `LayoutSearchState`, `StateEvaluationResult` | nothing — the outer search is gone                         |
+| `3_4_trial_state_generator.rs` (1,111 lines)                             | nothing                                                    |
+| `5_1_routing_grid.rs`, `5_3_bounded_astar.rs`, `5_2_route_occupancy.rs`  | Phase 6 lane assignment (~200 lines)                       |
+| Rip-up / reroute / order variants / conflict permutations                | nothing                                                    |
+| `LayoutScore` 21-field lexicographic comparator                          | constraints (asserted) + metrics (reported)                |
+| `ExactSpacingDemand`, `BadgeSpacingRequest`, `SpacingOverrides`          | label nodes + lane demand                                  |
+| ~15 search-budget config knobs                                           | see [04-config-and-quality.md](./04-config-and-quality.md) |
 
-Net effect: the engine gets substantially *smaller* as well as ~1000× faster.
+Net effect: the engine gets substantially _smaller_ as well as ~1000× faster.
 
 ## 6. What survives unchanged
 
@@ -248,19 +248,19 @@ Net effect: the engine gets substantially *smaller* as well as ~1000× faster.
 Complexity per phase, and the target for a 200-node / 400-edge graph — roughly 7× larger than the
 dataset that currently takes 47 seconds.
 
-| Phase | Complexity | Target |
-| --- | --- | ---: |
-| 0 Ingest | O(V+E) | 0.5 ms |
-| 1 Measure (canvas, warm cache) | O(V+E) text ops | 1–3 ms |
-| 2 Structure (SCC + FAS) | O(V+E) | 0.5 ms |
-| 3 Rank (network simplex) | near-linear in practice | 1–3 ms |
-| 4 Layer | O(V + Σ span) | 1 ms |
-| 5 Order (4 seeds × 16 sweeps, BMJ counting) | O(k · s · E log V) | 3–8 ms |
-| 6 Demand (interval colouring) | O(E log E) | 1 ms |
-| 7 Coordinates (Brandes–Köpf, 4 passes) | O(V+E) | 1 ms |
-| 8 Route materialization | O(E · bends) | 1 ms |
-| 9 Emit (typed arrays) | O(V+E) | 1–2 ms |
-| **Total** | | **≈ 15–25 ms** |
+| Phase                                       | Complexity              |         Target |
+| ------------------------------------------- | ----------------------- | -------------: |
+| 0 Ingest                                    | O(V+E)                  |         0.5 ms |
+| 1 Measure (canvas, warm cache)              | O(V+E) text ops         |         1–3 ms |
+| 2 Structure (SCC + FAS)                     | O(V+E)                  |         0.5 ms |
+| 3 Rank (network simplex)                    | near-linear in practice |         1–3 ms |
+| 4 Layer                                     | O(V + Σ span)           |           1 ms |
+| 5 Order (4 seeds × 16 sweeps, BMJ counting) | O(k · s · E log V)      |         3–8 ms |
+| 6 Demand (interval colouring)               | O(E log E)              |           1 ms |
+| 7 Coordinates (Brandes–Köpf, 4 passes)      | O(V+E)                  |           1 ms |
+| 8 Route materialization                     | O(E · bends)            |           1 ms |
+| 9 Emit (typed arrays)                       | O(V+E)                  |         1–2 ms |
+| **Total**                                   |                         | **≈ 15–25 ms** |
 
 Two structural notes:
 

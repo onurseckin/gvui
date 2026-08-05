@@ -36,48 +36,48 @@ Three tiers. Tier 1 is what actually gets tuned; the others are for experimentat
 Every one of these has a **monotone, predictable** effect. Turning it up always does more of the
 same thing.
 
-| knob | default | effect |
-| --- | --- | --- |
-| `direction` | `TB` | `TB` \| `BT` \| `LR` \| `RL` |
-| `nodeGap` | 56 | minimum horizontal separation within a rank |
-| `rankGap` | 120 | minimum vertical separation between ranks (channels can raise it) |
-| `graphPadding` | 80 | outer margin |
-| `laneSpacing` | 12 | distance between parallel routing lanes |
-| `portPitch` | 18 | minimum spacing between ports on one node side |
-| `portStubLength` | 20 | straight run before the first bend |
-| `cornerRadius` | 8 | bend rounding; `0` = sharp |
-| `edgeStyle` | `orthogonal` | `orthogonal` \| `rounded` \| `spline` |
-| `labelPlacement` | `beside-edge` | `on-edge` \| `beside-edge` \| `above-edge` |
-| `badgeClearance` | 10 | padding reserved around a badge box |
-| `maxLabelWidth` | 220 | wrap width for edge labels |
-| `maxLabelLines` | 3 | then ellipsize |
-| `minNodeWidth` / `maxNodeWidth` | 120 / 420 | shrink-to-fit clamp |
-| `targetAspectRatio` | 1.6 | drives rank-width balancing and component packing |
-| `maxNodesPerRank` | auto | overrides the derived rank-width cap |
-| `bundleParallelEdges` | `true` | route parallel edges as a bus |
-| `compaction` | `balanced` | `tight` \| `balanced` \| `airy` — a preset over gaps and lane spacing |
+| knob                            | default       | effect                                                                |
+| ------------------------------- | ------------- | --------------------------------------------------------------------- |
+| `direction`                     | `TB`          | `TB` \| `BT` \| `LR` \| `RL`                                          |
+| `nodeGap`                       | 56            | minimum horizontal separation within a rank                           |
+| `rankGap`                       | 120           | minimum vertical separation between ranks (channels can raise it)     |
+| `graphPadding`                  | 80            | outer margin                                                          |
+| `laneSpacing`                   | 12            | distance between parallel routing lanes                               |
+| `portPitch`                     | 18            | minimum spacing between ports on one node side                        |
+| `portStubLength`                | 20            | straight run before the first bend                                    |
+| `cornerRadius`                  | 8             | bend rounding; `0` = sharp                                            |
+| `edgeStyle`                     | `orthogonal`  | `orthogonal` \| `rounded` \| `spline`                                 |
+| `labelPlacement`                | `beside-edge` | `on-edge` \| `beside-edge` \| `above-edge`                            |
+| `badgeClearance`                | 10            | padding reserved around a badge box                                   |
+| `maxLabelWidth`                 | 220           | wrap width for edge labels                                            |
+| `maxLabelLines`                 | 3             | then ellipsize                                                        |
+| `minNodeWidth` / `maxNodeWidth` | 120 / 420     | shrink-to-fit clamp                                                   |
+| `targetAspectRatio`             | 1.6           | drives rank-width balancing and component packing                     |
+| `maxNodesPerRank`               | auto          | overrides the derived rank-width cap                                  |
+| `bundleParallelEdges`           | `true`        | route parallel edges as a bus                                         |
+| `compaction`                    | `balanced`    | `tight` \| `balanced` \| `airy` — a preset over gaps and lane spacing |
 
 ### Tier 2 — Algorithm selection
 
 For experimentation and for A/B comparison in the developer panel.
 
-| knob | default | alternatives |
-| --- | --- | --- |
-| `ranker` | `network-simplex` | `longest-path`, `tight-tree` |
-| `ordering` | `median` | `barycenter` |
-| `orderingSweeps` | 16 | |
-| `orderingSeeds` | 4 | 1 for strict determinism benchmarking |
-| `coordinator` | `brandes-kopf` | `simple` (rank-centred, for debugging) |
-| `bkAlign` | `median` | `leftmost`, `rightmost`, `up-left`, … |
-| `dummyPriority` | `true` | disable to see the effect on long-edge straightness |
+| knob             | default           | alternatives                                        |
+| ---------------- | ----------------- | --------------------------------------------------- |
+| `ranker`         | `network-simplex` | `longest-path`, `tight-tree`                        |
+| `ordering`       | `median`          | `barycenter`                                        |
+| `orderingSweeps` | 16                |                                                     |
+| `orderingSeeds`  | 4                 | 1 for strict determinism benchmarking               |
+| `coordinator`    | `brandes-kopf`    | `simple` (rank-centred, for debugging)              |
+| `bkAlign`        | `median`          | `leftmost`, `rightmost`, `up-left`, …               |
+| `dummyPriority`  | `true`            | disable to see the effect on long-edge straightness |
 
 ### Tier 3 — Budgets
 
-| knob | default | purpose |
-| --- | --- | --- |
-| `timeBudgetMs` | 250 | soft cap; Phase 5 stops sweeping and everything else completes |
-| `maxDummyChainLength` | 64 | guard against pathological spans |
-| `assertConstraints` | dev only | run the Phase 9 invariant checks in release too |
+| knob                  | default  | purpose                                                        |
+| --------------------- | -------- | -------------------------------------------------------------- |
+| `timeBudgetMs`        | 250      | soft cap; Phase 5 stops sweeping and everything else completes |
+| `maxDummyChainLength` | 64       | guard against pathological spans                               |
+| `assertConstraints`   | dev only | run the Phase 9 invariant checks in release too                |
 
 **Deleted:** all fifteen `max*States` / `max*Permutations` / `max*Passes` / `max*Candidates` knobs,
 plus `bendPenalty`, `crossingPenalty`, `directionPenalty`, `sideReusePenalty`, `nearObstaclePenalty`
@@ -91,15 +91,15 @@ semantics.
 
 ### 3a. Constraints — must hold, verified not optimized
 
-| constraint | guaranteed by |
-| --- | --- |
-| No node–node overlap | Brandes–Köpf separations (Phase 7) |
-| No edge–node penetration | lane routing inside channels/corridors (Phase 6) |
-| No badge over a node or another badge | label nodes are separated items (Phase 4/7) |
-| Every edge routed | routes are constructed, never searched (Phase 8) |
-| All segments orthogonal | polyline is built from axis-aligned steps |
-| Ports on the node boundary | ports are computed from the box |
-| Deterministic output | no HashMap iteration order in any decision path |
+| constraint                            | guaranteed by                                    |
+| ------------------------------------- | ------------------------------------------------ |
+| No node–node overlap                  | Brandes–Köpf separations (Phase 7)               |
+| No edge–node penetration              | lane routing inside channels/corridors (Phase 6) |
+| No badge over a node or another badge | label nodes are separated items (Phase 4/7)      |
+| Every edge routed                     | routes are constructed, never searched (Phase 8) |
+| All segments orthogonal               | polyline is built from axis-aligned steps        |
+| Ports on the node boundary            | ports are computed from the box                  |
+| Deterministic output                  | no HashMap iteration order in any decision path  |
 
 Asserted under `debug_assertions` and in CI; compiled out in release. **A constraint violation is a
 bug report, not a score.** This is the important change: today a violated constraint is a number the
@@ -110,18 +110,18 @@ search tries to reduce, which means the engine can ship an invalid layout (`dens
 
 Surfaced in the developer panel so tuning has visible feedback:
 
-| metric | meaning |
-| --- | --- |
-| `crossings` | after Phase 5. `geometricCrossings` will exceed it somewhat — lane routing also crosses where a vertical run meets another edge's horizontal run in the same channel, which the combinatorial count does not model. Watch the *ratio*: a small, stable excess is normal, a large one means lane ordering is fighting the topology. Measured: 28 → 44 on `dense_kubernetes_mesh`, 0 → 0 on most fixtures |
-| `bends` | total; Brandes–Köpf caps at 2 per edge for adjacent-rank edges |
-| `totalEdgeLength` | Manhattan |
-| `straightChainRatio` | fraction of dummy chains that are perfectly vertical — the single best proxy for "looks designed" |
-| `area`, `aspectRatio` | |
-| `laneDepthMax` | widest channel; a large value means the ordering is fighting the topology |
-| `portSideBalance` | |
-| `leaderCount` | badges that needed a leader line — should be ~0; nonzero means the label-node reservation is being defeated somewhere |
-| `labelsTruncated` | labels that hit `maxLabelLines` |
-| per-phase `durationMs` | |
+| metric                 | meaning                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crossings`            | after Phase 5. `geometricCrossings` will exceed it somewhat — lane routing also crosses where a vertical run meets another edge's horizontal run in the same channel, which the combinatorial count does not model. Watch the _ratio_: a small, stable excess is normal, a large one means lane ordering is fighting the topology. Measured: 28 → 44 on `dense_kubernetes_mesh`, 0 → 0 on most fixtures |
+| `bends`                | total; Brandes–Köpf caps at 2 per edge for adjacent-rank edges                                                                                                                                                                                                                                                                                                                                          |
+| `totalEdgeLength`      | Manhattan                                                                                                                                                                                                                                                                                                                                                                                               |
+| `straightChainRatio`   | fraction of dummy chains that are perfectly vertical — the single best proxy for "looks designed"                                                                                                                                                                                                                                                                                                       |
+| `area`, `aspectRatio`  |                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `laneDepthMax`         | widest channel; a large value means the ordering is fighting the topology                                                                                                                                                                                                                                                                                                                               |
+| `portSideBalance`      |                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `leaderCount`          | badges that needed a leader line — should be ~0; nonzero means the label-node reservation is being defeated somewhere                                                                                                                                                                                                                                                                                   |
+| `labelsTruncated`      | labels that hit `maxLabelLines`                                                                                                                                                                                                                                                                                                                                                                         |
+| per-phase `durationMs` |                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 `leaderCount` and `straightChainRatio` are the two to watch. They are early warnings that a
 structural assumption has broken, in a way that a single aggregate score would hide.
@@ -144,12 +144,12 @@ invalid layout with 191 crossings is a line of console output rather than a fail
 
 Because the underlying knobs are now monotone, presets become meaningful:
 
-| preset | changes |
-| --- | --- |
-| `compact` | `nodeGap` 36, `rankGap` 72, `laneSpacing` 8, `compaction: tight` |
-| `readable` (default) | as above defaults |
-| `presentation` | `nodeGap` 80, `rankGap` 160, `cornerRadius` 14, `labelPlacement: beside-edge` |
-| `dense-mesh` | `targetAspectRatio` 2.2, `bundleParallelEdges` true, `edgeStyle: rounded` |
+| preset               | changes                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `compact`            | `nodeGap` 36, `rankGap` 72, `laneSpacing` 8, `compaction: tight`              |
+| `readable` (default) | as above defaults                                                             |
+| `presentation`       | `nodeGap` 80, `rankGap` 160, `cornerRadius` 14, `labelPlacement: beside-edge` |
+| `dense-mesh`         | `targetAspectRatio` 2.2, `bundleParallelEdges` true, `edgeStyle: rounded`     |
 
 Presets should be the primary UI; the full knob list stays available behind a disclosure in the
 developer panel.

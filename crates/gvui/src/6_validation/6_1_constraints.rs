@@ -152,8 +152,12 @@ fn axis_cells(a: f64, b: f64, cell: f64) -> Option<(i64, i64)> {
     }
     let lo = a.min(b);
     let hi = a.max(b);
-    let c0 = (lo / cell).floor().clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
-    let c1 = (hi / cell).floor().clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
+    let c0 = (lo / cell)
+        .floor()
+        .clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
+    let c1 = (hi / cell)
+        .floor()
+        .clamp(-CELL_INDEX_LIMIT, CELL_INDEX_LIMIT) as i64;
     if c1 - c0 + 1 > MAX_AXIS_CELLS {
         return None;
     }
@@ -794,7 +798,10 @@ mod tests {
 
     /// Two stacked nodes with a straight orthogonal route between their facing ports.
     fn clean_layout() -> (Vec<PositionedNode>, Vec<RoutedPath>) {
-        let nodes = vec![node("a", 0.0, 0.0, 100.0, 50.0), node("b", 0.0, 200.0, 100.0, 50.0)];
+        let nodes = vec![
+            node("a", 0.0, 0.0, 100.0, 50.0),
+            node("b", 0.0, 200.0, 100.0, 50.0),
+        ];
         let src = Point { x: 50.0, y: 50.0 };
         let tgt = Point { x: 50.0, y: 200.0 };
         let routes = vec![RoutedPath {
@@ -848,11 +855,40 @@ mod tests {
     fn spatial_hash_returns_unbucketable_entries_for_every_query() {
         let mut hash = SpatialHash::new(1.0);
         // Spans far more than MAX_AXIS_CELLS cells, so it cannot be bucketed.
-        hash.insert(7, &Rect { x: 0.0, y: 0.0, width: 100_000.0, height: 1.0 });
-        hash.insert(9, &Rect { x: f64::NAN, y: 0.0, width: 1.0, height: 1.0 });
-        hash.insert(1, &Rect { x: 0.0, y: 0.0, width: 1.0, height: 1.0 });
+        hash.insert(
+            7,
+            &Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 100_000.0,
+                height: 1.0,
+            },
+        );
+        hash.insert(
+            9,
+            &Rect {
+                x: f64::NAN,
+                y: 0.0,
+                width: 1.0,
+                height: 1.0,
+            },
+        );
+        hash.insert(
+            1,
+            &Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 1.0,
+                height: 1.0,
+            },
+        );
 
-        let far_away = hash.query(&Rect { x: 9_000.0, y: 9_000.0, width: 1.0, height: 1.0 });
+        let far_away = hash.query(&Rect {
+            x: 9_000.0,
+            y: 9_000.0,
+            width: 1.0,
+            height: 1.0,
+        });
         assert!(far_away.contains(&7));
         assert!(far_away.contains(&9));
         assert!(!far_away.contains(&1));
@@ -863,7 +899,14 @@ mod tests {
         let hash = SpatialHash::new(10.0);
         assert!(hash.is_empty());
         assert_eq!(hash.len(), 0);
-        assert!(hash.query(&Rect { x: 0.0, y: 0.0, width: 10.0, height: 10.0 }).is_empty());
+        assert!(hash
+            .query(&Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 10.0,
+                height: 10.0
+            })
+            .is_empty());
     }
 
     #[test]
@@ -900,7 +943,10 @@ mod tests {
 
     #[test]
     fn touching_nodes_do_not_overlap() {
-        let nodes = vec![node("a", 0.0, 0.0, 100.0, 50.0), node("b", 100.0, 0.0, 100.0, 50.0)];
+        let nodes = vec![
+            node("a", 0.0, 0.0, 100.0, 50.0),
+            node("b", 100.0, 0.0, 100.0, 50.0),
+        ];
         let d = check_constraints(&nodes, &[], &[], &[], &cfg());
         assert!(d.is_empty());
     }
@@ -936,7 +982,9 @@ mod tests {
         ];
         let d = check_constraints(&nodes, &routes, &[], &[], &cfg());
         assert_eq!(
-            d.iter().filter(|x| x.code == "NON_ORTHOGONAL_SEGMENT").count(),
+            d.iter()
+                .filter(|x| x.code == "NON_ORTHOGONAL_SEGMENT")
+                .count(),
             2
         );
 
@@ -977,7 +1025,10 @@ mod tests {
     fn finds_non_finite_coordinates_everywhere() {
         let mut nodes = vec![node("a", f64::NAN, 0.0, 10.0, 10.0)];
         nodes.push(node("b", 400.0, 400.0, 10.0, 10.0));
-        let p = Point { x: f64::INFINITY, y: 0.0 };
+        let p = Point {
+            x: f64::INFINITY,
+            y: 0.0,
+        };
         let routes = vec![RoutedPath {
             edge_id: "e0".to_string(),
             points: vec![p, Point { x: 1.0, y: 1.0 }],
@@ -987,7 +1038,9 @@ mod tests {
         let badges = vec![badge("e0", f64::NAN, 0.0, 10.0, 10.0)];
         let d = check_constraints(&nodes, &routes, &badges, &[], &cfg());
         assert_eq!(
-            d.iter().filter(|x| x.code == "NON_FINITE_COORDINATE").count(),
+            d.iter()
+                .filter(|x| x.code == "NON_FINITE_COORDINATE")
+                .count(),
             3
         );
     }

@@ -95,7 +95,9 @@ describe("CUSTOM_LAYOUT_SCENARIOS", () => {
     expect(maxCycles).toBeGreaterThanOrEqual(4);
 
     // Heavy labels: at least one label long enough to force wrapping.
-    const longestLabel = Math.max(...scenarios.flatMap((s) => s.edges.map((e) => e.label?.length ?? 0)));
+    const longestLabel = Math.max(
+      ...scenarios.flatMap((s) => s.edges.map((e) => e.label?.length ?? 0)),
+    );
     expect(longestLabel).toBeGreaterThanOrEqual(70);
 
     // Multi-component: at least one scenario has three or more weakly connected components.

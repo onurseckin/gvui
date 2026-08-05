@@ -21,7 +21,7 @@ Here is the bind every orthogonal layered layout engine hits.
 Edges need space to run in. In a layered drawing, an edge leaving a node at rank $r$ and arriving at
 a node at rank $r+1$ goes down, then sideways, then down again. The sideways part runs in the
 horizontal band between the two ranks. If several edges need to run sideways through the same band
-at the same time, they need to be at *different heights* within it, or they overlap and become one
+at the same time, they need to be at _different heights_ within it, or they overlap and become one
 indistinguishable line.
 
 So the band has to be tall enough. How tall? That depends on how many edges need to share it. How
@@ -45,7 +45,7 @@ quality — an audit of the order-variant loop found it cost **4×** for byte-id
 k8s topology. Worse, the loop could still fail: `distributed_saga_workflow` returned **10 routes for
 11 edges** under default settings. One edge just did not get drawn.
 
-That is the failure mode of guess-and-retry. It is slow *and* it has no guarantee.
+That is the failure mode of guess-and-retry. It is slow _and_ it has no guarantee.
 
 ### How v2 breaks the loop: compute the requirement first
 
@@ -59,7 +59,7 @@ order 4. Whatever coordinates get assigned later, that link's route is: leave `a
 rightward through the band below rank 2, descend into `b`. It passes over the columns of orders 1
 through 4 and no others. It runs in the band below rank 2 and no other band.
 
-Which band, and which columns — that is the *entire* description of the route's topology, and it is
+Which band, and which columns — that is the _entire_ description of the route's topology, and it is
 pure combinatorics on the integers Phase 5 just produced. No geometry required.
 
 So compute the demand **now**, in order space, and hand it to Phase 7 as a set of minimum
@@ -98,7 +98,7 @@ lanes.
 
 ### Corridors — vertical space between adjacent items
 
-A **corridor** is the vertical gap between two adjacent items in the *same* rank. Corridor
+A **corridor** is the vertical gap between two adjacent items in the _same_ rank. Corridor
 $(r, o)$ sits between the items at orders $o$ and $o+1$ of rank $r$.
 
 Corridors carry **flat edges** — edges whose two endpoints landed on the same rank. A flat edge has
@@ -139,7 +139,7 @@ That is it. An interval $[\text{lo}, \text{hi}]$ over the integer order axis, pl
 lives in. These are **order intervals, not pixel intervals** — which is the whole point, because
 order intervals exist right now and pixel intervals do not.
 
-A parallel `heads_left` flag records whether the link travels toward a *smaller* order, because
+A parallel `heads_left` flag records whether the link travels toward a _smaller_ order, because
 `ChannelSeg` stores only the sorted interval and the travel direction is needed later for the
 aesthetic relabel.
 
@@ -245,17 +245,16 @@ E:                                           ●─────────●
 
 $A = [0,2]$, $B = [1,5]$, $C = [3,4]$, $D = [6,8]$, $E = [7,9]$. Already sorted by left endpoint.
 
-| step | segment | retire (hi < lo) | free lanes | assigned | active after |
-| --- | --- | --- | --- | ---: | --- |
-| 1 | A [0,2] | — | {} | **0** | (2,lane 0) |
-| 2 | B [1,5] | none (2 ≥ 1) | {} | **1** | (2,0) (5,1) |
-| 3 | C [3,4] | A (2 < 3) → free 0 | {0} | **0** | (5,1) (4,0) |
-| 4 | D [6,8] | C (4<6), B (5<6) → free 0,1 | {0,1} | **0** | (8,0) |
-| 5 | E [7,9] | none (8 ≥ 7) | {1} | **1** | (8,0) (9,1) |
+| step | segment | retire (hi < lo)            | free lanes | assigned | active after |
+| ---- | ------- | --------------------------- | ---------- | -------: | ------------ |
+| 1    | A [0,2] | —                           | {}         |    **0** | (2,lane 0)   |
+| 2    | B [1,5] | none (2 ≥ 1)                | {}         |    **1** | (2,0) (5,1)  |
+| 3    | C [3,4] | A (2 < 3) → free 0          | {0}        |    **0** | (5,1) (4,0)  |
+| 4    | D [6,8] | C (4<6), B (5<6) → free 0,1 | {0,1}      |    **0** | (8,0)        |
+| 5    | E [7,9] | none (8 ≥ 7)                | {1}        |    **1** | (8,0) (9,1)  |
 
 Two lanes total. Check against the lower bound: the deepest point is anywhere in $[1,2]$ (A and B),
-or $[3,4]$ (B and C), or $[7,8]$ (D and E) — depth 2 everywhere. $\omega = 2$, and the greedy used
-2. Optimal.
+or $[3,4]$ (B and C), or $[7,8]$ (D and E) — depth 2 everywhere. $\omega = 2$, and the greedy used 2. Optimal.
 
 Note step 3 and step 4: lane 0 is recycled twice. Freed lanes come off a **min-heap**, so the lowest
 free id is always taken. That is not just tidiness — it makes the assignment a function of the
@@ -265,7 +264,7 @@ across runs.
 ### 4.6 Why touching intervals must not share a lane
 
 The sweep retires an active segment only when `active_hi < lo` **strictly**. Two intervals that meet
-at exactly one point — say $[0,2]$ and $[2,4]$ — are *not* considered disjoint, and they get
+at exactly one point — say $[0,2]$ and $[2,4]$ — are _not_ considered disjoint, and they get
 different lanes.
 
 This looks over-cautious until you draw it. Both segments have an endpoint at order 2, meaning both
@@ -287,10 +286,10 @@ counts as conflict, and the test `touching_intervals_do_not_share_a_lane` pins i
 
 ---
 
-## 5. Choosing *which* lane: the bus look
+## 5. Choosing _which_ lane: the bus look
 
 The colouring says how many lanes are needed and guarantees no two conflicting segments share one.
-It says nothing about *which* lane number each segment should get — any permutation of the lane ids
+It says nothing about _which_ lane number each segment should get — any permutation of the lane ids
 is an equally valid colouring.
 
 That freedom is worth spending. The rule comes from VLSI channel routing and is called the left-edge
@@ -322,7 +321,7 @@ crosses nothing. Same for lane 1 at orders 1 and 4. **Zero crossings.**
 On the right, the lane-1 run descends at orders 1 and 4, both of which sit inside lane 0's run
 `[0,5]`: two crossings. The lane-2 run descends at 2 and 3, inside both shallower runs: four more.
 **Six crossings**, from the same segments, the same lane count, and an equally valid colouring. Lane
-*assignment* is free; lane *choice* is not.
+_assignment_ is free; lane _choice_ is not.
 
 That said, the win is in avoiding the pathological choice, not in fine-tuning a good one. Swapping
 this rule for a different sensible rule barely moves the needle — measured in [§8](#8-the-measured-consequence).
@@ -336,13 +335,13 @@ still a proper colouring and still a bijection onto $0..\omega$.
 ### 5.1 Why this is not the final word
 
 Everything above reasons in **order** space, because order is all Phase 6 has. The worked example is
-sound there — and the drawing can still come out looking like the right-hand picture, because *order
-is not a proxy for x across ranks*.
+sound there — and the drawing can still come out looking like the right-hand picture, because _order
+is not a proxy for x across ranks_.
 
 Item 0 of a rank holding fifteen shards and item 0 of the next rank holding the single reducer they
 all feed are both "order 0", and they are a thousand pixels apart. Two segments whose order intervals
 are disjoint can therefore overlap for most of the drawing's width, and — worse — a segment whose two
-items share an order index looks perfectly *vertical* to the sweep in §3, gets excluded from the
+items share an order index looks perfectly _vertical_ to the sweep in §3, gets excluded from the
 colouring as needing no lane at all, and lands in lane 0 on top of whatever is already there.
 
 Both failures were real. On the sample corpus this phase's assignment produced **148 geometric
@@ -352,13 +351,13 @@ of them overlapping for 1226 px.
 The fix is not to make this phase cleverer, because it cannot be: no amount of order-space reasoning
 recovers information that only coordinates carry. Instead the two questions are separated.
 
-| question | phase | why there |
-| --- | --- | --- |
-| **How much** routing space does this channel need? | 6 (here) | Phase 7 needs the answer *before* it can place anything |
-| **Which** lane does each segment take? | 8, [§5.5](10-edge-routing.md#55-lane-assignment-happens-in-coordinate-space) | needs the coordinates Phase 7 produces |
+| question                                           | phase                                                                        | why there                                               |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **How much** routing space does this channel need? | 6 (here)                                                                     | Phase 7 needs the answer _before_ it can place anything |
+| **Which** lane does each segment take?             | 8, [§5.5](10-edge-routing.md#55-lane-assignment-happens-in-coordinate-space) | needs the coordinates Phase 7 produces                  |
 
 The count computed here is unchanged and still binding — it is an upper bound on the lanes needed,
-and Phase 8 only ever permutes and packs *within* the space it bought. So the reservation guarantee
+and Phase 8 only ever permutes and packs _within_ the space it bought. So the reservation guarantee
 is untouched, and the drawn assignment is made where the geometry is known. Same corpus after the
 split: **40 crossings and 0 merged pairs.**
 
@@ -367,7 +366,7 @@ split: **40 crossings and 0 merged pairs.**
 ## 6. Corridors are easier
 
 Flat edges get the same treatment with a simplification. Every flat edge in a rank occupies the
-*whole* rank band vertically — it has to clear the tops or bottoms of the nodes it passes. So inside
+_whole_ rank band vertically — it has to clear the tops or bottoms of the nodes it passes. So inside
 one corridor, every segment conflicts with every other one. There is nothing to compute:
 
 $$\text{corridor lanes}(r, o) = \text{number of flat-edge segments crossing that corridor}$$
@@ -385,7 +384,7 @@ reservation.
 
 ## 7. Turning lanes into separations
 
-The phase's actual output is not lane numbers — those are for Phase 8. Its output *to Phase 7* is a
+The phase's actual output is not lane numbers — those are for Phase 8. Its output _to Phase 7_ is a
 set of minimum distances.
 
 ### Rank gaps
@@ -398,18 +397,18 @@ The `2 × port_stub_length` covers one straight run leaving the node above and o
 below, before and after the lanes. `rank_gap_min[r]` is the gap **below** rank $r$; the final entry
 is populated for uniform indexing and is meaningless.
 
-Note this is a `max`, not a sum. The lanes live *inside* the configured gap. If the configured gap is
+Note this is a `max`, not a sum. The lanes live _inside_ the configured gap. If the configured gap is
 already generous, the lanes cost nothing extra.
 
 Real numbers, at defaults (`rank_gap` 120, `lane_spacing` 12, `port_stub_length` 20, `compaction`
 balanced so the scale is 1.0):
 
-| lanes in the channel | lane demand | gap |
-| ---: | ---: | ---: |
-| 0 | $0 + 40 = 40$ | **120** (configured floor wins) |
-| 3 | $36 + 40 = 76$ | **120** (still absorbed) |
-| 7 | $84 + 40 = 124$ | **124** (routing starts to pay) |
-| 10 | $120 + 40 = 160$ | **160** |
+| lanes in the channel |      lane demand |                             gap |
+| -------------------: | ---------------: | ------------------------------: |
+|                    0 |    $0 + 40 = 40$ | **120** (configured floor wins) |
+|                    3 |   $36 + 40 = 76$ |        **120** (still absorbed) |
+|                    7 |  $84 + 40 = 124$ | **124** (routing starts to pay) |
+|                   10 | $120 + 40 = 160$ |                         **160** |
 
 Below about seven lanes the default rank gap already has room; past that the drawing grows to fit,
 which is the correct behaviour — a channel carrying ten parallel edges genuinely needs more vertical
@@ -427,11 +426,11 @@ lane cannot occupy the same pixels.
 
 At defaults (`node_gap` 56, `lane_spacing` 12):
 
-| corridor contents | separation |
-| --- | ---: |
-| nothing | $\max(56, 0) + 0 = $ **56** |
-| 2 flat edges | $\max(56, 24) + 0 = $ **56** |
-| 6 flat edges | $\max(56, 72) + 0 = $ **72** |
+| corridor contents               |                      separation |
+| ------------------------------- | ------------------------------: |
+| nothing                         |     $\max(56, 0) + 0 = $ **56** |
+| 2 flat edges                    |    $\max(56, 24) + 0 = $ **56** |
+| 6 flat edges                    |    $\max(56, 72) + 0 = $ **72** |
 | 1 flat edge with a 300 px badge | $\max(56, 12) + 300 = $ **356** |
 
 Two contract subtleties Phase 7 relies on:
@@ -447,8 +446,8 @@ Two contract subtleties Phase 7 relies on:
 
 Everywhere else, information moves strictly forward: measurement feeds structure, structure feeds
 ranking, ranking feeds layering, layering feeds ordering. `RoutingDemand` is the single exception —
-it is a requirement generated by a *downstream* concern (Phase 8 needs somewhere to draw) reaching an
-*upstream* decision (Phase 7 choosing coordinates).
+it is a requirement generated by a _downstream_ concern (Phase 8 needs somewhere to draw) reaching an
+_upstream_ decision (Phase 7 choosing coordinates).
 
 And the way that dependency is discharged is the whole thesis of v2 in miniature: instead of letting
 Phase 8 discover it has no room and asking Phase 7 to try again, the requirement is **computed ahead
@@ -456,7 +455,7 @@ of time, exactly**, and delivered as a hard lower bound. The cycle is broken by 
 correctly rather than by iterating.
 
 The guarantee that makes it sound is the optimality of the interval colouring. Because $\omega$ is
-the provable minimum, the separation derived from it is *exactly sufficient*: never too small, so
+the provable minimum, the separation derived from it is _exactly sufficient_: never too small, so
 routing cannot fail; never larger than necessary, so no whitespace is wasted. A heuristic lane count
 would have given up one of those two properties.
 
@@ -484,14 +483,14 @@ Measured result across all fixtures: **zero** `MISSING_ROUTE` diagnostics, **zer
 One property of this design is worth stating plainly rather than hiding, because it is real and it
 is characterised.
 
-The *combinatorial* crossing count from [Phase 5](./07-crossing-minimization.md) and the *geometric*
+The _combinatorial_ crossing count from [Phase 5](./07-crossing-minimization.md) and the _geometric_
 crossing count measured on the emitted polylines are not always equal. Measured across the layered
 fixtures, grouped by how deep the channels got:
 
-| channel lanes | 1 | 1 | 2 | 3 | 3 | 6 | 10 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| combinatorial | 0 | 0 | 0 | 0 | 0 | 6 | 28 |
-| geometric | 0 | 0 | 0 | 2 | 2 | 6 | 44 |
+| channel lanes |   1 |   1 |   2 |   3 |   3 |   6 |  10 |
+| ------------- | --: | --: | --: | --: | --: | --: | --: |
+| combinatorial |   0 |   0 |   0 |   0 |   0 |   6 |  28 |
+| geometric     |   0 |   0 |   0 |   2 |   2 |   6 |  44 |
 
 The excess is **zero at 1–2 lanes** and grows to **+16 at 10 lanes**. That shape is the signature of
 a structural property, not a bug.
@@ -517,8 +516,8 @@ Any orthogonal lane router has them; they are the price of the bus aesthetic.
 
 **The lever is lane depth, not lane order.** This was tested rather than assumed. Swapping the
 lane-ordering heuristic (direction-aware left-edge → plain ordering by left endpoint) moved the total
-across all layered fixtures from **121 to 122** — a null result. The lane *order* does not matter.
-The lane *count* does, and it is already the provable minimum, so it cannot be reduced by any change
+across all layered fixtures from **121 to 122** — a null result. The lane _order_ does not matter.
+The lane _count_ does, and it is already the provable minimum, so it cannot be reduced by any change
 to this phase.
 
 Reducing it means producing shorter horizontal runs in the first place, which means changing **Phase
@@ -550,7 +549,7 @@ structure it is handed is well-formed — links spanning more than one rank are 
 That assumption is load-bearing enough that it caught a real bug during development: an early spec
 for the `max_dummy_chain_length` pathology guard proposed keeping "only the first and last `cap/2`
 intermediate ranks", which deliberately creates one link spanning many ranks. Three phases depend on
-`up`/`down` being *adjacent-rank* adjacencies — the accumulator tree indexes by order within rank
+`up`/`down` being _adjacent-rank_ adjacencies — the accumulator tree indexes by order within rank
 $r+1$, this phase derives channel intervals from a single rank gap, and Brandes–Köpf's type-1
 conflict marking assumes single-rank segments. The cap is now advisory: chains are always contiguous
 and an over-long span is reported as a diagnostic instead.

@@ -8,7 +8,7 @@ Phases 0 and 1. Two questions have to be answered before a single coordinate exi
    what does the connectivity look like in a form that can be walked millions of times without
    allocating.
 2. **How big is everything?** Not roughly. Exactly. Every box that will be placed must have its
-   final width and height *before* the first ranking decision, because ranking, ordering and
+   final width and height _before_ the first ranking decision, because ranking, ordering and
    separation all consume those numbers and none of them can be re-run.
 
 This chapter covers both. Phase 0 is
@@ -28,14 +28,29 @@ The wire format is deliberately dull. Two flat arrays of plain records, defined 
 ```jsonc
 {
   "nodes": [
-    { "id": "api", "label": "API Gateway", "width": 240, "height": 96,
-      "rank": 3, "group": "control-plane" }
+    {
+      "id": "api",
+      "label": "API Gateway",
+      "width": 240,
+      "height": 96,
+      "rank": 3,
+      "group": "control-plane",
+    },
   ],
   "edges": [
-    { "id": "e1", "source": "api", "target": "db", "label": "queries",
-      "isCycle": false, "layoutRole": "auto", "weight": 2,
-      "minLen": 2, "labelWidth": 84, "labelHeight": 28 }
-  ]
+    {
+      "id": "e1",
+      "source": "api",
+      "target": "db",
+      "label": "queries",
+      "isCycle": false,
+      "layoutRole": "auto",
+      "weight": 2,
+      "minLen": 2,
+      "labelWidth": 84,
+      "labelHeight": 28,
+    },
+  ],
 }
 ```
 
@@ -62,10 +77,10 @@ input                      interned
 { id: "queue", … }    →    3    node_names[3] = "queue"
 ```
 
-From here on, a node *is* the number `2`. The string survives only in `node_names`, which is read
+From here on, a node _is_ the number `2`. The string survives only in `node_names`, which is read
 exactly once more, at emit time, to label the output.
 
-**Contract subtlety worth internalising:** index `i` is the `i`-th *surviving* node, so a dropped
+**Contract subtlety worth internalising:** index `i` is the `i`-th _surviving_ node, so a dropped
 duplicate shifts every later index. In the trace above, `"queue"` is index 3, not 4. Anything that
 needs to map back resolves through `node_names`, never by position in the caller's array.
 
@@ -75,7 +90,7 @@ v1 kept its adjacency as `HashMap<String, Vec<String>>`. Every neighbour lookup 
 every candidate ordering cloned a `Vec<Vec<String>>`; the routing grid keyed its vertices with
 `format!("{:.3},{:.3}")` and cloned three owned `String`s per grid edge into both directions of the
 adjacency list. The diagnosis catalogued this as three separate defects (#22, #23, #27) but it is
-really one: *the data structure made the cheap operations expensive.*
+really one: _the data structure made the cheap operations expensive._
 
 Dense indices are not a micro-optimisation here. They remove an entire category of cost and make
 the remaining costs legible. When ordering is a permutation of `u32`s, "try 4 seeds × 16 sweeps"
@@ -136,10 +151,10 @@ within a group, so two runs over the same arc list produce byte-identical arrays
 
 Ingest builds **two** of these:
 
-| CSR | keyed by | answers |
-| --- | --- | --- |
-| `out_csr` | source | "what does this node point at?" |
-| `in_csr` | target | "what points at this node?" |
+| CSR       | keyed by | answers                         |
+| --------- | -------- | ------------------------------- |
+| `out_csr` | source   | "what does this node point at?" |
+| `in_csr`  | target   | "what points at this node?"     |
 
 Both are needed. Tarjan's SCC walk only uses successors; the Eades sequence heuristic needs both
 in- and out-degree; the ordering sweeps go down using one and up using the other.
@@ -153,11 +168,11 @@ Ingest never fails. A single malformed edge must not cost the user the whole dra
 drops the offending record and appends a `LayoutDiagnostic` that rides all the way out to
 `validation.diagnostics` in the result payload.
 
-| code | trigger | action |
-| --- | --- | --- |
-| `DUPLICATE_NODE` | node id already interned | keep the first, skip this one |
-| `DUPLICATE_EDGE` | edge id already seen | keep the first, skip this one |
-| `UNKNOWN_ENDPOINT` | `source` or `target` is not a known node id | drop the edge |
+| code               | trigger                                     | action                        |
+| ------------------ | ------------------------------------------- | ----------------------------- |
+| `DUPLICATE_NODE`   | node id already interned                    | keep the first, skip this one |
+| `DUPLICATE_EDGE`   | edge id already seen                        | keep the first, skip this one |
+| `UNKNOWN_ENDPOINT` | `source` or `target` is not a known node id | drop the edge                 |
 
 All three are `severity: "warning"` and carry the offending ids:
 
@@ -169,7 +184,7 @@ UNKNOWN_ENDPOINT  Edge 'e17' references unknown node id(s) [ghost]; edge dropped
 #### Why the loud version is better
 
 v1 also dropped unresolvable edges — silently, deep inside the router. The consequence was that a
-typo in the caller's data presented as a *layout* bug: an edge that simply was not drawn, with
+typo in the caller's data presented as a _layout_ bug: an edge that simply was not drawn, with
 nothing anywhere saying why. The diagnosis measured a related symptom on
 `distributed_saga_workflow`, where the router returned 10 routes for 11 edges and reported only
 `unresolved_soft_conflicts` — a status that describes a routing difficulty, for something that was
@@ -211,7 +226,7 @@ resolving it afterwards.
 ### Weakly connected components
 
 A graph handed to the engine may be several graphs wearing a trenchcoat. Ingest finds the pieces
-with a union-find over all non-self edges, **ignoring direction** (hence *weakly* connected):
+with a union-find over all non-self edges, **ignoring direction** (hence _weakly_ connected):
 
 ```text
 edges: b→a, c→d          nodes: a b c d lonely
@@ -246,8 +261,8 @@ that could care about them runs later.
 adjacent ranks.
 
 An edge that carries a label gets 2 instead. The reason becomes obvious in
-[Chapter 6](./06-layering-and-labels.md): the badge is materialised as an *item on an intermediate
-rank*. A span of 1 has no intermediate rank, so there would be nowhere to put it, and the whole
+[Chapter 6](./06-layering-and-labels.md): the badge is materialised as an _item on an intermediate
+rank_. A span of 1 has no intermediate rank, so there would be nowhere to put it, and the whole
 "badge space cannot fail to fit" guarantee would have a hole in it.
 
 An explicit `minLen` from the host always wins:
@@ -283,17 +298,17 @@ where `side_degree = max(in_degree, out_degree)` — the busier side dictates th
 With the defaults (`port_pitch = 18`, `port_endpoint_padding = 16`, `min_node_width = 120`,
 `max_node_width = 420`):
 
-| out-degree | required | measured 100 | final width |
-| ---: | ---: | ---: | ---: |
-| 1 | 50 | 100 | **120** (min floor) |
-| 10 | $10 \times 18 + 32 = 212$ | 100 | **212** |
-| 30 | $30 \times 18 + 32 = 572$ | 100 | **420** (max ceiling) |
+| out-degree |                  required | measured 100 |           final width |
+| ---------: | ------------------------: | -----------: | --------------------: |
+|          1 |                        50 |          100 |   **120** (min floor) |
+|         10 | $10 \times 18 + 32 = 212$ |          100 |               **212** |
+|         30 | $30 \times 18 + 32 = 572$ |          100 | **420** (max ceiling) |
 
 Beyond `max_node_width` the node stops growing and the ports get tighter than `port_pitch`; that is
 the accepted trade, because a 572-pixel-wide box would distort the whole drawing to accommodate one
 hub.
 
-**Why here and not at routing time?** Because width is an *input* to ranking, ordering and
+**Why here and not at routing time?** Because width is an _input_ to ranking, ordering and
 coordinate assignment. By the time the router runs, every x coordinate is already fixed; widening a
 node then would mean invalidating them and re-running — exactly the retry loop the design exists to
 avoid. v1's plan put this in the routing phase, which is why it read as a data dependency problem.
@@ -303,7 +318,7 @@ finalised. Constraints flow forward.
 ### Pinned ranks
 
 A node may carry `rank: 3`, pinning it. Ingest saturates the value into a `u16` and sets
-`has_pinned_ranks` if *any* node used it. That flag disables rank balancing for the whole graph —
+`has_pinned_ranks` if _any_ node used it. That flag disables rank balancing for the whole graph —
 balancing works by moving nodes between ranks, and a graph with pins is a graph where the caller has
 said not to.
 
@@ -339,7 +354,7 @@ know how many lines its description wraps to. You cannot know that until you kno
 is. And the card's width depends on how wide its title renders in the actual font at the actual
 weight.
 
-That is a self-referential little problem, and it has to be solved *completely* before layout starts
+That is a self-referential little problem, and it has to be solved _completely_ before layout starts
 — not approximately, and not later. The answer is a separate phase with a hard boundary.
 
 ### The boundary
@@ -379,7 +394,7 @@ This is worth stating precisely, because it is the property that lets the node c
 without touching a line of layout code.
 
 - `IrEdge.label` is a `LabelBox { width, height }`. There is no text field.
-- `GraphIr` interns edge *ids*. It does not intern edge label text at all — which is why
+- `GraphIr` interns edge _ids_. It does not intern edge label text at all — which is why
   [`5_4_badges.rs`](../../crates/gvui/src/5_edge_routing/5_4_badges.rs) leaves
   `BadgePlacement::label` as an empty string and the host fills it back in from its own dataset.
 - `node_labels` is carried through as an opaque payload and copied into the output; no phase reads
@@ -414,33 +429,33 @@ the real font — correct for proportional metrics, CJK, and emoji, and costs mi
 The estimate is not a degenerate case, it is a supported path, so it must be finite, positive and
 stable. It sums a per-character width ratio:
 
-| character class | ratio (× font size) |
-| --- | ---: |
-| any character in a mono font | 0.60 |
-| space | 0.28 |
-| narrow glyphs — i j l t I f . , : ; ' backtick pipe ! ( ) [ ] { } - / \\ | 0.33 |
-| `mwMW@%&` | 0.90 |
-| code point > `0x2000` (CJK, emoji) | 1.00 |
-| `A`–`Z` | 0.66 |
-| `0`–`9` | 0.55 |
-| everything else | 0.52 |
+| character class                                                          | ratio (× font size) |
+| ------------------------------------------------------------------------ | ------------------: |
+| any character in a mono font                                             |                0.60 |
+| space                                                                    |                0.28 |
+| narrow glyphs — i j l t I f . , : ; ' backtick pipe ! ( ) [ ] { } - / \\ |                0.33 |
+| `mwMW@%&`                                                                |                0.90 |
+| code point > `0x2000` (CJK, emoji)                                       |                1.00 |
+| `A`–`Z`                                                                  |                0.66 |
+| `0`–`9`                                                                  |                0.55 |
+| everything else                                                          |                0.52 |
 
 with a ×1.04 bump at weight ≥ 600. The buckets are coarse on purpose. The estimate only has to be
-stable and must never *under*-report badly, because under-reporting is what makes text overflow its
+stable and must never _under_-report badly, because under-reporting is what makes text overflow its
 reserved box and collide with a neighbour. Treating an emoji as a latin letter would under-reserve
 by nearly half on a tool chip, which routinely carries an icon glyph.
 
 ### Fonts are named roles, not strings
 
-A card does not declare `"600 14px system-ui"`. It declares a *role*:
+A card does not declare `"600 14px system-ui"`. It declares a _role_:
 
-| key | weight | size | family |
-| --- | ---: | ---: | --- |
-| `node-title` | 600 | 14 | sans |
-| `node-type-tag` | 700 | 10 | mono |
-| `node-body` | 400 | 11 | sans |
-| `node-chip` | 600 | 11 | mono |
-| `edge-label` | 600 | 11 | mono |
+| key             | weight | size | family |
+| --------------- | -----: | ---: | ------ |
+| `node-title`    |    600 |   14 | sans   |
+| `node-type-tag` |    700 |   10 | mono   |
+| `node-body`     |    400 |   11 | sans   |
+| `node-chip`     |    600 |   11 | mono   |
+| `edge-label`    |    600 |   11 | mono   |
 
 The concrete family stack is resolved once, at first use, by reading the `--font-sans` /
 `--font-mono` custom properties off `document.documentElement` — the same properties the cards are
@@ -508,7 +523,7 @@ $$\text{width} = \left\lceil \mathrm{clamp}\big(\max_r \text{natural}_r + 2p,\; 
 
 $$\text{height} = \text{headerHeight} + p + \sum_{r \notin \text{header}} \big(\text{lines}_r \times \text{lineHeight}_r + \text{rowGap}\big)$$
 
-Only the *bottom* padding is charged, because the header's negative top margin cancels the card's
+Only the _bottom_ padding is charged, because the header's negative top margin cancels the card's
 top padding.
 
 Worked example. A node named `Fetch Orders` of type `TOOL`, description
@@ -536,7 +551,7 @@ Pass 2
 Result: `{ width: 325, height: 112 }`. That box, and nothing else about this node, crosses into the
 engine.
 
-### Label wrapping, and why an unbounded label is a *layout* hazard
+### Label wrapping, and why an unbounded label is a _layout_ hazard
 
 Edge labels go through `measureLabel(text, { maxWidth, maxLines })` with the defaults
 `maxLabelWidth = 220` and `maxLabelLines = 3`.
@@ -573,10 +588,10 @@ unbounded content is solving the wrong problem — expensively in v1, silently i
 
 Two caches, both keyed on everything that can change the answer:
 
-| cache | key | value |
-| --- | --- | --- |
-| text runs | `fontKey \| text` | width in px |
-| labels | `fontKey \| maxWidth \| maxLines \| text` | frozen `LabelBox` |
+| cache     | key                                       | value             |
+| --------- | ----------------------------------------- | ----------------- |
+| text runs | `fontKey \| text`                         | width in px       |
+| labels    | `fontKey \| maxWidth \| maxLines \| text` | frozen `LabelBox` |
 
 The measurer is a process-wide singleton (`getDefaultMeasurer()`) precisely so the caches persist:
 node labels repeat heavily across re-layouts of the same dataset, and the common interactive case —
@@ -592,7 +607,7 @@ hit; a caller mutating one would silently corrupt every later measurement of the
 meet:
 
 ```ts
-const measurer  = getDefaultMeasurer();
+const measurer = getDefaultMeasurer();
 const nodeSizes = measurer.measureNodes(dataset.nodes);
 
 // … per node:  width: size.width, height: size.height

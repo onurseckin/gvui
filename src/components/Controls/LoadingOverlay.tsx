@@ -31,9 +31,7 @@ export const LoadingOverlay: FC<LoadingOverlayProps> = ({
     <div className="loading-overlay-backdrop" role="status" aria-busy="true">
       <div className="loading-overlay-content">
         <Spinner size="lg" />
-        {displayMessage ? (
-          <span className="loading-overlay-message">{displayMessage}</span>
-        ) : null}
+        {displayMessage ? <span className="loading-overlay-message">{displayMessage}</span> : null}
       </div>
     </div>
   );

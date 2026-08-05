@@ -62,47 +62,47 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 
 ## Documentation map
 
-| Section | What it covers |
-| --- | --- |
-| [`engine/`](./engine/README.md) | The layered pipeline, phase by phase. The main body of the docs. |
-| [`modes/`](./modes/README.md) | The two layout engines, and the `direction` axis that is orthogonal to them. |
-| [`concepts/`](./concepts/README.md) | Cross-cutting ideas referenced by several chapters. |
+| Section                                                               | What it covers                                                                                            |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [`engine/`](./engine/README.md)                                       | The layered pipeline, phase by phase. The main body of the docs.                                          |
+| [`modes/`](./modes/README.md)                                         | The two layout engines, and the `direction` axis that is orthogonal to them.                              |
+| [`concepts/`](./concepts/README.md)                                   | Cross-cutting ideas referenced by several chapters.                                                       |
 | [`planning/layout-engine-v2/`](./planning/layout-engine-v2/README.md) | The design record: diagnosis of the previous engine, the architecture decision, and the measured results. |
-| [`planning/layout-engine-v3/`](./planning/layout-engine-v3/README.md) | The v3 pass: what the drawing looked wrong about, and what each fix cost. |
+| [`planning/layout-engine-v3/`](./planning/layout-engine-v3/README.md) | The v3 pass: what the drawing looked wrong about, and what each fix cost.                                 |
 | [`planning/layout-engine-v4/`](./planning/layout-engine-v4/README.md) | The v4 pass: 148 geometric crossings down to 40, and the measured case against using all four node sides. |
 
 ### The engine chapters
 
-| Chapter | Topic |
-| --- | --- |
-| [01](./engine/01-foundations.md) | Foundations — nodes, edges, directed graphs, cycles, from zero |
-| [02](./engine/02-the-pipeline.md) | The pipeline — the ten phases and why the order is forced |
-| [03](./engine/03-ingest-and-measurement.md) | Ingest and measurement — text becomes boxes, ids become indices |
-| [04](./engine/04-structure.md) | Structure — SCC decomposition, feedback arcs, making the graph acyclic |
-| [05](./engine/05-rank-assignment.md) | Rank assignment — network simplex, minimum lengths, balancing |
-| [06](./engine/06-layering-and-labels.md) | Layering and labels — dummy chains, and the label as a first-class item |
-| [07](./engine/07-crossing-minimization.md) | Crossing minimization — median sweeps, transpose, exact counting |
-| [08](./engine/08-routing-demand.md) | Routing demand — interval-graph colouring before any geometry exists |
-| [09](./engine/09-coordinate-assignment.md) | Coordinate assignment — rank bands and Brandes–Köpf |
-| [10](./engine/10-edge-routing.md) | Edge routing — lanes to polylines, ports, badges |
-| [11](./engine/11-emit-and-quality.md) | Emit and quality — packing, constraint checks, metrics |
+| Chapter                                     | Topic                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| [01](./engine/01-foundations.md)            | Foundations — nodes, edges, directed graphs, cycles, from zero          |
+| [02](./engine/02-the-pipeline.md)           | The pipeline — the ten phases and why the order is forced               |
+| [03](./engine/03-ingest-and-measurement.md) | Ingest and measurement — text becomes boxes, ids become indices         |
+| [04](./engine/04-structure.md)              | Structure — SCC decomposition, feedback arcs, making the graph acyclic  |
+| [05](./engine/05-rank-assignment.md)        | Rank assignment — network simplex, minimum lengths, balancing           |
+| [06](./engine/06-layering-and-labels.md)    | Layering and labels — dummy chains, and the label as a first-class item |
+| [07](./engine/07-crossing-minimization.md)  | Crossing minimization — median sweeps, transpose, exact counting        |
+| [08](./engine/08-routing-demand.md)         | Routing demand — interval-graph colouring before any geometry exists    |
+| [09](./engine/09-coordinate-assignment.md)  | Coordinate assignment — rank bands and Brandes–Köpf                     |
+| [10](./engine/10-edge-routing.md)           | Edge routing — lanes to polylines, ports, badges                        |
+| [11](./engine/11-emit-and-quality.md)       | Emit and quality — packing, constraint checks, metrics                  |
 
 ### The modes
 
-| Chapter | Topic |
-| --- | --- |
+| Chapter                     | Topic                                                                       |
+| --------------------------- | --------------------------------------------------------------------------- |
 | [01](./modes/01-layered.md) | Layered — the full pipeline, and the four values of `direction` it draws in |
-| [03](./modes/02-radial.md) | Radial — concentric BFS rings with proportional wedges |
+| [03](./modes/02-radial.md)  | Radial — concentric BFS rings with proportional wedges                      |
 
 ### The concepts
 
-| Document | Topic |
-| --- | --- |
-| [Sugiyama framework](./concepts/sugiyama-framework.md) | The classical four-phase method, and where this engine departs from it |
-| [Node measurement](./concepts/node-measurement.md) | How text becomes a box, and why estimating from character counts fails |
-| [Determinism](./concepts/determinism.md) | Why the same input must always draw identically, and the rules that make it so |
-| [Quality model](./concepts/quality-model.md) | Constraints are asserted, metrics are reported, and nothing is optimised |
-| [Computational complexity](./concepts/computational-complexity.md) | Per-phase and per-mode cost, with measured figures |
+| Document                                                           | Topic                                                                          |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| [Sugiyama framework](./concepts/sugiyama-framework.md)             | The classical four-phase method, and where this engine departs from it         |
+| [Node measurement](./concepts/node-measurement.md)                 | How text becomes a box, and why estimating from character counts fails         |
+| [Determinism](./concepts/determinism.md)                           | Why the same input must always draw identically, and the rules that make it so |
+| [Quality model](./concepts/quality-model.md)                       | Constraints are asserted, metrics are reported, and nothing is optimised       |
+| [Computational complexity](./concepts/computational-complexity.md) | Per-phase and per-mode cost, with measured figures                             |
 
 ---
 
@@ -112,10 +112,10 @@ overlapping something. It occupied a box on rank 2 before any coordinate existed
 `LayoutMode` union in [`src/state/useGraphStore.ts`](../src/state/useGraphStore.ts) has exactly two
 values, and [`EngineMode`](../crates/gvui/src/0_common/0_2_config.rs) mirrors them:
 
-| mode | engine | honours `direction` | notes |
-| --- | --- | :--: | --- |
-| `layered` | the full pipeline in [`engine/`](./engine/README.md) | yes | The default. Orthogonal lane routing, badge space reserved in the layered graph, routing that cannot fail. |
-| `radial` | concentric BFS rings with proportional wedges | no | Rings have no flow axis, so `direction` is ignored. Straight edges between boxes; edge–node grazing and badge overlap are best-effort, not guaranteed absent. See [the quality model](./concepts/quality-model.md#the-per-engine-constraint-policy). |
+| mode      | engine                                               | honours `direction` | notes                                                                                                                                                                                                                                                |
+| --------- | ---------------------------------------------------- | :-----------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layered` | the full pipeline in [`engine/`](./engine/README.md) |         yes         | The default. Orthogonal lane routing, badge space reserved in the layered graph, routing that cannot fail.                                                                                                                                           |
+| `radial`  | concentric BFS rings with proportional wedges        |         no          | Rings have no flow axis, so `direction` is ignored. Straight edges between boxes; edge–node grazing and badge overlap are best-effort, not guaranteed absent. See [the quality model](./concepts/quality-model.md#the-per-engine-constraint-policy). |
 
 ### `direction`
 
@@ -130,16 +130,16 @@ The edge `a → b`, drawn four ways:
         [ b ]                [ a ]
 ```
 
-| `direction` | ranks increase | how the pipeline gets there |
-| --- | --- | --- |
-| `top-down` | downward | the native frame; nothing is transformed |
-| `bottom-up` | upward | mirrored along the rank axis on the way out |
-| `left-right` | rightward | every box transposed on the way in, the drawing transposed on the way out |
-| `right-left` | leftward | transposed, then mirrored |
+| `direction`  | ranks increase | how the pipeline gets there                                               |
+| ------------ | -------------- | ------------------------------------------------------------------------- |
+| `top-down`   | downward       | the native frame; nothing is transformed                                  |
+| `bottom-up`  | upward         | mirrored along the rank axis on the way out                               |
+| `left-right` | rightward      | every box transposed on the way in, the drawing transposed on the way out |
+| `right-left` | leftward       | transposed, then mirrored                                                 |
 
 `direction` being the **only** source of flow direction is a v3 correction, not a refactor. Flow
 used to be half-encoded in the mode string as well (`left-right`, `right-left`, `bottom-up` were
-"modes"), and because the client sends a *fully resolved* config, `direction` was always present and
+"modes"), and because the client sends a _fully resolved_ config, `direction` was always present and
 the "explicit direction wins over mode" rule discarded the mode's direction every single time.
 Choosing `left-right` silently drew top-down. `EngineMode::from_mode_str` now returns no direction
 at all.
@@ -150,13 +150,13 @@ at all.
 renderer. It is now a value of `edgeStyle`, which changes how a finished polyline is drawn and never
 changes where anything is placed:
 
-| `edgeStyle` | what it draws |
-| --- | --- |
-| `rounded` (default) | axis-aligned polyline, corners rounded to `cornerRadius` |
-| `orthogonal` | the same polyline with sharp corners |
-| `spline` | a smooth cubic through the chain waypoints |
-| `octilinear` | each right-angle corner replaced by a 45° chamfer where the diagonal is collision-free — a post-pass, not a router. [Why](./engine/10-edge-routing.md) |
-| `straight` | source to target, clipped to the node boundaries |
+| `edgeStyle`         | what it draws                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `rounded` (default) | axis-aligned polyline, corners rounded to `cornerRadius`                                                                                               |
+| `orthogonal`        | the same polyline with sharp corners                                                                                                                   |
+| `spline`            | a smooth cubic through the chain waypoints                                                                                                             |
+| `octilinear`        | each right-angle corner replaced by a 45° chamfer where the diagonal is collision-free — a post-pass, not a router. [Why](./engine/10-edge-routing.md) |
+| `straight`          | source to target, clipped to the node boundaries                                                                                                       |
 
 Legacy mode strings (`top-down`, `top-down-dagre`, `force`, `stress`, `right-left`, `organic`,
 `grid`, `layered-spline`, …) are still accepted and normalized onto the surviving two engines; see
@@ -219,10 +219,10 @@ identical input.
 
 Two datasets, as the headline:
 
-| dataset | N | E | v1 | v2 | v1 valid | v2 valid |
-| --- | ---: | ---: | ---: | ---: | :--: | :--: |
-| `kubernetes_cluster_topology` | 12 | 13 | 26,710 ms | **0.14 ms** | ✓ | ✓ |
-| `dense_kubernetes_mesh` | 30 | 45 | 47,336 ms | **1.79 ms** | ✗ | ✓ |
+| dataset                       |   N |   E |        v1 |          v2 | v1 valid | v2 valid |
+| ----------------------------- | --: | --: | --------: | ----------: | :------: | :------: |
+| `kubernetes_cluster_topology` |  12 |  13 | 26,710 ms | **0.14 ms** |    ✓     |    ✓     |
+| `dense_kubernetes_mesh`       |  30 |  45 | 47,336 ms | **1.79 ms** |    ✗     |    ✓     |
 
 On the dense mesh the crossing count also fell from 191 to 28, and the layout went from failing its
 own validity check to passing it.
@@ -261,17 +261,17 @@ constraint violations is a pass condition, not a reported number.
 
 ## Where the code is
 
-| Path | Contents |
-| --- | --- |
-| [`crates/gvui/src/lib.rs`](../crates/gvui/src/lib.rs) | The phase table and the WASM entry point |
-| [`crates/gvui/src/0_common/`](../crates/gvui/src/0_common/) | Shared types, config, geometry, ingest |
-| [`crates/gvui/src/1_cycle_breaking/`](../crates/gvui/src/1_cycle_breaking/) | Phase 2 — structure |
-| [`crates/gvui/src/2_rank_assignment/`](../crates/gvui/src/2_rank_assignment/) | Phase 3 — ranks |
-| [`crates/gvui/src/3_crossing_minimization/`](../crates/gvui/src/3_crossing_minimization/) | Phases 4 and 5 — layering and ordering |
-| [`crates/gvui/src/4_coordinate_assignment/`](../crates/gvui/src/4_coordinate_assignment/) | Phases 6 and 7 — demand and coordinates |
-| [`crates/gvui/src/5_edge_routing/`](../crates/gvui/src/5_edge_routing/) | Phase 8 — routes, ports, badges |
-| [`crates/gvui/src/6_validation/`](../crates/gvui/src/6_validation/) | Phase 9 — constraints, metrics, emit |
-| [`crates/gvui/src/7_engines/`](../crates/gvui/src/7_engines/) | The two engines, the shared geometric helpers, and the dispatch facade |
-| [`src/engine/layout/measurement/`](../src/engine/layout/measurement/) | The measurement boundary — the only code that sees text |
-| [`crates/gvui/examples/audit.rs`](../crates/gvui/examples/audit.rs) | The native audit harness — 4 mode/direction cases × 10 datasets |
-| [`scripts/runLayoutAudit.ts`](../scripts/runLayoutAudit.ts) | The WASM regression gate — 3 cases × (26 scenarios + 10 datasets) = 108 runs |
+| Path                                                                                      | Contents                                                                     |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`crates/gvui/src/lib.rs`](../crates/gvui/src/lib.rs)                                     | The phase table and the WASM entry point                                     |
+| [`crates/gvui/src/0_common/`](../crates/gvui/src/0_common/)                               | Shared types, config, geometry, ingest                                       |
+| [`crates/gvui/src/1_cycle_breaking/`](../crates/gvui/src/1_cycle_breaking/)               | Phase 2 — structure                                                          |
+| [`crates/gvui/src/2_rank_assignment/`](../crates/gvui/src/2_rank_assignment/)             | Phase 3 — ranks                                                              |
+| [`crates/gvui/src/3_crossing_minimization/`](../crates/gvui/src/3_crossing_minimization/) | Phases 4 and 5 — layering and ordering                                       |
+| [`crates/gvui/src/4_coordinate_assignment/`](../crates/gvui/src/4_coordinate_assignment/) | Phases 6 and 7 — demand and coordinates                                      |
+| [`crates/gvui/src/5_edge_routing/`](../crates/gvui/src/5_edge_routing/)                   | Phase 8 — routes, ports, badges                                              |
+| [`crates/gvui/src/6_validation/`](../crates/gvui/src/6_validation/)                       | Phase 9 — constraints, metrics, emit                                         |
+| [`crates/gvui/src/7_engines/`](../crates/gvui/src/7_engines/)                             | The two engines, the shared geometric helpers, and the dispatch facade       |
+| [`src/engine/layout/measurement/`](../src/engine/layout/measurement/)                     | The measurement boundary — the only code that sees text                      |
+| [`crates/gvui/examples/audit.rs`](../crates/gvui/examples/audit.rs)                       | The native audit harness — 4 mode/direction cases × 10 datasets              |
+| [`scripts/runLayoutAudit.ts`](../scripts/runLayoutAudit.ts)                               | The WASM regression gate — 3 cases × (26 scenarios + 10 datasets) = 108 runs |

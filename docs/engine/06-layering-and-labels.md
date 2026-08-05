@@ -8,7 +8,7 @@ This is the chapter that carries the engine's central idea, so here it is up fro
 
 Everything else in this chapter follows from that sentence. Because a badge is an ordinary item, the
 machinery that separates nodes separates badges too, the machinery that sizes a row sizes it around
-badges too, and the space a badge needs is reserved *before any route exists*. It cannot fail to fit.
+badges too, and the space a badge needs is reserved _before any route exists_. It cannot fail to fit.
 So there is nothing to retry — and v1's entire badge-placement subsystem, all 1,003 lines of it,
 collapses into a lookup.
 
@@ -102,13 +102,13 @@ See the type definitions in [`0_1_types.rs`](../../crates/gvui/src/0_common/0_1_
 For each edge, Phase 4 computes $span = rank(target) - rank(source)$ using the endpoints **after**
 Phase 2's reversal, and dispatches:
 
-| case | what is built |
-| --- | --- |
-| `span == 1`, no label | a direct link — no intermediate items at all |
-| `span >= 2`, no label | a `Dummy` on every intermediate rank |
-| `span >= 2`, labelled | a `Dummy` on every intermediate rank **except one**, which is a `Label` |
-| `span == 0` (flat) | no chain; a `FlatEdge` record instead (§7) |
-| self-loop | no chain; carried through for Phase 8 to route against a fixed port pair |
+| case                  | what is built                                                            |
+| --------------------- | ------------------------------------------------------------------------ |
+| `span == 1`, no label | a direct link — no intermediate items at all                             |
+| `span >= 2`, no label | a `Dummy` on every intermediate rank                                     |
+| `span >= 2`, labelled | a `Dummy` on every intermediate rank **except one**, which is a `Label`  |
+| `span == 0` (flat)    | no chain; a `FlatEdge` record instead (§7)                               |
+| self-loop             | no chain; carried through for Phase 8 to route against a fixed port pair |
 
 There is no row for `span == 1, labelled`, and that is the point: Phase 3 guarantees it cannot happen
 (§5). Such an edge falls through the table as a plain direct link and loses its reservation, which is
@@ -178,8 +178,8 @@ of an item inside `rank_ranges[r]` always equals its `order` field. Two things f
   never move an item between ranks. Physical position is the ground truth; `order` is repaired to
   agree with it, not the other way round.
 
-The initial order inside a rank is *real nodes by ascending node index, then chain items by ascending
-edge index*. That is a deterministic seed derived from input order, not a heuristic — Phase 5 will
+The initial order inside a rank is _real nodes by ascending node index, then chain items by ascending
+edge index_. That is a deterministic seed derived from input order, not a heuristic — Phase 5 will
 replace it. It falls out of the construction: reals are placed in a first pass, chain items in a
 second.
 
@@ -289,7 +289,7 @@ line because their reservation was defeated. It is **0 on every layered fixture*
 
 ## 6. What v1 did instead
 
-v1 placed badges *after* routing, which meant discovering free space in a drawing that was already
+v1 placed badges _after_ routing, which meant discovering free space in a drawing that was already
 finished. `5_7_badge_placement.rs` did it like this:
 
 1. **Generate up to 48 candidate positions per edge** — offsets along and around the routed polyline.
@@ -317,17 +317,17 @@ always `0`, kept only for renderer compatibility.
 `label_placement` decides how the item is sized, and there are two boxes to keep straight:
 
 - the **item box**, which is the reservation — inflated by `badge_clearance` on every side, and
-  doubled on one axis for the offset placements so the polyline has somewhere to run that is *not*
+  doubled on one axis for the offset placements so the polyline has somewhere to run that is _not_
   underneath the badge;
 - the **badge box**, which is what actually gets drawn.
 
 With $lw = label.width + 2 \cdot badge\_clearance$ and $lh = label.height + 2 \cdot badge\_clearance$:
 
-| `label_placement` | item $(w, h)$ | edge passes through | badge occupies |
-| --- | --- | --- | --- |
-| `on-edge` (default) | $(lw,\; lh)$ | the item centre | the whole box, inset by `badge_clearance` |
-| `beside-edge` | $(2lw,\; lh)$ | the item's **left face** | the **right half**, inset |
-| `above-edge` | $(lw,\; 2lh)$ | the item's **bottom face** | the **top half**, inset |
+| `label_placement`   | item $(w, h)$ | edge passes through        | badge occupies                            |
+| ------------------- | ------------- | -------------------------- | ----------------------------------------- |
+| `on-edge` (default) | $(lw,\; lh)$  | the item centre            | the whole box, inset by `badge_clearance` |
+| `beside-edge`       | $(2lw,\; lh)$ | the item's **left face**   | the **right half**, inset                 |
+| `above-edge`        | $(lw,\; 2lh)$ | the item's **bottom face** | the **top half**, inset                   |
 
 ```text
 on-edge (default)       beside-edge                    above-edge
@@ -345,14 +345,14 @@ on-edge (default)       beside-edge                    above-edge
 
 `beside-edge` was the v2 default, and it was the wrong choice.
 
-A badge that sits *beside* its edge is not self-explaining: the reader has to be told which line it
+A badge that sits _beside_ its edge is not self-explaining: the reader has to be told which line it
 belongs to, so the renderer has to draw a **leader line** from the badge to the anchor on the edge.
 One dotted connector is fine. A drawing where every labelled edge has one is worse than a drawing
 where each label simply sits on the line it describes — the connectors are visual noise carrying
 information the geometry could have carried for free.
 
 Under `on-edge` the item is single-width, the edge runs through its centre, and the badge is drawn
-over the line. The anchor is then *inside* the badge rect, and the renderer's rule is containment:
+over the line. The anchor is then _inside_ the badge rect, and the renderer's rule is containment:
 [a connector is drawn only when the anchor genuinely falls outside the badge
 rect](./10-edge-routing.md#the-dashed-connector-is-drawn-only-when-it-is-honest), which for
 `on-edge` never happens. The offset placements remain available for callers who want the line kept
@@ -364,11 +364,11 @@ A badge measured at 60 × 20, with the default `badge_clearance` of 10:
 
 $$lw = 60 + 20 = 80, \qquad lh = 20 + 20 = 40$$
 
-| placement | item box | if the item lands at $(100, 200)$ |
-| --- | --- | --- |
-| `on-edge` | 80 × 40 | badge at $(110, 210)$, 60 × 20; anchor $(140, 220)$ — the centre |
-| `beside-edge` | **160** × 40 | badge at $(190, 210)$, 60 × 20; anchor $(100, 220)$ — the left face |
-| `above-edge` | 80 × **80** | badge at $(110, 210)$, 60 × 20; anchor $(140, 280)$ — the bottom face |
+| placement     | item box     | if the item lands at $(100, 200)$                                     |
+| ------------- | ------------ | --------------------------------------------------------------------- |
+| `on-edge`     | 80 × 40      | badge at $(110, 210)$, 60 × 20; anchor $(140, 220)$ — the centre      |
+| `beside-edge` | **160** × 40 | badge at $(190, 210)$, 60 × 20; anchor $(100, 220)$ — the left face   |
+| `above-edge`  | 80 × **80**  | badge at $(110, 210)$, 60 × 20; anchor $(140, 280)$ — the bottom face |
 
 In every case the badge width comes back out as exactly 60. The reservation is the badge plus its
 clearance plus, for the offset placements, an equal-sized empty half for the line.
@@ -414,12 +414,12 @@ which is what lets two siblings sit side by side joined by a straight horizontal
 
 A `FlatEdge` record is emitted instead, carrying the rank, both endpoint item indices, and the
 measured `LabelBox`. Its badge lives in the **vertical corridor** between the endpoints, and so its
-width becomes a *separation constraint* rather than an item width. Phase 6 computes, for each
+width becomes a _separation constraint_ rather than an item width. Phase 6 computes, for each
 corridor the flat edge spans:
 
 $$separation = \max\bigl(node\_gap,\; lanes \times lane\_spacing\bigr) + label\_width$$
 
-The routing lanes and the base node gap are a `max`, because the lanes live *inside* the gap. The
+The routing lanes and the base node gap are a `max`, because the lanes live _inside_ the gap. The
 label width is **added on top**, because the badge and the lanes cannot share space. Every corridor
 the edge spans gets the widest label covering it.
 
@@ -428,7 +428,7 @@ geometry exists, and the coordinate phase is told about it as a constraint it mu
 is placed and then checked.
 
 So a flat edge carries its badge **on its horizontal run**, not on a rank of its own. The common case
-— two rank *neighbours*, with nothing standing between them — collapses to a single straight
+— two rank _neighbours_, with nothing standing between them — collapses to a single straight
 horizontal segment, and the badge sits at its midpoint: the middle of a gap this same formula already
 widened by the label width, so it clears both nodes by construction. When the endpoints are not
 neighbours, the run steps out of the rank band to get past the items in between and comes back down
@@ -451,7 +451,7 @@ Here is the invariant this phase must never break, and the story of what happene
 > **Every link in a chain connects consecutive ranks.** If items $i$ and $j$ are adjacent in a
 > chain's `items`, then $rank(j) = rank(i) + 1$. No exceptions.
 
-`up` and `down` are *declared* as adjacent-rank adjacencies, and three separate phases read that
+`up` and `down` are _declared_ as adjacent-rank adjacencies, and three separate phases read that
 declaration as a guarantee:
 
 1. **Barth–Mutzel–Jünger crossing counting** (Phase 5) indexes its accumulator tree by the target

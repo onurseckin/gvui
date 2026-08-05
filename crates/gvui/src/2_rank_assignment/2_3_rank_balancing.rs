@@ -75,7 +75,11 @@ pub fn structural_arcs(ir: &GraphIr, structure: &StructureResult) -> Vec<(u32, u
 ///
 /// Pinned ranks are ordinary ranks here: a pin that contradicts an incoming `min_len` is raised
 /// like anything else, because Phase 4 can survive a moved node but not a violated `min_len`.
-pub fn repair_feasibility(rank_of: &mut [u16], arcs: &[(u32, u32, u16)], max_passes: usize) -> bool {
+pub fn repair_feasibility(
+    rank_of: &mut [u16],
+    arcs: &[(u32, u32, u16)],
+    max_passes: usize,
+) -> bool {
     for _ in 0..max_passes {
         let mut changed = false;
         for &(from, to, min_len) in arcs {
@@ -116,7 +120,7 @@ pub fn repair_feasibility(rank_of: &mut [u16], arcs: &[(u32, u32, u16)], max_pas
 ///
 /// The minimum rank is 0 on return, so the caller's normalisation stays a no-op in the common case.
 pub fn balance_ranks(
-    rank_of: &mut Vec<u16>,
+    rank_of: &mut [u16],
     ir: &GraphIr,
     structure: &StructureResult,
     config: &CustomLayoutConfig,
@@ -166,12 +170,7 @@ pub fn balance_ranks(
     let mut round = 0usize;
 
     loop {
-        let rank_count = rank_of[..node_count]
-            .iter()
-            .copied()
-            .max()
-            .unwrap_or(0) as usize
-            + 1;
+        let rank_count = rank_of[..node_count].iter().copied().max().unwrap_or(0) as usize + 1;
         if round >= rank_count.saturating_mul(4) || round >= hard_cap {
             break;
         }
@@ -397,7 +396,11 @@ mod tests {
                 rank_of
             );
         }
-        assert!(max_rank >= 3, "fan should have spread downward: {:?}", rank_of);
+        assert!(
+            max_rank >= 3,
+            "fan should have spread downward: {:?}",
+            rank_of
+        );
     }
 
     #[test]
@@ -459,7 +462,11 @@ mod tests {
             "tight nodes must stay put: {:?}",
             rank_of
         );
-        assert_eq!(width_of(&rank_of, 2), 2, "the sink rank should have shed one");
+        assert_eq!(
+            width_of(&rank_of, 2),
+            2,
+            "the sink rank should have shed one"
+        );
         assert_eq!(width_of(&rank_of, 3), 1);
     }
 
@@ -482,7 +489,11 @@ mod tests {
         balance_ranks(&mut rank_of, &ir, &structure, &config_with_cap(1));
 
         assert_feasible(&rank_of, &edges);
-        assert!(rank_of[5] <= 1 + 3, "node 5 overshot its arc: {:?}", rank_of);
+        assert!(
+            rank_of[5] <= 1 + 3,
+            "node 5 overshot its arc: {:?}",
+            rank_of
+        );
     }
 
     #[test]

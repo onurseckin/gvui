@@ -19,12 +19,12 @@ starts or ends:
       (lint)   (checkout)
 ```
 
-The goal of *hierarchical* graph layout is to turn that into a diagram where arrows generally point
+The goal of _hierarchical_ graph layout is to turn that into a diagram where arrows generally point
 one way, related things sit near each other, and lines cross as little as possible.
 
 ## The aha moment: decompose the problem
 
-In 1981, Kozo Sugiyama, Shojiro Tagawa and Mitsuhiko Toda observed that finding the *optimal*
+In 1981, Kozo Sugiyama, Shojiro Tagawa and Mitsuhiko Toda observed that finding the _optimal_
 hierarchical drawing in one step is hopeless: several of the sub-problems involved are NP-hard, and
 they interact. Their contribution was to split the problem into **four phases run strictly in
 sequence**, each responsible for exactly one kind of visual disorder, each handing a cleaner problem
@@ -80,7 +80,7 @@ also be above `A`.
       └─ C ←┘        the three of them form a loop
 ```
 
-**The solution.** Find the cycles and *reverse* just enough edges to break them. Remember which
+**The solution.** Find the cycles and _reverse_ just enough edges to break them. Remember which
 edges were reversed, so the arrowhead can be put back at the very end.
 
 Reversing `C → A` into `A → C` leaves a **DAG** — a directed acyclic graph — which is exactly what
@@ -92,7 +92,7 @@ the next phase needs.
 
 ### ② Layer assignment — vertical position
 
-**The problem.** Every node needs a *rank*: an integer saying which horizontal band it belongs to.
+**The problem.** Every node needs a _rank_: an integer saying which horizontal band it belongs to.
 The constraint is that an arrow must always go from a lower rank to a higher one.
 
 **The solution.** The simplest ranking is "longest path": push each node down until it is strictly
@@ -145,7 +145,7 @@ still arbitrary — and that order is what decides how many times edges cross.
 
 **The solution.** Sweep down the layers, and in each layer sort the nodes by the average (or the
 median) position of their neighbours in the layer above. Then sweep back up. Repeat. Finish each
-sweep with a *transpose* pass that tries swapping adjacent pairs and keeps a swap when it reduces
+sweep with a _transpose_ pass that tries swapping adjacent pairs and keeps a swap when it reduces
 the count.
 
 This is a heuristic — minimising crossings even between just two adjacent layers is NP-hard — but
@@ -193,16 +193,16 @@ staircase), and you must never let two boxes overlap.
 The engine has ten numbered phases. Four of them are Sugiyama's; the other six exist because a real
 drawing has text, boxes, ports and a wire format, none of which the 1981 paper had to deal with.
 
-| Sugiyama phase | GVUI phases | Source |
-| --- | --- | --- |
-| — | 0 Ingest | [`0_5_ingest.rs`](../../crates/gvui/src/0_common/0_5_ingest.rs) |
-| — | 1 Measure | [`src/engine/layout/measurement/`](../../src/engine/layout/measurement/) |
-| ① Cycle removal | 2 Structure | [`1_6_structure.rs`](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs) |
-| ② Layer assignment | 3 Rank, 4 Layer | [`2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs), [`3_1_layer_builder.rs`](../../crates/gvui/src/3_crossing_minimization/3_1_layer_builder.rs) |
-| ③ Crossing reduction | 5 Order | [`3_4_order_facade.rs`](../../crates/gvui/src/3_crossing_minimization/3_4_order_facade.rs) |
+| Sugiyama phase          | GVUI phases             | Source                                                                                                                                                                                         |
+| ----------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —                       | 0 Ingest                | [`0_5_ingest.rs`](../../crates/gvui/src/0_common/0_5_ingest.rs)                                                                                                                                |
+| —                       | 1 Measure               | [`src/engine/layout/measurement/`](../../src/engine/layout/measurement/)                                                                                                                       |
+| ① Cycle removal         | 2 Structure             | [`1_6_structure.rs`](../../crates/gvui/src/1_cycle_breaking/1_6_structure.rs)                                                                                                                  |
+| ② Layer assignment      | 3 Rank, 4 Layer         | [`2_4_rank_facade.rs`](../../crates/gvui/src/2_rank_assignment/2_4_rank_facade.rs), [`3_1_layer_builder.rs`](../../crates/gvui/src/3_crossing_minimization/3_1_layer_builder.rs)               |
+| ③ Crossing reduction    | 5 Order                 | [`3_4_order_facade.rs`](../../crates/gvui/src/3_crossing_minimization/3_4_order_facade.rs)                                                                                                     |
 | ④ Coordinate assignment | 6 Demand, 7 Coordinates | [`4_1_lane_demand.rs`](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs), [`4_4_coordinate_facade.rs`](../../crates/gvui/src/4_coordinate_assignment/4_4_coordinate_facade.rs) |
-| — | 8 Route | [`5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs) |
-| — | 9 Emit | [`6_3_emit.rs`](../../crates/gvui/src/6_validation/6_3_emit.rs) |
+| —                       | 8 Route                 | [`5_6_route_facade.rs`](../../crates/gvui/src/5_edge_routing/5_6_route_facade.rs)                                                                                                              |
+| —                       | 9 Emit                  | [`6_3_emit.rs`](../../crates/gvui/src/6_validation/6_3_emit.rs)                                                                                                                                |
 
 The split of ② into two phases, and of ④ into two phases, is where the interesting departures live.
 
@@ -250,13 +250,13 @@ See [engine chapter 06](../engine/06-layering-and-labels.md).
 **Textbook.** Once coordinates exist, an edge is drawn as a polyline or spline through its dummy
 positions. Where that produces overlaps, implementations either accept them or bolt on a router.
 
-**Here.** Phase 6 computes, *before any coordinate exists*, exactly how many parallel routing lanes
+**Here.** Phase 6 computes, _before any coordinate exists_, exactly how many parallel routing lanes
 each inter-rank channel and each intra-rank corridor needs. The segments crossing one channel form
 an **interval graph** over the order axis; interval graphs are perfect, so greedy colouring by
 ascending left endpoint uses exactly $\omega$ colours, where $\omega$ is the maximum overlap depth —
 the provable minimum. Those lane counts become hard lower bounds on rank gaps and node separations,
 which Phase 7 must honour. Phase 8 then materialises each polyline by table lookup: ordering,
-coordinates and lane index are all already fixed, so routing is *evaluation*, not search.
+coordinates and lane index are all already fixed, so routing is _evaluation_, not search.
 
 ```text
    channel between rank 0 and rank 1, three overlapping segments:
@@ -274,12 +274,12 @@ coordinates and lane index are all already fixed, so routing is *evaluation*, no
 ```
 
 **What the alternative cost.** v1 built a dense Cartesian routing grid (4,934 live vertices for a
-*12-node* graph) and ran bounded A\* per edge, inside a rip-up/reroute loop bounded by
+_12-node_ graph) and ran bounded A\* per edge, inside a rip-up/reroute loop bounded by
 4 order variants × 12 rip-up passes × 32 conflict permutations. Routing was measured at **99.5 %+**
 of total runtime: 4,979 ms of A\* for a single pass over a 12-node graph, and 26,710 ms end to end.
-On `kubernetes_cluster_topology`, disabling the permutation loop was a 12× speedup for a *bit-identical*
+On `kubernetes_cluster_topology`, disabling the permutation loop was a 12× speedup for a _bit-identical_
 result. Worse, quality moved non-monotonically with the budget knobs — on `dense_kubernetes_mesh`,
-*reducing* `initial_lane_rings` from 2 to 1 improved crossings from 206 to 146. A search whose
+_reducing_ `initial_lane_rings` from 2 to 1 improved crossings from 206 to 146. A search whose
 quality moves randomly with its budget is not converging; it is sampling.
 
 See [engine chapter 08](../engine/08-routing-demand.md) and [chapter 10](../engine/10-edge-routing.md).
@@ -289,7 +289,7 @@ See [engine chapter 08](../engine/08-routing-demand.md) and [chapter 10](../engi
 **Textbook.** Phase ③ iterates sweeps until crossings stop improving. Some implementations wrap the
 whole framework in an outer loop, trying variations and keeping the best.
 
-**Here.** There is exactly one search in the engine, and it is *inside* Phase 5: `ordering_seeds`
+**Here.** There is exactly one search in the engine, and it is _inside_ Phase 5: `ordering_seeds`
 (default 4) independent restarts, each of at most `ordering_sweeps` (default 16) median+transpose
 rounds, stopping a seed after 4 consecutive non-improving rounds. Nothing outside Phase 5 is ever
 re-run, and nothing is rolled back except Phase 5's own candidate orderings. The seeds are
@@ -301,8 +301,8 @@ Two supporting details make the single pass sufficient:
 - **Feedback edges are reversed and kept.** v1 admitted only `Forward` edges into the layer graph,
   so the sweeps and the crossing counter never saw the rest. The measured consequence: the crossing
   count the ordering phase observed was **0 on all eight datasets**, and `minimize_crossings` opened
-  with `if best_crossings == 0 { return; }` — so crossing minimization had *never executed on real
-  input*. A second counter elsewhere in v1, reading the same dense mesh, reported 433.
+  with `if best_crossings == 0 { return; }` — so crossing minimization had _never executed on real
+  input_. A second counter elsewhere in v1, reading the same dense mesh, reported 433.
 - **Ranking sees every edge's role.** v1 called `assign_ranks(.., None)`, discarding the edge-role
   map. Nodes on a cycle never reached in-degree 0 in the topological sort and silently fell back to
   rank 0. On the 30-node dense mesh this put **28 of 30 nodes in a single row** — 2 ranks instead of
@@ -322,17 +322,17 @@ lets a 420 px node and a 120 px node sit in the same rank without either wasting
 
 The parts of the framework that are simply correct:
 
-| Problem | Algorithm | Guarantee |
-| --- | --- | --- |
-| Feedback arc set | Eades–Lin–Smyth greedy | $\lvert FAS \rvert \le m/2 - n/6$, linear time |
-| Ranking | Network simplex (Gansner et al.) | optimal for $\sum \omega \cdot (\text{rank}(v) - \text{rank}(u))$ |
-| Two-layer ordering | Median + transpose | median is $\le 3\times$ optimal for the two-layer problem |
-| Crossing counting | Barth–Mutzel–Jünger accumulator tree | exact, $O(E \log V)$ |
-| Lane assignment | Greedy interval-graph colouring | optimal (interval graphs are perfect) |
-| $x$ coordinates | Brandes–Köpf | $\le 2$ bends per edge, dummy chains straight, $O(V+E)$ |
+| Problem            | Algorithm                            | Guarantee                                                         |
+| ------------------ | ------------------------------------ | ----------------------------------------------------------------- |
+| Feedback arc set   | Eades–Lin–Smyth greedy               | $\lvert FAS \rvert \le m/2 - n/6$, linear time                    |
+| Ranking            | Network simplex (Gansner et al.)     | optimal for $\sum \omega \cdot (\text{rank}(v) - \text{rank}(u))$ |
+| Two-layer ordering | Median + transpose                   | median is $\le 3\times$ optimal for the two-layer problem         |
+| Crossing counting  | Barth–Mutzel–Jünger accumulator tree | exact, $O(E \log V)$                                              |
+| Lane assignment    | Greedy interval-graph colouring      | optimal (interval graphs are perfect)                             |
+| $x$ coordinates    | Brandes–Köpf                         | $\le 2$ bends per edge, dummy chains straight, $O(V+E)$           |
 
 Every one of these is a single-pass algorithm with a stated guarantee. That is the criterion: search
-is used only where greedy is *provably* insufficient, which in this pipeline means Phase 5 and
+is used only where greedy is _provably_ insufficient, which in this pipeline means Phase 5 and
 nowhere else.
 
 ---

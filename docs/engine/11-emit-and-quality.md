@@ -120,7 +120,7 @@ Three contract details:
   target's). A badge belongs to the component of its edge's route, because a badge carries no node
   reference of its own. Anything unattributable is left where it is rather than moved to an
   arbitrary component.
-- **It is idempotent.** Placement depends only on per-component box *sizes* and component indices,
+- **It is idempotent.** Placement depends only on per-component box _sizes_ and component indices,
   both translation-invariant, so packing an already-packed arrangement reproduces it exactly. A
   caller who cannot tell whether packing already ran may simply run it.
 
@@ -143,13 +143,13 @@ Each crossing records a `bridgeOwnerEdgeId`: which of the two edges draws the li
 The rule is that the **lower-priority** edge hops, so the more structurally important line stays
 straight:
 
-| role | priority |
-| --- | ---: |
-| `Forward` | 4 |
-| `Cross` | 3 |
-| `Feedback` | 2 |
-| self-loop | 1 |
-| unknown | 0 |
+| role       | priority |
+| ---------- | -------: |
+| `Forward`  |        4 |
+| `Cross`    |        3 |
+| `Feedback` |        2 |
+| self-loop  |        1 |
+| unknown    |        0 |
 
 Ties break on edge id, so the choice is stable regardless of the order the pair was discovered in.
 
@@ -161,17 +161,17 @@ Ties break on edge id, so the choice is stable regardless of the order the pair 
 the engine guarantees by construction. Every diagnostic it produces has severity `"error"`: there is
 no such thing as a tolerable violation here.
 
-| code | what it means |
-| --- | --- |
-| `NON_FINITE_COORDINATE` | a NaN or infinity in a node box, route point, port, badge rect, anchor or leader |
-| `NODE_NODE_OVERLAP` | two node boxes overlap. Phase 7's separations forbid it |
-| `EDGE_NODE_PENETRATION` | a routed segment passes through a node's interior. Phase 6's lanes forbid it |
-| `BADGE_NODE_OVERLAP` | a badge box overlaps a node box |
-| `BADGE_BADGE_OVERLAP` | two badge boxes overlap |
+| code                     | what it means                                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `NON_FINITE_COORDINATE`  | a NaN or infinity in a node box, route point, port, badge rect, anchor or leader                            |
+| `NODE_NODE_OVERLAP`      | two node boxes overlap. Phase 7's separations forbid it                                                     |
+| `EDGE_NODE_PENETRATION`  | a routed segment passes through a node's interior. Phase 6's lanes forbid it                                |
+| `BADGE_NODE_OVERLAP`     | a badge box overlaps a node box                                                                             |
+| `BADGE_BADGE_OVERLAP`    | two badge boxes overlap                                                                                     |
 | `NON_ORTHOGONAL_SEGMENT` | a segment is not axis-aligned. Skipped for the `spline` and `straight` styles, which are diagonal by design |
-| `ENDPOINT_OFF_BOUNDARY` | a route's port point is not on its node's boundary |
-| `MISSING_ROUTE` | an input edge produced no polyline |
-| `MISSING_NODE_ITEM` | an input node produced no positioned node (raised by emit itself) |
+| `ENDPOINT_OFF_BOUNDARY`  | a route's port point is not on its node's boundary                                                          |
+| `MISSING_ROUTE`          | an input edge produced no polyline                                                                          |
+| `MISSING_NODE_ITEM`      | an input node produced no positioned node (raised by emit itself)                                           |
 
 Ingest diagnostics — unknown endpoints, dropped edges — are prepended to the list, because they are
 older than anything produced here and they explain any downstream surprise.
@@ -196,8 +196,8 @@ output is byte-identical across processes for identical input.
 
 v1's validator had **no spatial index anywhere**: $O(N^2)$ node-node, $O(E \cdot S \cdot N)$
 edge-node, $O(E^2 \cdot S^2)$ shared-segment, $O(B \cdot E \cdot S)$ badge-edge. It also allocated a
-`format!` message for every violation *even when called purely as a scoring probe inside the
-router's inner loop* — which it was, up to 4 × 12 × 32 times per layout. It could not realistically
+`format!` message for every violation _even when called purely as a scoring probe inside the
+router's inner loop_ — which it was, up to 4 × 12 × 32 times per layout. It could not realistically
 be run outside a debug build.
 
 v2 puts a uniform `SpatialHash` in front of every pairwise question, so each one is answered against
@@ -206,7 +206,7 @@ to callers:
 
 - **It may over-report and must never under-report.** Anything it cannot bucket — a non-finite
   rectangle, or one spanning more than `MAX_AXIS_CELLS = 512` cells on an axis — is returned by
-  *every* query rather than dropped. Callers still run the exact predicate on each candidate; the
+  _every_ query rather than dropped. Callers still run the exact predicate on each candidate; the
   hash only shrinks the candidate set.
 - **Results are sorted and deduplicated**, so iteration order never depends on the backing
   `HashMap`. The index is on the decision path of every constraint check, and determinism is a hard
@@ -237,7 +237,7 @@ flip a port side, swap two nodes in a rank, swap two ports on a side, batch-repa
 component. With no gradient, 4–8 state evaluations of budget, and a fitness function that took four
 seconds to run, this was random restart wearing a search's clothes. Crossing counts were also
 non-monotone in the budget knobs: on `dense_kubernetes_mesh`, dropping `initial_lane_rings` from 2
-to 1 *improved* crossings from 206 to 146. A search whose quality moves randomly with its budget is
+to 1 _improved_ crossings from 206 to 146. A search whose quality moves randomly with its budget is
 not converging; it is sampling.
 
 ### What v2 does
@@ -247,13 +247,13 @@ choose between. Every phase produces its output in one pass and hands it forward
 
 That is what makes the split possible:
 
-| | constraints | metrics |
-| --- | --- | --- |
-| produced by | `check_constraints` | `compute_metrics` |
-| severity | `error` — a bug report | none — an observation |
-| effect on the drawing | none (already final) | none |
-| a nonzero value means | the engine is broken | this is what the drawing looks like |
-| may it be traded off? | never | there is nothing to trade against |
+|                       | constraints            | metrics                             |
+| --------------------- | ---------------------- | ----------------------------------- |
+| produced by           | `check_constraints`    | `compute_metrics`                   |
+| severity              | `error` — a bug report | none — an observation               |
+| effect on the drawing | none (already final)   | none                                |
+| a nonzero value means | the engine is broken   | this is what the drawing looks like |
+| may it be traded off? | never                  | there is nothing to trade against   |
 
 Because no search can game them, the checks may be exhaustive and strict, and the metrics may be
 honest about things the engine does not promise.
@@ -267,29 +267,29 @@ From [`LayoutMetrics`](../../crates/gvui/src/0_common/0_1_types.rs), computed in
 
 ### Shape and structure
 
-| field | meaning |
-| --- | --- |
-| `crossings` | **combinatorial** count from Phase 5's exact Barth–Mutzel–Jünger algorithm — order inversions between adjacent ranks |
-| `geometricCrossings` | **measured** proper intersections between the emitted polylines |
-| `bendCount` | interior vertices of the *simplified* polyline, summed. A collinear vertex is an artefact of materialisation, not a bend a reader can see |
-| `totalLength` | total Manhattan path length over all routes |
-| `area` | bounding-box area over nodes, route points and badges |
-| `aspectRatio` | bbox width / height. `1.0` when the height is zero — the neutral report, not a division by zero |
-| `nodeCount`, `edgeCount` | emitted nodes; emitted routes |
-| `rankCount`, `dummyCount` | `0` for the non-layered engines, which have no layered graph |
+| field                     | meaning                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `crossings`               | **combinatorial** count from Phase 5's exact Barth–Mutzel–Jünger algorithm — order inversions between adjacent ranks                      |
+| `geometricCrossings`      | **measured** proper intersections between the emitted polylines                                                                           |
+| `bendCount`               | interior vertices of the _simplified_ polyline, summed. A collinear vertex is an artefact of materialisation, not a bend a reader can see |
+| `totalLength`             | total Manhattan path length over all routes                                                                                               |
+| `area`                    | bounding-box area over nodes, route points and badges                                                                                     |
+| `aspectRatio`             | bbox width / height. `1.0` when the height is zero — the neutral report, not a division by zero                                           |
+| `nodeCount`, `edgeCount`  | emitted nodes; emitted routes                                                                                                             |
+| `rankCount`, `dummyCount` | `0` for the non-layered engines, which have no layered graph                                                                              |
 
 ### Routing and attachment
 
-| field | meaning |
-| --- | --- |
-| `laneDepthMax` | the widest routing channel — `max` over `channel_lanes` and `corridor_lanes`. Large values mean the ordering is fighting the topology |
+| field             | meaning                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laneDepthMax`    | the widest routing channel — `max` over `channel_lanes` and `corridor_lanes`. Large values mean the ordering is fighting the topology                                                                                                                                                                                                                                                                                   |
 | `portSideBalance` | mean over nodes of $1 - \frac{\lvert \text{top} - \text{bottom} \rvert}{\max(1, \text{total})}$. `1.0` = every node's edges split evenly between its top and bottom; `0.0` = everything on one side. A node with no ports scores `1.0` — it is not unbalanced. Left/right ports (flat edges, self-loops) count toward `total` only, so a node dominated by side attachments reads as balanced rather than as an outlier |
 
 ### Badges
 
-| field | meaning |
-| --- | --- |
-| `leaderCount` | badges that needed a fallback leader line |
+| field             | meaning                                                                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `leaderCount`     | badges that needed a fallback leader line                                                                                                                                          |
 | `labelsTruncated` | badges whose display string ends in `…` or `...` — the host's measurer ellipsized it at `maxLabelLines`. The engine never sees text, so this string is the only surviving evidence |
 
 ### Constraint counters — any nonzero value is a bug, not a score
@@ -356,13 +356,13 @@ a bug. It is not, and the correction is worth recording because the reasoning ge
 
 Measured across the layered fixtures, sorted by channel depth:
 
-| channel lanes | 1 | 1 | 2 | 3 | 3 | 6 | 10 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| combinatorial | 0 | 0 | 0 | 0 | 0 | 6 | 28 |
-| geometric | 0 | 0 | 0 | 2 | 2 | 6 | 44 |
+| channel lanes |   1 |   1 |   2 |   3 |   3 |   6 |  10 |
+| ------------- | --: | --: | --: | --: | --: | --: | --: |
+| combinatorial |   0 |   0 |   0 |   0 |   0 |   6 |  28 |
+| geometric     |   0 |   0 |   0 |   2 |   2 |   6 |  44 |
 
 The excess is **zero on every shallow-channel fixture** and appears only as channels deepen. That is
-the signature of a structural property, not a defect: an edge descending to lane *k* must cross the
+the signature of a structural property, not a defect: an edge descending to lane _k_ must cross the
 horizontal run of any shallower lane whose x-interval spans its descent. The combinatorial count
 models order inversions between ranks and cannot see those crossings, because they happen inside a
 channel that does not exist yet when the count is taken.
@@ -377,7 +377,7 @@ channel that does not exist yet when the count is taken.
 
 This was **tested rather than assumed**. Swapping the lane-ordering heuristic — from the
 direction-aware left-edge rule to plain ordering by left endpoint — moved the total across all
-layered fixtures from 121 to 122. The lane *order* is not the lever. The lever is lane *count*, and
+layered fixtures from 121 to 122. The lane _order_ is not the lever. The lever is lane _count_, and
 that is already the provable minimum (optimal interval-graph colouring).
 
 The real improvement available is to make Phase 5's objective include horizontal span, not just
@@ -403,12 +403,12 @@ straight-line drawing, not a defect in the layout.
 
 So the two gates now encode the same split:
 
-| counter | layered / left-right | organic / radial / grid |
-| --- | --- | --- |
-| `nodeNodeOverlaps` | **fail** | **fail** (overlap removal, grid, ring sizing all prevent it) |
-| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail** | **fail** (no engine may drop an edge) |
-| `edgeNodePenetrations` | **fail** | reported as best-effort |
-| `badgeNodeOverlaps`, `badgeBadgeOverlaps` | **fail** | reported as best-effort |
+| counter                                        | layered / left-right | organic / radial / grid                                      |
+| ---------------------------------------------- | -------------------- | ------------------------------------------------------------ |
+| `nodeNodeOverlaps`                             | **fail**             | **fail** (overlap removal, grid, ring sizing all prevent it) |
+| `unresolvedRouteCount`, `unresolvedBadgeCount` | **fail**             | **fail** (no engine may drop an edge)                        |
+| `edgeNodePenetrations`                         | **fail**             | reported as best-effort                                      |
+| `badgeNodeOverlaps`, `badgeBadgeOverlaps`      | **fail**             | reported as best-effort                                      |
 
 The implementation is a small, explicit list in
 [`7_2_organic.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs), applied by the shared emit path
@@ -426,7 +426,7 @@ Those diagnostics are **rewritten to `"warning"`** rather than deleted. The info
 useful — a reader may well want to know that three edges graze nodes — it just is not a failure. The
 count of rewrites is what tells the status resolver the difference between "nothing went wrong" and
 "something went wrong that this engine never promised to prevent". Everything else still fails hard:
-overlapping node boxes, a port off its boundary, a missing route, a NaN. Those *are* invariants
+overlapping node boxes, a port off its boundary, a missing route, a NaN. Those _are_ invariants
 these engines claim.
 
 **Why this matters more than it looks.** Asserting a guarantee an engine never made would make the
@@ -442,24 +442,24 @@ check each against its own promise.
 
 `resolve_status` maps the outcome onto three wire values:
 
-| status | when |
-| --- | --- |
-| `invalid_hard_failure` | any diagnostic still has severity `"error"` — the drawing should not be trusted |
+| status                      | when                                                                                                                                                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_hard_failure`      | any diagnostic still has severity `"error"` — the drawing should not be trusted                                                                                                                      |
 | `unresolved_soft_conflicts` | structurally sound, but something used a fallback the design intends to be rare: a leader line, or an ellipsized label (for the geometric engines, also any softened diagnostic or unresolved count) |
-| `success` | neither |
+| `success`                   | neither                                                                                                                                                                                              |
 
 Invalidity outranks any soft signal.
 
 Alongside it, `OptimizationStats` carries execution metadata. The field names are preserved for
 renderer compatibility and one of them is a fossil worth calling out:
 
-| field | v2 meaning |
-| --- | --- |
-| `globalPasses` | ordering sweeps actually executed |
-| `evaluatedPortStates` | ordering seeds evaluated |
-| `spacingExpansions` | **always 0.** Spacing is exact — Phase 6 reserves it before any geometry exists — so nothing is ever widened after the fact. In v1 this counted retries |
-| `stopReason` | `ordering-converged` (zero crossings), `time-budget`, or `local-optimum` |
-| `timings` | per-phase milliseconds |
+| field                 | v2 meaning                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `globalPasses`        | ordering sweeps actually executed                                                                                                                       |
+| `evaluatedPortStates` | ordering seeds evaluated                                                                                                                                |
+| `spacingExpansions`   | **always 0.** Spacing is exact — Phase 6 reserves it before any geometry exists — so nothing is ever widened after the fact. In v1 this counted retries |
+| `stopReason`          | `ordering-converged` (zero crossings), `time-budget`, or `local-optimum`                                                                                |
+| `timings`             | per-phase milliseconds                                                                                                                                  |
 
 The time budget is measured against the **whole pipeline** rather than asked of the ordering phase.
 "We ran out of time" is a property of the run, and measuring it this way keeps the reason honest
@@ -473,12 +473,12 @@ Four defects were found at integration that **393 passing unit tests did not see
 unit tested its module against the same contract the module was built from — and in three of the
 four cases the contract itself was wrong.
 
-| # | defect | how it surfaced |
-| --- | --- | --- |
-| a | `isCycle` treated as a mandate rather than a bias → 249 ranks for 30 nodes and an out-of-bounds panic | first real dataset through the whole pipeline |
-| b | the dummy-chain cap broke the adjacent-rank adjacency contract three phases relied on | first real dataset |
-| c | [stale coordinate space](./09-coordinate-assignment.md#the-coordinate-space-trap) → 184 `EDGE_NODE_PENETRATION` errors | invariant assertions turned on |
-| d | the constraint policy was wrong for the straight-line engines | **two independent gates disagreed** |
+| #   | defect                                                                                                                 | how it surfaced                               |
+| --- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| a   | `isCycle` treated as a mandate rather than a bias → 249 ranks for 30 nodes and an out-of-bounds panic                  | first real dataset through the whole pipeline |
+| b   | the dummy-chain cap broke the adjacent-rank adjacency contract three phases relied on                                  | first real dataset                            |
+| c   | [stale coordinate space](./09-coordinate-assignment.md#the-coordinate-space-trap) → 184 `EDGE_NODE_PENETRATION` errors | invariant assertions turned on                |
+| d   | the constraint policy was wrong for the straight-line engines                                                          | **two independent gates disagreed**           |
 
 Three surfaced within minutes of running real data with the invariant assertions on. The fourth
 surfaced only because two gates that should have agreed did not. That is the argument for having

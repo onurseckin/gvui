@@ -57,7 +57,7 @@ follows is about why each one had to go.
 
 ### 2a. The costs multiply instead of adding
 
-In a straight pipeline, total cost is the *sum* of the phases. A slow phase costs you what it
+In a straight pipeline, total cost is the _sum_ of the phases. A slow phase costs you what it
 costs.
 
 In a pipeline with a retry loop, the phases inside the loop are multiplied by the number of
@@ -74,21 +74,21 @@ mechanisms inside routing alone:
 ```
 
 That is up to 1,536 full routings and 1,536 full validations for a single evaluation of a single
-candidate layout. Measured by sweeping the budget knobs against *fixed* node positions on
+candidate layout. Measured by sweeping the budget knobs against _fixed_ node positions on
 `kubernetes_cluster_topology` — **12 nodes, 13 edges** — so that only routing varies:
 
-| configuration | routing time |
-| --- | ---: |
-| defaults (4 variants × 12 rip-up × 32 permutations) | 7,466 ms |
-| 1 variant | 1,810 ms |
-| 1 variant, 1 permutation | **150 ms** |
+| configuration                                       | routing time |
+| --------------------------------------------------- | -----------: |
+| defaults (4 variants × 12 rip-up × 32 permutations) |     7,466 ms |
+| 1 variant                                           |     1,810 ms |
+| 1 variant, 1 permutation                            |   **150 ms** |
 
 The permutation loop cost **12×** and produced a byte-identical result: the same 13 routes, the
 same 4 crossings, equally valid. It was doing nothing except being expensive.
 
 The single-pipeline-pass number is the one that really matters. On that 12-node graph the whole
 engine took **26,710 ms** while its outer search evaluated only **6 candidate states**. That is
-about 4.4 seconds *per single pass*. The outer search breadth was never the problem. One pass was
+about 4.4 seconds _per single pass_. The outer search breadth was never the problem. One pass was
 the problem.
 
 Phase-level instrumentation of one pass:
@@ -111,17 +111,17 @@ Routing was 99.5 % of the cost, and routing was inside the loop.
 
 The second failure is subtler and, in the long run, worse.
 
-A retry loop only helps if each retry is *better informed* than the last. v1's loop scored a
+A retry loop only helps if each retry is _better informed_ than the last. v1's loop scored a
 candidate drawing with a 21-field lexicographic tuple, compared field by field, with
 `hard_error_count` first. Until that field reaches zero, the comparator is effectively a single
-boolean: "still broken" versus "still broken". It cannot distinguish *slightly* worse geometry from
-*catastrophically* worse geometry, so it gives the search no gradient — no sense of which direction
+boolean: "still broken" versus "still broken". It cannot distinguish _slightly_ worse geometry from
+_catastrophically_ worse geometry, so it gives the search no gradient — no sense of which direction
 is uphill.
 
 With no gradient and a budget of 4 to 8 evaluations of a 4-second fitness function, what remains is
 random restart. And the tell is measurable: **quality moved non-monotonically with the budget
-knobs.** On `dense_kubernetes_mesh`, lowering `initial_lane_rings` from 2 to 1 — strictly *less*
-routing freedom — *improved* the crossing count from 206 to 146.
+knobs.** On `dense_kubernetes_mesh`, lowering `initial_lane_rings` from 2 to 1 — strictly _less_
+routing freedom — _improved_ the crossing count from 206 to 146.
 
 > A search whose quality moves randomly with its budget knobs is not converging. It is sampling.
 
@@ -129,10 +129,10 @@ routing freedom — *improved* the crossing count from 206 to 146.
 
 The two datasets that hurt most, measured end to end:
 
-| dataset | N | E | v1 | v2 | speedup | v1 crossings | v2 crossings | v1 valid | v2 valid |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--: | :--: |
-| `kubernetes_cluster_topology` | 12 | 13 | 26,710 ms | **0.14 ms** | 190,785× | 2 | 0 | ✓ | ✓ |
-| `dense_kubernetes_mesh` | 30 | 45 | 47,336 ms | **1.79 ms** | 26,445× | **191** | 28 | **✗** | ✓ |
+| dataset                       |   N |   E |        v1 |          v2 |  speedup | v1 crossings | v2 crossings | v1 valid | v2 valid |
+| ----------------------------- | --: | --: | --------: | ----------: | -------: | -----------: | -----------: | :------: | :------: |
+| `kubernetes_cluster_topology` |  12 |  13 | 26,710 ms | **0.14 ms** | 190,785× |            2 |            0 |    ✓     |    ✓     |
+| `dense_kubernetes_mesh`       |  30 |  45 | 47,336 ms | **1.79 ms** |  26,445× |      **191** |           28 |  **✗**   |    ✓     |
 
 The second row is the important one. After 47.3 seconds, the 30-node graph came out with 191
 crossings **and was still invalid** — it had overlaps the engine had detected, tried to fix, and
@@ -162,13 +162,13 @@ decision must be made with enough information not to need rejecting.
 
 Applying that to the three back-edges in the diagram above:
 
-| v1 back-edge | Why it existed | What replaces it |
-| --- | --- | --- |
-| "a badge does not fit → widen and re-run" | Badge area was discovered only after routing | **Label items** — badge area is allocated during layering, §3a |
-| "an edge could not route → rip up and retry" | Routing space was discovered only by trying | **Lane demand** — space is computed before coordinates, §3b |
-| "too many crossings → flip a port and re-route" | Crossings were measured on geometry | Crossings are resolved **combinatorially**, before geometry exists |
+| v1 back-edge                                    | Why it existed                               | What replaces it                                                   |
+| ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| "a badge does not fit → widen and re-run"       | Badge area was discovered only after routing | **Label items** — badge area is allocated during layering, §3a     |
+| "an edge could not route → rip up and retry"    | Routing space was discovered only by trying  | **Lane demand** — space is computed before coordinates, §3b        |
+| "too many crossings → flip a port and re-route" | Crossings were measured on geometry          | Crossings are resolved **combinatorially**, before geometry exists |
 
-The third is the easiest to state: crossings are a property of the *order* of items within ranks,
+The third is the easiest to state: crossings are a property of the _order_ of items within ranks,
 not of pixels. Fix the order first, count the crossings on integers, and there is nothing for the
 geometry to repair. That is [Phase 5](./07-crossing-minimization.md), and it is the only phase in
 the engine that searches.
@@ -216,12 +216,12 @@ carrying the badge's measured width and height:
 Every consequence of that is free, because the machinery already exists and does not know it is
 looking at a label:
 
-| Machinery that already existed | What it now does for badges |
-| --- | --- |
-| Phase 5 orders items within a rank | Chooses the badge's horizontal position to minimize crossings |
-| Phase 7 separates adjacent items by `node_gap` | Keeps the badge clear of its neighbours |
-| Rank height is $\max(\text{item.height})$ over the rank | Makes the row tall enough for the badge by definition |
-| Phase 8 needs badge geometry | Reads it off the item's box — a lookup, not a search |
+| Machinery that already existed                          | What it now does for badges                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| Phase 5 orders items within a rank                      | Chooses the badge's horizontal position to minimize crossings |
+| Phase 7 separates adjacent items by `node_gap`          | Keeps the badge clear of its neighbours                       |
+| Rank height is $\max(\text{item.height})$ over the rank | Makes the row tall enough for the badge by definition         |
+| Phase 8 needs badge geometry                            | Reads it off the item's box — a lookup, not a search          |
 
 **The area is reserved by construction. A badge therefore cannot fail to fit. There is nothing to
 retry.** In v1 the equivalent code — candidate generation, geometric scoring, a disjoint-set
@@ -229,15 +229,15 @@ conflict graph doing up to $48^2 = 2{,}304$ conflict tests per badge pair, and a
 that built a formatted state-key string at every node of its DFS — was 1,003 lines. It is now a
 table lookup.
 
-The item is deliberately *larger* than the badge, which is what lets the badge sit beside the line
+The item is deliberately _larger_ than the badge, which is what lets the badge sit beside the line
 rather than on top of it. With $lw = \text{label.width} + 2 \times \texttt{badge\_clearance}$ and
 $lh = \text{label.height} + 2 \times \texttt{badge\_clearance}$:
 
-| `label_placement` | item size | edge passes through | badge occupies |
-| --- | --- | --- | --- |
-| `on-edge` | $(lw,\ lh)$ | the item's centre | the whole box, inset |
-| `beside-edge` *(default)* | $(2 \cdot lw,\ lh)$ | the item's **left face** | the **right half**, inset |
-| `above-edge` | $(lw,\ 2 \cdot lh)$ | the item's **bottom face** | the **top half**, inset |
+| `label_placement`         | item size           | edge passes through        | badge occupies            |
+| ------------------------- | ------------------- | -------------------------- | ------------------------- |
+| `on-edge`                 | $(lw,\ lh)$         | the item's centre          | the whole box, inset      |
+| `beside-edge` _(default)_ | $(2 \cdot lw,\ lh)$ | the item's **left face**   | the **right half**, inset |
+| `above-edge`              | $(lw,\ 2 \cdot lh)$ | the item's **bottom face** | the **top half**, inset   |
 
 Drawn, for the default `beside-edge`:
 
@@ -277,11 +277,11 @@ giving **4,934 live vertices**; instrumented end to end on the same dataset it r
 vertices and 10,294 grid edges. Each A\* expansion did a string-keyed hash
 lookup, a second hash lookup, a string clone, and a linear scan over every node rectangle to test
 whether the cell was blocked. One edge cost 25–65 ms. Then the results were committed to an
-occupancy ledger whose commit routine re-split *every existing reservation* against a fresh point
+occupancy ledger whose commit routine re-split _every existing reservation_ against a fresh point
 set, with an $O(k^2)$ dedup inside; per-commit cost grew from 0 ms to 24 ms as the reservation count
 climbed to 3,276.
 
-And all of that machinery existed to answer one question: *how much room do the edges need?*
+And all of that machinery existed to answer one question: _how much room do the edges need?_
 
 The v2 answer is that you do not need geometry to answer it. Consider what a route between two
 adjacent ranks actually is, once the ordering is fixed:
@@ -304,8 +304,8 @@ route for `B → X` runs from order 1 to order 2. The route for `C → W` runs f
 Those horizontal extents are **intervals on the order axis** — and orders are integers that already
 exist. No pixel is involved.
 
-Now the whole problem becomes: *how many horizontal lines do I need to stack in this channel so
-that no two of them overlap?* Which is exactly graph colouring on the intervals:
+Now the whole problem becomes: _how many horizontal lines do I need to stack in this channel so
+that no two of them overlap?_ Which is exactly graph colouring on the intervals:
 
 ```text
    order:        0        1        2        3
@@ -327,7 +327,7 @@ that no two of them overlap?* Which is exactly graph colouring on the intervals:
                  = 76 px of channel height required by routing
 ```
 
-76 px is what the *routes* demand. The gap actually used below rank $r$ is
+76 px is what the _routes_ demand. The gap actually used below rank $r$ is
 $\max(\texttt{rank\_gap},\ 76)$, and at the default `rank_gap = 120` the aesthetic gap wins here —
 which is the normal case. The routing figure only takes over once a channel is deep: at 9 lanes it
 reaches $9 \times 12 + 40 = 148$ px and the band grows to accommodate it. Either way the value is
@@ -358,7 +358,7 @@ The algorithm is a sweep, $O(k \log k)$ per channel:
 ```
 
 The same idea handles the sideways direction. A **corridor** is the vertical band between two
-adjacent items *within* a rank, where flat edges (both endpoints on the same rank) run:
+adjacent items _within_ a rank, where flat edges (both endpoints on the same rank) run:
 
 ```text
    rank r    [ A ]  ║  [ B ]  ║  [ C ]
@@ -388,14 +388,14 @@ The measured claim: zero `MISSING_ROUTE` diagnostics and zero `unresolved_route_
 
 ### 3c. What the two tricks have in common
 
-Both take a question that v1 answered by *trying and checking* — "does the badge fit?", "can the
-edge get through?" — and answer it by *computing* instead, at a point in the pipeline where the
+Both take a question that v1 answered by _trying and checking_ — "does the badge fit?", "can the
+edge get through?" — and answer it by _computing_ instead, at a point in the pipeline where the
 answer is cheap and certain.
 
 Both are only possible because of P2, **discrete before continuous**. The label fits because
 ordering and separation are decided on integers before any box is placed. The lanes are exactly
 right because the intervals are order intervals, not pixel intervals. Once you commit to making
-every decision that *can* be made on integers *on* integers, the continuous phase becomes a
+every decision that _can_ be made on integers _on_ integers, the continuous phase becomes a
 deterministic evaluation with nothing left to discover — and a phase with nothing left to discover
 is a phase that cannot fail, and therefore a phase you never have to run twice.
 
@@ -406,37 +406,37 @@ is a phase that cannot fail, and therefore a phase you never have to run twice.
 The design rule for every phase except ordering is: **use an algorithm with a proof attached.**
 Where the proof gives an optimum, take the optimum; where it gives a bound, know the bound.
 
-| # | Phase | Algorithm | Guarantee | Cost |
-| ---: | --- | --- | --- | --- |
-| 0 | Ingest | Interning + CSR construction | Exact; node order is input order; no hash iteration anywhere | $O(V + E)$ |
-| 1 | Measure | Canvas `measureText` against the card's real fonts | Exact for the actual font, including CJK and emoji | $O(V + E)$ text ops |
-| 2 | Structure | Tarjan SCC, then Eades–Lin–Smyth greedy FAS | $\lvert FAS \rvert \le m/2 - n/6$; reversing the returned arcs **provably** yields a DAG | $O(V + E)$ |
-| 3 | Rank | Network simplex (Gansner et al.) | **Optimal** for $\sum_{(u,v)} \omega_{uv}(\text{rank}(v) - \text{rank}(u))$ subject to every $\text{minlen}$ | near-linear in practice |
-| 4 | Layer | Chain expansion + label items | Every link spans exactly one rank; every label has reserved area | $O(V + \sum \text{span})$ |
-| 5 | Order | Median sweeps + transpose, BMJ counting | Median is $\le 3\times$ optimal for the two-layer problem; the count is **exact** | $O(k \cdot s \cdot E \log V)$ |
-| 6 | Demand | Greedy interval-graph colouring | **Optimal** — interval graphs are perfect, so greedy uses exactly $\omega$ lanes | $O(E \log E)$ |
-| 7 | Coordinates | Brandes–Köpf | $\le 2$ bends per edge; dummy chains straight where no type-1 conflict forbids it | $O(V + E)$ |
-| 8 | Route | Lane index → polyline; ports sorted, not searched | Deterministic evaluation; cannot fail, because Phase 6 reserved the space | $O(E \cdot \text{bends})$ |
-| 9 | Emit | Constraint assertion + metric computation | Constraints are asserted, never scored | $O(V + E)$ |
+|   # | Phase       | Algorithm                                          | Guarantee                                                                                                    | Cost                          |
+| --: | ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+|   0 | Ingest      | Interning + CSR construction                       | Exact; node order is input order; no hash iteration anywhere                                                 | $O(V + E)$                    |
+|   1 | Measure     | Canvas `measureText` against the card's real fonts | Exact for the actual font, including CJK and emoji                                                           | $O(V + E)$ text ops           |
+|   2 | Structure   | Tarjan SCC, then Eades–Lin–Smyth greedy FAS        | $\lvert FAS \rvert \le m/2 - n/6$; reversing the returned arcs **provably** yields a DAG                     | $O(V + E)$                    |
+|   3 | Rank        | Network simplex (Gansner et al.)                   | **Optimal** for $\sum_{(u,v)} \omega_{uv}(\text{rank}(v) - \text{rank}(u))$ subject to every $\text{minlen}$ | near-linear in practice       |
+|   4 | Layer       | Chain expansion + label items                      | Every link spans exactly one rank; every label has reserved area                                             | $O(V + \sum \text{span})$     |
+|   5 | Order       | Median sweeps + transpose, BMJ counting            | Median is $\le 3\times$ optimal for the two-layer problem; the count is **exact**                            | $O(k \cdot s \cdot E \log V)$ |
+|   6 | Demand      | Greedy interval-graph colouring                    | **Optimal** — interval graphs are perfect, so greedy uses exactly $\omega$ lanes                             | $O(E \log E)$                 |
+|   7 | Coordinates | Brandes–Köpf                                       | $\le 2$ bends per edge; dummy chains straight where no type-1 conflict forbids it                            | $O(V + E)$                    |
+|   8 | Route       | Lane index → polyline; ports sorted, not searched  | Deterministic evaluation; cannot fail, because Phase 6 reserved the space                                    | $O(E \cdot \text{bends})$     |
+|   9 | Emit        | Constraint assertion + metric computation          | Constraints are asserted, never scored                                                                       | $O(V + E)$                    |
 
 Two notes on reading this table.
 
 **Phase 5 is the only line without an exact answer, and that is not a shortcoming.** Two-layer
 crossing minimization is NP-hard. A $3\times$ bound from a linear-time heuristic, refined by a local
-transpose pass over an *exact* $O(E \log V)$ counting function, is the right trade. Because counting
+transpose pass over an _exact_ $O(E \log V)$ counting function, is the right trade. Because counting
 is exact and cheap, the search can evaluate hundreds of candidates in well under a millisecond —
 which is why the one search in the engine costs less than the phases that do not search. The
 defaults are `ordering_seeds = 4` and `ordering_sweeps = 16`.
 
 **Phase 2's bound is not the interesting part.** $\lvert FAS \rvert \le m/2 - n/6$ is a quality
-bound on how few edges get reversed, and it is nice to have. The *load-bearing* property is the
+bound on how few edges get reversed, and it is nice to have. The _load-bearing_ property is the
 other one: Eades' guarantee that reversing exactly the arcs it returns yields a DAG. That guarantee
 comes from deriving the arcs from a total vertex sequence covering **every arc it was shown** — so
 if you hide arcs from it, the guarantee evaporates. v2 learned this the hard way. An early version
 treated a caller's `isCycle` hint as a mandate and excluded those edges from the FAS pass. Six of
 the eight test datasets carry such hints; the result was a graph that was still cyclic, which sent
 longest-path ranking into unbounded relaxation along a live cycle — **249 ranks for 30 nodes** — and
-an out-of-bounds panic three phases later. The fix was to let hints set the *starting orientation*
+an out-of-bounds panic three phases later. The fix was to let hints set the _starting orientation_
 only, and then show the FAS pass every non-self arc in its current orientation. Acyclicity became a
 property of the algorithm instead of an assumption.
 
@@ -473,7 +473,7 @@ The instructive exercise is to reverse each of these and watch a retry loop reap
 **Reverse `Measure → Rank`.** Now ranking runs without knowing which edges carry labels, so
 labelled edges get $\text{minlen} = 1$ and land on adjacent ranks. There is no intermediate rank to
 host the badge. The only remaining options are to squeeze the badge in afterwards — which can fail,
-which needs a retry — or to re-run ranking with the labels known, which *is* the retry.
+which needs a retry — or to re-run ranking with the labels known, which _is_ the retry.
 
 **Reverse `Layer → Order`.** Now ordering runs before label items exist, and the label has to be
 inserted into an already-fixed row afterwards. Its horizontal position is then chosen by a local
@@ -487,16 +487,16 @@ forever.
 
 **Reverse `Demand → Coordinates`.** This is the one v1 got wrong, and it is the expensive one.
 Coordinates get assigned with no knowledge of how much room the edges will need, so routing
-discovers the shortfall by *failing to route*, and the only recovery is to widen a gap and re-run
+discovers the shortfall by _failing to route_, and the only recovery is to widen a gap and re-run
 coordinate assignment — plus everything downstream of it. That is the 47-second loop.
 
 **Reverse `Coordinates → Route`.** Routing before coordinates exist means routing in some abstract
 space and then trying to make the coordinates match, which is coordinate assignment with extra
 steps and no guarantee it can be satisfied.
 
-There is exactly one dependency in the whole engine that points *backwards* — routing needs space,
+There is exactly one dependency in the whole engine that points _backwards_ — routing needs space,
 and space is decided by an earlier phase. That is the pressure that produced v1's loop. v2 resolves
-it by moving the *computation* of the requirement earlier rather than by moving the *decision*
+it by moving the _computation_ of the requirement earlier rather than by moving the _decision_
 later:
 
 ```text
@@ -521,7 +521,7 @@ Same dependency. No loop. That is the whole idea, and it is why the pipeline dia
   per-fixture budget (and a `time_budget_ms` default of 250 ms, which no fixture approaches).
 - All 40 combinations valid, and byte-identical across separate processes.
 - `leader_count` 0, `unresolved_route_count` 0, `spacing_expansions` structurally 0.
-- The engine got substantially *smaller*. The A\* router, the routing grid, the occupancy ledger,
+- The engine got substantially _smaller_. The A\* router, the routing grid, the occupancy ledger,
   the rip-up loop, the 1,111-line trial-state generator, the 21-field lexicographic comparator and
   the badge backtracking search were all deleted, not replaced.
 
@@ -535,7 +535,7 @@ Same dependency. No loop. That is the whole idea, and it is why the pipeline dia
   edge descending to lane $k$ must cross the horizontal run of any shallower lane whose interval
   spans its descent, and a combinatorial count of order inversions cannot see that. It was tested
   rather than assumed — swapping the lane-ordering heuristic moved the total across all layered
-  fixtures from 121 to 122, so lane *order* is not the lever. Lane *count* is, and it is already
+  fixtures from 121 to 122, so lane _order_ is not the lever. Lane _count_ is, and it is already
   the proven minimum.
 - **The layered engine is not right for every graph.** On `dense_kubernetes_mesh` — 13 of 45 edges
   are feedback edges, so the data has no dominant flow direction — organic mode produces 8

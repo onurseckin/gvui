@@ -30,9 +30,6 @@
     "prod:restart": "docker compose -f docker-compose.prod.yml restart",
     "prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
   },
-  "engines": {
-    "bun": ">=1.0.0"
-  },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
     "@tanstack/react-router": "^1.170.18",
@@ -53,5 +50,8 @@
     "react-test-renderer": "19.2.8",
     "typescript": "^7.0.2",
     "vite": "^8.2.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

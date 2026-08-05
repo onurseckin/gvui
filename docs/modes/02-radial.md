@@ -18,7 +18,7 @@ arrange everything else in rings by how many hops away it is.
               ○      ○         ○      ○
 ```
 
-It is the natural shape for an ego network ("what does this service touch, and what do *those*
+It is the natural shape for an ego network ("what does this service touch, and what do _those_
 touch"), a taxonomy, or a dependency neighbourhood. It is a poor shape for a graph with several
 equally important roots, or one whose edges mostly do not belong to any tree.
 
@@ -48,19 +48,19 @@ $$x = r\cos\theta, \qquad y = r\sin\theta$$
 Two conventions to keep straight, because they trip everyone up:
 
 1. **$\theta = 0$ points right** (3 o'clock), not up.
-2. **Screen $y$ grows downward.** So increasing $\theta$ walks *clockwise* on screen, not
+2. **Screen $y$ grows downward.** So increasing $\theta$ walks _clockwise_ on screen, not
    counter-clockwise as in a maths textbook.
 
 Worked out, at radius 400 with six evenly spaced angles:
 
-| $\theta$ | radians | $\cos\theta$ | $\sin\theta$ | $x$ | $y$ | on screen |
-| ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 0° | 0.000 | 1.000 | 0.000 | +400 | 0 | right (3 o'clock) |
-| 60° | 1.047 | 0.500 | 0.866 | +200 | +346 | lower right |
-| 120° | 2.094 | −0.500 | 0.866 | −200 | +346 | lower left |
-| 180° | 3.142 | −1.000 | 0.000 | −400 | 0 | left (9 o'clock) |
-| 240° | 4.189 | −0.500 | −0.866 | −200 | −346 | upper left |
-| 300° | 5.236 | 0.500 | −0.866 | +200 | −346 | upper right |
+| $\theta$ | radians | $\cos\theta$ | $\sin\theta$ |  $x$ |  $y$ | on screen         |
+| -------: | ------: | -----------: | -----------: | ---: | ---: | ----------------- |
+|       0° |   0.000 |        1.000 |        0.000 | +400 |    0 | right (3 o'clock) |
+|      60° |   1.047 |        0.500 |        0.866 | +200 | +346 | lower right       |
+|     120° |   2.094 |       −0.500 |        0.866 | −200 | +346 | lower left        |
+|     180° |   3.142 |       −1.000 |        0.000 | −400 |    0 | left (9 o'clock)  |
+|     240° |   4.189 |       −0.500 |       −0.866 | −200 | −346 | upper left        |
+|     300° |   5.236 |        0.500 |       −0.866 | +200 | −346 | upper right       |
 
 That is the whole coordinate system. Everything below is about choosing $r$ and $\theta$ for each
 node.
@@ -160,9 +160,9 @@ $$2\pi r_k \;\ge\; 1.15 \cdot \sum_{v \in \text{ring } k}\bigl(\text{extent}^{\t
 
 A box is a rectangle and a ring is a circle, so "how much of the ring does this box eat" depends on
 the box's angle. The engine measures both extents against the node's own angle — which is why angles
-are settled *before* radii, and why the sizing can be exact instead of a conservative bound:
+are settled _before_ radii, and why the sizing can be exact instead of a conservative bound:
 
-$$\text{extent}^{\text{radial}} = w\lvert\cos\theta\rvert + h\lvert\sin\theta\rvert, \qquad
+$$ \text{extent}^{\text{radial}} = w\lvert\cos\theta\rvert + h\lvert\sin\theta\rvert, \qquad
 \text{extent}^{\text{tangential}} = w\lvert\sin\theta\rvert + h\lvert\cos\theta\rvert$$
 
 ```text
@@ -383,3 +383,4 @@ now that organic is gone; only `overlap_removal_passes`, which sat beside them, 
 ---
 
 ← [Layered](./01-layered.md) | [Index](./README.md) | [Docs Index →](../README.md)
+$$

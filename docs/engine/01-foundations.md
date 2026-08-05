@@ -4,8 +4,8 @@
 
 Before we can build an engine that draws graphs, we have to agree on what a graph is. This chapter
 assumes zero prior knowledge. If you already know what a DAG and a strongly connected component
-are, skip to [Layered drawings](#layered-drawings) — the last three sections define *rank*,
-*layered drawing* and *dummy node*, and every later chapter depends on those three words.
+are, skip to [Layered drawings](#layered-drawings) — the last three sections define _rank_,
+_layered drawing_ and _dummy node_, and every later chapter depends on those three words.
 
 We build everything on one running example: a small microservice architecture.
 
@@ -45,7 +45,7 @@ Graphs come in two flavours.
 An **undirected** graph represents symmetric relationships, like friendship. If Alice is friends
 with Bob, Bob is friends with Alice; the edge has no direction.
 
-A **directed** graph (a *digraph*) represents asymmetric relationships, like dependency or data
+A **directed** graph (a _digraph_) represents asymmetric relationships, like dependency or data
 flow. If `API` calls `Auth` to verify a user, `API` depends on `Auth` and not the reverse. We draw
 directed edges with an arrowhead:
 
@@ -75,8 +75,8 @@ Let's grow the example:
 
 Two nodes joined by an edge are **adjacent**. In a directed graph we name the two directions:
 
-- A **predecessor** of $v$ is a node that points *to* $v$.
-- A **successor** of $v$ is a node that $v$ points *to*.
+- A **predecessor** of $v$ is a node that points _to_ $v$.
+- A **successor** of $v$ is a node that $v$ points _to_.
 
 For `Cache`: its predecessor is `API`, its successor is `DB`.
 
@@ -89,23 +89,23 @@ single most expensive thing in the pipeline.
 
 Count the edges at a node and you get its **degree**.
 
-- **In-degree**: edges pointing *to* the node.
-- **Out-degree**: edges pointing *away from* the node.
+- **In-degree**: edges pointing _to_ the node.
+- **Out-degree**: edges pointing _away from_ the node.
 - **Degree**: the sum of the two.
 
-| Node | In-degree | Out-degree | What it means |
-| --- | ---: | ---: | --- |
-| API | 0 | 2 | A **source**. Nothing depends on it being drawn first; everything else follows from it. |
-| Auth | 1 | 1 | An intermediary. |
-| Cache | 1 | 1 | An intermediary. |
-| DB | 2 | 0 | A **sink**. Flow ends here. |
+| Node  | In-degree | Out-degree | What it means                                                                           |
+| ----- | --------: | ---------: | --------------------------------------------------------------------------------------- |
+| API   |         0 |          2 | A **source**. Nothing depends on it being drawn first; everything else follows from it. |
+| Auth  |         1 |          1 | An intermediary.                                                                        |
+| Cache |         1 |          1 | An intermediary.                                                                        |
+| DB    |         2 |          0 | A **sink**. Flow ends here.                                                             |
 
 Sources naturally want to live at the top of a top-down drawing; sinks at the bottom.
 
 Degree matters to the engine for a second, less obvious reason: **every edge at a node needs
 somewhere to attach.** A node with 8 edges needs 8 attachment points, and those need physical
 room along the node's border. The engine therefore grows a node's box during ingest if its degree
-demands it — before ranking, because node width is an *input* to ranking. `IrNode::degree` exists
+demands it — before ranking, because node width is an _input_ to ranking. `IrNode::degree` exists
 for exactly that.
 
 ## Paths and reachability
@@ -183,7 +183,7 @@ laid out and then packed side by side instead of being tangled together.
 ### Strongly connected components
 
 There is a stricter version. A **strongly connected component** (SCC) is a maximal set of nodes in
-which *every* node can reach *every* other node **following edge directions**.
+which _every_ node can reach _every_ other node **following edge directions**.
 
 Weak connectivity asks "is there a route if I am allowed to walk edges backwards?". Strong
 connectivity asks "is there a route if I must respect every arrow?". The second is much harder to
@@ -198,10 +198,10 @@ satisfy:
 
 - `{A, B, C}` is one SCC. `A → B → C → A` returns to its start, so each of the three reaches each
   of the three respecting direction.
-- `{D}` is an SCC all by itself. You can get *to* `D`, but there is no edge out of `D`, so `D`
+- `{D}` is an SCC all by itself. You can get _to_ `D`, but there is no edge out of `D`, so `D`
   reaches nothing and belongs with nobody.
 
-All four nodes are in the same *weakly* connected component; they form two *strongly* connected
+All four nodes are in the same _weakly_ connected component; they form two _strongly_ connected
 components.
 
 Why this matters: **every cycle lives entirely inside one SCC.** An edge that joins two different
@@ -250,7 +250,7 @@ But not every crossing is removable. A graph is **planar** if it can be drawn in
 crossings at all, and many graphs simply are not. The smallest examples are $K_5$ — five nodes with
 every pair joined, 10 edges — and $K_{3,3}$ — three nodes each joined to the same other three,
 9 edges. Neither can be drawn without at least one crossing, no matter how you arrange the nodes.
-Kuratowski's theorem says these two are the *only* obstructions: a graph is planar if and only if it
+Kuratowski's theorem says these two are the _only_ obstructions: a graph is planar if and only if it
 contains no subdivision of $K_5$ or $K_{3,3}$ inside it.
 
 $K_{3,3}$ is worth picturing, because it is exactly a two-rank layered drawing:
@@ -271,7 +271,7 @@ at least one crossing.
 
 Two consequences shape the engine:
 
-1. **"Zero crossings" is not a goal we can promise.** The honest goal is *few* crossings.
+1. **"Zero crossings" is not a goal we can promise.** The honest goal is _few_ crossings.
 2. **Even the reduced problem is hard.** Once nodes are assigned to rows, deciding the left-to-right
    order within two adjacent rows so as to minimize crossings between them is NP-hard. That is why
    ordering is the one phase in the engine that searches — see
@@ -280,7 +280,7 @@ Two consequences shape the engine:
 There is one more subtlety worth internalizing early. There are two different things called
 "crossings" in this codebase:
 
-- **Combinatorial crossings** — pairs of edges whose endpoints are *inverted* between two adjacent
+- **Combinatorial crossings** — pairs of edges whose endpoints are _inverted_ between two adjacent
   rows. Counted on integers, before any geometry exists.
 - **Geometric crossings** — actual intersections of the drawn polylines, measured afterwards.
 
@@ -295,7 +295,7 @@ comes from.
 Everything above is standard graph theory. The next three definitions are specific to how this
 engine draws, and every later chapter uses them constantly.
 
-A **layered drawing** (also called a *hierarchical* or *Sugiyama* drawing) places every node into
+A **layered drawing** (also called a _hierarchical_ or _Sugiyama_ drawing) places every node into
 one of a series of parallel rows, and draws every edge so that it travels from an earlier row to a
 later one. In a top-down drawing the rows are horizontal bands and every arrow points downward.
 
@@ -328,17 +328,17 @@ assignments satisfying that, the engine picks one minimizing the total weighted 
 
 $$\sum_{(u,v) \in E} \omega_{uv} \cdot \big(\text{rank}(v) - \text{rank}(u)\big)$$
 
-In words: *keep every arrow pointing downward, and make the arrows as short as you can.* Short
+In words: _keep every arrow pointing downward, and make the arrows as short as you can._ Short
 edges are easier to follow, and a drawing with short edges is compact.
 
 Working the example by hand, with every $\text{minlen} = 1$ and every $\omega = 1$:
 
-| Node | Constraints | Rank |
-| --- | --- | ---: |
-| API | none (no incoming edges) | 0 |
-| Auth | $\text{rank} \ge \text{rank(API)} + 1$ | 1 |
-| Cache | $\text{rank} \ge \text{rank(API)} + 1$ | 1 |
-| DB | $\ge \text{rank(Auth)} + 1$ and $\ge \text{rank(Cache)} + 1$ | 2 |
+| Node  | Constraints                                                  | Rank |
+| ----- | ------------------------------------------------------------ | ---: |
+| API   | none (no incoming edges)                                     |    0 |
+| Auth  | $\text{rank} \ge \text{rank(API)} + 1$                       |    1 |
+| Cache | $\text{rank} \ge \text{rank(API)} + 1$                       |    1 |
+| DB    | $\ge \text{rank(Auth)} + 1$ and $\ge \text{rank(Cache)} + 1$ |    2 |
 
 Total weighted edge length: $1 + 1 + 1 + 1 = 4$. No assignment does better, because every edge
 already spans the minimum of one row.
@@ -354,7 +354,7 @@ Now change one thing — give `Cache` an extra hop:
 ```
 
 Here `API → Cache` spans two rows instead of one, and the total edge length is 5. Ranking is the
-phase that decides *which* of the many legal assignments you get. Two nodes end up on the same rank
+phase that decides _which_ of the many legal assignments you get. Two nodes end up on the same rank
 precisely when neither constrains the other. See
 [Rank Assignment](./05-rank-assignment.md).
 
@@ -364,7 +364,7 @@ Three properties of ranks are worth stating explicitly, because later chapters r
   418.0" happens much later, in [Phase 7](./09-coordinate-assignment.md).
 - An edge whose two endpoints land on the **same** rank is called a **flat edge**. It cannot point
   downward, so it is drawn sideways, and it needs its own handling everywhere.
-- The number of ranks is the *height* of the drawing, and the widest rank is roughly its *width*.
+- The number of ranks is the _height_ of the drawing, and the widest rank is roughly its _width_.
   The engine can trade one against the other; that is what `balance_ranks` and
   `target_aspect_ratio` do.
 
@@ -432,7 +432,7 @@ why ranking tries to keep edges short — a shorter edge is not just prettier, i
 
 One more use of the same idea, and it is the load-bearing one in this engine: **an edge's label is
 also an item in the layered graph.** Instead of a zero-size dummy in the middle of the chain, the
-engine puts an item there carrying the *measured box of the badge*:
+engine puts an item there carrying the _measured box of the badge_:
 
 ```text
   rank 0     [ API ]
@@ -452,25 +452,25 @@ deletes an entire retry loop from the engine, and it is the subject of the
 
 ## Vocabulary summary
 
-| Term | Meaning |
-| --- | --- |
-| node / vertex | A thing to draw. |
-| edge / link | A directed connection between two nodes. |
-| in-degree / out-degree | Number of edges entering / leaving a node. |
-| path | A sequence of nodes joined by consecutive directed edges. |
-| cycle | A path that returns to its starting node. |
-| DAG | A directed graph with no cycles. |
-| topological order | A linear order of a DAG's nodes with every edge pointing forward. |
-| weakly connected component | An island of nodes, ignoring edge direction. |
-| strongly connected component | A maximal set where every node reaches every other, respecting direction. Every cycle lives inside one. |
-| planar | Drawable with zero crossings. Most real graphs are not. |
-| crossing | Two edges intersecting away from a shared node. |
-| rank | The row index a node is assigned to. |
-| flat edge | An edge whose endpoints share a rank. |
-| span | $\text{rank}(v) - \text{rank}(u)$ for an edge $u \to v$. |
-| dummy node | A zero-size placeholder on an intermediate rank of a long edge. |
-| label item | Like a dummy, but carrying the edge badge's measured box. |
-| item | The union of the three: real node, dummy, or label. What every phase after Phase 4 actually operates on. |
+| Term                         | Meaning                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| node / vertex                | A thing to draw.                                                                                         |
+| edge / link                  | A directed connection between two nodes.                                                                 |
+| in-degree / out-degree       | Number of edges entering / leaving a node.                                                               |
+| path                         | A sequence of nodes joined by consecutive directed edges.                                                |
+| cycle                        | A path that returns to its starting node.                                                                |
+| DAG                          | A directed graph with no cycles.                                                                         |
+| topological order            | A linear order of a DAG's nodes with every edge pointing forward.                                        |
+| weakly connected component   | An island of nodes, ignoring edge direction.                                                             |
+| strongly connected component | A maximal set where every node reaches every other, respecting direction. Every cycle lives inside one.  |
+| planar                       | Drawable with zero crossings. Most real graphs are not.                                                  |
+| crossing                     | Two edges intersecting away from a shared node.                                                          |
+| rank                         | The row index a node is assigned to.                                                                     |
+| flat edge                    | An edge whose endpoints share a rank.                                                                    |
+| span                         | $\text{rank}(v) - \text{rank}(u)$ for an edge $u \to v$.                                                 |
+| dummy node                   | A zero-size placeholder on an intermediate rank of a long edge.                                          |
+| label item                   | Like a dummy, but carrying the edge badge's measured box.                                                |
+| item                         | The union of the three: real node, dummy, or label. What every phase after Phase 4 actually operates on. |
 
 ---
 

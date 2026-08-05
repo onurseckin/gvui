@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use super::config::CustomLayoutConfig;
 use super::types::{NormalizedEdge, Rect};
+use std::collections::HashMap;
 
 const MIN_BADGE_WIDTH: f64 = 60.0;
 const BADGE_HEIGHT: f64 = 28.0;
@@ -31,11 +31,7 @@ pub fn get_badge_display_text(label: Option<&str>, is_cycle: bool) -> Option<Str
 }
 
 /// Measures the required bounding rectangle dimensions for a badge based on character length and padding.
-pub fn measure_badge_rect(
-    label: &str,
-    _config: &CustomLayoutConfig,
-    is_cycle: bool,
-) -> Rect {
+pub fn measure_badge_rect(label: &str, _config: &CustomLayoutConfig, is_cycle: bool) -> Rect {
     let display_text = get_badge_display_text(Some(label), is_cycle);
     let Some(text) = display_text else {
         return Rect {

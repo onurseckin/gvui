@@ -165,7 +165,8 @@ pub fn rank_tight_tree(node_count: usize, arcs: &[(u32, u32, u16)]) -> Vec<u16> 
         return Vec::new();
     }
 
-    let weighted: Vec<(u32, u32, u16, f64)> = arcs.iter().map(|&(f, t, m)| (f, t, m, 1.0)).collect();
+    let weighted: Vec<(u32, u32, u16, f64)> =
+        arcs.iter().map(|&(f, t, m)| (f, t, m, 1.0)).collect();
     let sane = sanitise(node_count, &weighted);
 
     match feasible_start(node_count, &sane) {
@@ -189,7 +190,11 @@ fn sanitise(node_count: usize, arcs: &[(u32, u32, u16, f64)]) -> Vec<Arc> {
         if from == to || from as usize >= node_count || to as usize >= node_count {
             continue;
         }
-        let weight = if weight.is_finite() { weight.max(0.0) } else { 1.0 };
+        let weight = if weight.is_finite() {
+            weight.max(0.0)
+        } else {
+            1.0
+        };
         out.push(Arc {
             from,
             to,
@@ -247,7 +252,12 @@ fn undirected_incidence(node_count: usize, arcs: &[Arc]) -> Csr {
 ///   component by definition of connectivity.
 ///
 /// Disconnected graphs seed a new root — the lowest unvisited index — when no frontier arc exists.
-fn build_tight_tree(node_count: usize, arcs: &[Arc], incidence: &Csr, ranks: &mut [i32]) -> Vec<u32> {
+fn build_tight_tree(
+    node_count: usize,
+    arcs: &[Arc],
+    incidence: &Csr,
+    ranks: &mut [i32],
+) -> Vec<u32> {
     let mut visited = vec![false; node_count];
     let mut tree: Vec<u32> = Vec::new();
     let mut visited_count = 0usize;
@@ -490,8 +500,7 @@ fn select_entering(
             continue;
         }
         let from_head = in_head[a.from as usize];
-        let to_tail =
-            !in_head[a.to as usize] && forest.tree_id[a.to as usize] == this_tree;
+        let to_tail = !in_head[a.to as usize] && forest.tree_id[a.to as usize] == this_tree;
         if !from_head || !to_tail {
             continue;
         }
@@ -538,11 +547,7 @@ mod tests {
     fn beats_longest_path_on_a_late_source() {
         // 0 -> 1 -> 2 and 3 -> 2. Longest path pins the extra source 3 to rank 0 and stretches its
         // only arc across two ranks; the optimum drops it to rank 1, next to its successor.
-        let arcs = [
-            (0u32, 1u32, 1u16, 1.0f64),
-            (1, 2, 1, 1.0),
-            (3, 2, 1, 1.0),
-        ];
+        let arcs = [(0u32, 1u32, 1u16, 1.0f64), (1, 2, 1, 1.0), (3, 2, 1, 1.0)];
         let simplex = rank_network_simplex(4, &arcs, 16).expect("feasible");
         let greedy = rank_longest_path(4, &strip(&arcs));
 
@@ -561,11 +566,7 @@ mod tests {
     fn a_heavy_arc_pulls_its_endpoints_adjacent() {
         // Skeleton with genuine freedom: node 1 may sit on rank 1 or rank 2 without violating
         // anything, so the weights alone decide which arc gets to be tight.
-        let heavy_tail = [
-            (0u32, 1u32, 1u16, 1.0f64),
-            (0, 2, 3, 1.0),
-            (1, 2, 1, 8.0),
-        ];
+        let heavy_tail = [(0u32, 1u32, 1u16, 1.0f64), (0, 2, 3, 1.0), (1, 2, 1, 8.0)];
         let ranks = rank_network_simplex(3, &heavy_tail, 16).expect("feasible");
         assert!(feasible_weighted(&ranks, &heavy_tail));
         assert_eq!(
@@ -575,11 +576,7 @@ mod tests {
             ranks
         );
 
-        let heavy_head = [
-            (0u32, 1u32, 1u16, 8.0f64),
-            (0, 2, 3, 1.0),
-            (1, 2, 1, 1.0),
-        ];
+        let heavy_head = [(0u32, 1u32, 1u16, 8.0f64), (0, 2, 3, 1.0), (1, 2, 1, 1.0)];
         let ranks = rank_network_simplex(3, &heavy_head, 16).expect("feasible");
         assert!(feasible_weighted(&ranks, &heavy_head));
         assert_eq!(
@@ -594,11 +591,7 @@ mod tests {
     fn optimum_is_reached_not_merely_improved() {
         // Exhaustive check on the same skeleton: no assignment within the feasible box beats the
         // one simplex returns.
-        let arcs = [
-            (0u32, 1u32, 1u16, 1.0f64),
-            (0, 2, 3, 1.0),
-            (1, 2, 1, 8.0),
-        ];
+        let arcs = [(0u32, 1u32, 1u16, 1.0f64), (0, 2, 3, 1.0), (1, 2, 1, 8.0)];
         let ranks = rank_network_simplex(3, &arcs, 16).expect("feasible");
         let best = weighted_length(&ranks, &arcs);
         for r1 in 0..8u16 {
@@ -625,10 +618,7 @@ mod tests {
             (1, 3, 1, 1.0),
             (2, 3, 1, 1.0),
         ];
-        assert_eq!(
-            rank_network_simplex(4, &arcs, 16),
-            Some(vec![0, 1, 1, 2])
-        );
+        assert_eq!(rank_network_simplex(4, &arcs, 16), Some(vec![0, 1, 1, 2]));
     }
 
     #[test]
@@ -654,11 +644,7 @@ mod tests {
     #[test]
     fn disconnected_components_are_all_ranked_from_zero() {
         // Two chains plus an isolated node; the forest has to seed three roots.
-        let arcs = [
-            (0u32, 1u32, 1u16, 1.0f64),
-            (1, 2, 1, 1.0),
-            (3, 4, 2, 1.0),
-        ];
+        let arcs = [(0u32, 1u32, 1u16, 1.0f64), (1, 2, 1, 1.0), (3, 4, 2, 1.0)];
         let ranks = rank_network_simplex(6, &arcs, 24).expect("feasible");
         assert!(feasible_weighted(&ranks, &arcs));
         assert_eq!(ranks[0], 0);
@@ -677,11 +663,7 @@ mod tests {
 
     #[test]
     fn a_zero_iteration_budget_still_returns_a_feasible_ranking() {
-        let arcs = [
-            (0u32, 1u32, 1u16, 1.0f64),
-            (0, 2, 3, 1.0),
-            (1, 2, 1, 8.0),
-        ];
+        let arcs = [(0u32, 1u32, 1u16, 1.0f64), (0, 2, 3, 1.0), (1, 2, 1, 8.0)];
         let ranks = rank_network_simplex(3, &arcs, 0).expect("feasible");
         assert!(feasible_weighted(&ranks, &arcs));
     }

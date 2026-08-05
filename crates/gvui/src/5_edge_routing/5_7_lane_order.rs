@@ -188,12 +188,7 @@ fn channel_capacity(
     rank: usize,
     config: &CustomLayoutConfig,
 ) -> usize {
-    let reserved = demand
-        .channel_lanes
-        .get(rank)
-        .copied()
-        .unwrap_or(1)
-        .max(1) as usize;
+    let reserved = demand.channel_lanes.get(rank).copied().unwrap_or(1).max(1) as usize;
     if rank + 1 >= layered.rank_count() {
         return reserved;
     }

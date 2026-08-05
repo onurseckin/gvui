@@ -188,19 +188,28 @@ pub fn route_flat_edge(
             demand,
             config,
         ),
-        None => detour_points(flat, from, to, &source_port, &target_port, layered, demand, config)
-            .unwrap_or_else(|| {
-                corridor_jog_points(
-                    flat,
-                    from,
-                    to,
-                    &source_port,
-                    &target_port,
-                    layered,
-                    demand,
-                    config,
-                )
-            }),
+        None => detour_points(
+            flat,
+            from,
+            to,
+            &source_port,
+            &target_port,
+            layered,
+            demand,
+            config,
+        )
+        .unwrap_or_else(|| {
+            corridor_jog_points(
+                flat,
+                from,
+                to,
+                &source_port,
+                &target_port,
+                layered,
+                demand,
+                config,
+            )
+        }),
     };
 
     Some(RoutedPath {
@@ -496,9 +505,7 @@ mod tests {
     use super::super::ports::assign_ports;
     use super::*;
     use crate::config::EngineMode;
-    use crate::types::{
-        CorridorSeg, IrEdge, IrNode, ItemKind, NormalizedEdge, NormalizedNode,
-    };
+    use crate::types::{CorridorSeg, IrEdge, IrNode, ItemKind, NormalizedEdge, NormalizedNode};
 
     fn cfg() -> CustomLayoutConfig {
         CustomLayoutConfig::default()
@@ -837,7 +844,11 @@ mod tests {
             .max_by(|a, b| (a[0].x - a[1].x).abs().total_cmp(&(b[0].x - b[1].x).abs()))
             .map(|w| w[0].y)
             .expect("a horizontal run");
-        assert!(!(200.0..=240.0).contains(&long_run), "run at y {}", long_run);
+        assert!(
+            !(200.0..=240.0).contains(&long_run),
+            "run at y {}",
+            long_run
+        );
 
         // Endpoints excluded: a route legitimately touches its own two boxes' boundaries.
         assert_clears_every_item(&route.points, &layered, &[1, 4]);
@@ -872,7 +883,10 @@ mod tests {
         };
 
         let (high_min, _) = sink_y(200.0);
-        assert!(high_min < 200.0, "endpoints near the top should exit upward");
+        assert!(
+            high_min < 200.0,
+            "endpoints near the top should exit upward"
+        );
 
         let (_, low_max) = sink_y(560.0);
         assert!(
@@ -907,8 +921,16 @@ mod tests {
             .collect();
         assert_eq!(verticals.len(), 2, "{:?}", route.points);
         // Corridor 0 is the gap [100, 200]; corridor 2 is [500, 600].
-        assert!(verticals[0] > 100.0 && verticals[0] < 200.0, "{:?}", verticals);
-        assert!(verticals[1] > 500.0 && verticals[1] < 600.0, "{:?}", verticals);
+        assert!(
+            verticals[0] > 100.0 && verticals[0] < 200.0,
+            "{:?}",
+            verticals
+        );
+        assert!(
+            verticals[1] > 500.0 && verticals[1] < 600.0,
+            "{:?}",
+            verticals
+        );
     }
 
     #[test]
@@ -1094,7 +1116,9 @@ mod tests {
         assert_eq!(route.points.len(), 2, "{:?}", route.points);
         assert!((route.points[0].y - route.points[1].y).abs() < 1e-9);
 
-        let gap = (b.x - (a.x + a.width)).abs().max((a.x - (b.x + b.width)).abs());
+        let gap = (b.x - (a.x + a.width))
+            .abs()
+            .max((a.x - (b.x + b.width)).abs());
         assert!(
             gap >= LABEL_WIDTH,
             "corridor {} is narrower than the {}px badge",

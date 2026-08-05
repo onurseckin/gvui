@@ -3,7 +3,7 @@
 # Phase 3 — Rank Assignment
 
 Phase 2 handed us a graph with no cycles in it: every edge now points "downhill". This phase decides
-*how far* downhill each one goes.
+_how far_ downhill each one goes.
 
 A **rank** is an integer depth. Rank 0 is the top row of the drawing, rank 1 the row below it, and
 so on. Assigning ranks is the moment the drawing acquires a shape, because from here on nothing can
@@ -68,7 +68,7 @@ The rest of this chapter is about choosing a good one.
 
 ## 2. Longest-path layering — the simple answer
 
-Start with the simplest rule that works: *put every node as high as its constraints allow.*
+Start with the simplest rule that works: _put every node as high as its constraints allow._
 
 Equivalently: the rank of a node is the length of the longest constrained path ending at it. Sources
 (nodes with no incoming arc) land on rank 0; everyone else is pushed down by the deepest ancestor
@@ -137,10 +137,10 @@ to cross something.
 
 Measure both rankings with total edge length $\sum (rank(v) - rank(u))$:
 
-| ranking | $0\to1$ | $1\to2$ | $3\to2$ | total |
-| --- | ---: | ---: | ---: | ---: |
-| longest path | 1 | 1 | **2** | **4** |
-| optimum | 1 | 1 | **1** | **3** |
+| ranking      | $0\to1$ | $1\to2$ | $3\to2$ | total |
+| ------------ | ------: | ------: | ------: | ----: |
+| longest path |       1 |       1 |   **2** | **4** |
+| optimum      |       1 |       1 |   **1** | **3** |
 
 Longest path is still worth having. It is $O(V+E)$, it cannot fail, and every other ranker in the
 engine starts from it: network simplex needs a feasible starting point before it can evaluate a
@@ -155,7 +155,7 @@ See [the implementation](../../crates/gvui/src/2_rank_assignment/2_1_longest_pat
 
 The default ranker minimises weighted edge length:
 
-$$\min \sum_{(u,v)} \omega(u,v)\,\bigl(rank(v) - rank(u)\bigr)
+$$ \min \sum_{(u,v)} \omega(u,v),\bigl(rank(v) - rank(u)\bigr)
 \quad\text{subject to}\quad rank(v) - rank(u) \ge minlen(u,v)$$
 
 This is Gansner et al. (1993) §2, the ranker `dot` uses. It is a linear program, and this
@@ -709,3 +709,4 @@ every edge badge into it as a first-class item.
 ---
 
 ← [Structure](./04-structure.md) | [Index](./README.md) | [Next: Layering and Labels →](./06-layering-and-labels.md)
+$$

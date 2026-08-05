@@ -265,7 +265,6 @@ fn arc_is_labelled(graph: &GraphIr, structure: &StructureResult, from: u32, to: 
     })
 }
 
-
 /// Edge indices of the *peer* edges, ascending.
 ///
 /// An edge `u -> v` of the cycle-broken DAG is a peer edge when all three hold:
@@ -624,11 +623,13 @@ mod tests {
 
         assert_eq!(result.rank_of, vec![0, 1, 1, 2]);
         assert_eq!(result.max_rank, 2);
-        assert_eq!(
-            result.rank_members,
-            vec![vec![0], vec![1, 2], vec![3]]
+        assert_eq!(result.rank_members, vec![vec![0], vec![1, 2], vec![3]]);
+        assert_result_is_consistent(
+            &result,
+            &ir,
+            &structure,
+            &raw_config(Ranker::NetworkSimplex),
         );
-        assert_result_is_consistent(&result, &ir, &structure, &raw_config(Ranker::NetworkSimplex));
     }
 
     #[test]
@@ -644,7 +645,11 @@ mod tests {
             ],
         );
         let structure = dag_structure(&ir);
-        for ranker in [Ranker::NetworkSimplex, Ranker::LongestPath, Ranker::TightTree] {
+        for ranker in [
+            Ranker::NetworkSimplex,
+            Ranker::LongestPath,
+            Ranker::TightTree,
+        ] {
             let result = assign_ranks(&ir, &structure, &raw_config(ranker));
             assert_result_is_consistent(&result, &ir, &structure, &raw_config(ranker));
             assert_eq!(result.rank_of[5], 0, "isolated node belongs on rank 0");
@@ -689,7 +694,12 @@ mod tests {
         let result = assign_ranks(&ir, &structure, &raw_config(Ranker::NetworkSimplex));
         assert_eq!(result.rank_of[0], 0);
         assert_eq!(result.rank_of[2], 1);
-        assert_result_is_consistent(&result, &ir, &structure, &raw_config(Ranker::NetworkSimplex));
+        assert_result_is_consistent(
+            &result,
+            &ir,
+            &structure,
+            &raw_config(Ranker::NetworkSimplex),
+        );
     }
 
     #[test]
@@ -840,7 +850,11 @@ mod tests {
             let ir = ir_of(node_count, edges);
             let structure = dag_structure(&ir);
 
-            for ranker in [Ranker::NetworkSimplex, Ranker::LongestPath, Ranker::TightTree] {
+            for ranker in [
+                Ranker::NetworkSimplex,
+                Ranker::LongestPath,
+                Ranker::TightTree,
+            ] {
                 for balance in [false, true] {
                     // Peer relaxation is swept too: it changes the constraint set every ranker and
                     // the balancer then work from, so it has to hold the same invariants.
@@ -948,7 +962,11 @@ mod tests {
         assert_eq!(flat.edge, 2);
         assert_eq!(flat.rank, ranks.rank_of[1]);
         assert_ne!(flat.from_item, flat.to_item);
-        assert_eq!(layered.chains.len(), 2, "only the two root edges are chains");
+        assert_eq!(
+            layered.chains.len(),
+            2,
+            "only the two root edges are chains"
+        );
     }
 
     #[test]
@@ -999,7 +1017,11 @@ mod tests {
         assert!(peer_edges(&ir, &structure).is_empty());
 
         let result = assign_ranks(&ir, &structure, &peer_config(true));
-        assert!(result.rank_of[2] - result.rank_of[1] >= 3, "{:?}", result.rank_of);
+        assert!(
+            result.rank_of[2] - result.rank_of[1] >= 3,
+            "{:?}",
+            result.rank_of
+        );
     }
 
     #[test]
@@ -1137,13 +1159,21 @@ mod tests {
             sorted.sort_unstable();
             assert_eq!(sorted, first, "peer list must be ascending");
             for _ in 0..4 {
-                assert_eq!(peer_edges(&ir, &structure), first, "case {} is unstable", case);
+                assert_eq!(
+                    peer_edges(&ir, &structure),
+                    first,
+                    "case {} is unstable",
+                    case
+                );
             }
 
             let config = peer_config(true);
             let ranks = assign_ranks(&ir, &structure, &config);
             for _ in 0..4 {
-                assert_eq!(assign_ranks(&ir, &structure, &config).rank_of, ranks.rank_of);
+                assert_eq!(
+                    assign_ranks(&ir, &structure, &config).rank_of,
+                    ranks.rank_of
+                );
             }
             assert_result_is_consistent(&ranks, &ir, &structure, &config);
         }

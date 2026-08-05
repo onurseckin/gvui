@@ -257,4 +257,3 @@ export class SqliteDatabase {
 }
 
 export const sqliteDb = new SqliteDatabase();
-

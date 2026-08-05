@@ -61,13 +61,13 @@ capped at `maxLines`.
 
 Fonts are named by **role**, not by font string:
 
-| role key | weight | size | family |
-| --- | ---: | ---: | --- |
-| `node-title` | 600 | 14 px | sans |
-| `node-type-tag` | 700 | 10 px | mono |
-| `node-body` | 400 | 11 px | sans |
-| `node-chip` | 600 | 11 px | mono |
-| `edge-label` | 600 | 11 px | mono |
+| role key        | weight |  size | family |
+| --------------- | -----: | ----: | ------ |
+| `node-title`    |    600 | 14 px | sans   |
+| `node-type-tag` |    700 | 10 px | mono   |
+| `node-body`     |    400 | 11 px | sans   |
+| `node-chip`     |    600 | 11 px | mono   |
+| `edge-label`    |    600 | 11 px | mono   |
 
 The concrete family is resolved once from the CSS custom properties `--font-sans` / `--font-mono`
 that the cards are actually styled with, so measurement follows a theme change instead of silently
@@ -95,19 +95,19 @@ The third is not a degenerate corner case — it is the only path available unde
 SSR, so it has to produce finite, positive, stable numbers every time. It buckets characters by
 width class:
 
-| class | ratio of font size | members |
-| --- | ---: | --- |
-| space | 0.28 | `" "` |
-| narrow | 0.33 | `i` `j` `l` `t` `I` `f` and `.` `,` `:` `;` `'` `` ` `` `!` `(` `)` `[` `]` `{` `}` `-` `/` `\` and the vertical bar |
-| digits | 0.55 | `0`–`9` |
-| uppercase | 0.66 | `A`–`Z` |
-| wide | 0.90 | `mwMW@%&` |
-| non-latin | 1.00 | code point > `0x2000` (CJK, emoji) |
-| everything else | 0.52 | lowercase latin, punctuation not listed above |
-| monospace | 0.60 | any character, when the role's family is `mono` |
+| class           | ratio of font size | members                                                                                                              |
+| --------------- | -----------------: | -------------------------------------------------------------------------------------------------------------------- |
+| space           |               0.28 | `" "`                                                                                                                |
+| narrow          |               0.33 | `i` `j` `l` `t` `I` `f` and `.` `,` `:` `;` `'` `` ` `` `!` `(` `)` `[` `]` `{` `}` `-` `/` `\` and the vertical bar |
+| digits          |               0.55 | `0`–`9`                                                                                                              |
+| uppercase       |               0.66 | `A`–`Z`                                                                                                              |
+| wide            |               0.90 | `mwMW@%&`                                                                                                            |
+| non-latin       |               1.00 | code point > `0x2000` (CJK, emoji)                                                                                   |
+| everything else |               0.52 | lowercase latin, punctuation not listed above                                                                        |
+| monospace       |               0.60 | any character, when the role's family is `mono`                                                                      |
 
 A weight of 600 or more multiplies the total by 1.04. The buckets are coarse on purpose: the
-estimate only has to be stable and never wildly *under*-report, because under-reporting is what makes
+estimate only has to be stable and never wildly _under_-report, because under-reporting is what makes
 text overflow its reserved box and collide with a neighbour.
 
 Any measurement that comes back non-finite or negative falls through to the estimate as well.
@@ -122,9 +122,9 @@ rows in the same order the DOM does:
 
 ```ts
 interface NodeTemplate {
-  padding: number;       // .node-card padding: both sides horizontally, bottom only vertically
-  headerHeight: number;  // .node-card-header band: padding + title line + bottom border
-  rowGap: number;        // .node-card flex gap, charged once per visible body row
+  padding: number; // .node-card padding: both sides horizontally, bottom only vertically
+  headerHeight: number; // .node-card-header band: padding + title line + bottom border
+  rowGap: number; // .node-card flex gap, charged once per visible body row
   rows: readonly NodeRowSpec[];
 }
 ```
@@ -136,16 +136,16 @@ Each row declares its kind, its fonts, and its non-text chrome:
 
 `DEFAULT_NODE_TEMPLATE` has `padding: 10`, `headerHeight: 34`, `rowGap: 8`, and six rows:
 
-| row | kind | fonts | line height | max lines | notes |
-| --- | --- | --- | ---: | ---: | --- |
-| `name` | flow | `node-title`, `node-type-tag` | 18 | 1 | `inHeader` — contributes width, not height |
-| `description` | wrap | `node-body` | 15 | 3 | |
-| `badges` | flow | `node-chip` | 22 | 3 | `itemChrome: 20` (9 px padding + 1 px border, both sides) |
-| `tools` | flow | `node-chip` | 22 | 3 | `itemChrome: 34` (adds a 12 px icon and its 4 px gap) |
-| `model` | wrap | `node-body` | 16 | 1 | joins `model` and `harnessModel` with `·` |
-| `context` | wrap | `node-body` | 15 | 4 | flattened `key: value` rows |
+| row           | kind | fonts                         | line height | max lines | notes                                                     |
+| ------------- | ---- | ----------------------------- | ----------: | --------: | --------------------------------------------------------- |
+| `name`        | flow | `node-title`, `node-type-tag` |          18 |         1 | `inHeader` — contributes width, not height                |
+| `description` | wrap | `node-body`                   |          15 |         3 |                                                           |
+| `badges`      | flow | `node-chip`                   |          22 |         3 | `itemChrome: 20` (9 px padding + 1 px border, both sides) |
+| `tools`       | flow | `node-chip`                   |          22 |         3 | `itemChrome: 34` (adds a 12 px icon and its 4 px gap)     |
+| `model`       | wrap | `node-body`                   |          16 |         1 | joins `model` and `harnessModel` with `·`                 |
+| `context`     | wrap | `node-body`                   |          15 |         4 | flattened `key: value` rows                               |
 
-Rows marked `inHeader` contribute *width* but not *height*: `headerHeight` already covers the header
+Rows marked `inHeader` contribute _width_ but not _height_: `headerHeight` already covers the header
 band, and counting the title row's line height again would double-count it.
 
 The point of this shape: **adding a row to `NodeCard` means adding one entry to this list and
@@ -190,27 +190,27 @@ advance widths; the estimate is used here because it is reproducible on paper):
 
 **Pass 1 — natural widths.**
 
-| row | computation | px |
-| --- | --- | ---: |
-| `name` | title `"Database Query"`: ratio sum 7.13 × 14 px × 1.04 = 103.8; tag `"task"` mono: 2.4 × 10 px × 1.04 = 25.0, + 14 chrome = 39.0; + 50 fixed chrome (status dot, gap, collapse button) + 8 item gap | **200.8** |
-| `description` | `"Fetches active users"`: ratio sum 9.49 × 11 px × 1.0 | **104.4** |
-| `badges` | `"SQL"` 20.6 + 20 = 40.6; `"Read-Only"` 61.8 + 20 = 81.8; `"Production"` 68.6 + 20 = 88.6; + 2 gaps × 4 | **219.0** |
-| `tools`, `model`, `context` | empty | — |
+| row                         | computation                                                                                                                                                                                          |        px |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------: |
+| `name`                      | title `"Database Query"`: ratio sum 7.13 × 14 px × 1.04 = 103.8; tag `"task"` mono: 2.4 × 10 px × 1.04 = 25.0, + 14 chrome = 39.0; + 50 fixed chrome (status dot, gap, collapse button) + 8 item gap | **200.8** |
+| `description`               | `"Fetches active users"`: ratio sum 9.49 × 11 px × 1.0                                                                                                                                               | **104.4** |
+| `badges`                    | `"SQL"` 20.6 + 20 = 40.6; `"Read-Only"` 61.8 + 20 = 81.8; `"Production"` 68.6 + 20 = 88.6; + 2 gaps × 4                                                                                              | **219.0** |
+| `tools`, `model`, `context` | empty                                                                                                                                                                                                |         — |
 
 `widest = 219.0`. Add `2 × padding = 20` → 239.0, inside `[120, 420]`, ceiling → **width = 240**.
 
 **Pass 2 — height at `contentWidth = 220`.**
 
-| step | computation | running height |
-| --- | --- | ---: |
-| start | `headerHeight 34 + padding 10` | 44 |
-| `name` | skipped — `inHeader` | 44 |
-| `description` | 104.4 ≤ 220 → 1 line → `1 × 15 + 8` | 67 |
-| `badges` | 40.6, +4+81.8 = 126.4, +4+88.6 = 219.0 ≤ 220 → 1 line → `1 × 22 + 8` | 97 |
+| step          | computation                                                          | running height |
+| ------------- | -------------------------------------------------------------------- | -------------: |
+| start         | `headerHeight 34 + padding 10`                                       |             44 |
+| `name`        | skipped — `inHeader`                                                 |             44 |
+| `description` | 104.4 ≤ 220 → 1 line → `1 × 15 + 8`                                  |             67 |
+| `badges`      | 40.6, +4+81.8 = 126.4, +4+88.6 = 219.0 ≤ 220 → 1 line → `1 × 22 + 8` |             97 |
 
 **Result: 240 × 97.**
 
-Notice which row won. The *title* wanted 201 px; the *badge* row wanted 219 px. The badges are what
+Notice which row won. The _title_ wanted 201 px; the _badge_ row wanted 219 px. The badges are what
 set the card's width, and no formula that only looks at the name could know that.
 
 ---
@@ -223,7 +223,7 @@ Edge labels go through `measureLabel`, which is greedy word wrap
 1. Split on whitespace. Accumulate tokens onto the current line while
    `currentWidth + spaceWidth + tokenWidth ≤ maxWidth`.
 2. When a token does not fit, commit the line and start a new one.
-3. When a *single* token is wider than the whole line — a URL, a hash, a file path — break it by
+3. When a _single_ token is wider than the whole line — a URL, a hash, a file path — break it by
    character.
 4. If the line count exceeds `maxLines`, truncate, then **ellipsize** the last line: pop characters
    until `width + ellipsisWidth ≤ maxWidth` and append `…`.
@@ -245,12 +245,12 @@ line height — and the width is `min(ceil(widest line), maxWidth)`.
 
 Four caches live inside one measurer instance:
 
-| cache | key | holds |
-| --- | --- | --- |
-| `textCache` | `` `${fontKey}|${text}` `` | width of one run |
-| `labelCache` | `` `${fontKey}|${maxWidth}|${maxLines}|${text}` `` | a whole `LabelBox` |
-| `fontStringCache` | font key | the resolved `"600 14px <stack>"` string |
-| `familyStackCache` | `"sans"` / `"mono"` | the CSS custom property value |
+| cache              | key                 | holds                                    |
+| ------------------ | ------------------- | ---------------------------------------- |
+| `textCache`        | `` `${fontKey}      | ${text}` ``                              | width of one run |
+| `labelCache`       | `` `${fontKey}      | ${maxWidth}                              | ${maxLines}      | ${text}` `` | a whole `LabelBox` |
+| `fontStringCache`  | font key            | the resolved `"600 14px <stack>"` string |
+| `familyStackCache` | `"sans"` / `"mono"` | the CSS custom property value            |
 
 `getDefaultMeasurer()` returns a process-wide instance. That sharing is the point: node labels repeat
 heavily across re-layouts of the same dataset, and a warm text cache turns re-layout into arithmetic.
@@ -270,7 +270,7 @@ v1 estimated node size arithmetically, with a per-section pile of magic constant
 was:
 
 ```ts
-width = name.length * 11 + 90
+width = name.length * 11 + 90;
 ```
 
 Three separate failures:
@@ -286,7 +286,7 @@ Three separate failures:
 A factor of 2.7 apart. The v1 formula allows both the same `14 * 11 = 154 px` of text. The narrow
 name reserves **87 px of dead space**; the wide name is **30 px short** and its text runs into
 whatever sits beside it. Real names are not that extreme, but the error never goes to zero and its
-*sign* varies from node to node, so it cannot be absorbed by a fudge factor.
+_sign_ varies from node to node, so it cannot be absorbed by a fudge factor.
 
 **2. The 90 is invisible chrome, hard-coded.** In the template that same allowance is
 `fixedChrome: 50` on the `name` row (8 px status dot + 8 px gap + 26 px collapse button + 8 px gap)
@@ -294,7 +294,7 @@ plus `itemChrome: 14` on the type tag plus `padding * 2 = 20`. Written as a sing
 unreviewable: nobody can tell from the number whether it still matches the CSS.
 
 **3. It drifts silently.** Every time the card gained a row, or the collapse button changed size, or
-a badge's padding was adjusted, the formula became a little more wrong — and *nothing failed*. The
+a badge's padding was adjusted, the formula became a little more wrong — and _nothing failed_. The
 layout kept producing plausible-looking numbers. The only symptom was cards gradually overlapping or
 gradually drifting apart, which reads as "the layout engine got worse" rather than "the card design
 changed".
@@ -312,10 +312,18 @@ By the time the Rust crate is called, all of the above has collapsed to numbers:
 ```jsonc
 {
   "nodes": [{ "id": "n1", "label": "Database Query", "width": 240, "height": 97 }],
-  "edges": [{ "id": "e1", "source": "n1", "target": "n2",
-              "label": "retry x3", "labelWidth": 84, "labelHeight": 28 }],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n2",
+      "label": "retry x3",
+      "labelWidth": 84,
+      "labelHeight": 28,
+    },
+  ],
   "options": { "nodeGap": 56, "direction": "top-down" },
-  "mode": "layered"
+  "mode": "layered",
 }
 ```
 

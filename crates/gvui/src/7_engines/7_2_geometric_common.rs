@@ -23,8 +23,8 @@ use crate::step6_validation::constraints::SpatialHash;
 use crate::step6_validation::{check_constraints, compute_metrics};
 use crate::types::{
     get_now_ms, BadgePlacement, CustomLayoutResult, EdgeCrossing, GraphIr, LayoutDiagnostic,
-    LayoutMetrics, LayoutValidationResult, NormalizedEdge, OptimizationStats,
-    Point, PortRef, PositionedNode, Rect, RoutedPath, Side,
+    LayoutMetrics, LayoutValidationResult, NormalizedEdge, OptimizationStats, Point, PortRef,
+    PositionedNode, Rect, RoutedPath, Side,
 };
 
 /// Number of candidate positions tried per badge before falling back to a leader line.
@@ -83,9 +83,11 @@ fn relax_overlaps(rects: &mut [Rect], config: &CustomLayoutConfig) {
     let eps = config.epsilon;
 
     for _pass in 0..config.overlap_removal_passes {
-        let mut index = SpatialHash::new(mean_cell(rects.iter().map(|r| {
-            (r.width + 2.0 * margin, r.height + 2.0 * margin)
-        })));
+        let mut index = SpatialHash::new(mean_cell(
+            rects
+                .iter()
+                .map(|r| (r.width + 2.0 * margin, r.height + 2.0 * margin)),
+        ));
         for (i, r) in rects.iter().enumerate() {
             index.insert(i as u32, &expand_rect(r, margin));
         }
@@ -161,13 +163,9 @@ fn enforce_separation(rects: &mut [Rect], config: &CustomLayoutConfig) {
     order.sort_by(|&a, &b| {
         let ca = rects[a as usize].center();
         let cb = rects[b as usize].center();
-        ca.x
-            .partial_cmp(&cb.x)
+        ca.x.partial_cmp(&cb.x)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then(
-                ca.y.partial_cmp(&cb.y)
-                    .unwrap_or(std::cmp::Ordering::Equal),
-            )
+            .then(ca.y.partial_cmp(&cb.y).unwrap_or(std::cmp::Ordering::Equal))
             .then(a.cmp(&b))
     });
 
@@ -671,7 +669,8 @@ pub fn detect_geometric_crossings(routes: &[RoutedPath], epsilon: f64) -> Vec<Ed
     let mut segs: Vec<Seg> = Vec::new();
     for (r, route) in routes.iter().enumerate() {
         for w in route.points.windows(2) {
-            if w[0].x.is_finite() && w[0].y.is_finite() && w[1].x.is_finite() && w[1].y.is_finite() {
+            if w[0].x.is_finite() && w[0].y.is_finite() && w[1].x.is_finite() && w[1].y.is_finite()
+            {
                 segs.push(Seg {
                     route: r as u32,
                     a: w[0],
@@ -716,7 +715,11 @@ pub fn detect_geometric_crossings(routes: &[RoutedPath], epsilon: f64) -> Vec<Ed
             let id_b = routes[segs[j].route as usize].edge_id.clone();
             // The lexicographically larger id owns the bridge, matching the layered engine's rule
             // for equal-priority roles.
-            let owner = if id_a < id_b { id_b.clone() } else { id_a.clone() };
+            let owner = if id_a < id_b {
+                id_b.clone()
+            } else {
+                id_a.clone()
+            };
             out.push(EdgeCrossing {
                 edge_id_a: id_a,
                 edge_id_b: id_b,
@@ -953,10 +956,7 @@ fn classify_status(
     if diagnostics.iter().any(|d| d.severity == "error") {
         return "invalid_hard_failure".to_string();
     }
-    if softened > 0
-        || metrics.unresolved_route_count > 0
-        || metrics.unresolved_badge_count > 0
-    {
+    if softened > 0 || metrics.unresolved_route_count > 0 || metrics.unresolved_badge_count > 0 {
         return "unresolved_soft_conflicts".to_string();
     }
     "success".to_string()
@@ -982,10 +982,10 @@ fn mean_cell(dims: impl Iterator<Item = (f64, f64)>) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::step0_common::ingest::build_graph_ir;
-    use crate::types::NormalizedNode;
     use crate::config::DEFAULT_CUSTOM_LAYOUT_CONFIG;
     use crate::geometry::rects_overlap_area;
+    use crate::step0_common::ingest::build_graph_ir;
+    use crate::types::NormalizedNode;
 
     fn node(id: &str, w: f64, h: f64) -> NormalizedNode {
         NormalizedNode {
@@ -1016,9 +1016,24 @@ mod tests {
     #[test]
     fn overlap_removal_separates_a_stack_of_identical_boxes() {
         let mut rects = vec![
-            Rect { x: 0.0, y: 0.0, width: 100.0, height: 50.0 },
-            Rect { x: 5.0, y: 5.0, width: 100.0, height: 50.0 },
-            Rect { x: 10.0, y: 2.0, width: 100.0, height: 50.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 5.0,
+                y: 5.0,
+                width: 100.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 10.0,
+                y: 2.0,
+                width: 100.0,
+                height: 50.0,
+            },
         ];
         let cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         remove_overlaps(&mut rects, &cfg);
@@ -1038,7 +1053,12 @@ mod tests {
         // this, so the assertion is really about the exact sweep.
         let cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         let mut rects: Vec<Rect> = (0..20)
-            .map(|_| Rect { x: 0.0, y: 0.0, width: 120.0, height: 60.0 })
+            .map(|_| Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 120.0,
+                height: 60.0,
+            })
             .collect();
         remove_overlaps(&mut rects, &cfg);
         for i in 0..rects.len() {
@@ -1055,9 +1075,24 @@ mod tests {
     fn exact_sweep_only_ever_moves_boxes_right() {
         let cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         let before = vec![
-            Rect { x: 0.0, y: 0.0, width: 100.0, height: 50.0 },
-            Rect { x: 20.0, y: 10.0, width: 100.0, height: 50.0 },
-            Rect { x: 40.0, y: 5.0, width: 100.0, height: 50.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 20.0,
+                y: 10.0,
+                width: 100.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 40.0,
+                y: 5.0,
+                width: 100.0,
+                height: 50.0,
+            },
         ];
         let mut after = before.clone();
         enforce_separation(&mut after, &cfg);
@@ -1072,8 +1107,18 @@ mod tests {
         let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
         cfg.overlap_removal_passes = 0;
         let mut rects = vec![
-            Rect { x: 0.0, y: 0.0, width: 100.0, height: 50.0 },
-            Rect { x: 1.0, y: 1.0, width: 100.0, height: 50.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 1.0,
+                y: 1.0,
+                width: 100.0,
+                height: 50.0,
+            },
         ];
         let before = rects.clone();
         remove_overlaps(&mut rects, &cfg);
@@ -1083,7 +1128,12 @@ mod tests {
 
     #[test]
     fn nearest_side_resolves_corners_deterministically() {
-        let r = Rect { x: 0.0, y: 0.0, width: 100.0, height: 100.0 };
+        let r = Rect {
+            x: 0.0,
+            y: 0.0,
+            width: 100.0,
+            height: 100.0,
+        };
         assert_eq!(nearest_side(&r, &Point { x: 50.0, y: 0.0 }), Side::Top);
         assert_eq!(nearest_side(&r, &Point { x: 100.0, y: 50.0 }), Side::Right);
         assert_eq!(nearest_side(&r, &Point { x: 50.0, y: 100.0 }), Side::Bottom);
@@ -1094,7 +1144,12 @@ mod tests {
 
     #[test]
     fn clip_to_boundary_never_returns_an_interior_point() {
-        let r = Rect { x: 0.0, y: 0.0, width: 100.0, height: 50.0 };
+        let r = Rect {
+            x: 0.0,
+            y: 0.0,
+            width: 100.0,
+            height: 50.0,
+        };
         // Degenerate direction: `toward` is the centre itself.
         let p = clip_to_boundary(&r, &r.center());
         assert!(
@@ -1148,13 +1203,24 @@ mod tests {
             unresolved_route_count: 1,
             ..LayoutMetrics::default()
         };
-        assert_eq!(classify_status(&[], &broken, 0), "unresolved_soft_conflicts");
+        assert_eq!(
+            classify_status(&[], &broken, 0),
+            "unresolved_soft_conflicts"
+        );
 
-        let hard = vec![LayoutDiagnostic::error("NODE_NODE_OVERLAP", "x".into(), vec![])];
+        let hard = vec![LayoutDiagnostic::error(
+            "NODE_NODE_OVERLAP",
+            "x".into(),
+            vec![],
+        )];
         assert_eq!(classify_status(&hard, &clean, 9), "invalid_hard_failure");
 
         // Ingest warnings (a dropped edge) are informational and must not change the status.
-        let warn = vec![LayoutDiagnostic::warning("UNKNOWN_ENDPOINT", "x".into(), vec![])];
+        let warn = vec![LayoutDiagnostic::warning(
+            "UNKNOWN_ENDPOINT",
+            "x".into(),
+            vec![],
+        )];
         assert_eq!(classify_status(&warn, &clean, 0), "success");
     }
 

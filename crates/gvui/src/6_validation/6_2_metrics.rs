@@ -43,6 +43,10 @@ const ELLIPSIS: char = '\u{2026}';
 /// `leader_count` and `lane_depth_max` are passed in rather than derived because only the caller
 /// knows them: leaders are decided by Phase 8's badge safety net, and lane depth lives in the
 /// Phase 6 [`crate::types::RoutingDemand`], neither of which survives into the wire payload.
+// Nine parameters, and the doc comment above justifies each one: they are values only the
+// caller can know, not state this function could re-derive. Bundling them into a struct would
+// add a type whose only purpose is to satisfy the lint.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_metrics(
     nodes: &[PositionedNode],
     routes: &[RoutedPath],
@@ -310,7 +314,10 @@ mod tests {
 
     fn dummy_item(rank: u16, order: u16, x: f64) -> Item {
         Item {
-            kind: ItemKind::Dummy { edge: 0, seq: order },
+            kind: ItemKind::Dummy {
+                edge: 0,
+                seq: order,
+            },
             rank,
             order,
             width: 10.0,
@@ -494,7 +501,10 @@ mod tests {
 
     #[test]
     fn constraint_counters_are_reported_not_scored() {
-        let nodes = vec![node("a", 0.0, 0.0, 100.0, 50.0), node("b", 10.0, 10.0, 100.0, 50.0)];
+        let nodes = vec![
+            node("a", 0.0, 0.0, 100.0, 50.0),
+            node("b", 10.0, 10.0, 100.0, 50.0),
+        ];
         let m = compute_metrics(&nodes, &[], &[], &[], None, 0, 0, 0, &cfg());
         assert_eq!(m.node_node_overlaps, 1);
         assert_eq!(m.edge_node_penetrations, 0);
@@ -506,14 +516,24 @@ mod tests {
             BadgePlacement {
                 edge_id: "e0".to_string(),
                 label: "a very long label\u{2026}".to_string(),
-                rect: Rect { x: 0.0, y: 0.0, width: 40.0, height: 20.0 },
+                rect: Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 40.0,
+                    height: 20.0,
+                },
                 anchor_point: Point { x: 0.0, y: 0.0 },
                 leader_points: None,
             },
             BadgePlacement {
                 edge_id: "e1".to_string(),
                 label: "short".to_string(),
-                rect: Rect { x: 500.0, y: 0.0, width: 0.0, height: 0.0 },
+                rect: Rect {
+                    x: 500.0,
+                    y: 0.0,
+                    width: 0.0,
+                    height: 0.0,
+                },
                 anchor_point: Point { x: 500.0, y: 0.0 },
                 leader_points: None,
             },
@@ -529,7 +549,13 @@ mod tests {
             route("e0", vec![Point { x: 0.0, y: 0.0 }], "a", "b"),
             route(
                 "e1",
-                vec![Point { x: 0.0, y: 0.0 }, Point { x: f64::NAN, y: 0.0 }],
+                vec![
+                    Point { x: 0.0, y: 0.0 },
+                    Point {
+                        x: f64::NAN,
+                        y: 0.0,
+                    },
+                ],
                 "a",
                 "b",
             ),

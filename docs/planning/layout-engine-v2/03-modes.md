@@ -6,13 +6,13 @@ The five current modes, what each should actually be, and the one that needs a r
 
 ## Recommended taxonomy
 
-| Mode | Engine | Good for | Bad for |
-| --- | --- | --- | --- |
-| **Layered orthogonal** (default) | Phases 0–9, orthogonal router | Pipelines, system designs, sagas, decision trees, state machines | Very dense meshes with no direction |
-| **Layered spline** | Phases 0–7, then piecewise-Bézier through dummy chain | Same, softer look | same |
-| **Left–right** | Layered on the transposed problem | Wide flows, timelines, org charts | Deep hierarchies |
-| **Organic (stress)** | Stress majorization + overlap removal | **Meshes, network topologies, undirected relationship maps** | Anything with a real flow direction |
-| **Radial** | BFS-tree radial | Ego networks, taxonomies, "what depends on X" | Multi-root graphs |
+| Mode                             | Engine                                                | Good for                                                         | Bad for                             |
+| -------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------- |
+| **Layered orthogonal** (default) | Phases 0–9, orthogonal router                         | Pipelines, system designs, sagas, decision trees, state machines | Very dense meshes with no direction |
+| **Layered spline**               | Phases 0–7, then piecewise-Bézier through dummy chain | Same, softer look                                                | same                                |
+| **Left–right**                   | Layered on the transposed problem                     | Wide flows, timelines, org charts                                | Deep hierarchies                    |
+| **Organic (stress)**             | Stress majorization + overlap removal                 | **Meshes, network topologies, undirected relationship maps**     | Anything with a real flow direction |
+| **Radial**                       | BFS-tree radial                                       | Ego networks, taxonomies, "what depends on X"                    | Multi-root graphs                   |
 
 Grid stays as a debug/overview mode.
 
@@ -44,7 +44,7 @@ let stagger = if row % 2 == 1 { node_gap * 0.5 } else { 0.0 };
 
 A staggered grid with lines through node centres. It ignores topology entirely — two strongly
 related nodes are as likely to be at opposite corners as adjacent. For the use case that motivates
-it most — *"web meshes, network diagrams"* — it is the worst possible answer.
+it most — _"web meshes, network diagrams"_ — it is the worst possible answer.
 
 ### The right algorithm: stress majorization by SGD
 
@@ -58,7 +58,7 @@ where `d_ij` is graph-theoretic distance.
 
 1. **Target distances.** BFS from every node → all-pairs shortest paths, O(V·E). Fine to ~2,000
    nodes. Beyond that, use pivot-based sparse stress (choose ~100 pivots, BFS from each only).
-2. **Optimize by SGD** (Zheng, Pawar & Goodman, *Graph Drawing by Stochastic Gradient Descent*,
+2. **Optimize by SGD** (Zheng, Pawar & Goodman, _Graph Drawing by Stochastic Gradient Descent_,
    2018). Shuffle the node pairs; for each pair apply a constrained move toward its target distance
    with a decaying step size `η_t`. Converges in ~30 epochs, is far more robust than
    Fruchterman–Reingold, has no temperature/repulsion constants to tune, and cannot explode.
@@ -77,8 +77,8 @@ removal ~2 ms. Comparable to the layered engine and far better than a grid.
 
 ### Why this matters for the stated goal
 
-The user's graphs are described as *"relations, thinking models, maybe software system designs …
-a general graph generation system."* Roughly half of those have a genuine flow direction (layered
+The user's graphs are described as _"relations, thinking models, maybe software system designs …
+a general graph generation system."_ Roughly half of those have a genuine flow direction (layered
 wins) and half do not (stress wins). Having a real organic mode means the layered engine no longer
 has to pretend it can draw a mesh — which is exactly the case where it currently spends 47 seconds
 producing 191 crossings.

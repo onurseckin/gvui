@@ -20,7 +20,7 @@ Four things break immediately without it.
 
 Computed layouts are persisted, keyed by a dataset signature plus a configuration hash plus the
 mode (see [`layoutCacheStorage.ts`](../../src/utils/layoutCacheStorage.ts)). A cache is a promise:
-*"recomputing this would give you the same answer, so here is the stored one."* If the engine is
+_"recomputing this would give you the same answer, so here is the stored one."_ If the engine is
 non-deterministic that promise is false, and the user sees a different drawing depending on whether
 the cache happened to be warm. The bug looks like "the layout randomly changes", which is one of the
 hardest classes of bug to report.
@@ -54,7 +54,7 @@ rumour.
 
 The native audit fingerprints geometry and compares it. The TypeScript audit runs 168 fixture/mode
 combinations. Both gates assume a stable answer; with jitter they either fail constantly or have to
-be loosened until they test nothing. (Snapshotting each fixture's metrics so that an *aesthetic*
+be loosened until they test nothing. (Snapshotting each fixture's metrics so that an _aesthetic_
 regression also fails the build is a planned extension, not something the harness does today — but
 it is only possible at all because the output is stable.)
 
@@ -71,7 +71,7 @@ has one consequence that matters here:
 Not "unspecified but stable". Genuinely different, run to run, on the same binary with the same
 input. So the moment any decision depends on iteration order, the output becomes process-dependent.
 
-The dangerous part is that this usually *looks* fine. Consider:
+The dangerous part is that this usually _looks_ fine. Consider:
 
 ```rust
 // The hazard, in the shape it actually appeared in v1:
@@ -86,7 +86,7 @@ by the hasher's seed.
 The measured verdict at the time: output was byte-identical across five native runs, so this was
 recorded as a **latent hazard** rather than an observed failure. That is the worst possible state
 for a bug. It was not luck exactly — the same allocation pattern in the same binary can produce a
-stable order for a while — but nothing *guaranteed* it, and it would have shifted with any change to
+stable order for a while — but nothing _guaranteed_ it, and it would have shifted with any change to
 the hasher, the map's capacity, or the insertion pattern. A test suite cannot catch this; it only
 shows up as a user complaint after an unrelated refactor.
 
@@ -105,7 +105,7 @@ Ingest's own module documentation states the invariant directly:
 > Every decision is driven by `Vec` iteration or an explicitly sorted key list. The one `HashMap`
 > present is a lookup table that is never iterated, so output is byte-identical across processes.
 
-### Rule 2 — a `HashMap` may be *queried*, never *iterated for order*
+### Rule 2 — a `HashMap` may be _queried_, never _iterated for order_
 
 This is the pattern used throughout. `port_side_balance` builds a
 `HashMap<&str, (usize, usize, usize)>` and annotates it:
@@ -120,7 +120,7 @@ computes lane depth as a maximum over map values, with the reason written down:
 // Taking a max over HashMap values is order-independent, so this stays deterministic.
 ```
 
-`max` over a set is the same whatever order you visit it in. A `sum` of floats would *not* be, since
+`max` over a set is the same whatever order you visit it in. A `sum` of floats would _not_ be, since
 floating-point addition is not associative.
 
 ### Rule 3 — sort before use, with a total key ending in a stable id
@@ -131,16 +131,16 @@ index or an input position. A tie broken by "whichever came first" is a tie brok
 
 Concrete examples in the engine:
 
-| Site | Sort key |
-| --- | --- |
-| [Item ordering](../../crates/gvui/src/3_crossing_minimization/3_3_ordering.rs) | `(traversal position, current order, discriminator, item index)`, where `discriminator` is `(kind rank, primary index, secondary index)` with `Real < Label < Dummy` |
-| [Lane members](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) | `(lo_order, hi_order, edge, link)` |
-| [Corridor segments](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) | `(rank, after_order, span, edge)` — "a total order, so the result never depends on hash iteration" |
-| [Emit](../../crates/gvui/src/6_validation/6_3_emit.rs) | routes and badges by `(input edge index, edge id)` |
-| [Component packing](../../crates/gvui/src/6_validation/6_3_emit.rs) | descending height, then width, then component index — "so the order never depends on a hash" |
-| [Eades FAS](../../crates/gvui/src/1_cycle_breaking/1_3_eades_fas.rs) | returns edge indices sorted ascending and deduplicated |
-| [Tarjan SCC](../../crates/gvui/src/1_cycle_breaking/1_2_tarjan_scc.rs) | members sorted ascending, components ordered by their minimum node — "so `comp_of` is a function of the arc *set*" |
-| [Spatial hash queries](../../crates/gvui/src/6_validation/6_1_constraints.rs) | results sorted and deduplicated before being returned |
+| Site                                                                                  | Sort key                                                                                                                                                             |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Item ordering](../../crates/gvui/src/3_crossing_minimization/3_3_ordering.rs)        | `(traversal position, current order, discriminator, item index)`, where `discriminator` is `(kind rank, primary index, secondary index)` with `Real < Label < Dummy` |
+| [Lane members](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs)      | `(lo_order, hi_order, edge, link)`                                                                                                                                   |
+| [Corridor segments](../../crates/gvui/src/4_coordinate_assignment/4_1_lane_demand.rs) | `(rank, after_order, span, edge)` — "a total order, so the result never depends on hash iteration"                                                                   |
+| [Emit](../../crates/gvui/src/6_validation/6_3_emit.rs)                                | routes and badges by `(input edge index, edge id)`                                                                                                                   |
+| [Component packing](../../crates/gvui/src/6_validation/6_3_emit.rs)                   | descending height, then width, then component index — "so the order never depends on a hash"                                                                         |
+| [Eades FAS](../../crates/gvui/src/1_cycle_breaking/1_3_eades_fas.rs)                  | returns edge indices sorted ascending and deduplicated                                                                                                               |
+| [Tarjan SCC](../../crates/gvui/src/1_cycle_breaking/1_2_tarjan_scc.rs)                | members sorted ascending, components ordered by their minimum node — "so `comp_of` is a function of the arc _set_"                                                   |
+| [Spatial hash queries](../../crates/gvui/src/6_validation/6_1_constraints.rs)         | results sorted and deduplicated before being returned                                                                                                                |
 
 The discriminator is worth a second look, because it shows what "total" means in practice:
 
@@ -160,7 +160,7 @@ pointer, no address, no insertion counter. Two items can never tie.
 ### Rule 4 — no wall-clock input to a decision
 
 `config.time_budget_ms` is consulted in exactly one place: Phase 5 stops starting new sweeps once it
-is exceeded. Everywhere else, elapsed time is measured and reported but never *read*.
+is exceeded. Everywhere else, elapsed time is measured and reported but never _read_.
 
 The organic engine states this explicitly:
 
@@ -171,7 +171,7 @@ The organic engine states this explicitly:
 That is the general principle. A budget that changes the answer turns "the same graph" into "the
 same graph on an unloaded machine".
 
-> **Caveat, stated honestly.** Phase 5's time budget *is* a decision input, so a layered layout on a
+> **Caveat, stated honestly.** Phase 5's time budget _is_ a decision input, so a layered layout on a
 > heavily loaded machine could in principle stop sweeping earlier and install a different ordering.
 > With `time_budget_ms: 250` and a measured worst case of 1.88 ms across all forty audit
 > combinations, the budget is nowhere near binding on any real fixture — but it is the one place
@@ -185,7 +185,7 @@ threading — is unavailable in the browser anyway. Beyond the performance argum
 reduction is a classic source of run-to-run variation: the same numbers summed in a different order
 give a different last bit.
 
-Floating point *is* deterministic when the same operations happen in the same order, which is what
+Floating point _is_ deterministic when the same operations happen in the same order, which is what
 single-threaded, `Vec`-ordered traversal gives.
 
 ---
@@ -218,7 +218,7 @@ Two related points:
 
 - **The LCG is the only randomness in the whole engine.** Grep for it: the other occurrences are
   test-local generators for property tests. The layered pipeline has no RNG at all — its
-  "`ordering_seeds`" are *deterministic traversal orders* (identity, DFS pre-order, BFS level order,
+  "`ordering_seeds`" are _deterministic traversal orders_ (identity, DFS pre-order, BFS level order,
   a reversed variant, then rotations), not random restarts.
 - **Even the degenerate case is made reproducible.** When two nodes land exactly on top of each
   other during SGD there is no direction to separate them along, so the code picks one from the pair
@@ -277,7 +277,7 @@ catch a regression at the module that caused it, rather than as a mysterious aud
 
 ---
 
-## What determinism does *not* promise
+## What determinism does _not_ promise
 
 Worth stating, so the guarantee is not over-read:
 
@@ -291,7 +291,7 @@ Worth stating, so the guarantee is not over-read:
 - **It is not stability across configurations.** `compaction: tight` draws differently from
   `balanced`. Obviously.
 
-The promise is exactly: *same input, same config, same mode, same build → same bytes.*
+The promise is exactly: _same input, same config, same mode, same build → same bytes._
 
 ---
 

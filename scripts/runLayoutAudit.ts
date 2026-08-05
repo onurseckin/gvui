@@ -218,7 +218,9 @@ function buildEngineInputs(
 function loadPublicGraphFixtures(projectRoot: string): Fixture[] {
   const graphsDir = join(projectRoot, "public/data/graphs");
   const files = readdirSync(graphsDir)
-    .filter((f) => f.endsWith(".json"))
+    // `manifest.json` is the generated index of this directory, not a dataset in it — it holds a
+    // string array, so auditing it dereferences a `nodes` that was never there.
+    .filter((f) => f.endsWith(".json") && f !== "manifest.json")
     .sort();
 
   return files.map((file) => {
@@ -310,9 +312,7 @@ async function runLayoutAudit(): Promise<void> {
           (f) => [f, validation.metrics[f]] as const,
         ).filter(([, v]) => v !== 0);
         if (soft.length > 0) {
-          console.log(
-            `    (best-effort: ${soft.map(([f, v]) => `${f}=${v}`).join(" ")})`,
-          );
+          console.log(`    (best-effort: ${soft.map(([f, v]) => `${f}=${v}`).join(" ")})`);
         }
       }
 

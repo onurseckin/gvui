@@ -94,7 +94,10 @@ mod tests {
             assert!(out.nodes.is_empty(), "{mode:?}");
             assert!(out.edges.is_empty(), "{mode:?}");
             assert!(out.validation.is_valid, "{mode:?}");
-            assert_eq!(out.optimization_stats.stop_reason, "empty_graph", "{mode:?}");
+            assert_eq!(
+                out.optimization_stats.stop_reason, "empty_graph",
+                "{mode:?}"
+            );
         }
     }
 
@@ -169,7 +172,10 @@ mod tests {
         for mode in ALL_MODES {
             let w0 = width(&compute_layout(&nodes, &edges, &base, mode));
             let w1 = width(&compute_layout(&nodes, &edges, &wide, mode));
-            assert!(w1 > w0, "{mode:?}: doubling node_gap must widen ({w0} -> {w1})");
+            assert!(
+                w1 > w0,
+                "{mode:?}: doubling node_gap must widen ({w0} -> {w1})"
+            );
         }
     }
 

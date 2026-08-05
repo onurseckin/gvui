@@ -97,10 +97,10 @@ bun run dev
 
 ## 🔌 Ports
 
-| Mode                         | URL                    |
-| ----------------------------- | ---------------------- |
-| Production (Docker or not)   | http://localhost:5555  |
-| Development (Docker or not)  | http://localhost:4444  |
+| Mode                        | URL                   |
+| --------------------------- | --------------------- |
+| Production (Docker or not)  | http://localhost:5555 |
+| Development (Docker or not) | http://localhost:4444 |
 
 These memorable repeated-digit ports were chosen so gvui can run alongside other local projects without colliding with common defaults like `3000`/`5173`/`8080`.
 
