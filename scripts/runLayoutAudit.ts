@@ -21,6 +21,7 @@ import {
 import { getDefaultMeasurer } from "../src/engine/layout/measurement";
 import type { NormalizedEdge, NormalizedNode } from "../src/engine/layout/custom/types";
 import { CUSTOM_LAYOUT_SCENARIOS } from "../src/features/GraphTesting/data/customLayoutScenarios";
+import { getEdgeCompositeBadgeText } from "../src/engine/layout/customLayoutAdapter";
 import type { LayoutMode } from "../src/state/useGraphStore";
 import type { GraphEdgeData, GraphNodeData } from "../src/types/graphData";
 
@@ -165,6 +166,8 @@ function computeLayout(
 /**
  * Node sizes and edge label boxes measured up front, exactly like `customLayoutAdapter.ts`'s
  * `buildEngineInputs` — the Rust side never sees text, only already-measured boxes.
+ * Measures composite badge text with horizontal padding (+24px, min 54px) and fixed 26px height
+ * so the engine reserves exact badge dimensions during routing and crossing optimization.
  */
 function buildEngineInputs(
   nodes: GraphNodeData[],
@@ -191,10 +194,11 @@ function buildEngineInputs(
 
   const normalizedEdges: NormalizedEdge[] = edges.map((edge, index) => {
     const id = edge.id || `e-${edge.source}-${edge.target}-${index}`;
-    const labelBox = edge.label
-      ? measurer.measureLabel(edge.label, {
-          maxWidth: config.maxLabelWidth,
-          maxLines: config.maxLabelLines,
+    const badgeText = getEdgeCompositeBadgeText(edge);
+    const labelBox = badgeText
+      ? measurer.measureLabel(badgeText, {
+          maxWidth: Math.max(config.maxLabelWidth, 320),
+          maxLines: 1,
         })
       : null;
 
@@ -207,8 +211,8 @@ function buildEngineInputs(
       layoutRole: edge.layoutRole,
       weight: edge.weight,
       minLen: edge.minLen,
-      labelWidth: labelBox?.width,
-      labelHeight: labelBox?.height,
+      labelWidth: labelBox ? Math.max(54, labelBox.width + 24) : undefined,
+      labelHeight: labelBox ? 26 : undefined,
     };
   });
 
