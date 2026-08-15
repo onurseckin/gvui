@@ -54,7 +54,12 @@ describe("timeline collector", () => {
       createEvent("task-validation-started", { task_id: "T-1" }, 4),
       createEvent(
         "review-recorded",
-        { task_id: "T-1", verdict: "reject", findings: [{ id: "F-1" }], round: 1 },
+        {
+          task_id: "T-1",
+          verdict: "reject",
+          findings: [{ id: "F-1" }],
+          round: 1,
+        },
         5,
       ),
       createEvent("review-recorded", { task_id: "T-1", verdict: "pass" }, 6),

@@ -113,6 +113,63 @@ export interface FindingDetail {
   revalidationProof?: { method: string; evidence: string[] };
 }
 
+export interface MediaAsset {
+  id: string;
+  type: "image" | "video" | "audio" | "document" | "code" | "log" | string;
+  url: string;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  timestamp?: string;
+  step?: number | string;
+  author?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  dimensions?: { width: number; height: number };
+  metadata?: Record<string, unknown>;
+}
+
+export interface PlaywrightMetadata {
+  viewport?: { width: number; height: number };
+  traces?: string[];
+  videos?: string[];
+  screenshots?: MediaAsset[];
+  testFile?: string;
+  durationMs?: number;
+  browser?: string;
+  status?: "passed" | "failed" | "timedOut" | "interrupted" | string;
+  [key: string]: unknown;
+}
+
+export interface EdgeTrafficExchange {
+  id: string;
+  timestamp: string;
+  source: string;
+  target: string;
+  kind?: PayloadKind | string;
+  summary?: string;
+  tokens?: number;
+  bytes?: number;
+  durationMs?: number;
+  status?: "success" | "error" | "warning" | "in_transit" | string;
+  payloadSnippet?: string;
+  fullPayload?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface EdgeTrafficDetail {
+  volume?: number;
+  tokens?: number;
+  bytes?: number;
+  messagesCount?: number;
+  exchanges?: EdgeTrafficExchange[];
+  ratePerSec?: number;
+  lastActive?: string;
+  status?: "active" | "idle" | "congested" | "error" | string;
+  glowColor?: string;
+  glowIntensity?: number;
+}
+
 export interface GraphSection {
   id: string;
   title: string;
@@ -127,6 +184,10 @@ export interface NodeMetadata {
   leaseAgent?: string;
   repairRounds?: number;
   durationMs?: number;
+  mediaAssets?: MediaAsset[];
+  screenshots?: MediaAsset[];
+  assets?: MediaAsset[];
+  playwrightMetadata?: PlaywrightMetadata;
   [key: string]: unknown;
 }
 
@@ -154,6 +215,8 @@ export interface GraphNodeData {
   logs?: string;
   context?: NodeContext;
   metadata?: NodeMetadata;
+  mediaAssets?: MediaAsset[];
+  screenshots?: MediaAsset[];
   rank?: number;
   group?: string;
 }
@@ -207,6 +270,10 @@ export interface GraphEdgeData {
   layoutRole?: EdgeLayoutHint;
   weight?: number;
   minLen?: number;
+  traffic?: EdgeTrafficDetail;
+  isHighTraffic?: boolean;
+  trafficVolume?: number;
+  exchanges?: EdgeTrafficExchange[];
 }
 
 export interface GraphDataset {
@@ -238,4 +305,8 @@ export interface PositionedEdge extends GraphEdgeData {
   leaderPoints?: Point[];
   sourcePort?: PortRef;
   targetPort?: PortRef;
+  bundleOffset?: number;
+  bundleCount?: number;
+  bundleIndex?: number;
+  sharedAnchor?: Point;
 }

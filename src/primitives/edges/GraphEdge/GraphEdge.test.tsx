@@ -169,4 +169,31 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain("port-attachment-point source-port");
     expect(html).toContain("port-attachment-point target-port");
   });
+
+  it("renders high-traffic glowing edge and shared anchor junction", () => {
+    const highTrafficEdge: PositionedEdge = {
+      ...baseEdge,
+      isHighTraffic: true,
+      traffic: {
+        volume: 8,
+        messagesCount: 8,
+        tokens: 15400,
+        status: "active",
+        glowColor: "#06b6d4",
+      },
+      sharedAnchor: { x: 55, y: 55 },
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={highTrafficEdge} />
+      </svg>,
+    );
+
+    expect(html).toContain("high-traffic");
+    expect(html).toContain("edge-glow-backdrop");
+    expect(html).toContain("shared-anchor-junction");
+    expect(html).toContain('cx="55"');
+    expect(html).toContain('cy="55"');
+  });
 });

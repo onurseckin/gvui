@@ -1,17 +1,19 @@
-import type { CSSProperties, FC } from "react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   IconBinary,
   IconFiles,
   IconInfoCircle,
+  IconPhoto,
   IconShieldSearch,
   IconTerminal,
   IconX,
 } from "@tabler/icons-react";
+import type { CSSProperties, FC } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphNodeData, IoPort } from "../../types/graphData";
 import { edgeToPort } from "./DrawerSection";
+import { AssetsTab } from "./tabs/AssetsTab";
 import { CommandsTab } from "./tabs/CommandsTab";
 import { FilesTab } from "./tabs/FilesTab";
 import { FindingsTab } from "./tabs/FindingsTab";
@@ -19,11 +21,11 @@ import { OverviewTab } from "./tabs/OverviewTab";
 import { RawProvenanceTab } from "./tabs/RawProvenanceTab";
 import "./NodeDetailDrawer.css";
 
-type TabId = "overview" | "files" | "commands" | "findings" | "provenance";
+type TabId = "overview" | "assets" | "files" | "commands" | "findings" | "provenance";
 
 /**
  * Node detail inspection drawer providing rich metadata, execution metrics,
- * stream accordions, touched files, executions, reviews, and raw provenance.
+ * stream accordions, touched files, executions, reviews, media assets, and raw provenance.
  */
 export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
@@ -76,6 +78,14 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const status = describeNodeStatus(node);
   const IconComp = kind.IconComponent;
 
+  const assetsCount =
+    (node.mediaAssets?.length ?? 0) +
+    (node.screenshots?.length ?? 0) +
+    ((node.metadata?.mediaAssets as unknown[])?.length ?? 0) +
+    ((node.metadata?.screenshots as unknown[])?.length ?? 0) +
+    ((node.metadata?.assets as unknown[])?.length ?? 0) +
+    ((node.metadata?.playwrightMetadata?.screenshots as unknown[])?.length ?? 0);
+
   const filesCount =
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
   const commandsCount = (node.metadata?.commands as unknown[])?.length ?? 0;
@@ -90,6 +100,13 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       icon: IconInfoCircle,
       count: 0,
       visible: true,
+    },
+    {
+      id: "assets" as TabId,
+      label: "Assets & Media",
+      icon: IconPhoto,
+      count: assetsCount,
+      visible: assetsCount > 0 || Boolean(node.metadata?.playwrightMetadata),
     },
     {
       id: "files" as TabId,
@@ -188,6 +205,7 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             nodeNamesById={nodeNamesById}
           />
         )}
+        {currentTabId === "assets" && <AssetsTab node={node} />}
         {currentTabId === "files" && <FilesTab node={node} />}
         {currentTabId === "commands" && <CommandsTab node={node} />}
         {currentTabId === "findings" && <FindingsTab node={node} />}

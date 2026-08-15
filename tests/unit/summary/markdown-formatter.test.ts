@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkflowState } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/workflow/types.ts";
 import { formatSummaryMarkdown } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/summary/markdown-formatter.ts";
 import type {
   RollupMetrics,
   TimelineEventRecord,
 } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/summary/types.ts";
+import type { WorkflowState } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/workflow/types.ts";
 
 describe("markdown formatter", () => {
   test("formats executive summary correctly", () => {
@@ -18,7 +18,11 @@ describe("markdown formatter", () => {
       active_command_duration_ms: 5_000,
       total_commands_executed: 4,
       total_gates_passed: 4,
-      estimated_tokens: { tokens_in: 1000, tokens_out: 500, total_tokens: 1500 },
+      estimated_tokens: {
+        tokens_in: 1000,
+        tokens_out: 500,
+        total_tokens: 1500,
+      },
       files_touched: [{ path: "src/index.ts", additions: 100, deletions: 20 }],
     };
 

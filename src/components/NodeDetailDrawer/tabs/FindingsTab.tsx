@@ -1,5 +1,5 @@
-import type { FC } from "react";
 import { IconAlertTriangle, IconCheck, IconShieldCheck } from "@tabler/icons-react";
+import type { FC } from "react";
 import type { FindingDetail, GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 
@@ -73,7 +73,11 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
               {f.remediation ? (
                 <p
                   className="drawer-prose"
-                  style={{ margin: "4px 0", color: "#a1a1aa", fontSize: "11px" }}
+                  style={{
+                    margin: "4px 0",
+                    color: "#a1a1aa",
+                    fontSize: "11px",
+                  }}
                 >
                   <strong>Remediation:</strong> {f.remediation}
                 </p>

@@ -17,7 +17,14 @@ describe("NodeDetailDrawer tests", () => {
     step: 2,
     model: "claude-3-5-sonnet",
     description: "Orchestrates subagent tasks across workers",
-    files: [{ path: "src/engine/planner.ts", mode: "write", additions: 45, deletions: 12 }],
+    files: [
+      {
+        path: "src/engine/planner.ts",
+        mode: "write",
+        additions: 45,
+        deletions: 12,
+      },
+    ],
     metadata: {
       writeScope: ["src/engine/planner.ts"],
       repairRounds: 0,
@@ -273,6 +280,97 @@ describe("NodeDetailDrawer tests", () => {
       expect(html.includes("Reviewer Critic")).toBe(true);
       expect(html.includes("Tools")).toBe(true);
       expect(html.includes("run_command")).toBe(true);
+    });
+  });
+
+  describe("AssetsTab & LightboxDialog asset gallery", () => {
+    test("renders asset gallery cards and playwright test execution summary", async () => {
+      const { AssetsTab } = await import("./tabs/AssetsTab");
+      const assetNode: GraphNodeData = {
+        id: "node-validator-1",
+        name: "UI Verification Validator",
+        kind: "gate",
+        status: "success",
+        metadata: {
+          playwrightMetadata: {
+            testFile: "tests/e2e/nodeDrawer.spec.ts",
+            status: "passed",
+            browser: "chromium",
+            viewport: { width: 1280, height: 720 },
+            durationMs: 3450,
+          },
+          mediaAssets: [
+            {
+              id: "asset-1",
+              type: "image",
+              url: "/screenshots/node-drawer-full.png",
+              title: "Full Node Drawer Expanded",
+              description: "High-resolution screenshot of open node drawer with 5 tabs",
+              dimensions: { width: 1280, height: 720 },
+              sizeBytes: 1024 * 120,
+              step: 3,
+            },
+            {
+              id: "asset-2",
+              type: "video",
+              url: "/videos/validation-run.webm",
+              title: "Playwright E2E Run Video",
+              description: "Full viewport interaction recording",
+              sizeBytes: 1024 * 1024 * 3,
+              step: 3,
+            },
+          ],
+        },
+      };
+
+      const html = renderToString(<AssetsTab node={assetNode} />);
+
+      expect(html.includes("Playwright Test Suite Execution")).toBe(true);
+      expect(html.includes("tests/e2e/nodeDrawer.spec.ts")).toBe(true);
+      expect(html.includes("Passed")).toBe(true);
+      expect(html.includes("chromium")).toBe(true);
+      expect(html.includes("1280")).toBe(true);
+      expect(html.includes("720")).toBe(true);
+      expect(html.includes("Validator Media") && html.includes("Inspection Assets")).toBe(true);
+      expect(html.includes("Full Node Drawer Expanded")).toBe(true);
+      expect(html.includes("Playwright E2E Run Video")).toBe(true);
+      expect(html.includes("120.0 KB")).toBe(true);
+      expect(html.includes("3.0 MB")).toBe(true);
+    });
+
+    test("renders LightboxDialog with zoom controls, keyboard hints, and metadata sidebar", async () => {
+      const { LightboxDialog } = await import("./LightboxDialog");
+      const testAssets = [
+        {
+          id: "lightbox-img-1",
+          type: "image",
+          url: "/screenshots/active-edge-traffic.png",
+          title: "Active Edge Traffic Inspector",
+          description: "Chronology of high-traffic edge packets",
+          author: "worker-t03",
+          timestamp: "2026-08-15T00:00:00.000Z",
+          dimensions: { width: 1920, height: 1080 },
+          sizeBytes: 1024 * 450,
+          mimeType: "image/png",
+          step: 2,
+        },
+      ];
+
+      const html = renderToString(
+        <LightboxDialog isOpen={true} assets={testAssets} initialIndex={0} onClose={() => {}} />,
+      );
+
+      expect(html.includes("Active Edge Traffic Inspector")).toBe(true);
+      expect(html.includes("drawer-lightbox-overlay")).toBe(true);
+      expect(html.includes("1 of 1")).toBe(true);
+      expect(html.includes("1920") && html.includes("1080")).toBe(true);
+      expect(html.includes("450.0 KB")).toBe(true);
+      expect(html.includes("Zoom In")).toBe(true);
+      expect(html.includes("Reset Zoom")).toBe(true);
+      expect(html.includes("Asset Details")).toBe(true);
+      expect(html.includes("worker-t03")).toBe(true);
+      expect(html.includes("image/png")).toBe(true);
+      expect(html.includes("Step 2")).toBe(true);
     });
   });
 });

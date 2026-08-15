@@ -36,11 +36,11 @@ const PAYLOAD_LABELS: Readonly<Record<string, string>> = Object.freeze({
 /**
  * Compact row renderer for legacy or auxiliary list views.
  */
-export const IoRow: FC<{ port: IoPort; peerName?: string; direction: "in" | "out" }> = ({
-  port,
-  peerName,
-  direction,
-}) => {
+export const IoRow: FC<{
+  port: IoPort;
+  peerName?: string;
+  direction: "in" | "out";
+}> = ({ port, peerName, direction }) => {
   const isGenericSummary = !port.kind || port.kind === "summary";
   return (
     <li className="drawer-io-row">

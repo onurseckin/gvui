@@ -1,4 +1,3 @@
-import type { ComponentType, ReactNode } from "react";
 import {
   IconAlertCircle,
   IconAlertTriangle,
@@ -8,6 +7,7 @@ import {
   IconRocket,
   IconShieldCheck,
 } from "@tabler/icons-react";
+import type { ComponentType, ReactNode } from "react";
 import type { EdgeKind, GraphEdgeData } from "../../../types/graphData";
 
 export type SemanticEdgeKind =

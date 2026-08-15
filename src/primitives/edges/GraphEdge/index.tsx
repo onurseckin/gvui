@@ -7,26 +7,26 @@ import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
 import "./GraphEdge.css";
 
-export { EdgeMarkerDefs } from "./EdgeMarkerDefs";
-export type { EdgeMarkerDefsProps } from "./EdgeMarkerDefs";
-export { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
-export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
+export type { CollisionOptions, CollisionResolutionResult } from "./collision";
 export {
-  EDGE_KIND_DESCRIPTORS,
-  DEFAULT_EDGE_KIND,
-  describeEdgeKind,
-  resolveEdgeKind,
-  getEdgeIconComponent,
-} from "./edgeKinds";
-export type { EdgeKindDescriptor, SemanticEdgeKind } from "./edgeKinds";
-export {
+  computeSafeBadgePlacement,
   doesRectOverlap,
-  rectContainsPoint,
   findCollidingNodes,
   preventBadgeCollision,
-  computeSafeBadgePlacement,
+  rectContainsPoint,
 } from "./collision";
-export type { CollisionOptions, CollisionResolutionResult } from "./collision";
+export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
+export { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
+export type { EdgeMarkerDefsProps } from "./EdgeMarkerDefs";
+export { EdgeMarkerDefs } from "./EdgeMarkerDefs";
+export type { EdgeKindDescriptor, SemanticEdgeKind } from "./edgeKinds";
+export {
+  DEFAULT_EDGE_KIND,
+  describeEdgeKind,
+  EDGE_KIND_DESCRIPTORS,
+  getEdgeIconComponent,
+  resolveEdgeKind,
+} from "./edgeKinds";
 
 export interface GraphEdgeProps {
   edge: PositionedEdge;
@@ -98,6 +98,16 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     const semanticKind = resolveEdgeKind(edge);
     const descriptor = describeEdgeKind(semanticKind);
 
+    const isHighTraffic = Boolean(
+      edge.isHighTraffic ||
+      (edge.traffic && ((edge.traffic.volume ?? 0) > 1 || (edge.traffic.messagesCount ?? 0) > 1)) ||
+      edge.isCycle ||
+      edge.traffic?.status === "congested",
+    );
+
+    const glowColor =
+      edge.traffic?.glowColor ?? (edge.isCycle ? "#f59e0b" : isHighTraffic ? "#06b6d4" : undefined);
+
     const markerId = isSelected
       ? "url(#edge-arrowhead-selected)"
       : edge.isCycle
@@ -105,11 +115,13 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
         : `url(#${descriptor.markerId})`;
 
     const shouldAnimate =
-      isAnimated || descriptor.animated || Boolean(edge.isCycle || semanticKind === "loop");
+      isAnimated ||
+      descriptor.animated ||
+      Boolean(edge.isCycle || semanticKind === "loop" || isHighTraffic);
 
     return (
       <g
-        className={`graph-edge-group kind-${semanticKind}`}
+        className={`graph-edge-group kind-${semanticKind} ${isHighTraffic ? "high-traffic" : ""}`}
         onClick={handleEdgeClick}
         shapeRendering="geometricPrecision"
         textRendering="geometricPrecision"
@@ -121,14 +133,33 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
+        {isHighTraffic && (
+          <path
+            d={dPath}
+            className="edge-glow-backdrop"
+            stroke={glowColor || "#06b6d4"}
+            vectorEffect="non-scaling-stroke"
+            shapeRendering="geometricPrecision"
+            textRendering="geometricPrecision"
+          />
+        )}
         <path
           d={dPath}
-          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${shouldAnimate ? "animated" : ""}`}
+          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${isHighTraffic ? "high-traffic" : ""} ${shouldAnimate ? "animated" : ""}`}
           markerEnd={edge.directed !== false ? markerId : undefined}
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
+        {edge.sharedAnchor && (
+          <circle
+            cx={edge.sharedAnchor.x}
+            cy={edge.sharedAnchor.y}
+            r={4}
+            fill={glowColor || "#38bdf8"}
+            className="shared-anchor-junction"
+          />
+        )}
         {showPorts && edge.sourcePort && (
           <circle
             cx={edge.sourcePort.point.x}
@@ -161,6 +192,10 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             badgeRect={edge.badgeRect}
             anchorPoint={edge.anchorPoint}
             leaderPoints={edge.leaderPoints}
+            traffic={edge.traffic}
+            isHighTraffic={isHighTraffic}
+            bundleCount={edge.bundleCount}
+            bundleIndex={edge.bundleIndex}
           />
         )}
       </g>

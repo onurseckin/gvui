@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import {
   DEFAULT_EDGE_KIND,
-  EDGE_KIND_DESCRIPTORS,
   describeEdgeKind,
+  EDGE_KIND_DESCRIPTORS,
   getEdgeIconComponent,
   resolveEdgeKind,
   type SemanticEdgeKind,

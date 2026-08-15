@@ -267,3 +267,71 @@
     stroke-dashoffset: 28;
   }
 }
+
+/* High-Traffic Edge Bundles and Glow Badges */
+.edge-glow-backdrop {
+  fill: none;
+  stroke-width: 6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.35;
+  filter: blur(4px);
+  pointer-events: none;
+  animation: traffic-pulse 2.5s ease-in-out infinite alternate;
+}
+
+.graph-edge-path.high-traffic {
+  stroke-width: 2.5px;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.shared-anchor-junction {
+  stroke: #18181b;
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
+  animation: junction-pulse 2s ease-in-out infinite alternate;
+}
+
+.edge-badge-group.high-traffic .edge-badge-rect {
+  stroke-width: 2px;
+  animation: badge-glow-pulse 2s ease-in-out infinite alternate;
+}
+
+.edge-traffic-chip {
+  cursor: default;
+  transition: transform 0.15s ease;
+}
+.edge-badge-group:hover .edge-traffic-chip {
+  transform: scale(1.06);
+}
+
+@keyframes traffic-pulse {
+  from {
+    opacity: 0.25;
+    stroke-width: 5px;
+  }
+  to {
+    opacity: 0.55;
+    stroke-width: 8px;
+  }
+}
+
+@keyframes junction-pulse {
+  from {
+    r: 3.5;
+    opacity: 0.8;
+  }
+  to {
+    r: 5;
+    opacity: 1;
+  }
+}
+
+@keyframes badge-glow-pulse {
+  from {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
+  }
+  to {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+}

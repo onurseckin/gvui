@@ -36,7 +36,12 @@ export const FilesTab: FC<FilesTabProps> = ({ node }) => {
                     {file.mode ?? "read"}
                   </span>
                   <div
-                    style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      width: "100%",
+                    }}
                   >
                     <div
                       style={{
@@ -50,7 +55,12 @@ export const FilesTab: FC<FilesTabProps> = ({ node }) => {
                         {file.lines ? `:${file.lines}` : ""}
                       </code>
                       {hasChurn ? (
-                        <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)" }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontFamily: "var(--font-mono)",
+                          }}
+                        >
                           <span style={{ color: "#34d399" }}>+{file.additions ?? 0}</span>{" "}
                           <span style={{ color: "#f87171" }}>-{file.deletions ?? 0}</span>
                         </span>

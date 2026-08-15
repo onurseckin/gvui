@@ -194,4 +194,33 @@ describe("EdgeBadgeOverlay Semantic Types", () => {
     expect(html).toContain("Dispatch Worker");
     expect(html).toContain("2.4k tokens");
   });
+
+  it("renders high-traffic glowing badge with traffic chip and bundle counter", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={100}
+        y={100}
+        kind="data"
+        label="Context Sync Stream"
+        bundleCount={4}
+        traffic={{
+          volume: 12,
+          messagesCount: 12,
+          tokens: 45200,
+          status: "active",
+          glowColor: "#06b6d4",
+          glowIntensity: 0.8,
+        }}
+        isHighTraffic={true}
+      />,
+    );
+
+    expect(html).toContain("high-traffic");
+    expect(html).toContain("Context Sync Stream");
+    expect(html).toContain("12 msgs");
+    expect(html).toContain("x4");
+    expect(html).toContain("edge-traffic-chip");
+    expect(html).toContain("edge-bundle-chip");
+    expect(html).toContain("#06b6d4");
+  });
 });

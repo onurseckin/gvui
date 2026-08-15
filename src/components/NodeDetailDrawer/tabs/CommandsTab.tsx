@@ -1,5 +1,5 @@
-import type { FC } from "react";
 import { IconCheck, IconX } from "@tabler/icons-react";
+import type { FC } from "react";
 import { formatDuration } from "../../../primitives/nodes/NodeCard/nodeCardModel";
 import type { CommandExecutionDetail, GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
@@ -34,7 +34,11 @@ export const CommandsTab: FC<CommandsTabProps> = ({ node }) => {
               <div className="drawer-command-header">
                 <span
                   className={`drawer-command-exit ${isSuccess ? "is-success" : "is-error"}`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
                 >
                   {isSuccess ? <IconCheck size={12} /> : <IconX size={12} />}
                   Exit {cmd.exitCode}

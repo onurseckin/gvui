@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandRecord } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/contracts/commands.ts";
+import { generateGraphDataset } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/summary/graph-generator.ts";
 import type {
   TaskRecord,
   WorkflowState,
 } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/workflow/types.ts";
-import { generateGraphDataset } from "/Users/onurseckinsenoglu/repos/skills/orchestrating-long-tasks/scripts/src/summary/graph-generator.ts";
 
 describe("graph generator", () => {
   test("generates full GVUI compliant GraphDataset with archetypes, steps and badges", () => {
@@ -117,6 +117,8 @@ describe("graph generator", () => {
     const t1Node = dataset.nodes.find((n) => n.id === "node-task-T-1");
     expect(t1Node?.kind).toBe("agent");
     expect(t1Node?.step).toBe(2);
+    expect(t1Node?.model).toBe("Gemini 2.0 Flash");
+    expect(t1Node?.tier).toBe("s");
     expect(t1Node?.badge?.icon).toBe("IconRobot");
     expect(t1Node?.metadata?.commands).toHaveLength(1);
     expect(t1Node?.metadata?.findings).toHaveLength(1);
@@ -141,17 +143,42 @@ describe("graph generator", () => {
     // Sections are empty (no background phase overlays)
     expect(dataset.sections ?? []).toHaveLength(0);
 
-    // Edge badges and containers
+    // Validator Media Assets and Playwright metadata assertions
+    expect(t1Node?.metadata?.mediaAssets).toBeDefined();
+    expect(g1Node?.metadata?.mediaAssets).toBeDefined();
+
+    // Edge Traffic Detail and Exchanges
+    const promptEdge = dataset.edges.find((e) => e.id === "edge-prompt-plan");
+    expect(promptEdge?.traffic).toBeDefined();
+    expect(promptEdge?.traffic?.messagesCount).toBeGreaterThanOrEqual(1);
+    expect(promptEdge?.exchanges).toHaveLength(1);
+
+    const criticEdge = dataset.edges.find((e) => e.id === "edge-critic-complete");
+    expect(criticEdge?.traffic).toBeDefined();
+    expect(criticEdge?.traffic?.tokens).toBe(450);
+    expect(criticEdge?.traffic?.glowColor).toBe("#10b981");
+
     const spawnEdge = dataset.edges.find((e) => e.kind === "spawn");
     expect(spawnEdge?.badge?.icon).toBe("IconRocket");
     expect(spawnEdge?.container?.stepBadge).toBe("2");
     expect(spawnEdge?.container?.title).toBe("Dispatches Worker");
+    expect(spawnEdge?.traffic).toBeDefined();
+    expect(spawnEdge?.exchanges?.[0]?.kind).toBe("prompt");
 
     const loopEdge = dataset.edges.find((e) => e.kind === "loop");
     expect(loopEdge?.isCycle).toBe(true);
     expect(loopEdge?.badge?.icon).toBe("IconAlertCircle");
     expect(loopEdge?.container?.title).toContain("Validator Pushback");
     expect(loopEdge?.stepNumber).toBe("3 -> 2");
+    expect(loopEdge?.traffic).toBeDefined();
+    expect(loopEdge?.traffic?.status).toBe("congested");
+    expect(loopEdge?.traffic?.glowColor).toBe("#f59e0b");
+    expect(loopEdge?.isHighTraffic).toBe(true);
+
+    const depEdge = dataset.edges.find((e) => e.kind === "dependency");
+    expect(depEdge?.traffic).toBeDefined();
+    expect(depEdge?.traffic?.glowColor).toBe("#06b6d4");
+    expect(depEdge?.isHighTraffic).toBe(true);
 
     const joinEdge = dataset.edges.find((e) => e.kind === "join");
     expect(joinEdge?.badge?.icon).toBe("IconFileText");

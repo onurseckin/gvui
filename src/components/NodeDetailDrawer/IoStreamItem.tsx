@@ -1,5 +1,3 @@
-import type { FC, MouseEvent } from "react";
-import { useCallback, useMemo, useState } from "react";
 import {
   IconCheck,
   IconChevronDown,
@@ -8,6 +6,8 @@ import {
   IconCpu,
   IconFileText,
 } from "@tabler/icons-react";
+import type { FC, MouseEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { formatTokens } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import type { IoPort } from "../../types/graphData";
 import { formatBytes, getByteLength } from "./streamUtils";
