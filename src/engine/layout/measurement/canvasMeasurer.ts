@@ -213,45 +213,64 @@ export function createCanvasMeasurer(options?: CanvasMeasurerOptions): Measureme
       return lines.length > maxLines;
     }
 
-    for (const token of trimmed.split(/\s+/)) {
-      if (token.length === 0) continue;
-      const tokenWidth = measureRun(token, fontKey);
-
-      if (current.length > 0) {
-        const joined = currentWidth + spaceWidth + tokenWidth;
-        if (joined <= maxWidth) {
-          current = `${current} ${token}`;
-          currentWidth = joined;
-          continue;
+    const paragraphs = trimmed.split(/\r?\n/);
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const paragraph = paragraphs[pIdx];
+      const pTrimmed = paragraph.trim();
+      if (pTrimmed.length === 0) {
+        if (pIdx > 0 && lines.length < maxLines) {
+          lines.push("");
+          widths.push(0);
         }
-        if (commit()) {
-          stopped = true;
-          break;
-        }
-      }
-
-      if (tokenWidth <= maxWidth) {
-        current = token;
-        currentWidth = tokenWidth;
         continue;
       }
 
-      // A single token wider than the line (a URL, a hash, a path): break it by character.
-      for (const ch of token) {
-        const chWidth = measureRun(ch, fontKey);
-        if (current.length > 0 && currentWidth + chWidth > maxWidth) {
+      for (const token of pTrimmed.split(/\s+/)) {
+        if (token.length === 0) continue;
+        const tokenWidth = measureRun(token, fontKey);
+
+        if (current.length > 0) {
+          const joined = currentWidth + spaceWidth + tokenWidth;
+          if (joined <= maxWidth) {
+            current = `${current} ${token}`;
+            currentWidth = joined;
+            continue;
+          }
           if (commit()) {
             stopped = true;
             break;
           }
         }
-        current += ch;
-        currentWidth += chWidth;
-      }
-      if (stopped) break;
-    }
 
-    if (!stopped) commit();
+        if (tokenWidth <= maxWidth) {
+          current = token;
+          currentWidth = tokenWidth;
+          continue;
+        }
+
+        // A single token wider than the line (a URL, a hash, a path): break it by character.
+        for (const ch of token) {
+          const chWidth = measureRun(ch, fontKey);
+          if (current.length > 0 && currentWidth + chWidth > maxWidth) {
+            if (commit()) {
+              stopped = true;
+              break;
+            }
+          }
+          current += ch;
+          currentWidth += chWidth;
+        }
+        if (stopped) break;
+      }
+
+      if (stopped) break;
+      if (current.length > 0) {
+        if (commit()) {
+          stopped = true;
+          break;
+        }
+      }
+    }
 
     let truncated = stopped;
     if (lines.length > maxLines) {

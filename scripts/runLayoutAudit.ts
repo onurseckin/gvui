@@ -46,6 +46,7 @@ interface AuditLayoutMetrics {
   edgeNodePenetrations: number;
   badgeNodeOverlaps: number;
   badgeBadgeOverlaps: number;
+  badgeEdgePenetrations: number;
   unresolvedRouteCount: number;
   unresolvedBadgeCount: number;
 }
@@ -128,6 +129,7 @@ const LAYERED_ONLY_CONSTRAINT_FIELDS: readonly (keyof AuditLayoutMetrics)[] = [
   "edgeNodePenetrations",
   "badgeNodeOverlaps",
   "badgeBadgeOverlaps",
+  "badgeEdgePenetrations",
 ];
 
 /** The counters that are build failures for `auditCase`. */

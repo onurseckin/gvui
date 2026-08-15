@@ -19,6 +19,17 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
       [node.id, onToggleCollapse],
     );
 
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLButtonElement>): void => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggleCollapse(node.id);
+        }
+      },
+      [node.id, onToggleCollapse],
+    );
+
     const kind = describeNodeKind(node);
     const tier = resolveModelTier(node);
     const IconComp = kind.IconComponent;
@@ -29,9 +40,6 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
           <span className="node-card-kind-icon" style={{ color: kind.accent }}>
             <IconComp size={14} color={kind.accent} />
           </span>
-          <h3 className="node-card-title" title={node.name}>
-            {node.name}
-          </h3>
           {node.type ? <span className="node-card-type-tag">{node.type}</span> : null}
         </div>
         <div className="node-card-header-aside">
@@ -59,6 +67,8 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
             type="button"
             className="node-card-toggle-btn"
             onClick={handleToggle}
+            onKeyDown={handleKeyDown}
+            aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? "Expand node" : "Collapse node"}
           >
             <svg

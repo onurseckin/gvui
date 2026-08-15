@@ -124,17 +124,15 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
   rowGap: 8,
   rows: Object.freeze([
     {
-      id: "identity",
+      id: "header",
       kind: "flow",
-      // 8px status dot + 6px gap + 14px kind icon + 6px gap, then 8px header gap + 6px aside gap
-      // + an 18px collapse button on the right.
-      fixedChrome: 66,
+      // 14px kind icon + 6px gap, plus 6px gap + 18px collapse button on the right.
+      fixedChrome: 44,
       itemGap: 6,
       lineHeight: 18,
       maxLines: 1,
       inHeader: true,
       segments: [
-        { fontKey: FONT_KEYS.nodeTitle, itemChrome: 0, select: (n) => [n.name].filter(Boolean) },
         {
           fontKey: FONT_KEYS.nodeTypeTag,
           itemChrome: 12,
@@ -154,6 +152,30 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       ],
     },
     {
+      id: "title",
+      kind: "wrap",
+      fixedChrome: 0,
+      itemGap: 0,
+      lineHeight: 18,
+      maxLines: Number.POSITIVE_INFINITY,
+      segments: [
+        {
+          fontKey: FONT_KEYS.nodeTitle,
+          itemChrome: 0,
+          select: (n) => [n.name].filter(Boolean),
+        },
+      ],
+    },
+    {
+      id: "description",
+      kind: "wrap",
+      fixedChrome: 0,
+      itemGap: 0,
+      lineHeight: 15,
+      maxLines: MAX_DESCRIPTION_LINES,
+      segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
+    },
+    {
       id: "badges",
       kind: "flow",
       fixedChrome: 0,
@@ -167,15 +189,6 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
           select: selectMiniChips,
         },
       ],
-    },
-    {
-      id: "description",
-      kind: "wrap",
-      fixedChrome: 0,
-      itemGap: 0,
-      lineHeight: 15,
-      maxLines: MAX_DESCRIPTION_LINES,
-      segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
     },
     {
       id: "tools",

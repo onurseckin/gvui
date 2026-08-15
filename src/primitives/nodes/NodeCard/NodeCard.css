@@ -76,6 +76,8 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   position: relative;
   z-index: 1;
+  min-height: 35px;
+  box-sizing: border-box;
 }
 
 .node-card-header-main {
@@ -84,7 +86,7 @@
   gap: 6px;
   min-width: 0;
   min-height: 18px;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .node-card-header-aside {
@@ -92,7 +94,7 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 1;
-  max-width: 60%;
+  min-width: 0;
   justify-content: flex-end;
 }
 
@@ -105,15 +107,16 @@
 
 .node-card-title {
   margin: 0;
+  width: 100%;
   font-size: 13px;
   font-weight: 600;
   line-height: 18px;
   color: #fafafa;
   letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
 }
 
 .node-card-toggle-btn {

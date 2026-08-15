@@ -19,8 +19,9 @@ use crate::types::{
 };
 
 use super::constraints::{
-    rect_is_finite, scan_badge_badge_overlaps, scan_badge_node_overlaps,
-    scan_collinear_edge_overlaps, scan_edge_node_penetrations, scan_node_node_overlaps,
+    rect_is_finite, scan_badge_badge_overlaps, scan_badge_edge_penetrations,
+    scan_badge_node_overlaps, scan_collinear_edge_overlaps, scan_edge_node_penetrations,
+    scan_node_node_overlaps,
 };
 
 /// Suffix the host's label measurer appends when a label hit `max_label_lines` and was ellipsized.
@@ -139,6 +140,8 @@ pub fn compute_metrics(
     scan_badge_node_overlaps(badges, nodes, eps, |_, _| badge_node_overlaps += 1);
     let mut badge_badge_overlaps = 0usize;
     scan_badge_badge_overlaps(badges, eps, |_, _| badge_badge_overlaps += 1);
+    let mut badge_edge_penetrations = 0usize;
+    scan_badge_edge_penetrations(badges, routes, eps, |_, _, _| badge_edge_penetrations += 1);
     let mut collinear_edge_overlaps = 0usize;
     scan_collinear_edge_overlaps(routes, eps, |_, _| collinear_edge_overlaps += 1);
 
@@ -170,6 +173,7 @@ pub fn compute_metrics(
         edge_node_penetrations,
         badge_node_overlaps,
         badge_badge_overlaps,
+        badge_edge_penetrations,
         unresolved_route_count,
         unresolved_badge_count,
         collinear_edge_overlaps,
@@ -508,6 +512,39 @@ mod tests {
         let m = compute_metrics(&nodes, &[], &[], &[], None, 0, 0, 0, &cfg());
         assert_eq!(m.node_node_overlaps, 1);
         assert_eq!(m.edge_node_penetrations, 0);
+        assert_eq!(m.badge_edge_penetrations, 0);
+    }
+
+    #[test]
+    fn badge_edge_penetrations_are_counted() {
+        let routes = vec![
+            route(
+                "e0",
+                vec![Point { x: 50.0, y: 0.0 }, Point { x: 50.0, y: 200.0 }],
+                "a",
+                "b",
+            ),
+            route(
+                "e1",
+                vec![Point { x: 0.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+                "c",
+                "d",
+            ),
+        ];
+        let badges = vec![BadgePlacement {
+            edge_id: "e0".to_string(),
+            label: "badge".to_string(),
+            rect: Rect {
+                x: 30.0,
+                y: 80.0,
+                width: 40.0,
+                height: 40.0,
+            },
+            anchor_point: Point { x: 50.0, y: 100.0 },
+            leader_points: None,
+        }];
+        let m = compute_metrics(&[], &routes, &badges, &[], None, 0, 0, 0, &cfg());
+        assert_eq!(m.badge_edge_penetrations, 1);
     }
 
     #[test]

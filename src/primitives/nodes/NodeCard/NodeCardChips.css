@@ -12,7 +12,11 @@
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .node-card-badge-chip {
@@ -22,9 +26,14 @@
   border-radius: 4px;
   font-family: var(--font-mono);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e4e4e7;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .node-card-badge-chip.variant-info {
@@ -54,7 +63,12 @@
   background-color: rgba(255, 255, 255, 0.06);
   color: #a1a1aa;
   font-family: var(--font-mono);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .node-card-model-chip {
@@ -68,6 +82,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #d4d4d8;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 .node-card-model-chip.tier-l {
   background-color: rgba(129, 140, 248, 0.16);

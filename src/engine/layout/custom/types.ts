@@ -287,6 +287,7 @@ export interface LayoutMetrics {
   edgeNodePenetrations: number;
   badgeNodeOverlaps: number;
   badgeBadgeOverlaps: number;
+  badgeEdgePenetrations: number;
   unresolvedRouteCount: number;
   unresolvedBadgeCount: number;
 }

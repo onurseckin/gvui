@@ -134,16 +134,17 @@ Each row declares its kind, its fonts, and its non-text chrome:
 - **`wrap`** — prose. Each selected string is wrapped independently and the lines stack.
 - **`flow`** — pills. Items sit side by side and wrap onto further lines when they run out of room.
 
-`DEFAULT_NODE_TEMPLATE` has `padding: 10`, `headerHeight: 34`, `rowGap: 8`, and six rows:
+`DEFAULT_NODE_TEMPLATE` has `padding: 10`, `headerHeight: 35`, `rowGap: 8`, and seven rows:
 
-| row           | kind | fonts                         | line height | max lines | notes                                                     |
-| ------------- | ---- | ----------------------------- | ----------: | --------: | --------------------------------------------------------- |
-| `name`        | flow | `node-title`, `node-type-tag` |          18 |         1 | `inHeader` — contributes width, not height                |
-| `description` | wrap | `node-body`                   |          15 |         3 |                                                           |
-| `badges`      | flow | `node-chip`                   |          22 |         3 | `itemChrome: 20` (9 px padding + 1 px border, both sides) |
-| `tools`       | flow | `node-chip`                   |          22 |         3 | `itemChrome: 34` (adds a 12 px icon and its 4 px gap)     |
-| `model`       | wrap | `node-body`                   |          16 |         1 | joins `model` and `harnessModel` with `·`                 |
-| `context`     | wrap | `node-body`                   |          15 |         4 | flattened `key: value` rows                               |
+| row           | kind | fonts           | line height | max lines | notes                                                 |
+| ------------- | ---- | --------------- | ----------: | --------: | ----------------------------------------------------- |
+| `header`      | flow | `node-type-tag` |          18 |         1 | `inHeader` — contributes width, not height            |
+| `title`       | wrap | `node-title`    |          18 |         ∞ | full width, natural wrapping                          |
+| `description` | wrap | `node-body`     |          15 |         4 | max 4 lines                                           |
+| `badges`      | flow | `node-metrics`  |          18 |         ∞ | `itemChrome: 26` (mini chips)                         |
+| `tools`       | flow | `node-chip`     |          22 |         ∞ | `itemChrome: 34` (adds a 12 px icon and its 4 px gap) |
+| `files`       | flow | `node-chip`     |          22 |         ∞ | summary of modified files or scopes                   |
+| `metrics`     | wrap | `node-metrics`  |          14 |         ∞ | token counts, duration, cost, retries                 |
 
 Rows marked `inHeader` contribute _width_ but not _height_: `headerHeight` already covers the header
 band, and counting the title row's line height again would double-count it.

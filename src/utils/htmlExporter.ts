@@ -117,7 +117,7 @@ function renderOverflowChip(overflow: number): string {
   return `<span class="node-chip node-chip--overflow" title="${overflow} more"><span class="node-chip-label">${escapeHtml(formatOverflowLabel(overflow))}</span></span>`;
 }
 
-/** Mirrors `NodeCardHeader`: `[status] [kind] Title [type] … [model] [collapse]`. */
+/** Mirrors `NodeCardHeader`: `[status] [kind] [type] … [step] [badge] [model] [collapse]`. */
 function generateNodeHeaderHtml(node: GraphNodeData): string {
   const kind = describeNodeKind(node);
   const status = describeNodeStatus(node);
@@ -135,6 +135,14 @@ function generateNodeHeaderHtml(node: GraphNodeData): string {
     ? `<span class="node-card-type-tag">${escapeHtml(node.type)}</span>`
     : "";
 
+  const stepBadge =
+    node.step !== undefined
+      ? `<span class="node-card-step-badge" title="Execution Step ${node.step}">Step ${node.step}</span>`
+      : "";
+  const statusBadge = node.badge
+    ? `<span class="node-card-badge-chip variant-${node.badge.variant ?? "info"}">${escapeHtml(node.badge.text)}</span>`
+    : "";
+
   const modelTitle = node.harnessModel ? `${model} · harness: ${node.harnessModel}` : (model ?? "");
   const modelChip = model
     ? `<span class="node-card-model-chip${tier ? ` tier-${tier}` : ""}" title="${escapeHtml(modelTitle)}">${escapeHtml(model)}</span>`
@@ -147,9 +155,14 @@ function generateNodeHeaderHtml(node: GraphNodeData): string {
   )}</span>`;
 
   return `<header class="node-card-header">
-          <div class="node-card-header-main">${statusDot}${kindIcon}<h3 class="node-card-title" title="${escapeHtml(node.name)}">${escapeHtml(node.name)}</h3>${typeTag}</div>
-          <div class="node-card-header-aside">${modelChip}${collapseGlyph}</div>
+          <div class="node-card-header-main">${statusDot}${kindIcon}${typeTag}</div>
+          <div class="node-card-header-aside">${stepBadge}${statusBadge}${modelChip}${collapseGlyph}</div>
         </header>`;
+}
+
+function generateTitleHtml(node: GraphNodeData): string {
+  if (!node.name) return "";
+  return `<h3 class="node-card-title" title="${escapeHtml(node.name)}">${escapeHtml(node.name)}</h3>`;
 }
 
 function generateDescriptionHtml(node: GraphNodeData): string {
@@ -206,6 +219,7 @@ function generateMetricsHtml(node: GraphNodeData): string {
 function generateNodeHtml(node: PositionedNode): string {
   const kind = describeNodeKind(node);
   const bodyHtml = [
+    generateTitleHtml(node),
     generateDescriptionHtml(node),
     generateToolsHtml(node),
     generateFilesHtml(node),
@@ -749,6 +763,8 @@ function buildViewerCss(): string {
       border-bottom: 1px solid #232327;
       position: relative;
       z-index: 1;
+      min-height: 35px;
+      box-sizing: border-box;
     }
     .node-card-header-main {
       display: flex;
@@ -756,8 +772,16 @@ function buildViewerCss(): string {
       gap: 6px;
       min-width: 0;
       min-height: 18px;
+      flex: 0 1 auto;
     }
-    .node-card-header-aside { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .node-card-header-aside {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 1;
+      min-width: 0;
+      justify-content: flex-end;
+    }
 
     /* The dot paints itself and its glow from currentColor, so the inline colour drives both. */
     .node-card-status-dot {
@@ -779,15 +803,16 @@ function buildViewerCss(): string {
 
     .node-card-title {
       margin: 0;
-      font-size: 14px;
+      width: 100%;
+      font-size: 13px;
       font-weight: 600;
       line-height: 18px;
       color: #fafafa;
       letter-spacing: -0.01em;
-      white-space: nowrap;
-      overflow: visible;
-      text-overflow: clip;
-      flex-shrink: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      box-sizing: border-box;
     }
 
     .node-card-type-tag {
@@ -801,7 +826,63 @@ function buildViewerCss(): string {
       background-color: rgba(255, 255, 255, 0.06);
       color: #a1a1aa;
       font-family: var(--font-mono);
-      flex-shrink: 0;
+      flex-shrink: 1;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .node-card-step-badge {
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 14px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.18);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      font-family: var(--font-mono);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .node-card-badge-chip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e4e4e7;
+      flex-shrink: 1;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .node-card-badge-chip.variant-info {
+      background: rgba(6, 182, 212, 0.12);
+      border-color: rgba(6, 182, 212, 0.3);
+      color: #67e8f9;
+    }
+    .node-card-badge-chip.variant-warning {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+    .node-card-badge-chip.variant-success {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
     }
 
     .node-card-model-chip {
@@ -815,6 +896,11 @@ function buildViewerCss(): string {
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: #d4d4d8;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+      min-width: 0;
+      max-width: 100%;
     }
     /* Tier, not model name, drives weight — so a graph keeps ranking correctly when models are
        renamed or swapped for custom ones. Larger tier reads heavier. */

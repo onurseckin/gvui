@@ -768,4 +768,48 @@ mod tests {
             "doubling node_gap must widen the drawing: {w_base} -> {w_wide}"
         );
     }
+
+    #[test]
+    fn scenario_17_left_right_has_zero_badge_edge_penetrations() {
+        let nodes = vec![
+            node("PLAN", 170.0, 65.0),
+            node("EXEC1", 160.0, 65.0),
+            node("EXEC2", 160.0, 65.0),
+            node("AUDIT", 170.0, 65.0),
+        ];
+        let mut e0 = edge("e0", "PLAN", "EXEC1");
+        e0.label = Some("assign task 1".into());
+        e0.label_width = Some(120.0);
+        e0.label_height = Some(26.0);
+        let mut e1 = edge("e1", "PLAN", "EXEC2");
+        e1.label = Some("assign task 2".into());
+        e1.label_width = Some(120.0);
+        e1.label_height = Some(26.0);
+        let mut e2 = edge("e2", "EXEC1", "AUDIT");
+        e2.label = Some("submit code".into());
+        e2.label_width = Some(120.0);
+        e2.label_height = Some(26.0);
+        let mut e3 = edge("e3", "EXEC2", "AUDIT");
+        e3.label = Some("submit tests".into());
+        e3.label_width = Some(120.0);
+        e3.label_height = Some(26.0);
+        let mut e4 = edge("e4", "AUDIT", "PLAN");
+        e4.label = Some("↺ request revision".into());
+        e4.is_cycle = Some(true);
+        e4.label_width = Some(140.0);
+        e4.label_height = Some(26.0);
+
+        let edges = vec![e0, e1, e2, e3, e4];
+
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.direction = Direction::LeftRight;
+        let res = layout_layered(&nodes, &edges, &cfg);
+
+        assert_eq!(
+            res.validation.metrics.badge_edge_penetrations, 0,
+            "badge_edge_penetrations should be 0, diagnostics: {:?}",
+            res.validation.diagnostics
+        );
+        assert!(res.validation.is_valid);
+    }
 }

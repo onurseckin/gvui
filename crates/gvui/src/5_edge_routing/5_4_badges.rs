@@ -15,8 +15,12 @@
 
 use super::edge_style::simplify_polyline;
 use crate::config::{CustomLayoutConfig, LabelPlacement};
-use crate::geometry::{expand_rect, point_at_path_ratio, rects_overlap_strict};
-use crate::types::{BadgePlacement, GraphIr, Item, LabelBox, Layered, Point, Rect, RoutedPath};
+use crate::geometry::{
+    expand_rect, point_at_path_ratio, rects_overlap_strict, segment_intersects_rect_interior,
+};
+use crate::types::{
+    BadgePlacement, GraphIr, Item, LabelBox, Layered, Point, Rect, RoutedPath, Segment,
+};
 use std::collections::HashMap;
 
 /// Cell size of the uniform spatial hash used by the safety net, in pixels.
@@ -133,13 +137,53 @@ pub fn place_badges(
             continue;
         };
 
-        // Phase 6d widened the corridor by the label width, so the vertical run is exactly where
-        // the space was reserved. A flat edge that collapsed to a straight line has no vertical
-        // run; its midpoint is then the reserved position by the same argument.
-        let centre = longest_vertical_midpoint(&route.points)
+        let normal = midpoint_normal(&route.points);
+        let normal_off = measured.width.max(measured.height) / 2.0 + config.badge_clearance;
+        let clearance = config.badge_clearance.max(0.0);
+
+        let default_centre = longest_vertical_midpoint(&route.points)
             .unwrap_or_else(|| point_at_path_ratio(&route.points, 0.5));
-        let rect = centred_rect(centre, measured);
-        let anchor_point = nearest_point_on_polyline(&route.points, centre);
+
+        // Try primary midpoint first, then along-path and normal offset candidates.
+        let mut candidates: Vec<Point> = Vec::with_capacity(10);
+        candidates.push(default_centre);
+        candidates.push(Point {
+            x: default_centre.x + normal.x * normal_off,
+            y: default_centre.y + normal.y * normal_off,
+        });
+        candidates.push(Point {
+            x: default_centre.x - normal.x * normal_off,
+            y: default_centre.y - normal.y * normal_off,
+        });
+        for &ratio in &[0.35, 0.65, 0.2, 0.8] {
+            let p = point_at_path_ratio(&route.points, ratio);
+            candidates.push(p);
+            candidates.push(Point {
+                x: p.x + normal.x * normal_off,
+                y: p.y + normal.y * normal_off,
+            });
+            candidates.push(Point {
+                x: p.x - normal.x * normal_off,
+                y: p.y - normal.y * normal_off,
+            });
+        }
+
+        let mut best_rect: Option<Rect> = None;
+        let fallback_rect = centred_rect(default_centre, measured);
+
+        for pt in candidates {
+            let candidate = centred_rect(pt, measured);
+            let padded = expand_rect(&candidate, clearance);
+            if !obstacles.overlaps(&padded, config.epsilon)
+                && !rect_intersects_other_routes(&candidate, edge_id, routes, config.epsilon)
+            {
+                best_rect = Some(candidate);
+                break;
+            }
+        }
+
+        let rect = best_rect.unwrap_or(fallback_rect);
+        let anchor_point = nearest_point_on_polyline(&route.points, rect.center());
 
         obstacles.insert(rect);
         badges.push(BadgePlacement {
@@ -200,22 +244,32 @@ pub fn place_badges(
         };
 
         // One perpendicular direction, taken from the segment at the route's midpoint, then a few
-        // slides along the route. No rotation, no scoring, no backtracking.
+        // slides along the route.
         let normal = midpoint_normal(&route.points);
         let offset = measured.width.max(measured.height) / 2.0 + config.badge_clearance;
         let clearance = config.badge_clearance.max(0.0);
 
         let mut placed: Option<Rect> = None;
+        let mut candidates: Vec<Point> = Vec::with_capacity(15);
         for &ratio in SAFETY_NET_RATIOS.iter() {
             let on_path = point_at_path_ratio(&route.points, ratio);
-            let candidate = centred_rect(
-                Point {
-                    x: on_path.x + normal.x * offset,
-                    y: on_path.y + normal.y * offset,
-                },
-                measured,
-            );
-            if !obstacles.overlaps(&expand_rect(&candidate, clearance), config.epsilon) {
+            candidates.push(Point {
+                x: on_path.x + normal.x * offset,
+                y: on_path.y + normal.y * offset,
+            });
+            candidates.push(Point {
+                x: on_path.x - normal.x * offset,
+                y: on_path.y - normal.y * offset,
+            });
+            candidates.push(on_path);
+        }
+
+        for pt in candidates {
+            let candidate = centred_rect(pt, measured);
+            let padded = expand_rect(&candidate, clearance);
+            if !obstacles.overlaps(&padded, config.epsilon)
+                && !rect_intersects_other_routes(&candidate, edge_id, routes, config.epsilon)
+            {
                 placed = Some(candidate);
                 break;
             }
@@ -253,6 +307,33 @@ pub fn place_badges(
         badges,
         leader_count,
     }
+}
+
+fn rect_intersects_other_routes(
+    rect: &Rect,
+    current_edge_id: &str,
+    routes: &[RoutedPath],
+    epsilon: f64,
+) -> bool {
+    if !crate::geometry::rect_is_finite(rect) || rect.width <= 0.0 || rect.height <= 0.0 {
+        return false;
+    }
+    for r in routes {
+        if r.edge_id == current_edge_id {
+            continue;
+        }
+        for w in r.points.windows(2) {
+            if !crate::geometry::is_finite_point(&w[0]) || !crate::geometry::is_finite_point(&w[1])
+            {
+                continue;
+            }
+            let s = Segment { a: w[0], b: w[1] };
+            if segment_intersects_rect_interior(&s, rect, epsilon) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Badge rectangle for a chain that owns a `Label` item.

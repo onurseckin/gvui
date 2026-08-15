@@ -5,6 +5,11 @@ pub fn is_finite_point(p: &Point) -> bool {
     p.x.is_finite() && p.y.is_finite()
 }
 
+/// Checks if all dimensions of a Rect are finite.
+pub fn rect_is_finite(r: &Rect) -> bool {
+    r.x.is_finite() && r.y.is_finite() && r.width.is_finite() && r.height.is_finite()
+}
+
 /// Expands a rectangle in all four cardinal directions by the given margin amount.
 /// The resulting rectangle has origin (x - margin, y - margin) and dimensions
 /// (width + 2*margin, height + 2*margin).
@@ -142,24 +147,32 @@ pub fn collinear_overlap_length(s1: &Segment, s2: &Segment, epsilon: f64) -> f64
     0.0
 }
 
-/// Checks if an orthogonal segment penetrates into the interior of a rectangle.
+/// Checks if an orthogonal or diagonal segment penetrates into the interior of a rectangle.
 pub fn segment_intersects_rect_interior(s: &Segment, rect: &Rect, epsilon: f64) -> bool {
-    if point_in_rect_interior(&s.a, rect, epsilon) || point_in_rect_interior(&s.b, rect, epsilon) {
+    if !is_finite_point(&s.a) || !is_finite_point(&s.b) || !rect_is_finite(rect) {
+        return false;
+    }
+    let eps = if epsilon.is_finite() && epsilon > 0.0 {
+        epsilon
+    } else {
+        1e-9
+    };
+    if point_in_rect_interior(&s.a, rect, eps) || point_in_rect_interior(&s.b, rect, eps) {
         return true;
     }
 
-    let s_horiz = (s.a.y - s.b.y).abs() <= epsilon;
-    let s_vert = (s.a.x - s.b.x).abs() <= epsilon;
+    let s_horiz = (s.a.y - s.b.y).abs() <= eps;
+    let s_vert = (s.a.x - s.b.x).abs() <= eps;
 
     if s_horiz {
         let min_x = s.a.x.min(s.b.x);
         let max_x = s.a.x.max(s.b.x);
         let y = s.a.y;
 
-        if y > rect.y + epsilon && y < rect.y + rect.height - epsilon {
+        if y > rect.y + eps && y < rect.y + rect.height - eps {
             let overlap_min = min_x.max(rect.x);
             let overlap_max = max_x.min(rect.x + rect.width);
-            if overlap_max - overlap_min > epsilon {
+            if overlap_max - overlap_min > eps {
                 return true;
             }
         }
@@ -170,16 +183,120 @@ pub fn segment_intersects_rect_interior(s: &Segment, rect: &Rect, epsilon: f64) 
         let max_y = s.a.y.max(s.b.y);
         let x = s.a.x;
 
-        if x > rect.x + epsilon && x < rect.x + rect.width - epsilon {
+        if x > rect.x + eps && x < rect.x + rect.width - eps {
             let overlap_min = min_y.max(rect.y);
             let overlap_max = max_y.min(rect.y + rect.height);
-            if overlap_max - overlap_min > epsilon {
+            if overlap_max - overlap_min > eps {
                 return true;
             }
         }
     }
 
-    false
+    let inner_w = rect.width - 2.0 * eps;
+    let inner_h = rect.height - 2.0 * eps;
+    if inner_w <= eps || inner_h <= eps {
+        return false;
+    }
+    let rx0 = rect.x + eps;
+    let rx1 = rect.x + rect.width - eps;
+    let ry0 = rect.y + eps;
+    let ry1 = rect.y + rect.height - eps;
+
+    let dx = s.b.x - s.a.x;
+    let dy = s.b.y - s.a.y;
+    let len_sq = dx * dx + dy * dy;
+    if len_sq <= eps * eps {
+        return false;
+    }
+
+    let mut t0 = 0.0f64;
+    let mut t1 = 1.0f64;
+
+    let checks = [
+        (-dx, s.a.x - rx0),
+        (dx, rx1 - s.a.x),
+        (-dy, s.a.y - ry0),
+        (dy, ry1 - s.a.y),
+    ];
+
+    for (p, q) in checks {
+        if p.abs() < 1e-12 {
+            if q < 0.0 {
+                return false;
+            }
+        } else if p < 0.0 {
+            let r = q / p;
+            if r > t0 {
+                t0 = r;
+            }
+        } else {
+            let r = q / p;
+            if r < t1 {
+                t1 = r;
+            }
+        }
+        if t0 > t1 {
+            return false;
+        }
+    }
+
+    (t1 - t0) * len_sq.sqrt() > eps
+}
+
+/// Returns the length of segment `s` that lies within `rect`.
+pub fn segment_clipped_length(s: &Segment, rect: &Rect, epsilon: f64) -> f64 {
+    if !is_finite_point(&s.a) || !is_finite_point(&s.b) || !rect_is_finite(rect) {
+        return 0.0;
+    }
+    let eps = if epsilon.is_finite() && epsilon > 0.0 {
+        epsilon
+    } else {
+        1e-9
+    };
+    let rx0 = rect.x;
+    let rx1 = rect.x + rect.width;
+    let ry0 = rect.y;
+    let ry1 = rect.y + rect.height;
+
+    let dx = s.b.x - s.a.x;
+    let dy = s.b.y - s.a.y;
+    let len = (dx * dx + dy * dy).sqrt();
+    if len <= eps {
+        return 0.0;
+    }
+
+    let mut t0 = 0.0f64;
+    let mut t1 = 1.0f64;
+
+    let checks = [
+        (-dx, s.a.x - rx0),
+        (dx, rx1 - s.a.x),
+        (-dy, s.a.y - ry0),
+        (dy, ry1 - s.a.y),
+    ];
+
+    for (p, q) in checks {
+        if p.abs() < 1e-12 {
+            if q < -eps {
+                return 0.0;
+            }
+        } else if p < 0.0 {
+            let r = q / p;
+            if r > t0 {
+                t0 = r;
+            }
+        } else {
+            let r = q / p;
+            if r < t1 {
+                t1 = r;
+            }
+        }
+        if t0 > t1 {
+            return 0.0;
+        }
+    }
+
+    (t1 - t0).max(0.0) * len
 }
 
 /// Simplifies an orthogonal polyline by filtering adjacent duplicate points
@@ -813,5 +930,113 @@ mod tests {
                 assert!(!rects_overlap_area(&packed[i], &packed[j], 1e-6));
             }
         }
+    }
+
+    #[test]
+    fn segment_rect_interior_boundary_and_negative_cases() {
+        let r = Rect {
+            x: 10.0,
+            y: 10.0,
+            width: 80.0,
+            height: 40.0,
+        };
+        let eps = 1e-6;
+
+        // 1. Zero-length segments (degenerate point segments)
+        let zero_inside = Segment {
+            a: Point { x: 50.0, y: 30.0 },
+            b: Point { x: 50.0, y: 30.0 },
+        };
+        assert!(segment_intersects_rect_interior(&zero_inside, &r, eps));
+        assert_eq!(segment_clipped_length(&zero_inside, &r, eps), 0.0);
+
+        let zero_outside = Segment {
+            a: Point { x: 0.0, y: 0.0 },
+            b: Point { x: 0.0, y: 0.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&zero_outside, &r, eps));
+        assert_eq!(segment_clipped_length(&zero_outside, &r, eps), 0.0);
+
+        let zero_boundary = Segment {
+            a: Point { x: 10.0, y: 20.0 },
+            b: Point { x: 10.0, y: 20.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&zero_boundary, &r, eps));
+        assert_eq!(segment_clipped_length(&zero_boundary, &r, eps), 0.0);
+
+        // 2. Collinear boundary segments (tangent touch on edges, must NOT penetrate interior)
+        let top_edge = Segment {
+            a: Point { x: 10.0, y: 10.0 },
+            b: Point { x: 90.0, y: 10.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&top_edge, &r, eps));
+
+        let bottom_edge = Segment {
+            a: Point { x: 10.0, y: 50.0 },
+            b: Point { x: 90.0, y: 50.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&bottom_edge, &r, eps));
+
+        let left_edge = Segment {
+            a: Point { x: 10.0, y: 10.0 },
+            b: Point { x: 10.0, y: 50.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&left_edge, &r, eps));
+
+        let right_edge = Segment {
+            a: Point { x: 90.0, y: 10.0 },
+            b: Point { x: 90.0, y: 50.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&right_edge, &r, eps));
+
+        // 3. Diagonal spline/linear segments
+        // Diagonal completely crossing interior
+        let diag_crossing = Segment {
+            a: Point { x: 0.0, y: 0.0 },
+            b: Point { x: 100.0, y: 60.0 },
+        };
+        assert!(segment_intersects_rect_interior(&diag_crossing, &r, eps));
+        let clipped = segment_clipped_length(&diag_crossing, &r, eps);
+        assert!(clipped > 0.0);
+
+        // Diagonal grazing corner outside
+        let diag_grazing = Segment {
+            a: Point { x: 0.0, y: 10.0 },
+            b: Point { x: 10.0, y: 0.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&diag_grazing, &r, eps));
+        assert_eq!(segment_clipped_length(&diag_grazing, &r, eps), 0.0);
+
+        // Diagonal touching corner vertex (10, 10)
+        let diag_corner = Segment {
+            a: Point { x: 0.0, y: 20.0 },
+            b: Point { x: 20.0, y: 0.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&diag_corner, &r, eps));
+
+        // 4. Non-finite coordinates and negative epsilon
+        let nan_seg = Segment {
+            a: Point {
+                x: f64::NAN,
+                y: 20.0,
+            },
+            b: Point { x: 50.0, y: 20.0 },
+        };
+        assert!(!segment_intersects_rect_interior(&nan_seg, &r, eps));
+        assert_eq!(segment_clipped_length(&nan_seg, &r, eps), 0.0);
+
+        let inf_seg = Segment {
+            a: Point { x: 0.0, y: 20.0 },
+            b: Point {
+                x: f64::INFINITY,
+                y: 20.0,
+            },
+        };
+        assert!(!segment_intersects_rect_interior(&inf_seg, &r, eps));
+        assert_eq!(segment_clipped_length(&inf_seg, &r, eps), 0.0);
+
+        // Negative epsilon handled gracefully
+        assert!(segment_intersects_rect_interior(&diag_crossing, &r, -1.0));
+        assert!(segment_clipped_length(&diag_crossing, &r, -1.0) > 0.0);
     }
 }

@@ -18,17 +18,18 @@ use crate::badge_measurement::get_badge_display_text;
 use crate::config::{CustomLayoutConfig, EdgeStyle, LabelPlacement};
 use crate::geometry::{
     clip_ray_to_rect, expand_rect, nearest_point_on_polyline, point_at_path_ratio,
+    segment_clipped_length, segment_intersects_rect_interior,
 };
 use crate::step6_validation::constraints::SpatialHash;
 use crate::step6_validation::{check_constraints, compute_metrics};
 use crate::types::{
     get_now_ms, BadgePlacement, CustomLayoutResult, EdgeCrossing, GraphIr, LayoutDiagnostic,
     LayoutMetrics, LayoutValidationResult, NormalizedEdge, OptimizationStats, Point, PortRef,
-    PositionedNode, Rect, RoutedPath, Side,
+    PositionedNode, Rect, RoutedPath, Segment, Side,
 };
 
 /// Number of candidate positions tried per badge before falling back to a leader line.
-const BADGE_CANDIDATES: usize = 5;
+const BADGE_CANDIDATES: usize = 12;
 
 // =============================================================================================
 // The engine
@@ -441,6 +442,13 @@ fn right_side_port(
     }
 }
 
+#[derive(Clone, Copy)]
+struct RouteSeg {
+    route_index: usize,
+    a: Point,
+    b: Point,
+}
+
 /// Places every badge and reports how many needed a leader line.
 ///
 /// `routes` must be the vector [`build_routes`] returned for the same `ir`.
@@ -496,6 +504,44 @@ pub fn place_badges(
             .map(|l| (l.width, l.height)),
     ));
 
+    let mut segs: Vec<RouteSeg> = Vec::new();
+    for (r, route) in routes.iter().enumerate() {
+        for w in route.points.windows(2) {
+            if w[0].x.is_finite() && w[0].y.is_finite() && w[1].x.is_finite() && w[1].y.is_finite()
+            {
+                segs.push(RouteSeg {
+                    route_index: r,
+                    a: w[0],
+                    b: w[1],
+                });
+            }
+        }
+    }
+
+    let seg_bbox = |s: &RouteSeg| {
+        let min_x = s.a.x.min(s.b.x);
+        let min_y = s.a.y.min(s.b.y);
+        let w = (s.b.x - s.a.x).abs();
+        let h = (s.b.y - s.a.y).abs();
+        Rect {
+            x: if min_x.is_finite() { min_x } else { 0.0 },
+            y: if min_y.is_finite() { min_y } else { 0.0 },
+            width: if w.is_finite() { w } else { 0.0 },
+            height: if h.is_finite() { h } else { 0.0 },
+        }
+    };
+
+    let seg_index = {
+        let mut h = SpatialHash::new(mean_cell(segs.iter().map(|s| {
+            let r = seg_bbox(s);
+            (r.width, r.height)
+        })));
+        for (i, s) in segs.iter().enumerate() {
+            h.insert(i as u32, &seg_bbox(s));
+        }
+        h
+    };
+
     let mut placed: Vec<Rect> = Vec::with_capacity(candidates.len());
     let mut out: Vec<BadgePlacement> = Vec::with_capacity(candidates.len());
     let mut leaders = 0usize;
@@ -520,7 +566,17 @@ pub fn place_badges(
                 width: label.width,
                 height: label.height,
             };
-            let conflict = conflict_area(&rect, rects, &node_index, &placed, &badge_index, config);
+            let conflict = conflict_area(
+                &rect,
+                e,
+                rects,
+                &node_index,
+                &placed,
+                &badge_index,
+                &segs,
+                &seg_index,
+                config,
+            );
             if conflict <= config.epsilon {
                 best = Some(rect);
                 break;
@@ -610,23 +666,70 @@ fn badge_offsets(points: &[Point], label_height: f64, config: &CustomLayoutConfi
     v.push(at(0.5, -1.0, 0.0));
     v.push(at(0.35, 1.0, 0.0));
     v.push(at(0.65, -1.0, 0.0));
+    v.push(at(0.35, -1.0, 0.0));
+    v.push(at(0.65, 1.0, 0.0));
     v.push(at(0.5, 2.0, 0.0));
+    v.push(at(0.5, -2.0, 0.0));
+    v.push(at(0.2, 1.0, 0.0));
+    v.push(at(0.8, -1.0, 0.0));
+    v.push(at(0.2, -1.0, 0.0));
+    v.push(at(0.8, 1.0, 0.0));
     v
 }
 
-/// Total overlap area between `rect` and the node boxes plus the already-placed badges.
+/// Total overlap area between `rect` and the node boxes, already-placed badges,
+/// and crossing/adjacent edge routes.
 ///
-/// Returning an area rather than a boolean is what makes the "no candidate fits" branch pick the
-/// least bad position instead of the first one tried.
+/// ### Architectural Rationale:
+/// In geometric engines (e.g. Radial, Force, Topological DAG without dummy reservation chains),
+/// edge routing occurs after node placement without reserving dedicated rank-level badge boxes.
+/// As a consequence, adjacent or crossing edges often share narrow corridors or cross at acute
+/// angles. Placing a badge at a naive midpoint can occlude crossing edge strokes or be pierced by
+/// them, violating the readability invariant.
+///
+/// `conflict_area` indexes all line segments from non-owner edge routes in a spatial hash and
+/// evaluates interior penetration against the candidate badge rectangle (expanded by `clearance`).
+/// The penalty `len * clearance.max(12.0) + (rect.width * rect.height * 0.5)` combines:
+/// 1. A continuous penalty proportional to the length of the segment crossing the clearance box,
+///    so that glancing touches are preferred over central bisections.
+/// 2. A discrete base penalty proportional to badge area, ensuring that fully clear positions
+///    strictly dominate any position with partial edge penetration.
+///
+/// Returning a continuous scalar conflict area rather than a boolean enables the placement loop to
+/// pick the least-conflicting candidate when dense edge meshes preclude a 100% collision-free
+/// placement, and seamlessly emit a leader line connecting the displaced badge back to its route anchor.
 fn conflict_area(
     rect: &Rect,
+    current_edge_index: usize,
     node_rects: &[Rect],
     node_index: &SpatialHash,
     placed: &[Rect],
     badge_index: &SpatialHash,
+    segs: &[RouteSeg],
+    seg_index: &SpatialHash,
     config: &CustomLayoutConfig,
 ) -> f64 {
-    let padded = expand_rect(rect, config.badge_clearance.max(0.0));
+    if !rect.x.is_finite()
+        || !rect.y.is_finite()
+        || !rect.width.is_finite()
+        || !rect.height.is_finite()
+        || rect.width <= 0.0
+        || rect.height <= 0.0
+    {
+        return f64::INFINITY;
+    }
+
+    let clearance = if config.badge_clearance.is_finite() {
+        config.badge_clearance.max(0.0)
+    } else {
+        0.0
+    };
+    let eps = if config.epsilon.is_finite() && config.epsilon > 0.0 {
+        config.epsilon
+    } else {
+        1e-9
+    };
+    let padded = expand_rect(rect, clearance);
     let mut total = 0.0;
     for id in node_index.query(&padded) {
         if let Some(other) = node_rects.get(id as usize) {
@@ -636,6 +739,18 @@ fn conflict_area(
     for id in badge_index.query(&padded) {
         if let Some(other) = placed.get(id as usize) {
             total += overlap_area(rect, other);
+        }
+    }
+    for id in seg_index.query(&padded) {
+        if let Some(seg) = segs.get(id as usize) {
+            if seg.route_index == current_edge_index {
+                continue;
+            }
+            let s = Segment { a: seg.a, b: seg.b };
+            if segment_intersects_rect_interior(&s, &padded, eps) {
+                let len = segment_clipped_length(&s, &padded, eps);
+                total += len * clearance.max(12.0) + (rect.width * rect.height * 0.5);
+            }
         }
     }
     total
@@ -922,10 +1037,11 @@ pub fn finish_geometric_layout(
 /// Reporting these as errors would make the default grid drawing of any wide graph read as a broken
 /// layout. They stay in the diagnostic list — the information is real and useful — but as warnings,
 /// and they drive the status to `unresolved_soft_conflicts` rather than `invalid_hard_failure`.
-const SOFT_FOR_GEOMETRIC_ENGINES: [&str; 3] = [
+const SOFT_FOR_GEOMETRIC_ENGINES: [&str; 4] = [
     "EDGE_NODE_PENETRATION",
     "BADGE_NODE_OVERLAP",
     "BADGE_BADGE_OVERLAP",
+    "BADGE_EDGE_PENETRATION",
 ];
 
 /// Rewrites the severity of every [`SOFT_FOR_GEOMETRIC_ENGINES`] diagnostic to `"warning"`.
@@ -1010,6 +1126,16 @@ mod tests {
             min_len: None,
             label_width: None,
             label_height: None,
+        }
+    }
+
+    fn dummy_port(id: &str) -> PortRef {
+        PortRef {
+            node_id: id.to_string(),
+            side: Side::Bottom,
+            index: 0,
+            point: Point { x: 0.0, y: 0.0 },
+            stub: Point { x: 0.0, y: 0.0 },
         }
     }
 
@@ -1182,15 +1308,21 @@ mod tests {
         let mut diags = vec![
             LayoutDiagnostic::error("EDGE_NODE_PENETRATION", "line grazes a box".into(), vec![]),
             LayoutDiagnostic::error("BADGE_BADGE_OVERLAP", "badges touch".into(), vec![]),
+            LayoutDiagnostic::error(
+                "BADGE_EDGE_PENETRATION",
+                "line crosses badge".into(),
+                vec![],
+            ),
             LayoutDiagnostic::error("NODE_NODE_OVERLAP", "boxes overlap".into(), vec![]),
         ];
         let softened = soften_geometric_diagnostics(&mut diags);
-        assert_eq!(softened, 2);
+        assert_eq!(softened, 3);
         assert_eq!(diags[0].severity, "warning");
         assert_eq!(diags[1].severity, "warning");
+        assert_eq!(diags[2].severity, "warning");
         // A structural violation these engines *do* guarantee stays an error.
-        assert_eq!(diags[2].severity, "error");
-        assert_eq!(diags.len(), 3, "softening must not drop information");
+        assert_eq!(diags[3].severity, "error");
+        assert_eq!(diags.len(), 4, "softening must not drop information");
     }
 
     #[test]
@@ -1232,5 +1364,278 @@ mod tests {
         let adj = undirected_adjacency(&ir);
         assert_eq!(adj[0], vec![1]);
         assert_eq!(adj[1], vec![0]);
+    }
+
+    #[test]
+    fn place_badges_avoids_crossing_edge_stroke() {
+        let nodes = vec![
+            node("a", 20.0, 20.0),
+            node("b", 20.0, 20.0),
+            node("c", 20.0, 20.0),
+            node("d", 20.0, 20.0),
+        ];
+        let mut e0 = edge("e0", "a", "b");
+        e0.label = Some("lbl".to_string());
+        e0.label_width = Some(40.0);
+        e0.label_height = Some(20.0);
+        let e1 = edge("e1", "c", "d");
+        let edges = vec![e0, e1];
+
+        let cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        let ir = build_graph_ir(&nodes, &edges, &cfg);
+        let rects = vec![
+            Rect {
+                x: 40.0,
+                y: 0.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 40.0,
+                y: 180.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 0.0,
+                y: 90.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 180.0,
+                y: 90.0,
+                width: 20.0,
+                height: 20.0,
+            },
+        ];
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 50.0, y: 20.0 }, Point { x: 50.0, y: 180.0 }],
+                source_port: dummy_port("a"),
+                target_port: dummy_port("b"),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 20.0, y: 100.0 }, Point { x: 180.0, y: 100.0 }],
+                source_port: dummy_port("c"),
+                target_port: dummy_port("d"),
+            },
+        ];
+
+        let (badges, leaders) = place_badges(&ir, &edges, &rects, &routes, &cfg);
+        assert_eq!(badges.len(), 1);
+        assert_eq!(
+            leaders, 0,
+            "badge should find a clear offset without needing a leader"
+        );
+        // Verify badge does not collide with e1 (y=100 from x=20 to 180)
+        let b = &badges[0];
+        let s = Segment {
+            a: Point { x: 20.0, y: 100.0 },
+            b: Point { x: 180.0, y: 100.0 },
+        };
+        assert!(
+            !segment_intersects_rect_interior(&s, &b.rect, cfg.epsilon),
+            "placed badge {:?} must not be penetrated by crossing edge e1",
+            b.rect
+        );
+    }
+
+    #[test]
+    fn place_badges_handles_diagonal_routes_and_negative_clearance() {
+        let nodes = vec![
+            node("a", 20.0, 20.0),
+            node("b", 20.0, 20.0),
+            node("c", 20.0, 20.0),
+            node("d", 20.0, 20.0),
+        ];
+        let mut e0 = edge("e0", "a", "b");
+        e0.label = Some("lbl".to_string());
+        e0.label_width = Some(30.0);
+        e0.label_height = Some(15.0);
+        let e1 = edge("e1", "c", "d");
+        let edges = vec![e0, e1];
+
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.badge_clearance = -5.0; // Negative clearance handled safely
+        let ir = build_graph_ir(&nodes, &edges, &cfg);
+        let rects = vec![
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 200.0,
+                y: 200.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 0.0,
+                y: 200.0,
+                width: 20.0,
+                height: 20.0,
+            },
+            Rect {
+                x: 200.0,
+                y: 0.0,
+                width: 20.0,
+                height: 20.0,
+            },
+        ];
+        // e0 diagonal (10, 10) -> (210, 210)
+        // e1 diagonal crossing (10, 210) -> (210, 10), intersecting at (110, 110)
+        // e1 also has a zero-length segment [Point(10, 210), Point(10, 210)]
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 10.0, y: 10.0 }, Point { x: 210.0, y: 210.0 }],
+                source_port: dummy_port("a"),
+                target_port: dummy_port("b"),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![
+                    Point { x: 10.0, y: 210.0 },
+                    Point { x: 10.0, y: 210.0 }, // zero-length segment
+                    Point { x: 210.0, y: 10.0 },
+                ],
+                source_port: dummy_port("c"),
+                target_port: dummy_port("d"),
+            },
+        ];
+
+        let (badges, leaders) = place_badges(&ir, &edges, &rects, &routes, &cfg);
+        assert_eq!(badges.len(), 1);
+        assert_eq!(leaders, 0);
+        let b = &badges[0];
+        let s = Segment {
+            a: Point { x: 10.0, y: 210.0 },
+            b: Point { x: 210.0, y: 10.0 },
+        };
+        assert!(
+            !segment_intersects_rect_interior(&s, &b.rect, cfg.epsilon),
+            "badge {:?} must avoid crossing diagonal edge",
+            b.rect
+        );
+    }
+
+    #[test]
+    fn place_badges_dense_mesh_leader_fallback() {
+        // Construct a scenario where an edge is completely enveloped by crossing edge routes,
+        // so that all 12 candidate badge offsets have non-zero conflict area.
+        let nodes = vec![
+            node("src", 50.0, 50.0),
+            node("dst", 50.0, 50.0),
+            node("n1", 50.0, 50.0),
+            node("n2", 50.0, 50.0),
+            node("n3", 50.0, 50.0),
+            node("n4", 50.0, 50.0),
+        ];
+
+        let mut e0 = edge("e0", "src", "dst");
+        e0.label = Some("BLOCKED".to_string());
+        e0.label_width = Some(60.0);
+        e0.label_height = Some(30.0);
+
+        let e1 = edge("e1", "n1", "n2");
+        let e2 = edge("e2", "n3", "n4");
+        let edges = vec![e0, e1, e2];
+
+        let cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        let ir = build_graph_ir(&nodes, &edges, &cfg);
+        let rects = vec![
+            Rect {
+                x: 0.0,
+                y: 200.0,
+                width: 50.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 400.0,
+                y: 200.0,
+                width: 50.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 200.0,
+                y: 0.0,
+                width: 50.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 200.0,
+                y: 400.0,
+                width: 50.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 50.0,
+                height: 50.0,
+            },
+            Rect {
+                x: 400.0,
+                y: 400.0,
+                width: 50.0,
+                height: 50.0,
+            },
+        ];
+
+        // e0 runs horizontally from (50, 225) to (400, 225)
+        // Crossing edges create an unavoidable mesh covering the corridor:
+        // e1 runs vertically through the middle from (225, 50) to (225, 400)
+        // e2 runs horizontally very close to e0 at y=210 and y=240
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 50.0, y: 225.0 }, Point { x: 400.0, y: 225.0 }],
+                source_port: dummy_port("src"),
+                target_port: dummy_port("dst"),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![
+                    Point { x: 150.0, y: 50.0 },
+                    Point { x: 150.0, y: 400.0 },
+                    Point { x: 225.0, y: 50.0 },
+                    Point { x: 225.0, y: 400.0 },
+                    Point { x: 300.0, y: 50.0 },
+                    Point { x: 300.0, y: 400.0 },
+                ],
+                source_port: dummy_port("n1"),
+                target_port: dummy_port("n2"),
+            },
+            RoutedPath {
+                edge_id: "e2".to_string(),
+                points: vec![
+                    Point { x: 50.0, y: 205.0 },
+                    Point { x: 400.0, y: 205.0 },
+                    Point { x: 50.0, y: 245.0 },
+                    Point { x: 400.0, y: 245.0 },
+                ],
+                source_port: dummy_port("n3"),
+                target_port: dummy_port("n4"),
+            },
+        ];
+
+        let (badges, leaders) = place_badges(&ir, &edges, &rects, &routes, &cfg);
+        assert_eq!(badges.len(), 1);
+        assert_eq!(leaders, 1, "dense mesh should trigger leader-line fallback");
+
+        let b = &badges[0];
+        assert!(
+            b.leader_points.is_some(),
+            "displaced badge must have leader_points"
+        );
+        let leader = b.leader_points.as_ref().unwrap();
+        assert_eq!(leader.len(), 2);
+        assert_eq!(leader[0], b.anchor_point);
+        assert_eq!(leader[1], b.rect.center());
     }
 }

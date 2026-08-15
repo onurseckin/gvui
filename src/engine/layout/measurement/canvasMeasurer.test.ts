@@ -237,6 +237,185 @@ describe("measureNodes", () => {
     expect(detailedSize.width).toBeGreaterThanOrEqual(bareSize.width);
   });
 
+  it("measures dedicated title row and wraps long titles vertically", () => {
+    const measurer = createCanvasMeasurer();
+    const shortTitle: GraphNodeData = {
+      id: "a",
+      name: "Short Task",
+    };
+    const longTitle: GraphNodeData = {
+      id: "b",
+      name: "Long Extended Task Name That Exceeds A Single Line And Wraps Naturally Across Multiple Rows",
+    };
+
+    const [shortSize, longSizeNarrow] = measurer.measureNodes([shortTitle, longTitle], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+
+    const [longSizeWide] = measurer.measureNodes([longTitle], {
+      minNodeWidth: 500,
+      maxNodeWidth: 500,
+    });
+
+    // Dedicated title row wraps on narrow card and increases height
+    expect(longSizeNarrow.height).toBeGreaterThan(shortSize.height);
+    // At wide width, fewer lines are needed so height is less than or equal to narrow
+    expect(longSizeWide.height).toBeLessThanOrEqual(longSizeNarrow.height);
+  });
+
+  it("measures cards across standard widths: 200px, 320px, and 500px", () => {
+    const measurer = createCanvasMeasurer();
+    const complexNode: GraphNodeData = {
+      id: "n-complex",
+      name: "Deep Architecture Validation And Analysis Runner",
+      type: "validator",
+      step: 3,
+      badge: { text: "BLOCKING", variant: "warning" },
+      model: "claude-3-5-sonnet",
+      description:
+        "Performs full adversarial round checking across all gates before passing to critic.",
+      tools: [{ name: "cargo" }, { name: "bun" }],
+    };
+
+    const [size200] = measurer.measureNodes([complexNode], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+    const [size320] = measurer.measureNodes([complexNode], {
+      minNodeWidth: 320,
+      maxNodeWidth: 320,
+    });
+    const [size500] = measurer.measureNodes([complexNode], {
+      minNodeWidth: 500,
+      maxNodeWidth: 500,
+    });
+
+    expect(size200.width).toBe(200);
+    expect(size320.width).toBe(320);
+    expect(size500.width).toBe(500);
+
+    // Height should be strictly non-increasing as width expands because text wraps into fewer lines
+    expect(size200.height).toBeGreaterThanOrEqual(size320.height);
+    expect(size320.height).toBeGreaterThanOrEqual(size500.height);
+  });
+
+  it("measures multiline title with explicit newlines allocating height per line", () => {
+    const measurer = createCanvasMeasurer();
+    const singleLine: GraphNodeData = {
+      id: "single",
+      name: "Single Line Title",
+    };
+    const multiline: GraphNodeData = {
+      id: "multi",
+      name: "Line 1: Ingest\nLine 2: Validate\nLine 3: Execute",
+    };
+
+    const [singleSize, multiSize] = measurer.measureNodes([singleLine, multiline], {
+      minNodeWidth: 320,
+      maxNodeWidth: 320,
+    });
+
+    expect(multiSize.height).toBeGreaterThan(singleSize.height);
+  });
+
+  it("measures long unbroken tokens breaking characters cleanly", () => {
+    const measurer = createCanvasMeasurer();
+    const unbrokenToken: GraphNodeData = {
+      id: "unbroken",
+      name: "https://git.internal.company.com/repositories/gvui/commits/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1098",
+    };
+
+    const [size] = measurer.measureNodes([unbrokenToken], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+
+    expect(size.width).toBe(200);
+    expect(size.height).toBeGreaterThan(0);
+    expect(Number.isFinite(size.height)).toBe(true);
+  });
+
+  it("measures Unicode titles with emojis, CJK, and RTL scripts", () => {
+    const measurer = createCanvasMeasurer();
+    const emojiNode: GraphNodeData = { id: "emoji", name: "🚀 Deploy Worker 🤖" };
+    const cjkNode: GraphNodeData = {
+      id: "cjk",
+      name: "日本語のタスク・中文任务・한국어 분석 작업",
+    };
+    const rtlNode: GraphNodeData = { id: "rtl", name: "مهمة المنسق الرئيسي للنظام" };
+
+    const sizes = measurer.measureNodes([emojiNode, cjkNode, rtlNode], {
+      minNodeWidth: 250,
+      maxNodeWidth: 250,
+    });
+
+    for (const size of sizes) {
+      expect(Number.isFinite(size.width)).toBe(true);
+      expect(Number.isFinite(size.height)).toBe(true);
+      expect(size.width).toBe(250);
+      expect(size.height).toBeGreaterThan(0);
+    }
+  });
+
+  it("proves exact arithmetic for multi-line wrapped title height expansion", () => {
+    const measurer = createCanvasMeasurer();
+    // In DEFAULT_NODE_TEMPLATE:
+    // headerHeight = 35, padding = 10, rowGap = 8, title lineHeight = 18.
+    // Bare card with N-line title has height = 35 + 10 + N * 18 + 8.
+    const oneLineNode: GraphNodeData = { id: "n1", name: "Short" };
+    const twoLineNode: GraphNodeData = { id: "n2", name: "Line 1\nLine 2" };
+    const threeLineNode: GraphNodeData = { id: "n3", name: "Line 1\nLine 2\nLine 3" };
+    const fourLineNode: GraphNodeData = { id: "n4", name: "Line 1\nLine 2\nLine 3\nLine 4" };
+
+    const [s1, s2, s3, s4] = measurer.measureNodes(
+      [oneLineNode, twoLineNode, threeLineNode, fourLineNode],
+      { minNodeWidth: 320, maxNodeWidth: 320 },
+    );
+
+    // 35 + 10 + 1 * 18 + 8 = 71
+    expect(s1.height).toBe(71);
+    // 35 + 10 + 2 * 18 + 8 = 89
+    expect(s2.height).toBe(89);
+    // 35 + 10 + 3 * 18 + 8 = 107
+    expect(s3.height).toBe(107);
+    // 35 + 10 + 4 * 18 + 8 = 125
+    expect(s4.height).toBe(125);
+
+    expect(s2.height - s1.height).toBe(18);
+    expect(s3.height - s2.height).toBe(18);
+    expect(s4.height - s3.height).toBe(18);
+  });
+
+  it("handles variable font scaling and prevents height under-estimation", () => {
+    // Standard scale measurer
+    const standardMeasurer = createCanvasMeasurer();
+
+    // 1.5x larger font scale measurer
+    const largeScaleMeasurer = createCanvasMeasurer({
+      measureTextWidth: (text, spec) => text.length * spec.sizePx * 0.9,
+    });
+
+    const longTitleNode: GraphNodeData = {
+      id: "scaled-node",
+      name: "Long Adaptive Name For Dynamic Layout Measurement Across Font Stacks",
+    };
+
+    const [standardSize] = standardMeasurer.measureNodes([longTitleNode], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+
+    const [scaledSize] = largeScaleMeasurer.measureNodes([longTitleNode], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+
+    // Scaled font needs more or equal lines, so height must not under-report
+    expect(scaledSize.height).toBeGreaterThanOrEqual(standardSize.height);
+    expect(Number.isFinite(scaledSize.height)).toBe(true);
+  });
+
   it("returns finite positive sizes with no canvas available", () => {
     const node: GraphNodeData = {
       id: "n1",

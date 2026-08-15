@@ -185,6 +185,7 @@ fn run(
         ("edgeNodePenetrations", m.edge_node_penetrations),
         ("badgeNodeOverlaps", m.badge_node_overlaps),
         ("badgeBadgeOverlaps", m.badge_badge_overlaps),
+        ("badgeEdgePenetrations", m.badge_edge_penetrations),
         ("unresolvedRouteCount", m.unresolved_route_count),
         ("unresolvedBadgeCount", m.unresolved_badge_count),
         ("collinearEdgeOverlaps", m.collinear_edge_overlaps),

@@ -8,12 +8,15 @@ import { NodeCardFiles } from "./NodeCardFiles";
 import { NodeCardHeader } from "./NodeCardHeader";
 import { NodeCardMetrics } from "./NodeCardMetrics";
 import { NodeCardMiniChips } from "./NodeCardMiniChips";
+import { NodeCardTitle } from "./NodeCardTitle";
 import { NodeCardTools } from "./NodeCardTools";
 import { describeNodeKind, resolveNodeStatus } from "./nodeKinds";
 
 export type { NodeCardProps, NodeStatusVariant } from "./NodeCard.types";
 export { NodeCardHeader } from "./NodeCardHeader";
 export type { NodeCardHeaderProps } from "./NodeCardHeader";
+export { NodeCardTitle } from "./NodeCardTitle";
+export type { NodeCardTitleProps } from "./NodeCardTitle";
 export { NodeCardDescription } from "./NodeCardDescription";
 export type { NodeCardDescriptionProps } from "./NodeCardDescription";
 export { NodeCardTools } from "./NodeCardTools";
@@ -88,6 +91,7 @@ export const NodeCard: FC<NodeCardProps> = memo(
         <NodeCardHeader node={node} isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />
         {!isCollapsed ? (
           <div className="node-card-body">
+            <NodeCardTitle node={node} />
             <NodeCardDescription node={node} />
             <NodeCardMiniChips node={node} />
             <NodeCardTools node={node} />

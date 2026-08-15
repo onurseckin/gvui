@@ -720,6 +720,7 @@ pub struct LayoutMetrics {
     pub edge_node_penetrations: usize,
     pub badge_node_overlaps: usize,
     pub badge_badge_overlaps: usize,
+    pub badge_edge_penetrations: usize,
     pub unresolved_route_count: usize,
     pub unresolved_badge_count: usize,
     /// Pairs of edges drawing an axis-aligned run along the same line, so that one hides the other.
@@ -838,5 +839,28 @@ pub fn get_now_ms() -> f64 {
         static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
         let start = START.get_or_init(std::time::Instant::now);
         start.elapsed().as_secs_f64() * 1000.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn layout_metrics_serde_camel_case_parity() {
+        let metrics = LayoutMetrics {
+            badge_edge_penetrations: 42,
+            ..LayoutMetrics::default()
+        };
+        let json = serde_json::to_string(&metrics).expect("metrics serialization");
+        assert!(
+            json.contains("\"badgeEdgePenetrations\":42"),
+            "serialized json must contain camelCase badgeEdgePenetrations, got: {}",
+            json
+        );
+        let roundtrip: LayoutMetrics =
+            serde_json::from_str(&json).expect("metrics deserialization");
+        assert_eq!(roundtrip.badge_edge_penetrations, 42);
+        assert_eq!(roundtrip, metrics);
     }
 }

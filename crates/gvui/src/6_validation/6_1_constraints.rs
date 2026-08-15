@@ -368,6 +368,52 @@ pub fn scan_badge_badge_overlaps(
     }
 }
 
+/// Reports every `(badge index, route index, segment index)` where a segment of a different edge
+/// passes through a badge's interior.
+pub fn scan_badge_edge_penetrations(
+    badges: &[BadgePlacement],
+    routes: &[RoutedPath],
+    epsilon: f64,
+    mut on_hit: impl FnMut(usize, usize, usize),
+) {
+    if badges.is_empty() || routes.is_empty() {
+        return;
+    }
+    let hash = build_badge_index(badges);
+    for (ri, route) in routes.iter().enumerate() {
+        if route.points.len() < 2 {
+            continue;
+        }
+        for k in 0..route.points.len() - 1 {
+            let seg = Segment {
+                a: route.points[k],
+                b: route.points[k + 1],
+            };
+            if !is_finite_point(&seg.a) || !is_finite_point(&seg.b) {
+                continue;
+            }
+            let bb = segment_bbox(&seg, epsilon);
+            for cand in hash.query(&bb) {
+                let bi = cand as usize;
+                let Some(badge) = badges.get(bi) else {
+                    continue;
+                };
+                if !rect_is_finite(&badge.rect) {
+                    continue;
+                }
+                // An edge is allowed to carry its own badge (e.g. OnEdge label placement);
+                // only different/unrelated edges penetrating the badge are violations.
+                if route.edge_id == badge.edge_id {
+                    continue;
+                }
+                if segment_intersects_rect_interior(&seg, &badge.rect, epsilon) {
+                    on_hit(bi, ri, k);
+                }
+            }
+        }
+    }
+}
+
 /// Reports every unordered pair of *different* routes that draw an axis-aligned run along the same
 /// line with overlapping extent, as `(route i, route j)` with `i < j`.
 ///
@@ -625,6 +671,24 @@ pub fn check_constraints(
                         a.edge_id, b.edge_id
                     ),
                     vec![a.edge_id.clone(), b.edge_id.clone()],
+                ));
+            }
+        }
+        reported += 1;
+    });
+
+    // ---- BADGE_EDGE_PENETRATION ---------------------------------------------------------------
+    reported = 0;
+    scan_badge_edge_penetrations(badges, routes, eps, |bi, ri, seg| {
+        if reported < MAX_REPORTS_PER_CODE {
+            if let (Some(b), Some(r)) = (badges.get(bi), routes.get(ri)) {
+                out.push(LayoutDiagnostic::error(
+                    "BADGE_EDGE_PENETRATION",
+                    format!(
+                        "Badge for edge '{}' is penetrated by segment {} of edge '{}'",
+                        b.edge_id, seg, r.edge_id
+                    ),
+                    vec![b.edge_id.clone(), r.edge_id.clone()],
                 ));
             }
         }
@@ -973,6 +1037,32 @@ mod tests {
     }
 
     #[test]
+    fn finds_badge_edge_penetrations() {
+        let (nodes, mut routes) = clean_layout();
+        // routes has e0: (50, 50) -> (50, 200).
+        // Add unrelated route e1: (0, 100) -> (100, 100) crossing perpendicularly.
+        routes.push(RoutedPath {
+            edge_id: "e1".to_string(),
+            points: vec![Point { x: 0.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+            source_port: port("a", Side::Left, Point { x: 0.0, y: 100.0 }),
+            target_port: port("b", Side::Right, Point { x: 100.0, y: 100.0 }),
+        });
+        // Place badge for e0 at (30, 80, 40, 40) which covers x in [30, 70], y in [80, 120].
+        // e0 passes through the badge (allowed, since it is e0's own badge).
+        // e1 passes horizontally through the badge (y = 100, x in [0, 100]) -> violation!
+        let badges = vec![badge("e0", 30.0, 80.0, 40.0, 40.0)];
+        let d = check_constraints(&nodes, &routes, &badges, &[], &cfg());
+        let pen: Vec<&LayoutDiagnostic> = d
+            .iter()
+            .filter(|x| x.code == "BADGE_EDGE_PENETRATION")
+            .collect();
+        assert_eq!(
+            pen[0].ids.as_deref(),
+            Some(&["e0".to_string(), "e1".to_string()][..])
+        );
+    }
+
+    #[test]
     fn finds_non_orthogonal_segment_and_skips_it_for_curved_styles() {
         let (nodes, mut routes) = clean_layout();
         routes[0].points = vec![
@@ -1069,5 +1159,56 @@ mod tests {
             let b: Vec<&String> = again.iter().map(|d| &d.message).collect();
             assert_eq!(a, b);
         }
+    }
+
+    #[test]
+    fn badge_edge_penetration_boundary_and_negative_cases() {
+        let (nodes, _) = clean_layout();
+        let b = badge("e_owner", 100.0, 100.0, 60.0, 30.0);
+        let badges = vec![b];
+
+        // 1. Collinear edge touching badge boundary (tangent) -> NO violation
+        let routes_tangent = vec![RoutedPath {
+            edge_id: "e_other1".to_string(),
+            points: vec![Point { x: 50.0, y: 100.0 }, Point { x: 200.0, y: 100.0 }],
+            source_port: port("a", Side::Left, Point { x: 50.0, y: 100.0 }),
+            target_port: port("b", Side::Right, Point { x: 200.0, y: 100.0 }),
+        }];
+        let d1 = check_constraints(&nodes, &routes_tangent, &badges, &[], &cfg());
+        assert!(!d1.iter().any(|x| x.code == "BADGE_EDGE_PENETRATION"));
+
+        // 2. Zero-length segment outside or on boundary -> NO violation
+        let routes_zero = vec![RoutedPath {
+            edge_id: "e_other2".to_string(),
+            points: vec![Point { x: 100.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+            source_port: port("a", Side::Left, Point { x: 100.0, y: 100.0 }),
+            target_port: port("b", Side::Right, Point { x: 100.0, y: 100.0 }),
+        }];
+        let d2 = check_constraints(&nodes, &routes_zero, &badges, &[], &cfg());
+        assert!(!d2.iter().any(|x| x.code == "BADGE_EDGE_PENETRATION"));
+
+        // 3. Diagonal spline segment piercing interior -> VIOLATION
+        let routes_diag = vec![RoutedPath {
+            edge_id: "e_other3".to_string(),
+            points: vec![Point { x: 80.0, y: 90.0 }, Point { x: 180.0, y: 150.0 }],
+            source_port: port("a", Side::Left, Point { x: 80.0, y: 90.0 }),
+            target_port: port("b", Side::Right, Point { x: 180.0, y: 150.0 }),
+        }];
+        let d3 = check_constraints(&nodes, &routes_diag, &badges, &[], &cfg());
+        let pen3: Vec<&LayoutDiagnostic> = d3
+            .iter()
+            .filter(|x| x.code == "BADGE_EDGE_PENETRATION")
+            .collect();
+        assert_eq!(pen3.len(), 1);
+
+        // 4. Owner's own edge passing through -> NO violation
+        let routes_own = vec![RoutedPath {
+            edge_id: "e_owner".to_string(),
+            points: vec![Point { x: 80.0, y: 115.0 }, Point { x: 180.0, y: 115.0 }],
+            source_port: port("a", Side::Left, Point { x: 80.0, y: 115.0 }),
+            target_port: port("b", Side::Right, Point { x: 180.0, y: 115.0 }),
+        }];
+        let d4 = check_constraints(&nodes, &routes_own, &badges, &[], &cfg());
+        assert!(!d4.iter().any(|x| x.code == "BADGE_EDGE_PENETRATION"));
     }
 }
