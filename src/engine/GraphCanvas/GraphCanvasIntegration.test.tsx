@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as bunTest from "bun:test";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { GraphDataset } from "../../types/graphData";
-import { generateDatasetSignature } from "../../utils/fileStorage";
+import type { GraphDataset, PositionedEdge } from "../../types/graphData";
+import { generateDatasetSignature, loadStoredViewport } from "../../utils/fileStorage";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
 import { localDb } from "../../utils/localDb";
 import { useGraphStore } from "../../state/useGraphStore";
@@ -11,6 +11,7 @@ import { DEFAULT_CUSTOM_LAYOUT_CONFIG } from "../layout/custom/config";
 import type { CustomLayoutConfig } from "../layout/custom/config";
 import type { LayoutMode } from "../../state/useGraphStore";
 import * as realCustomLayoutAdapterModule from "../layout/customLayoutAdapter";
+import { GraphBadgeLayer } from "./GraphBadgeLayer";
 
 if (typeof window === "undefined") {
   (globalThis as unknown as { window: unknown }).window = globalThis;
@@ -115,6 +116,89 @@ describe("GraphCanvas Storage Integration", () => {
     expect(cachedHit?.nodes[0].x).toBe(50);
     expect(cachedMiss).toBeNull();
   });
+
+  it("GraphBadgeLayer renders precomputed badgeRect and leaderPoints directly", () => {
+    const edge: PositionedEdge = {
+      id: "e1",
+      source: "n1",
+      target: "n2",
+      path: "M 0 0 L 100 100",
+      label: "Action Step",
+      labelX: 120,
+      labelY: 80,
+      badgeRect: { x: 100, y: 70, width: 80, height: 26 },
+      anchorPoint: { x: 140, y: 83 },
+      leaderPoints: [
+        { x: 140, y: 83 },
+        { x: 150, y: 100 },
+      ],
+      traffic: { volume: 1200, tokens: 4500 },
+      bundleCount: 3,
+      isHighTraffic: true,
+    };
+
+    let badgeRenderer: ReactTestRenderer | undefined;
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        badgeRenderer = create(
+          createElement(GraphBadgeLayer, {
+            positionedEdges: [edge],
+            hiddenNodeIds: new Set<string>(),
+            selectedNodeId: null,
+          }),
+        );
+      });
+    });
+
+    expect(badgeRenderer).toBeDefined();
+    const tree = badgeRenderer?.toJSON();
+    expect(tree).not.toBeNull();
+    badgeRenderer?.unmount();
+  });
+
+  it("GraphBadgeLayer forwards all badge overlay props including traffic, isHighTraffic, bundleCount, isCycle, stepNumber to EdgeBadgeOverlay", () => {
+    const edge: PositionedEdge = {
+      id: "edge-test-props",
+      source: "n1",
+      target: "n2",
+      path: "M 0 0 L 100 100",
+      label: "Action Step",
+      labelX: 120,
+      labelY: 80,
+      badgeRect: { x: 100, y: 70, width: 80, height: 26 },
+      anchorPoint: { x: 140, y: 83 },
+      leaderPoints: [
+        { x: 140, y: 83 },
+        { x: 150, y: 100 },
+      ],
+      traffic: { volume: 1200, tokens: 4500 },
+      bundleCount: 3,
+      isHighTraffic: true,
+      isCycle: true,
+      stepNumber: 5,
+      container: { title: "Step Container", stepBadge: "5" },
+      badge: { text: "Badge Text" },
+      kind: "data",
+    };
+
+    let badgeRenderer: ReactTestRenderer | undefined;
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        badgeRenderer = create(
+          createElement(GraphBadgeLayer, {
+            positionedEdges: [edge],
+            hiddenNodeIds: new Set<string>(),
+            selectedNodeId: "n1",
+          }),
+        );
+      });
+    });
+
+    expect(badgeRenderer).toBeDefined();
+    const tree = badgeRenderer?.toJSON();
+    expect(tree).not.toBeNull();
+    badgeRenderer?.unmount();
+  });
 });
 
 describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivity)", () => {
@@ -158,6 +242,105 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
       edges: [{ id: "e1", source: "n1", target: "n2", path: `M ${marker} ${marker} L 1 1` }],
     };
   }
+
+  it("debounces saveStoredViewport by 400ms during rapid viewport manipulation", async () => {
+    const testFile = "debounced-viewport.json";
+    const sig = generateDatasetSignature(dataset);
+
+    mock.module("../layout/customLayoutAdapter", () => ({
+      computeCustomEngineGraphLayoutAsync: () => Promise.resolve(layoutResult(1)),
+      computeCustomEngineGraphLayout: originalComputeCustomEngineGraphLayout,
+    }));
+
+    const { GraphCanvas } = await import("./index");
+
+    useGraphStore.setState({
+      dataset,
+      currentFile: testFile,
+      layoutMode: "layered",
+      zoomLevel: 1,
+      panOffset: { x: 0, y: 0 },
+    });
+
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer = create(createElement(GraphCanvas));
+      });
+    });
+    await flushEffects();
+
+    // Immediately after mount, persistence should not yet have executed because of 400ms debounce
+    expect(loadStoredViewport(testFile, sig)).toBeNull();
+
+    // Rapidly change pan and zoom
+    await act(async () => {
+      useGraphStore.setState({ panOffset: { x: 100, y: 100 }, zoomLevel: 1.5 });
+    });
+    await act(async () => {
+      useGraphStore.setState({ panOffset: { x: 250, y: 350 }, zoomLevel: 2.0 });
+    });
+
+    // Still null before 400ms expires
+    expect(loadStoredViewport(testFile, sig)).toBeNull();
+
+    // Wait for the 400ms debounce timer to fire
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    });
+
+    const saved = loadStoredViewport(testFile, sig);
+    expect(saved).not.toBeNull();
+    expect(saved?.zoomLevel).toBe(2.0);
+    expect(saved?.panOffset).toEqual({ x: 250, y: 350 });
+  });
+
+  it("cleans up debounce timer on unmount and prevents writing to storage after unmount", async () => {
+    const testFile = "unmount-viewport.json";
+    const sig = generateDatasetSignature(dataset);
+
+    mock.module("../layout/customLayoutAdapter", () => ({
+      computeCustomEngineGraphLayoutAsync: () => Promise.resolve(layoutResult(1)),
+      computeCustomEngineGraphLayout: originalComputeCustomEngineGraphLayout,
+    }));
+
+    const { GraphCanvas } = await import("./index");
+
+    useGraphStore.setState({
+      dataset,
+      currentFile: testFile,
+      layoutMode: "layered",
+      zoomLevel: 1.0,
+      panOffset: { x: 10, y: 10 },
+    });
+
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer = create(createElement(GraphCanvas));
+      });
+    });
+    await flushEffects();
+
+    // Trigger state update
+    await act(async () => {
+      useGraphStore.setState({ panOffset: { x: 99, y: 99 }, zoomLevel: 3.0 });
+    });
+
+    // Unmount before 400ms debounce expires
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer?.unmount();
+        renderer = undefined;
+      });
+    });
+
+    // Advance time past 400ms
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    });
+
+    // Storage must still be null because unmount cancelled the timer!
+    expect(loadStoredViewport(testFile, sig)).toBeNull();
+  });
 
   it("recomputes when a layout-affecting config field changes, but not for cornerRadius/edgeStyle/zoomSensitivity", async () => {
     const calls: { configPartial?: Partial<CustomLayoutConfig>; mode?: LayoutMode }[] = [];

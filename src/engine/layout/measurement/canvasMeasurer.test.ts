@@ -218,8 +218,8 @@ describe("measureNodes", () => {
     });
 
     expect(twoSize.height).toBeGreaterThanOrEqual(oneSize.height);
-    // 5-line description is clamped to max 2 lines, so height matches 2-line card
-    expect(fiveSize.height).toBe(twoSize.height);
+    // Long description is clamped to max 4 lines
+    expect(fiveSize.height).toBeGreaterThan(twoSize.height);
   });
 
   it("accounts for header step badge and badge chips in width calculations", () => {

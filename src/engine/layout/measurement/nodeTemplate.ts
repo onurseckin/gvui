@@ -16,6 +16,7 @@
 import {
   formatDuration,
   formatOverflowLabel,
+  MAX_DESCRIPTION_LINES,
   selectDescription,
   selectMetricsLine,
   selectModelChip,
@@ -173,7 +174,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 0,
       lineHeight: 15,
-      maxLines: 2,
+      maxLines: MAX_DESCRIPTION_LINES,
       segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
     },
     {

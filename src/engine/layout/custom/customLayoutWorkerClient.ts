@@ -47,6 +47,7 @@ export interface ComputeLayoutWorkerDependencies {
     nodes: NormalizedNode[],
     edges: NormalizedEdge[],
     configPartial?: Partial<CustomLayoutConfig>,
+    mode?: string,
   ) => Promise<CustomLayoutResult> | CustomLayoutResult;
 }
 
@@ -71,6 +72,23 @@ export class LayoutCancelledError extends Error {
   }
 }
 
+interface PendingRequest {
+  id: string;
+  resolve: (result: CustomLayoutResult) => void;
+  reject: (error: Error) => void;
+  timer: unknown;
+  runtime: LayoutWorkerRuntime;
+  signal?: AbortSignal;
+  onAbort?: () => void;
+}
+
+interface WorkerState {
+  worker: WorkerLike;
+  runtime: LayoutWorkerRuntime;
+  pendingRequests: Map<string, PendingRequest>;
+}
+
+let activeWorkerState: WorkerState | null = null;
 let requestIdCounter = 0;
 
 function getLayoutWorkerEnvironment(): LayoutWorkerEnvironment {
@@ -93,8 +111,124 @@ function getLayoutWorkerEnvironment(): LayoutWorkerEnvironment {
   };
 }
 
+function terminateAndResetWorker(state: WorkerState, errorFactory: () => Error): void {
+  if (activeWorkerState === state) {
+    activeWorkerState = null;
+  }
+  const { worker, pendingRequests, runtime } = state;
+  const pendingList = Array.from(pendingRequests.values());
+  pendingRequests.clear();
+
+  for (const pending of pendingList) {
+    runtime.clearTimer(pending.timer);
+    if (pending.signal && pending.onAbort) {
+      pending.signal.removeEventListener("abort", pending.onAbort);
+    }
+    pending.reject(errorFactory());
+  }
+
+  try {
+    worker.onmessage = null;
+    worker.onerror = null;
+    worker.onmessageerror = null;
+    worker.terminate();
+  } catch {
+    // Ignore errors during termination
+  }
+}
+
 /**
- * Computes in a real browser Worker whenever one is available. Browser failures are terminal.
+ * Resets and terminates the active Web Worker singleton instance.
+ * Used for testing and catastrophic recovery.
+ */
+export function resetLayoutWorkerSingleton(): void {
+  if (activeWorkerState) {
+    terminateAndResetWorker(activeWorkerState, () => new LayoutCancelledError());
+  }
+}
+
+/**
+ * Test seam to introspect whether a worker singleton is currently active.
+ */
+export function getActiveWorkerForTesting(): WorkerLike | null {
+  return activeWorkerState?.worker ?? null;
+}
+
+function getOrCreateWorkerState(runtime: LayoutWorkerRuntime): WorkerState {
+  if (activeWorkerState && activeWorkerState.runtime === runtime) {
+    return activeWorkerState;
+  }
+
+  if (activeWorkerState) {
+    resetLayoutWorkerSingleton();
+  }
+
+  let worker: WorkerLike;
+  try {
+    worker = runtime.createWorker();
+  } catch (error) {
+    throw new LayoutWorkerError("Unable to start layout worker", {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+
+  const pendingRequests = new Map<string, PendingRequest>();
+  const state: WorkerState = {
+    worker,
+    runtime,
+    pendingRequests,
+  };
+  activeWorkerState = state;
+
+  worker.onmessage = (event: MessageEvent<CustomLayoutWorkerMessage>) => {
+    const data = event.data;
+    if (
+      !data ||
+      typeof data !== "object" ||
+      typeof (data as unknown as { id?: unknown }).id !== "string"
+    ) {
+      terminateAndResetWorker(
+        state,
+        () => new LayoutWorkerError("Layout worker returned an unreadable message"),
+      );
+      return;
+    }
+
+    const pending = state.pendingRequests.get(data.id);
+    if (!pending) {
+      return;
+    }
+
+    state.pendingRequests.delete(data.id);
+    state.runtime.clearTimer(pending.timer);
+    if (pending.signal && pending.onAbort) {
+      pending.signal.removeEventListener("abort", pending.onAbort);
+    }
+
+    if (data.type === "success" && data.result) {
+      pending.resolve(data.result);
+    } else {
+      pending.reject(new LayoutWorkerError(data.error ?? "Unknown worker layout error"));
+    }
+  };
+
+  worker.onerror = () => {
+    terminateAndResetWorker(state, () => new LayoutWorkerError("Layout worker failed"));
+  };
+
+  worker.onmessageerror = () => {
+    terminateAndResetWorker(
+      state,
+      () => new LayoutWorkerError("Layout worker returned an unreadable message"),
+    );
+  };
+
+  return state;
+}
+
+/**
+ * Computes layout asynchronously using a persistent Worker singleton whenever available.
+ * Multiple requests are multiplexed with correlation IDs. Browser failures are terminal.
  */
 export async function computeCustomLayoutAsync(
   options: ComputeLayoutWorkerOptions,
@@ -120,69 +254,74 @@ export async function computeCustomLayoutAsync(
     return await computeSynchronously(nodes, edges, config, options.mode);
   }
 
+  const state = getOrCreateWorkerState(runtime);
   const reqId = `req_${++requestIdCounter}_${Date.now()}`;
 
   return new Promise<CustomLayoutResult>((resolve, reject) => {
-    let worker: WorkerLike | null = null;
-    let timer: unknown;
-    let settled = false;
-    let terminated = false;
-
-    const cleanup = () => {
-      if (timer !== undefined) {
-        runtime.clearTimer(timer);
-        timer = undefined;
+    const onAbort = () => {
+      const pending = state.pendingRequests.get(reqId);
+      if (!pending) return;
+      state.pendingRequests.delete(reqId);
+      state.runtime.clearTimer(pending.timer);
+      if (pending.signal && pending.onAbort) {
+        pending.signal.removeEventListener("abort", pending.onAbort);
       }
-      signal?.removeEventListener("abort", onAbort);
-      if (worker) {
-        worker.onmessage = null;
-        worker.onerror = null;
-        worker.onmessageerror = null;
-        if (!terminated) {
-          terminated = true;
-          worker.terminate();
-        }
+      if (state.pendingRequests.size === 0) {
+        terminateAndResetWorker(state, () => new LayoutCancelledError());
       }
+      reject(new LayoutCancelledError());
     };
 
-    const settle = (outcome: { result: CustomLayoutResult } | { error: Error }) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      if ("result" in outcome) resolve(outcome.result);
-      else reject(outcome.error);
+    const onTimeout = () => {
+      const pending = state.pendingRequests.get(reqId);
+      if (!pending) return;
+      terminateAndResetWorker(state, () => new LayoutTimeoutError(timeoutMs));
     };
 
-    const onAbort = () => settle({ error: new LayoutCancelledError() });
+    const timer = runtime.setTimer(onTimeout, timeoutMs);
+
+    const pendingRecord: PendingRequest = {
+      id: reqId,
+      resolve,
+      reject,
+      timer,
+      runtime,
+      signal,
+      onAbort,
+    };
+
+    state.pendingRequests.set(reqId, pendingRecord);
+
+    if (signal) {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
 
     try {
-      worker = runtime.createWorker();
-      worker.onmessage = (event) => {
-        if (event.data.id !== reqId) return;
-        if (event.data.type === "success" && event.data.result) {
-          settle({ result: event.data.result });
-        } else {
-          settle({
-            error: new LayoutWorkerError(event.data.error ?? "Unknown worker layout error"),
-          });
-        }
-      };
-      worker.onerror = () => settle({ error: new LayoutWorkerError("Layout worker failed") });
-      worker.onmessageerror = () =>
-        settle({ error: new LayoutWorkerError("Layout worker returned an unreadable message") });
-
-      signal?.addEventListener("abort", onAbort, { once: true });
-      timer = runtime.setTimer(
-        () => settle({ error: new LayoutTimeoutError(timeoutMs) }),
-        timeoutMs,
-      );
-      worker.postMessage({ id: reqId, nodes, edges, configPartial: config, mode: options.mode });
+      state.worker.postMessage({
+        id: reqId,
+        nodes,
+        edges,
+        configPartial: config,
+        mode: options.mode,
+      });
     } catch (error) {
-      settle({
-        error: new LayoutWorkerError("Unable to start layout worker", {
+      state.pendingRequests.delete(reqId);
+      runtime.clearTimer(timer);
+      if (signal && onAbort) {
+        signal.removeEventListener("abort", onAbort);
+      }
+      terminateAndResetWorker(
+        state,
+        () =>
+          new LayoutWorkerError("Failed to post message to layout worker", {
+            cause: error instanceof Error ? error : undefined,
+          }),
+      );
+      reject(
+        new LayoutWorkerError("Failed to post message to layout worker", {
           cause: error instanceof Error ? error : undefined,
         }),
-      });
+      );
     }
   });
 }

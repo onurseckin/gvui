@@ -19,7 +19,7 @@ export const MAX_TOOL_CHIPS = 4;
 export const MAX_FILE_CHIPS = 3;
 
 /** Lines of prose the card shows before the rest is drawer-only. */
-export const MAX_DESCRIPTION_LINES = 2;
+export const MAX_DESCRIPTION_LINES = 4;
 
 export interface ChipSelection {
   shown: string[];
