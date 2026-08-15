@@ -17,7 +17,6 @@ import {
   formatDuration,
   formatOverflowLabel,
   selectDescription,
-  selectFileChips,
   selectMetricsLine,
   selectModelChip,
   selectToolChips,
@@ -71,18 +70,6 @@ export interface NodeTemplate {
 function selectToolOverflow(node: GraphNodeData): string[] {
   const { overflow } = selectToolChips(node);
   return overflow > 0 ? [formatOverflowLabel(overflow)] : [];
-}
-
-function selectFileOverflow(node: GraphNodeData): string[] {
-  const { overflow } = selectFileChips(node);
-  return overflow > 0 ? [formatOverflowLabel(overflow)] : [];
-}
-
-function selectBadges(node: GraphNodeData): string[] {
-  if (node.badges && Array.isArray(node.badges) && node.badges.length > 0) {
-    return node.badges.map((b) => b.label).filter(Boolean);
-  }
-  return [];
 }
 
 function selectMiniChips(node: GraphNodeData): string[] {

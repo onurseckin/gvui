@@ -1,5 +1,6 @@
 import {
   IconArrowRight,
+  IconArrowsExchange,
   IconBinary,
   IconClock,
   IconFlame,
@@ -10,7 +11,7 @@ import type { CSSProperties, FC } from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { describeEdgeKind, resolveEdgeKind } from "../../primitives/edges/GraphEdge/edgeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
-import type { GraphEdgeData } from "../../types/graphData";
+import type { GraphEdgeData, GraphNodeData } from "../../types/graphData";
 import { EdgeOverviewTab } from "./tabs/OverviewTab";
 import { EdgeRawJsonTab } from "./tabs/RawJsonTab";
 import { TrafficChronologyTab } from "./tabs/TrafficChronologyTab";
@@ -57,9 +58,9 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [edge, handleClose]);
 
-  const nodeNamesById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of dataset?.nodes ?? []) map.set(c.id, c.name);
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, GraphNodeData>();
+    for (const c of dataset?.nodes ?? []) map.set(c.id, c);
     return map;
   }, [dataset]);
 
@@ -74,12 +75,62 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
     [onNavigateNode, centerNodeOnCanvas],
   );
 
+  const sourceNode = edge ? nodeMap.get(edge.source) : undefined;
+  const targetNode = edge ? nodeMap.get(edge.target) : undefined;
+  const sourceName = sourceNode?.name || (edge ? edge.source : "");
+  const targetName = targetNode?.name || (edge ? edge.target : "");
+
+  const exchanges = useMemo(() => edge?.traffic?.exchanges ?? [], [edge?.traffic?.exchanges]);
+  const callCount =
+    exchanges.length > 0
+      ? exchanges.length
+      : (edge?.traffic?.messagesCount ?? edge?.traffic?.volume ?? (edge?.traffic ? 1 : 0));
+
+  const activeSteps = useMemo(() => {
+    if (!edge) return [];
+    if (edge.traffic?.activeSteps && edge.traffic.activeSteps.length > 0) {
+      return edge.traffic.activeSteps;
+    }
+    const stepSet = new Set<number | string>();
+    for (const ex of exchanges) {
+      const st = ex.step ?? ex.stepNumber;
+      if (st !== undefined && st !== null && st !== "") {
+        stepSet.add(st);
+      }
+    }
+    if (stepSet.size > 0) {
+      return Array.from(stepSet);
+    }
+    if (edge.stepNumber !== undefined && edge.stepNumber !== null && edge.stepNumber !== "") {
+      return [edge.stepNumber];
+    }
+    return [];
+  }, [edge, exchanges]);
+
+  const callSummaryHeadline = useMemo(() => {
+    const timesLabel = callCount === 1 ? "1 time" : `${callCount} times`;
+    if (activeSteps.length > 1) {
+      return `Called ${timesLabel} across Steps ${activeSteps.join(", ")}`;
+    } else if (activeSteps.length === 1) {
+      return `Called ${timesLabel} at Step ${activeSteps[0]}`;
+    }
+    return `Called ${timesLabel}`;
+  }, [callCount, activeSteps]);
+
+  const callingRelationship = useMemo(() => {
+    if (!edge) return "";
+    if (edge.traffic?.callingRelationship) {
+      return edge.traffic.callingRelationship;
+    }
+    const sKind = sourceNode?.kind ? sourceNode.kind.toUpperCase() : "SOURCE";
+    const tKind = targetNode?.kind ? targetNode.kind.toUpperCase() : "TARGET";
+    return `${sKind} (${sourceName}) ◄──► ${tKind} (${targetName})`;
+  }, [edge, sourceNode, targetNode, sourceName, targetName]);
+
   if (!edge) return null;
 
   const semanticKind = resolveEdgeKind(edge);
   const descriptor = describeEdgeKind(semanticKind);
-  const sourceName = nodeNamesById.get(edge.source) || edge.source;
-  const targetName = nodeNamesById.get(edge.target) || edge.target;
 
   const exchangesCount =
     edge.traffic?.exchanges?.length ?? edge.traffic?.messagesCount ?? edge.traffic?.volume ?? 0;
@@ -181,6 +232,44 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
           <code className="edge-drawer-id">{edge.id}</code>
         </div>
       </header>
+
+      {/* Top Interaction Summary Card */}
+      <div className="edge-interaction-summary-card">
+        <div className="edge-interaction-summary-header">
+          <div className="edge-summary-header-left">
+            <span className="edge-summary-icon-wrapper">
+              <IconArrowsExchange size={14} />
+            </span>
+            <span className="edge-interaction-summary-title">INTERACTION SUMMARY</span>
+          </div>
+          <span className="edge-call-count-badge">{callSummaryHeadline}</span>
+        </div>
+        <div className="edge-interaction-summary-body">
+          <div className="edge-interaction-summary-row">
+            <span className="edge-summary-bullet">•</span>
+            <span className="edge-summary-label">Total Inter-Node Calls:</span>
+            <span className="edge-summary-value">
+              {`${callCount} ${callCount === 1 ? "Time" : "Times"}`}
+            </span>
+          </div>
+          {activeSteps.length > 0 && (
+            <div className="edge-interaction-summary-row">
+              <span className="edge-summary-bullet">•</span>
+              <span className="edge-summary-label">Active Steps:</span>
+              <span className="edge-summary-value">
+                {activeSteps.map((s) => `Step ${s}`).join(", ")}
+              </span>
+            </div>
+          )}
+          <div className="edge-interaction-summary-row edge-interaction-summary-row--relationship">
+            <span className="edge-summary-bullet">•</span>
+            <span className="edge-summary-label">Calling Relationship:</span>
+            <span className="edge-summary-value edge-summary-relationship-text">
+              {callingRelationship}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <nav className="edge-drawer-tabs" aria-label="Edge Detail Sections">
         {tabs.map((tab) => {

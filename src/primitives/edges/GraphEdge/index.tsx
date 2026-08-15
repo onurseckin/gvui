@@ -16,7 +16,7 @@ export {
   rectContainsPoint,
 } from "./collision";
 export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
-export { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
+export { EdgeBadgeOverlay, sanitizeStepBadge } from "./EdgeBadgeOverlay";
 export type { EdgeMarkerDefsProps } from "./EdgeMarkerDefs";
 export { EdgeMarkerDefs } from "./EdgeMarkerDefs";
 export type { EdgeKindDescriptor, SemanticEdgeKind } from "./edgeKinds";
@@ -37,6 +37,7 @@ export interface GraphEdgeProps {
   isSelected?: boolean;
   isHovered?: boolean;
   isAnimated?: boolean;
+  isHighlighted?: boolean;
   renderBadge?: boolean;
   showPorts?: boolean;
   onClick?: (edgeId: string) => void;
@@ -52,6 +53,7 @@ const areGraphEdgePropsEqual = (prevProps: GraphEdgeProps, nextProps: GraphEdgeP
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isHovered === nextProps.isHovered &&
     prevProps.isAnimated === nextProps.isAnimated &&
+    prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.renderBadge === nextProps.renderBadge &&
     prevProps.showPorts === nextProps.showPorts &&
     prevProps.onClick === nextProps.onClick
@@ -66,7 +68,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     targetX,
     targetY,
     isSelected = false,
-    isAnimated = false,
+    isHighlighted = false,
     renderBadge = true,
     showPorts = false,
     onClick,
@@ -97,6 +99,9 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
 
     const semanticKind = resolveEdgeKind(edge);
     const descriptor = describeEdgeKind(semanticKind);
+    const isHighlightedEdge = Boolean(
+      isHighlighted || (edge as { isHighlighted?: boolean }).isHighlighted,
+    );
 
     const isHighTraffic = Boolean(
       edge.isHighTraffic ||
@@ -110,18 +115,15 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
 
     const markerId = isSelected
       ? "url(#edge-arrowhead-selected)"
-      : edge.isCycle
-        ? "url(#edge-arrowhead-cycle)"
-        : `url(#${descriptor.markerId})`;
-
-    const shouldAnimate =
-      isAnimated ||
-      descriptor.animated ||
-      Boolean(edge.isCycle || semanticKind === "loop" || isHighTraffic);
+      : isHighlightedEdge
+        ? "url(#edge-arrowhead-highlighted)"
+        : edge.isCycle
+          ? "url(#edge-arrowhead-cycle)"
+          : `url(#${descriptor.markerId})`;
 
     return (
       <g
-        className={`graph-edge-group kind-${semanticKind} ${isHighTraffic ? "high-traffic" : ""}`}
+        className={`graph-edge-group kind-${semanticKind} ${isHighTraffic ? "high-traffic" : ""} ${isSelected ? "selected" : ""} ${isHighlightedEdge ? "is-highlighted" : ""}`}
         onClick={handleEdgeClick}
         shapeRendering="geometricPrecision"
         textRendering="geometricPrecision"
@@ -145,7 +147,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
         )}
         <path
           d={dPath}
-          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${isHighTraffic ? "high-traffic" : ""} ${shouldAnimate ? "animated" : ""}`}
+          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${isHighlightedEdge ? "is-highlighted" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${isHighTraffic ? "high-traffic" : ""}`}
           markerEnd={edge.directed !== false ? markerId : undefined}
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
@@ -196,6 +198,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             isHighTraffic={isHighTraffic}
             bundleCount={edge.bundleCount}
             bundleIndex={edge.bundleIndex}
+            onClick={handleEdgeClick}
           />
         )}
       </g>

@@ -141,19 +141,73 @@ export interface PlaywrightMetadata {
   [key: string]: unknown;
 }
 
+export interface ExchangeTransferredFile {
+  path: string;
+  mode?: FileMode;
+  additions?: number;
+  deletions?: number;
+  diff?: string;
+}
+
+export interface ExchangeFinding {
+  id?: string;
+  requirementId?: string;
+  severity?: "critical" | "important" | "suggestion" | string;
+  observation?: string;
+  remediation?: string;
+  status?: "open" | "resolved" | string;
+  revalidationProof?: { method?: string; evidence?: string[] };
+}
+
+export interface ExchangeResolutionProof {
+  method?: string;
+  evidence?: string[] | string;
+  details?: string;
+}
+
 export interface EdgeTrafficExchange {
   id: string;
-  timestamp: string;
-  source: string;
-  target: string;
+  timestamp?: string;
+  source?: string;
+  target?: string;
+  step?: number | string;
+  stepNumber?: number | string;
+  direction?: "forward" | "reverse" | string;
+  type?:
+    | "submission"
+    | "rejection"
+    | "repair"
+    | "approval"
+    | "prompt"
+    | "artifact"
+    | "feedback"
+    | "decision"
+    | string;
   kind?: PayloadKind | string;
   summary?: string;
   tokens?: number;
   bytes?: number;
   durationMs?: number;
+  latencyMs?: number;
   status?: "success" | "error" | "warning" | "in_transit" | string;
   payloadSnippet?: string;
+  payloadPreview?: string;
   fullPayload?: string;
+  inputGoal?: string;
+  outputPassed?: string;
+  filesTransferred?: Array<ExchangeTransferredFile | string>;
+  files?: Array<ExchangeTransferredFile | string>;
+  auditFinding?: ExchangeFinding | string;
+  finding?: ExchangeFinding | string;
+  rejectionObservation?: string;
+  observation?: string;
+  requiredRemediation?: string;
+  remediation?: string;
+  remediatedPayload?: string;
+  verdict?: "PASS" | "FAIL" | "WARNING" | string;
+  resolutionProof?: ExchangeResolutionProof | string;
+  proof?: ExchangeResolutionProof | string;
+  evidence?: string | string[];
   metadata?: Record<string, unknown>;
 }
 
@@ -162,12 +216,15 @@ export interface EdgeTrafficDetail {
   tokens?: number;
   bytes?: number;
   messagesCount?: number;
+  avgLatencyMs?: number;
   exchanges?: EdgeTrafficExchange[];
   ratePerSec?: number;
   lastActive?: string;
   status?: "active" | "idle" | "congested" | "error" | string;
   glowColor?: string;
   glowIntensity?: number;
+  activeSteps?: Array<number | string>;
+  callingRelationship?: string;
 }
 
 export interface GraphSection {
@@ -225,6 +282,7 @@ export interface EdgeHandoff {
   kind: PayloadKind;
   summary?: string;
   tokens?: number;
+  preview?: string;
 }
 
 export interface EdgeContainerDetail {
@@ -259,6 +317,7 @@ export interface GraphEdgeData {
   source: string;
   target: string;
   label?: string;
+  description?: string;
   directed?: boolean;
   isCycle?: boolean;
   kind?: EdgeKind;
@@ -273,6 +332,9 @@ export interface GraphEdgeData {
   traffic?: EdgeTrafficDetail;
   isHighTraffic?: boolean;
   trafficVolume?: number;
+  bundleCount?: number;
+  bundleIndex?: number;
+  tokens?: number;
   exchanges?: EdgeTrafficExchange[];
 }
 

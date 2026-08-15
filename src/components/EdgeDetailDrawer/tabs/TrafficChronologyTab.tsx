@@ -1,19 +1,29 @@
 import {
+  IconAlertCircle,
+  IconAlertTriangle,
   IconArrowLeft,
   IconArrowRight,
+  IconCheck,
+  IconCircleCheck,
   IconClock,
   IconCoins,
   IconCopy,
+  IconFileCode,
   IconFilter,
   IconFlame,
   IconMessageCircle,
+  IconShieldCheck,
+  IconTarget,
 } from "@tabler/icons-react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { memo, useMemo, useState } from "react";
 import { formatTokens } from "../../../primitives/nodes/NodeCard/nodeCardModel";
 import type {
   EdgeTrafficDetail,
   EdgeTrafficExchange,
+  ExchangeFinding,
+  ExchangeResolutionProof,
+  ExchangeTransferredFile,
   GraphEdgeData,
 } from "../../../types/graphData";
 
@@ -32,7 +42,7 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
 
     const [filterType, setFilterType] = useState<string>("all");
     const [expandedIds, setExpandedIds] = useState<Set<string>>(
-      () => new Set(exchanges.slice(0, 3).map((e) => e.id)),
+      () => new Set(exchanges.map((e) => e.id)),
     );
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -54,16 +64,149 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
 
     const filteredExchanges = useMemo(() => {
       if (filterType === "all") return exchanges;
-      return exchanges.filter((e) => e.type === filterType);
+      return exchanges.filter((e) => {
+        const t = (e.type ?? e.kind ?? "").toLowerCase();
+        return t === filterType.toLowerCase();
+      });
     }, [exchanges, filterType]);
 
     const availableTypes = useMemo(() => {
       const set = new Set<string>();
       for (const e of exchanges) {
-        if (e.type) set.add(e.type);
+        const t = e.type ?? e.kind;
+        if (t) set.add(t);
       }
       return Array.from(set);
     }, [exchanges]);
+
+    const renderTransferredFiles = (
+      rawFiles?: Array<ExchangeTransferredFile | string>,
+    ): ReactNode => {
+      if (!rawFiles || rawFiles.length === 0) return null;
+      return (
+        <div className="edge-payload-files-list">
+          {rawFiles.map((file, idx) => {
+            if (typeof file === "string") {
+              return (
+                <div key={idx} className="edge-payload-file-item">
+                  <code className="edge-payload-file-path">{file}</code>
+                </div>
+              );
+            }
+            return (
+              <div key={idx} className="edge-payload-file-item">
+                <div className="edge-payload-file-header">
+                  <code className="edge-payload-file-path">{file.path}</code>
+                  {(file.additions !== undefined || file.deletions !== undefined) && (
+                    <span className="edge-file-diff-stats">
+                      {file.additions !== undefined && (
+                        <span className="diff-add">{`+${file.additions}`}</span>
+                      )}
+                      {file.deletions !== undefined && (
+                        <span className="diff-del">{`-${file.deletions}`}</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {file.diff && (
+                  <pre className="edge-pre edge-pre--diff">
+                    <code>{file.diff}</code>
+                  </pre>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    const renderFinding = (rawFinding?: ExchangeFinding | string): ReactNode => {
+      if (!rawFinding) return null;
+      if (typeof rawFinding === "string") {
+        return <span className="edge-finding-text">{rawFinding}</span>;
+      }
+      return (
+        <div className="edge-finding-card">
+          <div className="edge-finding-header">
+            {rawFinding.id && <strong className="edge-finding-id">{rawFinding.id}</strong>}
+            {rawFinding.severity && (
+              <span className={`edge-severity-badge severity-${rawFinding.severity.toLowerCase()}`}>
+                {rawFinding.severity === "critical"
+                  ? "(Critical Severity)"
+                  : `(${rawFinding.severity} Severity)`}
+              </span>
+            )}
+            {rawFinding.status && (
+              <span className={`edge-finding-status status-${rawFinding.status.toLowerCase()}`}>
+                {rawFinding.status.toUpperCase()}
+              </span>
+            )}
+          </div>
+          {rawFinding.observation && (
+            <div className="edge-finding-subfield">
+              <span className="edge-finding-sublabel">Context / Observation:</span>
+              <p className="edge-finding-subtext">"{rawFinding.observation}"</p>
+            </div>
+          )}
+          {rawFinding.remediation && (
+            <div className="edge-finding-subfield">
+              <span className="edge-finding-sublabel">Required Remediation:</span>
+              <p className="edge-finding-subtext">"{rawFinding.remediation}"</p>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const renderResolutionProof = (
+      proof?: ExchangeResolutionProof | string,
+      evidence?: string | string[],
+    ): ReactNode => {
+      if (!proof && !evidence) return null;
+
+      const proofMethod = typeof proof === "object" ? proof.method : undefined;
+      const proofDetails = typeof proof === "object" ? proof.details : undefined;
+      const proofEvidence =
+        typeof proof === "object"
+          ? Array.isArray(proof.evidence)
+            ? proof.evidence
+            : proof.evidence
+              ? [proof.evidence]
+              : []
+          : typeof proof === "string"
+            ? [proof]
+            : [];
+
+      const rawEvidenceList = Array.isArray(evidence)
+        ? evidence
+        : typeof evidence === "string"
+          ? [evidence]
+          : [];
+
+      const combinedEvidence = Array.from(new Set([...proofEvidence, ...rawEvidenceList]));
+
+      return (
+        <div className="edge-evidence-card">
+          {proofMethod && (
+            <div className="edge-evidence-method">
+              <span className="edge-evidence-label">Method:</span>
+              <code>{proofMethod}</code>
+            </div>
+          )}
+          {proofDetails && <p className="edge-evidence-details">{proofDetails}</p>}
+          {combinedEvidence.length > 0 && (
+            <div className="edge-evidence-list">
+              {combinedEvidence.map((ev, idx) => (
+                <div key={idx} className="edge-evidence-item">
+                  <IconShieldCheck size={13} className="edge-evidence-icon" />
+                  <span className="edge-evidence-text">{ev}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     return (
       <div className="edge-drawer-tab-content">
@@ -119,7 +262,8 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
         <section className="edge-drawer-section">
           <div className="edge-section-header-row">
             <h4 className="edge-drawer-section-title">
-              Chronology Inspector
+              CHRONOLOGICAL CALL LOG &amp; CONTEXT
+              <span className="edge-section-sublabel">Chronology Inspector</span>
               <span className="edge-section-count">{filteredExchanges.length}</span>
             </h4>
             {availableTypes.length > 1 && (
@@ -157,6 +301,14 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                 const isForward = exchange.direction !== "reverse";
                 const fromName = isForward ? sourceName : targetName;
                 const toName = isForward ? targetName : sourceName;
+                const stepVal = exchange.step ?? exchange.stepNumber;
+                const typeVal = exchange.type ?? exchange.kind;
+                const filesList = exchange.filesTransferred ?? exchange.files;
+                const findingVal = exchange.auditFinding ?? exchange.finding;
+                const observationVal = exchange.rejectionObservation ?? exchange.observation;
+                const remediationVal = exchange.requiredRemediation ?? exchange.remediation;
+                const payloadStream =
+                  exchange.payloadPreview ?? exchange.payloadSnippet ?? exchange.fullPayload;
 
                 return (
                   <div key={exchange.id} className="edge-timeline-item">
@@ -179,14 +331,19 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                         }}
                       >
                         <div className="edge-exchange-route">
+                          {stepVal !== undefined && (
+                            <span className="edge-exchange-step-chip">{`[Step ${stepVal}]`}</span>
+                          )}
                           <span className="edge-exchange-peer">{fromName}</span>
                           <span className="edge-exchange-arrow">
                             {isForward ? <IconArrowRight size={13} /> : <IconArrowLeft size={13} />}
                           </span>
                           <span className="edge-exchange-peer">{toName}</span>
-                          {exchange.type && (
-                            <span className={`edge-exchange-type-chip type-${exchange.type}`}>
-                              {exchange.type}
+                          {typeVal && (
+                            <span
+                              className={`edge-exchange-type-chip type-${typeVal.toLowerCase().replace(/\s+/g, "-")}`}
+                            >
+                              {typeVal}
                             </span>
                           )}
                         </div>
@@ -197,8 +354,10 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                               {formatTokens(exchange.tokens)} tok
                             </span>
                           )}
-                          {typeof exchange.latencyMs === "number" && (
-                            <span className="edge-exchange-metric">{`${exchange.latencyMs}ms`}</span>
+                          {typeof (exchange.latencyMs ?? exchange.durationMs) === "number" && (
+                            <span className="edge-exchange-metric">
+                              {`${exchange.latencyMs ?? exchange.durationMs}ms`}
+                            </span>
                           )}
                           {exchange.timestamp && (
                             <span className="edge-exchange-time">
@@ -212,7 +371,120 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                         <p className="edge-exchange-summary">{exchange.summary}</p>
                       )}
 
-                      {isExpanded && exchange.payloadPreview && (
+                      {/* Deep In/Out Payload Context Flow */}
+                      <div className="edge-exchange-context-flow">
+                        {exchange.inputGoal && (
+                          <div className="edge-payload-context-row">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconTarget size={12} className="edge-field-icon" /> Input Goal:
+                            </span>
+                            <span className="edge-payload-context-value">{exchange.inputGoal}</span>
+                          </div>
+                        )}
+
+                        {exchange.outputPassed && (
+                          <div className="edge-payload-context-row">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconCheck size={12} className="edge-field-icon" /> Output Passed:
+                            </span>
+                            <span className="edge-payload-context-value">
+                              {exchange.outputPassed}
+                            </span>
+                          </div>
+                        )}
+
+                        {filesList && filesList.length > 0 && (
+                          <div className="edge-payload-context-row edge-payload-context-row--files">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconFileCode size={12} className="edge-field-icon" /> Files
+                              Transferred:
+                            </span>
+                            <div className="edge-transferred-files-wrapper">
+                              {renderTransferredFiles(filesList)}
+                            </div>
+                          </div>
+                        )}
+
+                        {findingVal && (
+                          <div className="edge-payload-context-row edge-payload-context-row--finding">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconAlertTriangle size={12} className="edge-field-icon" /> Audit
+                              Finding:
+                            </span>
+                            <div className="edge-finding-wrapper">{renderFinding(findingVal)}</div>
+                          </div>
+                        )}
+
+                        {!findingVal && observationVal && (
+                          <div className="edge-payload-context-row">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconAlertCircle size={12} className="edge-field-icon" /> Context /
+                              Observation:
+                            </span>
+                            <p className="edge-payload-quote">{`"${observationVal}"`}</p>
+                          </div>
+                        )}
+
+                        {!findingVal && remediationVal && (
+                          <div className="edge-payload-context-row">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              Required Remediation:
+                            </span>
+                            <p className="edge-payload-quote">{`"${remediationVal}"`}</p>
+                          </div>
+                        )}
+
+                        {exchange.remediatedPayload && (
+                          <div className="edge-payload-context-row">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">Remediated Payload:</span>
+                            <span className="edge-payload-context-value edge-remediated-value">
+                              {exchange.remediatedPayload}
+                            </span>
+                          </div>
+                        )}
+
+                        {exchange.verdict && (
+                          <div className="edge-payload-context-row edge-payload-context-row--verdict">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">Verdict:</span>
+                            <span
+                              className={`edge-verdict-badge verdict-${exchange.verdict.toLowerCase()}`}
+                            >
+                              {exchange.verdict === "PASS" && <IconCircleCheck size={12} />}
+                              {exchange.verdict}
+                            </span>
+                            {findingVal && (
+                              <span className="edge-verdict-finding-resolved">
+                                {`(Finding ${typeof findingVal === "object" ? findingVal.id : findingVal} RESOLVED)`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {(exchange.resolutionProof || exchange.proof || exchange.evidence) && (
+                          <div className="edge-payload-context-row edge-payload-context-row--evidence">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconShieldCheck size={12} className="edge-field-icon" /> Evidence:
+                            </span>
+                            <div className="edge-evidence-wrapper">
+                              {renderResolutionProof(
+                                exchange.resolutionProof ?? exchange.proof,
+                                exchange.evidence,
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {isExpanded && payloadStream && (
                         <div className="edge-exchange-body">
                           <div className="edge-exchange-toolbar">
                             <span className="edge-exchange-payload-label">Payload Stream</span>
@@ -221,7 +493,7 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                               className={`edge-copy-btn ${copiedId === exchange.id ? "is-copied" : ""}`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCopy(exchange.id, exchange.payloadPreview);
+                                handleCopy(exchange.id, payloadStream);
                               }}
                             >
                               <IconCopy size={12} />
@@ -229,7 +501,7 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                             </button>
                           </div>
                           <pre className="edge-pre">
-                            <code>{exchange.payloadPreview}</code>
+                            <code>{payloadStream}</code>
                           </pre>
                         </div>
                       )}

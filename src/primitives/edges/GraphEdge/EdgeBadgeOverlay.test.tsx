@@ -122,61 +122,61 @@ describe("EdgeBadgeOverlay connector", () => {
 });
 
 describe("EdgeBadgeOverlay Semantic Types", () => {
-  it("renders spawn badge with IconRocket and kind-spawn class", () => {
+  it("renders spawn badge with clean typography and kind-spawn class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="spawn" label="dispatch agent" />,
     );
     expect(html).toContain("kind-spawn");
     expect(html).toContain("dispatch agent");
-    expect(html).toContain("tabler-icon-rocket");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders data badge with IconFileText and kind-data class", () => {
+  it("renders data badge with clean typography and kind-data class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="data" label="output.json" />,
     );
     expect(html).toContain("kind-data");
     expect(html).toContain("output.json");
-    expect(html).toContain("tabler-icon-file-text");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders dependency badge with IconLink and kind-dependency class", () => {
+  it("renders dependency badge with clean typography and kind-dependency class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="dependency" label="needs approval" />,
     );
     expect(html).toContain("kind-dependency");
     expect(html).toContain("needs approval");
-    expect(html).toContain("tabler-icon-link");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders loop badge with IconAlertTriangle and kind-loop class", () => {
+  it("renders loop badge with clean typography and kind-loop class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="loop" label="rejection loop" />,
     );
     expect(html).toContain("kind-loop");
     expect(html).toContain("rejection loop");
-    expect(html).toContain("tabler-icon-alert-triangle");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders gate badge with IconShieldCheck and kind-gate class", () => {
+  it("renders gate badge with clean typography and kind-gate class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="gate" label="security gate" />,
     );
     expect(html).toContain("kind-gate");
     expect(html).toContain("security gate");
-    expect(html).toContain("tabler-icon-shield-check");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders critic badge with IconCertificate and kind-critic class", () => {
+  it("renders critic badge with clean typography and kind-critic class", () => {
     const html = renderToString(
       <EdgeBadgeOverlay x={100} y={100} kind="critic" label="final signoff" />,
     );
     expect(html).toContain("kind-critic");
     expect(html).toContain("final signoff");
-    expect(html).toContain("tabler-icon-certificate");
+    expect(html).not.toContain("tabler-icon");
   });
 
-  it("renders rich container details with stepBadge and detail text", () => {
+  it("renders rich container details with pure numeric stepBadge and detail text", () => {
     const html = renderToString(
       <EdgeBadgeOverlay
         x={100}
@@ -193,9 +193,19 @@ describe("EdgeBadgeOverlay Semantic Types", () => {
     expect(html).toContain("04");
     expect(html).toContain("Dispatch Worker");
     expect(html).toContain("2.4k tokens");
+    expect(html).not.toContain("Step 04");
   });
 
-  it("renders high-traffic glowing badge with traffic chip and bundle counter", () => {
+  it("strips 'Step' prefix from stepNumber or container", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} stepNumber="Step 2" label="Dispatches Task" />,
+    );
+    expect(html).toContain("2");
+    expect(html).toContain("Dispatches Task");
+    expect(html).not.toContain("Step 2");
+  });
+
+  it("renders high-traffic glowing badge with bundle counter and without on-canvas traffic chips", () => {
     const html = renderToString(
       <EdgeBadgeOverlay
         x={100}
@@ -217,10 +227,9 @@ describe("EdgeBadgeOverlay Semantic Types", () => {
 
     expect(html).toContain("high-traffic");
     expect(html).toContain("Context Sync Stream");
-    expect(html).toContain("12 msgs");
     expect(html).toContain("x4");
-    expect(html).toContain("edge-traffic-chip");
     expect(html).toContain("edge-bundle-chip");
+    expect(html).not.toContain("edge-traffic-chip");
     expect(html).toContain("#06b6d4");
   });
 });

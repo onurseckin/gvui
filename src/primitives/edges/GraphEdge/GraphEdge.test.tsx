@@ -141,6 +141,17 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain('marker-end="url(#edge-arrowhead-selected)"');
   });
 
+  it("applies is-highlighted state and accent marker on highlight", () => {
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} isHighlighted={true} />
+      </svg>,
+    );
+
+    expect(html).toContain("is-highlighted");
+    expect(html).toContain('marker-end="url(#edge-arrowhead-highlighted)"');
+  });
+
   it("renders ports when showPorts is true", () => {
     const edgeWithPorts: PositionedEdge = {
       ...baseEdge,

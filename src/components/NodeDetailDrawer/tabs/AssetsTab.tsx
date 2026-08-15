@@ -40,12 +40,12 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
     };
 
     for (const a of node.mediaAssets ?? []) addAsset(a);
-    for (const a of node.screenshots ?? []) addAsset({ type: "image", ...a });
+    for (const a of node.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
     for (const a of node.metadata?.mediaAssets ?? []) addAsset(a);
-    for (const a of node.metadata?.screenshots ?? []) addAsset({ type: "image", ...a });
+    for (const a of node.metadata?.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
     for (const a of node.metadata?.assets ?? []) addAsset(a);
     for (const a of node.metadata?.playwrightMetadata?.screenshots ?? [])
-      addAsset({ type: "image", ...a });
+      addAsset({ ...a, type: a.type || "image" });
 
     return list;
   }, [node]);

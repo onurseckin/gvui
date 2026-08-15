@@ -12,7 +12,7 @@ import {
   IconZoomOut,
   IconZoomReset,
 } from "@tabler/icons-react";
-import type { FC, MouseEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { FC, MouseEvent } from "react";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { MediaAsset } from "../../types/graphData";
 import { formatBytes } from "./DrawerSection";

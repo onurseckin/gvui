@@ -1,13 +1,3 @@
-import {
-  IconAlertTriangle,
-  IconBolt,
-  IconCertificate,
-  IconFileText,
-  IconFlame,
-  IconLink,
-  IconRocket,
-  IconShieldCheck,
-} from "@tabler/icons-react";
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useCallback } from "react";
 import type { Point, Rect } from "../../../engine/layout/custom/types";
@@ -17,9 +7,7 @@ import type {
   EdgeKind,
   EdgeTrafficDetail,
 } from "../../../types/graphData";
-import { formatTokens } from "../../nodes/NodeCard/nodeCardModel";
-import { getTablerIconComponent } from "../../nodes/NodeCard/nodeKinds";
-import { describeEdgeKind, getEdgeIconComponent, resolveEdgeKind } from "./edgeKinds";
+import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
 
 export interface EdgeBadgeOverlayProps {
   x: number;
@@ -41,6 +29,18 @@ export interface EdgeBadgeOverlayProps {
   onClick?: (e: MouseEvent<SVGGElement>) => void;
 }
 
+/**
+ * Sanitizes step badge text or numbers to guarantee pure numbers or cycle arrows (e.g. "2", "3", "3 -> 2"),
+ * strictly stripping any "Step" or "step" prefixes/labels.
+ */
+export function sanitizeStepBadge(raw?: string | number): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const str = String(raw).trim();
+  if (!str) return undefined;
+  const cleaned = str.replace(/^step[\s:#-]*/i, "").trim();
+  return cleaned || undefined;
+}
+
 export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBadgeOverlay({
   x,
   y,
@@ -57,7 +57,6 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   traffic,
   isHighTraffic = false,
   bundleCount,
-  bundleIndex,
   onClick,
 }) {
   const handleClick = useCallback(
@@ -81,8 +80,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   const semanticKind = resolveEdgeKind({ kind, isCycle });
   const descriptor = describeEdgeKind(semanticKind);
 
-  const effectiveStep =
-    container?.stepBadge ?? (stepNumber !== undefined ? String(stepNumber) : undefined);
+  const effectiveStep = sanitizeStepBadge(container?.stepBadge ?? stepNumber);
   const titleText = container?.title ?? badge?.text ?? label;
   const detailText = container?.detail;
 
@@ -97,60 +95,23 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
     ? titleText?.trim()
       ? `CYCLE (${titleText})`
       : "CYCLE"
-    : (titleText ?? (effectiveStep ? `Step ${effectiveStep}` : descriptor.label));
-
-  // Determine Icon
-  const iconKey = container?.icon ?? badge?.icon;
-  let IconComp = getTablerIconComponent(iconKey) ?? getEdgeIconComponent(iconKey);
-
-  if (!IconComp && iconKey) {
-    const v = container?.variant ?? badge?.variant;
-    IconComp =
-      isCycle || v === "warning" || v === "loop"
-        ? IconAlertTriangle
-        : v === "info" || v === "spawn"
-          ? IconRocket
-          : v === "success" || v === "gate"
-            ? IconShieldCheck
-            : v === "critic"
-              ? IconCertificate
-              : v === "dependency"
-                ? IconLink
-                : v === "data"
-                  ? IconFileText
-                  : undefined;
-  } else if (!IconComp && isCycle) {
-    IconComp = IconAlertTriangle;
-  } else if (!IconComp && descriptor.IconComponent) {
-    IconComp = descriptor.IconComponent;
-  }
+    : (titleText ?? descriptor.label);
 
   // Variant determination
   const variant = isCycle
     ? "loop"
     : (container?.variant ?? badge?.variant ?? descriptor.badgeVariant);
 
-  // Traffic summary snippet
-  let trafficSnippet: string | null = null;
-  if (traffic) {
-    if ((traffic.messagesCount ?? 0) > 1 || (traffic.volume ?? 0) > 1) {
-      trafficSnippet = `${traffic.messagesCount ?? traffic.volume} msgs`;
-    } else if (typeof traffic.tokens === "number" && traffic.tokens > 0) {
-      trafficSnippet = `${formatTokens(traffic.tokens)} tok`;
-    }
-  }
-
   const bundleSnippet = bundleCount && bundleCount > 1 ? `x${bundleCount}` : null;
 
+  // Measure composite single-line text width without icon chrome or traffic chips
   const computedWidth = Math.max(
-    68,
-    (effectiveStep ? effectiveStep.length * 6.5 + 16 : 0) +
-      (IconComp ? 18 : 0) +
+    54,
+    (effectiveStep ? effectiveStep.length * 7 + 14 : 0) +
       displayText.length * 6.8 +
-      (detailText ? detailText.length * 6.0 + 12 : 0) +
-      (trafficSnippet ? trafficSnippet.length * 6.2 + 20 : 0) +
-      (bundleSnippet ? bundleSnippet.length * 6.2 + 14 : 0) +
-      24,
+      (detailText ? detailText.length * 6.0 + 10 : 0) +
+      (bundleSnippet ? bundleSnippet.length * 6.2 + 12 : 0) +
+      20,
   );
   const width = badgeRect ? Math.max(badgeRect.width, computedWidth) : computedWidth;
   const height = badgeRect ? Math.max(badgeRect.height, 26) : 26;
@@ -181,12 +142,13 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   return (
     <g
       transform={`translate(${renderX}, ${renderY})`}
-      className={`edge-badge-group kind-${semanticKind} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""} ${effectiveHighTraffic ? "high-traffic" : ""} ${badge?.clickable || onClick ? "is-clickable" : ""}`.trim()}
+      className={`edge-badge-group kind-${semanticKind} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""} ${effectiveHighTraffic ? "high-traffic" : ""} is-clickable ${badge?.clickable || onClick ? "has-click" : ""}`.trim()}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      aria-label={`Edge: ${displayText}${trafficSnippet ? `, Traffic: ${trafficSnippet}` : ""}`}
+      aria-label={`Edge ${effectiveStep ? `${effectiveStep}: ` : ""}${displayText}`}
+      style={{ cursor: "pointer" }}
     >
       {showLeaderPath && (
         <path
@@ -235,13 +197,14 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
             justifyContent: "center",
             width: "100%",
             height: "100%",
-            gap: "5px",
+            gap: "6px",
             padding: "0 6px",
             boxSizing: "border-box",
           }}
         >
           {effectiveStep && (
             <span
+              className="edge-step-badge"
               style={{
                 fontSize: "9px",
                 fontWeight: 700,
@@ -255,7 +218,6 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
               {effectiveStep}
             </span>
           )}
-          {IconComp ? <IconComp size={12} className="edge-badge-icon" /> : null}
           <span className="edge-badge-label">{displayText}</span>
 
           {bundleSnippet && (
@@ -276,31 +238,9 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
             </span>
           )}
 
-          {trafficSnippet && (
-            <span
-              className={`edge-traffic-chip ${traffic?.status === "congested" ? "is-congested" : "is-active"}`}
-              style={{
-                fontSize: "9.5px",
-                fontWeight: 600,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "3px",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                backgroundColor: isCycle ? "rgba(245, 158, 11, 0.2)" : "rgba(6, 182, 212, 0.2)",
-                color: isCycle ? "#fcd34d" : "#67e8f9",
-                border: isCycle
-                  ? "1px solid rgba(245, 158, 11, 0.4)"
-                  : "1px solid rgba(6, 182, 212, 0.4)",
-              }}
-            >
-              {isCycle ? <IconFlame size={10} /> : <IconBolt size={10} />}
-              <span>{trafficSnippet}</span>
-            </span>
-          )}
-
           {detailText && (
             <span
+              className="edge-badge-detail"
               style={{
                 fontSize: "9.5px",
                 opacity: 0.8,

@@ -14,7 +14,6 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
   positionedEdges,
   hiddenNodeIds,
   selectedNodeId,
-  positionedNodes,
 }) {
   return (
     <svg

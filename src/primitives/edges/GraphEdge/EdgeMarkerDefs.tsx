@@ -52,6 +52,27 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
         />
       </marker>
 
+      {/* Highlighted Edge Marker */}
+      <marker
+        id={getMarkerId("edge-arrowhead-highlighted")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="var(--accent, #818cf8)"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
       {/* 1. Spawn / Dispatch Marker (Cyan) */}
       <marker
         id={getMarkerId("edge-arrowhead-spawn")}

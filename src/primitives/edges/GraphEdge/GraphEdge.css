@@ -13,11 +13,12 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Base Edge Path - Neutral dark-mode zinc by default */
+/* Base Edge Path - Neutral dark-mode zinc by default (Static, Solid, Clean) */
 .graph-edge-path {
   fill: none;
   stroke: #3f3f46;
   stroke-width: 1.5px;
+  stroke-dasharray: none;
   vector-effect: non-scaling-stroke;
   shape-rendering: geometricPrecision;
   transition:
@@ -26,27 +27,22 @@
     filter 0.2s ease;
 }
 
-/* 1. Spawn / Dispatch - Cyan/Blue dashed */
+/* 1. Spawn / Dispatch - Cyan/Blue solid by default */
 .graph-edge-path.kind-spawn,
 .graph-edge-path.kind-dispatch {
   stroke: #06b6d4;
   stroke-width: 2px;
-  stroke-dasharray: 6 4;
+  stroke-dasharray: none;
 }
 
-.graph-edge-path.kind-spawn.animated,
-.graph-edge-path.kind-dispatch.animated {
-  animation: edge-flow 1.5s linear infinite;
-}
-
-/* 2. Sequence - Neutral slate/zinc (#3f3f46), understated */
+/* 2. Sequence - Neutral slate/zinc (#3f3f46), understated solid */
 .graph-edge-path.kind-sequence {
   stroke: #3f3f46;
   stroke-width: 1.5px;
   stroke-dasharray: none;
 }
 
-/* 3. Data Handoff - Indigo solid curve */
+/* 3. Data Handoff - Indigo solid */
 .graph-edge-path.kind-data,
 .graph-edge-path.kind-handoff {
   stroke: #6366f1;
@@ -54,21 +50,20 @@
   stroke-dasharray: none;
 }
 
-/* 4. Dependency - Slate dashed */
+/* 4. Dependency - Slate solid */
 .graph-edge-path.kind-dependency {
   stroke: #64748b;
   stroke-width: 1.5px;
-  stroke-dasharray: 5 4;
+  stroke-dasharray: none;
 }
 
-/* 5. Loop / Pushback - Crimson / Amber reverse-pulsating dashes */
+/* 5. Loop / Pushback - Crimson solid */
 .graph-edge-path.kind-loop,
 .graph-edge-path.kind-pushback,
 .graph-edge-path.cycle {
   stroke: #f43f5e;
   stroke-width: 2px;
-  stroke-dasharray: 6 4;
-  animation: edge-flow-reverse 1.8s linear infinite;
+  stroke-dasharray: none;
 }
 
 /* 6. Gate / Validation - Emerald Green solid */
@@ -87,21 +82,40 @@
   stroke-dasharray: none;
 }
 
-/* Selection and Hover Interactions */
-.graph-edge-group:hover .graph-edge-path {
+/* Hover Interaction (Static stroke-width enlargement without animation) */
+.graph-edge-group:hover .graph-edge-path:not(.selected):not(.is-highlighted) {
   stroke: var(--accent-color, #818cf8);
-  stroke-width: 3px;
+  stroke-width: 2.5px;
 }
 
-.graph-edge-path.selected {
+/* Selection and Highlight Interactions: Cut-off Animated Dashed Lines (stroke-dasharray: 6 4) ONLY */
+.graph-edge-path.selected,
+.graph-edge-path.is-highlighted,
+.graph-edge-group.selected .graph-edge-path,
+.graph-edge-group.is-highlighted .graph-edge-path {
   stroke: var(--accent-color, #818cf8) !important;
-  stroke-width: 3px;
+  stroke-width: 2.5px;
+  stroke-dasharray: 6 4 !important;
+  animation: edge-flow 1.2s linear infinite !important;
   filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
 }
 
-.graph-edge-path.animated:not(.cycle):not(.kind-loop):not(.kind-pushback) {
-  stroke-dasharray: 8 6;
-  animation: edge-flow 1.5s linear infinite;
+/* Highlight / Selection for Loop & Cycles: Reverse Animated Dashes */
+.graph-edge-path.cycle.selected,
+.graph-edge-path.cycle.is-highlighted,
+.graph-edge-path.kind-loop.selected,
+.graph-edge-path.kind-loop.is-highlighted,
+.graph-edge-path.kind-pushback.selected,
+.graph-edge-path.kind-pushback.is-highlighted,
+.graph-edge-group.selected .graph-edge-path.cycle,
+.graph-edge-group.is-highlighted .graph-edge-path.cycle,
+.graph-edge-group.selected .graph-edge-path.kind-loop,
+.graph-edge-group.is-highlighted .graph-edge-path.kind-loop,
+.graph-edge-group.selected .graph-edge-path.kind-pushback,
+.graph-edge-group.is-highlighted .graph-edge-path.kind-pushback {
+  stroke: var(--accent-color, #f43f5e) !important;
+  stroke-dasharray: 6 4 !important;
+  animation: edge-flow-reverse 1.2s linear infinite !important;
 }
 
 /* Edge Badge Overlay */
@@ -230,10 +244,6 @@
   color: #fde047;
 }
 
-.edge-badge-icon {
-  flex-shrink: 0;
-}
-
 .edge-badge-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,7 +254,8 @@
   fill: #18181f;
 }
 
-.edge-badge-group.selected .edge-badge-rect {
+.edge-badge-group.selected .edge-badge-rect,
+.edge-badge-group.is-highlighted .edge-badge-rect {
   stroke: var(--accent-color, #818cf8);
   fill: #18181f;
   filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.5));
@@ -252,7 +263,7 @@
 
 @keyframes edge-flow {
   from {
-    stroke-dashoffset: 28;
+    stroke-dashoffset: 20;
   }
   to {
     stroke-dashoffset: 0;
@@ -264,11 +275,11 @@
     stroke-dashoffset: 0;
   }
   to {
-    stroke-dashoffset: 28;
+    stroke-dashoffset: 20;
   }
 }
 
-/* High-Traffic Edge Bundles and Glow Badges */
+/* High-Traffic Edge Bundles and Glow Backdrops */
 .edge-glow-backdrop {
   fill: none;
   stroke-width: 6px;
@@ -277,61 +288,18 @@
   opacity: 0.35;
   filter: blur(4px);
   pointer-events: none;
-  animation: traffic-pulse 2.5s ease-in-out infinite alternate;
 }
 
 .graph-edge-path.high-traffic {
-  stroke-width: 2.5px;
-  filter: drop-shadow(0 0 4px currentColor);
+  stroke-width: 2px;
 }
 
 .shared-anchor-junction {
   stroke: #18181b;
   stroke-width: 2px;
   filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
-  animation: junction-pulse 2s ease-in-out infinite alternate;
 }
 
 .edge-badge-group.high-traffic .edge-badge-rect {
   stroke-width: 2px;
-  animation: badge-glow-pulse 2s ease-in-out infinite alternate;
-}
-
-.edge-traffic-chip {
-  cursor: default;
-  transition: transform 0.15s ease;
-}
-.edge-badge-group:hover .edge-traffic-chip {
-  transform: scale(1.06);
-}
-
-@keyframes traffic-pulse {
-  from {
-    opacity: 0.25;
-    stroke-width: 5px;
-  }
-  to {
-    opacity: 0.55;
-    stroke-width: 8px;
-  }
-}
-
-@keyframes junction-pulse {
-  from {
-    r: 3.5;
-    opacity: 0.8;
-  }
-  to {
-    r: 5;
-    opacity: 1;
-  }
-}
-
-@keyframes badge-glow-pulse {
-  from {
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
-  }
-  to {
-    filter: drop-shadow(0 0 8px currentColor);
-  }
 }

@@ -10,9 +10,10 @@ describe("EdgeMarkerDefs", () => {
       </svg>,
     );
 
-    // 1. Default neutral & selected
+    // 1. Default neutral, selected & highlighted
     expect(html).toContain('id="edge-arrowhead"');
     expect(html).toContain('id="edge-arrowhead-selected"');
+    expect(html).toContain('id="edge-arrowhead-highlighted"');
 
     // 2. 7 Semantic Markers
     expect(html).toContain('id="edge-arrowhead-spawn"');
