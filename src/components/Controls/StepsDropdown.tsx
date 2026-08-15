@@ -8,6 +8,7 @@ import {
 import { useGraphStore } from "../../state/useGraphStore";
 import { createPanelDismissHandler } from "./panelDismiss";
 import "./Controls.css";
+import "./StepsDropdown.css";
 
 export const StepsDropdown: FC = React.memo(function StepsDropdown() {
   const dataset = useGraphStore((state) => state.dataset);

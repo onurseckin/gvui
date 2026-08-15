@@ -8,7 +8,6 @@ import { buildEdgePath } from "../layout/custom/edgePath";
 import { GraphBadgeLayer } from "./GraphBadgeLayer";
 import "./GraphCanvas.css";
 import { GraphHtmlLayer } from "./GraphHtmlLayer";
-import { GraphSectionsLayer } from "./GraphSectionsLayer";
 import { GraphSvgLayer } from "./GraphSvgLayer";
 import { useLayoutComputation } from "./useLayoutComputation";
 import { usePanZoom } from "./usePanZoom";
@@ -122,11 +121,6 @@ export const GraphCanvas: FC = () => {
     >
       {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
-        <GraphSectionsLayer
-          sections={dataset?.sections}
-          positionedNodes={positionedNodes}
-          hiddenNodeIds={hiddenNodeIds}
-        />
         <GraphSvgLayer
           styledEdges={styledEdges}
           hiddenNodeIds={hiddenNodeIds}
