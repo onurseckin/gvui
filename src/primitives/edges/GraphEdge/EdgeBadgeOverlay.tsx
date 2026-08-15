@@ -1,11 +1,21 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useCallback } from "react";
+import {
+  IconAlertCircle,
+  IconArrowRight,
+  IconFileText,
+  IconGitMerge,
+  IconRocket,
+} from "@tabler/icons-react";
 import type { Point, Rect } from "../../../engine/layout/custom/types";
+import type { BadgeDetail } from "../../../types/graphData";
+import { getTablerIconComponent } from "../../nodes/NodeCard/nodeKinds";
 
 export interface EdgeBadgeOverlayProps {
   x: number;
   y: number;
   label?: string;
+  badge?: BadgeDetail;
   isCycle?: boolean;
   isSelected?: boolean;
   badgeRect?: Rect;
@@ -19,6 +29,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
     x,
     y,
     label,
+    badge,
     isCycle = false,
     isSelected = false,
     badgeRect,
@@ -44,29 +55,35 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
       [onClick],
     );
 
-    const hasBadge = Boolean(label && label.trim().length > 0) || isCycle;
-    if (!hasBadge) {
-      return null;
-    }
+    const badgeText = badge?.text ?? label;
+    const hasBadge = Boolean(badgeText && badgeText.trim().length > 0) || isCycle;
+    if (!hasBadge) return null;
 
     const displayText = isCycle
-      ? label && label.trim().length > 0
-        ? `CYCLE (${label})`
+      ? badgeText && badgeText.trim().length > 0
+        ? `CYCLE (${badgeText})`
         : "CYCLE"
-      : (label ?? "");
+      : (badgeText ?? "");
 
-    const width = badgeRect ? badgeRect.width : Math.max(60, displayText.length * 8 + 24);
+    const iconKey = badge?.icon;
+    let IconComp = getTablerIconComponent(iconKey);
+    if (!IconComp) {
+      if (isCycle || badge?.variant === "warning") IconComp = IconAlertCircle;
+      else if (badge?.variant === "info") IconComp = IconRocket;
+      else if (badge?.variant === "success") IconComp = IconFileText;
+      else if (badge?.text?.toLowerCase().includes("join")) IconComp = IconGitMerge;
+      else if (badge?.text) IconComp = IconArrowRight;
+    }
+
+    const iconPadding = IconComp ? 20 : 0;
+    const width = badgeRect
+      ? badgeRect.width
+      : Math.max(64, displayText.length * 7.5 + 24 + iconPadding);
     const height = badgeRect ? badgeRect.height : 28;
     const renderX = badgeRect ? badgeRect.x + badgeRect.width / 2 : x;
     const renderY = badgeRect ? badgeRect.y + badgeRect.height / 2 : y;
 
     const hasLeaderPoints = Boolean(leaderPoints && leaderPoints.length >= 2);
-
-    // A connector is only honest when the edge does NOT pass under the badge. Containment, not
-    // distance from the badge centre, is the right test: with `on-edge` placement — the default —
-    // the anchor is the point of the edge the badge covers, so it is inside the rect and a dashed
-    // line to it would point at the thing it starts from. A wide badge whose anchor sits well
-    // off-centre but still under the rect is the same case, and a distance test would miss it.
     const anchor = anchorPoint ?? (hasLeaderPoints && leaderPoints ? leaderPoints[0] : undefined);
     const anchorIsOutsideBadge =
       anchor !== undefined &&
@@ -85,10 +102,13 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
             .trim()
         : "";
 
+    const variant = isCycle ? "warning" : (badge?.variant ?? "neutral");
+    const isClickable = badge?.clickable ?? Boolean(onClick);
+
     return (
       <g
         transform={`translate(${renderX}, ${renderY})`}
-        className={`edge-badge-group ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
+        className={`edge-badge-group ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""} ${isClickable ? "is-clickable" : ""}`.trim()}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         role="button"
@@ -124,22 +144,32 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
           ry={14}
           fill="#18181b"
           opacity={1}
-          stroke="#27272a"
-          className={`edge-badge-rect ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
+          className={`edge-badge-rect variant-${variant} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
         />
-        <text
-          x={0}
-          y={0}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="#ffffff"
-          fontSize="11"
-          fontFamily="var(--font-mono)"
-          fontWeight="600"
-          className="edge-badge-text"
+        <foreignObject
+          x={-width / 2}
+          y={-height / 2}
+          width={width}
+          height={height}
+          style={{ pointerEvents: "none" }}
         >
-          {displayText}
-        </text>
+          <div
+            className={`edge-badge-inner variant-${variant}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              height: "100%",
+              gap: "5px",
+              padding: "0 8px",
+              boxSizing: "border-box",
+            }}
+          >
+            {IconComp ? <IconComp size={13} className="edge-badge-icon" /> : null}
+            <span className="edge-badge-label">{displayText}</span>
+          </div>
+        </foreignObject>
       </g>
     );
   },

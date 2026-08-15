@@ -18,7 +18,136 @@
   cursor: grabbing;
 }
 
-/* High-DPI HD Vector & Typography Stage */
+/* Glassmorphic Step Scrubber */
+.step-scrubber-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  background: rgba(18, 18, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  max-width: calc(100% - 48px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+
+.step-scrubber-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.step-scrubber-icon {
+  color: #818cf8;
+}
+
+.step-scrubber-title {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fafafa;
+}
+
+.step-scrubber-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+}
+.step-pill.is-active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+
+.step-pill-count {
+  font-size: 9.5px;
+  opacity: 0.8;
+}
+
+.step-scrubber-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.step-control-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  color: #e4e4e7;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.step-control-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+.step-control-btn.is-playing {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fcd34d;
+}
+
+.step-speed-btn {
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.step-reset-btn {
+  padding: 4px;
+}
+
+/* Stage & Layers */
 .graph-transform-stage {
   position: absolute;
   top: 0;
@@ -27,12 +156,8 @@
   height: 100%;
   transform-origin: 0 0;
   pointer-events: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: geometricPrecision;
 }
 
-/* SVG Vector Crispness Layer */
 .graph-svg-layer {
   position: absolute;
   top: 0;
@@ -41,24 +166,16 @@
   height: 100%;
   overflow: visible;
   pointer-events: none;
-  shape-rendering: geometricPrecision;
-  text-rendering: geometricPrecision;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 .graph-svg-layer path,
 .graph-svg-layer marker {
   vector-effect: non-scaling-stroke;
-  shape-rendering: geometricPrecision;
-  text-rendering: geometricPrecision;
 }
-
 .graph-svg-layer g {
   pointer-events: auto;
 }
 
-/* HTML Node Card Layer */
 .graph-html-layer {
   position: absolute;
   top: 0;
@@ -78,5 +195,6 @@
 }
 
 .graph-node-wrapper.is-dimmed {
-  opacity: 0.3;
+  opacity: 0.2;
+  filter: grayscale(0.5);
 }

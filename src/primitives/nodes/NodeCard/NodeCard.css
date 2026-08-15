@@ -1,19 +1,5 @@
-/*
- * Node card.
- *
- * Two rules govern everything here:
- *
- * 1. Nothing in this file may grow the card. The layout engine sized the box from
- *    `nodeTemplate.ts`; any row that can wrap without a cap, or any padding not mirrored in that
- *    template, shows up as clipped text on the canvas.
- * 2. Text uses an explicit grey ramp rather than the `--text-*` tokens. Those tokens are all pure
- *    white by design (a deliberate high-contrast choice for chrome), but a card needs title,
- *    prose, and metrics to sit at visibly different weights or it reads as one flat block.
- */
-
 .node-card {
   --node-kind-accent: #a78bfa;
-
   width: 100%;
   height: auto;
   min-height: 0;
@@ -40,11 +26,6 @@
   text-rendering: geometricPrecision;
 }
 
-/*
- * Kind accent. Absolutely positioned rather than a `border-left` so it takes no part in the box
- * model — a 3px border would eat 3px of the content width the measurer already committed to, and
- * long titles would clip. Sits above the header band, which spans the full card width.
- */
 .node-card::before {
   content: "";
   position: absolute;
@@ -60,32 +41,31 @@
   background-color: #1b1b1f;
   border-color: #3f3f46;
 }
-
 .node-card.selected {
   border-color: var(--node-kind-accent);
   box-shadow:
     0 0 0 1px var(--node-kind-accent),
     0 8px 28px -10px rgba(0, 0, 0, 0.9);
 }
-
 .node-card.filtered {
   opacity: 0.28;
   filter: grayscale(0.6);
 }
-
-/* A failed node earns a tint; nothing else does. */
 .node-card.status-error {
   border-color: rgba(248, 113, 113, 0.45);
 }
-
 .node-card.status-skipped {
   opacity: 0.55;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 8px,
+    transparent 8px,
+    transparent 16px
+  );
 }
 
-/* ---------------------------------------------------------------------------------------------
- * Header
- * ------------------------------------------------------------------------------------------- */
-
+/* Header */
 .node-card-header {
   display: flex;
   align-items: center;
@@ -106,14 +86,12 @@
   min-width: 0;
   min-height: 18px;
 }
-
 .node-card-header-aside {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
 }
-
 .node-card-status-dot {
   width: 8px;
   height: 8px;
@@ -122,8 +100,6 @@
   background-color: currentColor;
   box-shadow: 0 0 7px currentColor;
 }
-
-/* Only an in-flight node moves. Motion is expensive attention; nothing settled should spend it. */
 .node-card-status-dot.is-animated {
   animation: node-status-pulse 1.4s ease-in-out infinite;
 }
@@ -142,22 +118,60 @@
 
 .node-card-kind-icon {
   flex-shrink: 0;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-
 .node-card-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 18px;
   color: #fafafa;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: visible;
-  text-overflow: clip;
   flex-shrink: 0;
 }
-
+.node-card-step-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.node-card-badge-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7;
+}
+.node-card-badge-chip.variant-info {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+  color: #67e8f9;
+}
+.node-card-badge-chip.variant-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+.node-card-badge-chip.variant-success {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
 .node-card-type-tag {
   font-size: 10px;
   font-weight: 600;
@@ -171,7 +185,6 @@
   font-family: var(--font-mono);
   flex-shrink: 0;
 }
-
 .node-card-model-chip {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -184,28 +197,22 @@
   color: #d4d4d8;
   white-space: nowrap;
 }
-
-/* Tier, not model name, drives weight — so a graph keeps ranking correctly when models are renamed
-   or swapped for custom ones. Larger tier reads heavier. */
 .node-card-model-chip.tier-l {
   background-color: rgba(129, 140, 248, 0.16);
   border-color: rgba(129, 140, 248, 0.45);
   color: #c7d2fe;
 }
-
 .node-card-model-chip.tier-m {
   background-color: rgba(167, 139, 250, 0.12);
   border-color: rgba(167, 139, 250, 0.32);
   color: #ddd6fe;
 }
-
 .node-card-model-chip.tier-s,
 .node-card-model-chip.tier-xs {
   background-color: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
   color: #a1a1aa;
 }
-
 .node-card-toggle-btn {
   background: none;
   border: none;
@@ -220,24 +227,19 @@
     background-color 0.15s ease,
     color 0.15s ease;
 }
-
 .node-card-toggle-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
   color: #fafafa;
 }
 
-/* ---------------------------------------------------------------------------------------------
- * Body
- * ------------------------------------------------------------------------------------------- */
-
+/* Body */
 .node-card-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 6px;
+  padding-top: 6px;
   min-height: 0;
 }
-
 .node-card-description {
   margin: 0;
   font-size: 11px;
@@ -247,13 +249,50 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.node-card-mini-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.node-card-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 13px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+  font-family: var(--font-mono);
+}
+.node-card-mini-chip .mini-chip-icon {
+  flex-shrink: 0;
+  color: #71717a;
+}
+.node-card-mini-chip.chip-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+}
+.node-card-mini-chip.chip-warning .mini-chip-icon {
+  color: #f59e0b;
+}
+.node-card-mini-chip.chip-success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+}
+.node-card-mini-chip.chip-success .mini-chip-icon {
+  color: #10b981;
+}
 
 .node-card-chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
-
 .node-chip {
   display: inline-flex;
   align-items: center;
@@ -271,38 +310,31 @@
   max-width: 100%;
   box-sizing: border-box;
 }
-
 .node-chip-icon {
   flex-shrink: 0;
   color: #71717a;
   display: block;
 }
-
 .node-chip-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* Writes are the thing you scan a trace for, so they get the only tinted chip on the card. */
 .node-chip--file-write {
   background-color: rgba(251, 191, 36, 0.1);
   border-color: rgba(251, 191, 36, 0.28);
   color: #fcd34d;
 }
-
 .node-chip--file-write .node-chip-icon {
   color: #fbbf24;
 }
-
 .node-chip--overflow {
   background-color: transparent;
   border-style: dashed;
   border-color: rgba(255, 255, 255, 0.16);
   color: #71717a;
 }
-
 .node-card-metrics {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -313,7 +345,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .node-card-metrics.has-retries {
   color: #d97706;
 }

@@ -1,16 +1,26 @@
 import type { CSSProperties, FC } from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  IconArrowsExchange,
+  IconBinary,
+  IconFiles,
+  IconInfoCircle,
+  IconShieldSearch,
+  IconTerminal,
+} from "@tabler/icons-react";
 import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphNodeData, IoPort } from "../../types/graphData";
 import { edgeToPort } from "./DrawerSection";
-import { OverviewTab } from "./tabs/OverviewTab";
-import { FilesTab } from "./tabs/FilesTab";
 import { CommandsTab } from "./tabs/CommandsTab";
+import { FilesTab } from "./tabs/FilesTab";
 import { FindingsTab } from "./tabs/FindingsTab";
+import { IoTab } from "./tabs/IoTab";
+import { OverviewTab } from "./tabs/OverviewTab";
+import { RawProvenanceTab } from "./tabs/RawProvenanceTab";
 import "./NodeDetailDrawer.css";
 
-type TabId = "overview" | "files" | "commands" | "findings";
+type TabId = "overview" | "io" | "files" | "commands" | "findings" | "provenance";
 
 export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
@@ -63,10 +73,58 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
 
   const kind = describeNodeKind(node);
   const status = describeNodeStatus(node);
+  const IconComp = kind.IconComponent;
+
+  const ioCount = inputs.length + outputs.length;
   const filesCount =
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
   const commandsCount = (node.metadata?.commands as unknown[])?.length ?? 0;
   const findingsCount = (node.metadata?.findings as unknown[])?.length ?? 0;
+  const hasRepairOrCritic =
+    ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
+
+  // Tab definitions
+  const tabs = [
+    { id: "overview" as TabId, label: "Overview", icon: IconInfoCircle, count: 0, visible: true },
+    {
+      id: "io" as TabId,
+      label: "I/O",
+      icon: IconArrowsExchange,
+      count: ioCount,
+      visible: ioCount > 0,
+    },
+    {
+      id: "files" as TabId,
+      label: "Files & Diffs",
+      icon: IconFiles,
+      count: filesCount,
+      visible: filesCount > 0,
+    },
+    {
+      id: "commands" as TabId,
+      label: "Executions",
+      icon: IconTerminal,
+      count: commandsCount,
+      visible: commandsCount > 0,
+    },
+    {
+      id: "findings" as TabId,
+      label: "Feedback & Reviews",
+      icon: IconShieldSearch,
+      count: findingsCount,
+      visible: findingsCount > 0 || hasRepairOrCritic,
+    },
+    {
+      id: "provenance" as TabId,
+      label: "Raw Provenance",
+      icon: IconBinary,
+      count: 0,
+      visible: true,
+    },
+  ];
+
+  const visibleTabs = tabs.filter((t) => t.visible);
+  const currentTabId = visibleTabs.some((t) => t.id === activeTab) ? activeTab : "overview";
 
   return (
     <aside className="node-drawer" role="complementary" aria-label={`Details for ${node.name}`}>
@@ -75,20 +133,9 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
         style={{ "--node-kind-accent": kind.accent } as CSSProperties}
       >
         <div className="drawer-header-top">
-          <svg
-            className="drawer-kind-icon"
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke={kind.accent}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            {kind.icon}
-          </svg>
+          <span className="drawer-kind-icon" style={{ color: kind.accent }}>
+            <IconComp size={16} color={kind.accent} />
+          </span>
           <h2 className="drawer-title">{node.name}</h2>
           <button
             type="button"
@@ -118,6 +165,9 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             <span className="drawer-status-dot" />
             {status.label}
           </span>
+          {node.step !== undefined ? (
+            <span className="drawer-step-chip">Step {node.step}</span>
+          ) : null}
           {node.model ? <span className="drawer-model">{node.model}</span> : null}
           {node.harnessModel ? (
             <span className="drawer-model drawer-model--harness">harness: {node.harnessModel}</span>
@@ -127,40 +177,25 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       </header>
 
       <nav className="drawer-tabs" aria-label="Detail Sections">
-        <button
-          type="button"
-          className={`drawer-tab ${activeTab === "overview" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("overview")}
-        >
-          Overview
-        </button>
-        <button
-          type="button"
-          className={`drawer-tab ${activeTab === "files" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("files")}
-        >
-          Files {filesCount > 0 ? <span className="drawer-tab-badge">{filesCount}</span> : null}
-        </button>
-        <button
-          type="button"
-          className={`drawer-tab ${activeTab === "commands" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("commands")}
-        >
-          Commands{" "}
-          {commandsCount > 0 ? <span className="drawer-tab-badge">{commandsCount}</span> : null}
-        </button>
-        <button
-          type="button"
-          className={`drawer-tab ${activeTab === "findings" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("findings")}
-        >
-          Findings{" "}
-          {findingsCount > 0 ? <span className="drawer-tab-badge">{findingsCount}</span> : null}
-        </button>
+        {visibleTabs.map((tab) => {
+          const TabIcon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={`drawer-tab ${currentTabId === tab.id ? "is-active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <TabIcon size={14} />
+              <span>{tab.label}</span>
+              {tab.count > 0 ? <span className="drawer-tab-badge">{tab.count}</span> : null}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="drawer-body">
-        {activeTab === "overview" && (
+        {currentTabId === "overview" && (
           <OverviewTab
             node={node}
             inputs={inputs}
@@ -168,9 +203,13 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             nodeNamesById={nodeNamesById}
           />
         )}
-        {activeTab === "files" && <FilesTab node={node} />}
-        {activeTab === "commands" && <CommandsTab node={node} />}
-        {activeTab === "findings" && <FindingsTab node={node} />}
+        {currentTabId === "io" && (
+          <IoTab node={node} inputs={inputs} outputs={outputs} nodeNamesById={nodeNamesById} />
+        )}
+        {currentTabId === "files" && <FilesTab node={node} />}
+        {currentTabId === "commands" && <CommandsTab node={node} />}
+        {currentTabId === "findings" && <FindingsTab node={node} />}
+        {currentTabId === "provenance" && <RawProvenanceTab node={node} />}
       </div>
     </aside>
   );

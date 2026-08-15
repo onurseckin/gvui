@@ -5,6 +5,14 @@ export interface NodeBadge {
   variant?: "success" | "info" | "amber" | "error" | "gray";
 }
 
+export interface BadgeDetail {
+  text: string;
+  variant?: "info" | "warning" | "error" | "success" | "neutral";
+  icon?: string;
+  clickable?: boolean;
+  targetTab?: "overview" | "io" | "files" | "commands" | "feedback" | string;
+}
+
 export interface NodeTool {
   name: string;
   type?: "generic" | "custom";
@@ -26,7 +34,6 @@ export type NodeKind =
   | "terminal"
   | "input"
   | "critic";
-
 export type NodeStatus =
   | "pending"
   | "running"
@@ -35,24 +42,27 @@ export type NodeStatus =
   | "warning"
   | "skipped"
   | "cached";
-
 export type ModelTier = "xs" | "s" | "m" | "l";
 export type FileMode = "read" | "write" | "attach";
+export type EdgeKind = "sequence" | "spawn" | "conditional" | "loop" | "fallback" | "join" | "data";
+export type PayloadKind = "full-context" | "summary" | "artifact" | "decision" | "file" | "prompt";
 
 export interface FileRef {
   path: string;
   mode?: FileMode;
   lines?: string;
   diff?: string;
+  additions?: number;
+  deletions?: number;
 }
-
-export type PayloadKind = "full-context" | "summary" | "artifact" | "decision" | "file" | "prompt";
 
 export interface IoPort {
   node?: string;
   kind: PayloadKind;
   label: string;
   tokens?: number;
+  preview?: string;
+  dataRef?: string;
 }
 
 export interface NodeMetrics {
@@ -71,6 +81,10 @@ export interface CommandExecutionDetail {
   durationMs: number;
   startedAt: string;
   finishedAt: string;
+  stdoutSnippet?: string;
+  stderrSnippet?: string;
+  stdoutTail?: string;
+  stderrTail?: string;
   logPath?: string;
 }
 
@@ -81,6 +95,7 @@ export interface FindingDetail {
   observation: string;
   remediation?: string;
   status: "open" | "resolved";
+  revalidationProof?: { method: string; evidence: string[] };
 }
 
 export interface GraphSection {
@@ -96,6 +111,7 @@ export interface NodeMetadata {
   writeScope?: string[];
   leaseAgent?: string;
   repairRounds?: number;
+  durationMs?: number;
   [key: string]: unknown;
 }
 
@@ -106,18 +122,18 @@ export interface GraphNodeData {
   type?: string;
   kind?: NodeKind;
   status?: NodeStatus;
+  step?: number;
+  stepLabel?: string;
+  badge?: BadgeDetail;
+  badges?: NodeBadge[];
   model?: string;
   harnessModel?: string;
   tier?: ModelTier;
   sectionId?: string;
-  badges?: NodeBadge[];
   tools?: NodeTool[];
   files?: FileRef[];
   metrics?: NodeMetrics;
-  io?: {
-    inputs?: IoPort[];
-    outputs?: IoPort[];
-  };
+  io?: { inputs?: IoPort[]; outputs?: IoPort[] };
   prompt?: string;
   output?: string;
   logs?: string;
@@ -126,8 +142,6 @@ export interface GraphNodeData {
   rank?: number;
   group?: string;
 }
-
-export type EdgeKind = "sequence" | "spawn" | "conditional" | "loop" | "fallback" | "join" | "data";
 
 export interface EdgeHandoff {
   kind: PayloadKind;
@@ -144,6 +158,7 @@ export interface GraphEdgeData {
   isCycle?: boolean;
   kind?: EdgeKind;
   condition?: string;
+  badge?: BadgeDetail;
   handoff?: EdgeHandoff;
   layoutRole?: EdgeLayoutHint;
   weight?: number;

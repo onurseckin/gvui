@@ -23,19 +23,20 @@
 }
 
 .graph-edge-group:hover .graph-edge-path {
-  stroke: var(--accent-color);
+  stroke: var(--accent-color, #818cf8);
   stroke-width: 3px;
 }
 
 .graph-edge-path.selected {
-  stroke: var(--accent-color);
+  stroke: var(--accent-color, #818cf8);
   stroke-width: 3px;
   filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
 }
 
 .graph-edge-path.cycle {
-  stroke: #fbbf24;
+  stroke: #f59e0b;
   stroke-dasharray: 6 4;
+  animation: edge-flow-reverse 1.8s linear infinite;
 }
 
 .graph-edge-path.animated {
@@ -50,7 +51,7 @@
 }
 
 .edge-badge-rect {
-  fill: #09090b;
+  fill: #0d0d10;
   stroke: #3f3f46;
   stroke-width: 1.5px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.9));
@@ -59,38 +60,53 @@
     stroke 0.2s ease;
 }
 
+.edge-badge-rect.variant-info {
+  stroke: rgba(6, 182, 212, 0.5);
+}
+
+.edge-badge-rect.variant-warning,
+.edge-badge-rect.cycle {
+  stroke: rgba(245, 158, 11, 0.7);
+  stroke-width: 2px;
+}
+
+.edge-badge-rect.variant-success {
+  stroke: rgba(16, 185, 129, 0.5);
+}
+
+.edge-badge-inner {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #e4e4e7;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.edge-badge-inner.variant-info {
+  color: #67e8f9;
+}
+
+.edge-badge-inner.variant-warning {
+  color: #fcd34d;
+}
+
+.edge-badge-inner.variant-success {
+  color: #6ee7b7;
+}
+
+.edge-badge-icon {
+  flex-shrink: 0;
+}
+
+.edge-badge-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .edge-badge-group:hover .edge-badge-rect {
   stroke: var(--accent-color, #818cf8);
-  fill: #09090b;
-}
-
-.edge-badge-rect.selected,
-.edge-badge-group.selected .edge-badge-rect {
-  stroke: var(--accent-color, #818cf8);
-  fill: #09090b;
-}
-
-.edge-badge-rect.cycle,
-.edge-badge-group.cycle .edge-badge-rect {
-  stroke: #f59e0b;
-  stroke-width: 2px;
-  fill: #09090b;
-}
-
-.edge-badge-text {
-  fill: #ffffff;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  pointer-events: none;
-  user-select: none;
-  transition: fill 0.2s ease;
-}
-
-.edge-badge-group.cycle .edge-badge-text,
-.edge-badge-rect.cycle + .edge-badge-text {
-  fill: #fbbf24;
-  font-weight: 700;
+  fill: #16161a;
 }
 
 @keyframes edge-flow {
@@ -99,5 +115,14 @@
   }
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+@keyframes edge-flow-reverse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 28;
   }
 }

@@ -9,13 +9,6 @@ export interface NodeCardHeaderProps {
   onToggleCollapse: (id: string) => void;
 }
 
-/**
- * `[status] [kind] Title … [model] [collapse]`.
- *
- * Three questions get three slots, left to right in the order you ask them: how did it go, what is
- * it, what is it called — then, right-aligned, what ran it. Status and kind never share a colour
- * channel, so a running orchestrator and a finished tool call stay distinguishable at a glance.
- */
 export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
   ({ node, isCollapsed, onToggleCollapse }) => {
     const handleToggle = useCallback(
@@ -29,37 +22,33 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
     const kind = describeNodeKind(node);
     const status = describeNodeStatus(node);
     const tier = resolveModelTier(node);
+    const IconComp = kind.IconComponent;
 
     return (
       <header className="node-card-header">
         <div className="node-card-header-main">
           <span
             className={`node-card-status-dot ${status.animated ? "is-animated" : ""}`.trim()}
-            // `color`, not `background-color`: the dot paints itself and its glow from
-            // `currentColor`, so one value drives both.
             style={{ color: status.color }}
             title={`Status: ${status.label}`}
           />
-          <svg
-            className="node-card-kind-icon"
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke={kind.accent}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            {kind.icon}
-          </svg>
+          <span className="node-card-kind-icon" style={{ color: kind.accent }}>
+            <IconComp size={14} color={kind.accent} />
+          </span>
           <h3 className="node-card-title" title={node.name}>
             {node.name}
           </h3>
           {node.type ? <span className="node-card-type-tag">{node.type}</span> : null}
+          {node.step !== undefined ? (
+            <span className="node-card-step-badge">Step {node.step}</span>
+          ) : null}
         </div>
         <div className="node-card-header-aside">
+          {node.badge ? (
+            <span className={`node-card-badge-chip variant-${node.badge.variant ?? "info"}`}>
+              {node.badge.text}
+            </span>
+          ) : null}
           {node.model ? (
             <span
               className={`node-card-model-chip ${tier ? `tier-${tier}` : ""}`.trim()}
