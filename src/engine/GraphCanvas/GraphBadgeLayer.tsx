@@ -1,6 +1,6 @@
 import type { FC } from "react";
-import { memo, useMemo } from "react";
-import { computeSafeBadgePlacement, EdgeBadgeOverlay } from "../../primitives/edges/GraphEdge";
+import { memo } from "react";
+import { EdgeBadgeOverlay } from "../../primitives/edges/GraphEdge";
 import type { PositionedEdge, PositionedNode } from "../../types/graphData";
 
 export interface GraphBadgeLayerProps {
@@ -16,12 +16,6 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
   selectedNodeId,
   positionedNodes,
 }) {
-  const visibleNodes = useMemo(() => {
-    if (!positionedNodes || positionedNodes.length === 0) return [];
-    if (hiddenNodeIds.size === 0) return positionedNodes;
-    return positionedNodes.filter((node) => !hiddenNodeIds.has(node.id));
-  }, [positionedNodes, hiddenNodeIds]);
-
   return (
     <svg
       className="graph-svg-badge-layer"
@@ -39,16 +33,13 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
         }
         const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
 
-        const placement =
-          visibleNodes.length > 0
-            ? computeSafeBadgePlacement(edge, visibleNodes)
-            : {
-                x: edge.labelX ?? 0,
-                y: edge.labelY ?? 0,
-                badgeRect: edge.badgeRect,
-                anchorPoint: edge.anchorPoint,
-                leaderPoints: edge.leaderPoints,
-              };
+        const placement = {
+          x: edge.labelX ?? 0,
+          y: edge.labelY ?? 0,
+          badgeRect: edge.badgeRect,
+          anchorPoint: edge.anchorPoint,
+          leaderPoints: edge.leaderPoints,
+        };
 
         return (
           <g key={`badge-${edge.id}`} style={{ pointerEvents: "auto" }}>
@@ -65,6 +56,10 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
               badgeRect={placement.badgeRect}
               anchorPoint={placement.anchorPoint}
               leaderPoints={placement.leaderPoints}
+              traffic={edge.traffic}
+              isHighTraffic={edge.isHighTraffic}
+              bundleCount={edge.bundleCount}
+              bundleIndex={edge.bundleIndex}
             />
           </g>
         );

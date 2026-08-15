@@ -174,13 +174,8 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       maxLines: Number.POSITIVE_INFINITY,
       segments: [
         {
-          fontKey: FONT_KEYS.nodeTypeTag,
-          itemChrome: 12,
-          select: selectBadges,
-        },
-        {
           fontKey: FONT_KEYS.nodeMetrics,
-          itemChrome: 20,
+          itemChrome: 26,
           select: selectMiniChips,
         },
       ],
@@ -191,7 +186,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 0,
       lineHeight: 15,
-      maxLines: Number.POSITIVE_INFINITY,
+      maxLines: 2,
       segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
     },
     {
@@ -199,7 +194,6 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       kind: "flow",
       fixedChrome: 0,
       itemGap: 4,
-      // An 18px chip plus the 4px gap to the row below it.
       lineHeight: 22,
       maxLines: Number.POSITIVE_INFINITY,
       segments: [
@@ -226,20 +220,11 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
         {
           fontKey: FONT_KEYS.nodeChip,
           itemChrome: CHIP_CHROME_WITH_ICON,
-          select: (n) => selectFileChips(n).shown,
-        },
-        {
-          fontKey: FONT_KEYS.nodeChip,
-          itemChrome: CHIP_CHROME_BARE,
-          select: selectFileOverflow,
-        },
-        {
-          fontKey: FONT_KEYS.nodeChip,
-          itemChrome: CHIP_CHROME_WITH_ICON,
           select: selectFileSummary,
         },
       ],
     },
+
     {
       id: "metrics",
       kind: "wrap",

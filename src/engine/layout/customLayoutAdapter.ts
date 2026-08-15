@@ -46,10 +46,11 @@ function buildEngineInputs(
 
   const edges: NormalizedEdge[] = dataset.edges.map((edge, index) => {
     const id = edge.id || `e-${edge.source}-${edge.target}-${index}`;
-    const labelBox = edge.label
-      ? measurer.measureLabel(edge.label, {
-          maxWidth: config.maxLabelWidth,
-          maxLines: config.maxLabelLines,
+    const badgeText = edge.container?.title ?? edge.badge?.text ?? edge.label;
+    const labelBox = badgeText
+      ? measurer.measureLabel(badgeText, {
+          maxWidth: Math.max(config.maxLabelWidth, 320),
+          maxLines: 1,
         })
       : null;
 
@@ -62,8 +63,8 @@ function buildEngineInputs(
       layoutRole: edge.layoutRole,
       weight: edge.weight,
       minLen: edge.minLen,
-      labelWidth: labelBox?.width,
-      labelHeight: labelBox?.height,
+      labelWidth: labelBox ? labelBox.width + 32 : undefined,
+      labelHeight: labelBox ? 26 : undefined,
     };
   });
 

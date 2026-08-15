@@ -187,30 +187,39 @@ describe("measureNodes", () => {
       withBadges,
       withMiniChips,
     ]);
-    expect(badgeSize.height).toBeGreaterThan(bareSize.height);
+    // Body badges are not rendered, so they do not allocate extra height
+    expect(badgeSize.height).toBe(bareSize.height);
+    // Mini chips are rendered, so they allocate vertical space
     expect(miniSize.height).toBeGreaterThan(bareSize.height);
   });
 
-  it("calculates full vertical space without artificial height caps for long multi-line descriptions", () => {
+  it("clamps description height to 2 lines matching DOM line clamp", () => {
     const measurer = createCanvasMeasurer();
-    const twoLine: GraphNodeData = {
+    const oneLine: GraphNodeData = {
       id: "a",
+      name: "worker",
+      description: "Short single line text.",
+    };
+    const twoLine: GraphNodeData = {
+      id: "b",
       name: "worker",
       description: "First line of text that wraps nicely. Second line of text that wraps nicely.",
     };
     const fiveLine: GraphNodeData = {
-      id: "b",
+      id: "c",
       name: "worker",
       description:
         "First line of text that wraps. Second line of text that wraps. Third line of text that wraps. Fourth line of text that wraps. Fifth line of text that wraps. Sixth line of text that wraps.",
     };
 
-    const [twoSize, fiveSize] = measurer.measureNodes([twoLine, fiveLine], {
+    const [oneSize, twoSize, fiveSize] = measurer.measureNodes([oneLine, twoLine, fiveLine], {
       minNodeWidth: 200,
       maxNodeWidth: 200,
     });
 
-    expect(fiveSize.height).toBeGreaterThan(twoSize.height);
+    expect(twoSize.height).toBeGreaterThanOrEqual(oneSize.height);
+    // 5-line description is clamped to max 2 lines, so height matches 2-line card
+    expect(fiveSize.height).toBe(twoSize.height);
   });
 
   it("accounts for header step badge and badge chips in width calculations", () => {

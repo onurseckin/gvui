@@ -152,8 +152,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       (bundleSnippet ? bundleSnippet.length * 6.2 + 14 : 0) +
       24,
   );
-  const width = badgeRect ? badgeRect.width : computedWidth;
-  const height = badgeRect ? badgeRect.height : 26;
+  const width = badgeRect ? Math.max(badgeRect.width, computedWidth) : computedWidth;
+  const height = badgeRect ? Math.max(badgeRect.height, 26) : 26;
   const renderX = badgeRect ? badgeRect.x + badgeRect.width / 2 : x;
   const renderY = badgeRect ? badgeRect.y + badgeRect.height / 2 : y;
 

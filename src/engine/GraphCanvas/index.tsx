@@ -44,15 +44,18 @@ export const GraphCanvas: FC = () => {
 
   useEffect(() => {
     if (!dataset || !currentFile) return;
-    const signature = generateDatasetSignature(dataset);
-    saveStoredViewport(currentFile, {
-      signature,
-      zoomLevel,
-      panOffset,
-      selectedNodeId,
-      layoutMode,
-      collapsedNodeIds: Array.from(collapsedNodeIds),
-    });
+    const timer = setTimeout(() => {
+      const signature = generateDatasetSignature(dataset);
+      saveStoredViewport(currentFile, {
+        signature,
+        zoomLevel,
+        panOffset,
+        selectedNodeId,
+        layoutMode,
+        collapsedNodeIds: Array.from(collapsedNodeIds),
+      });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [dataset, currentFile, zoomLevel, panOffset, selectedNodeId, layoutMode, collapsedNodeIds]);
 
   const styledEdges = useMemo(
