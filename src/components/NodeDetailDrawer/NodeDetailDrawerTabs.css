@@ -1,0 +1,186 @@
+/* Detail Drawer Sub-view Tabs & Card Components */
+
+.drawer-io-list,
+.drawer-file-list,
+.drawer-kv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-io-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.drawer-io-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+}
+
+.drawer-io-label {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #d4d4d8;
+  overflow-wrap: anywhere;
+}
+
+.drawer-io-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-payload-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+}
+.drawer-payload-tag.payload-prompt {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #c4b5fd;
+}
+.drawer-payload-tag.payload-full-context {
+  background: rgba(251, 146, 60, 0.13);
+  border-color: rgba(251, 146, 60, 0.34);
+  color: #fdba74;
+}
+.drawer-payload-tag.payload-summary {
+  background: rgba(129, 140, 248, 0.13);
+  border-color: rgba(129, 140, 248, 0.34);
+  color: #c7d2fe;
+}
+.drawer-payload-tag.payload-artifact {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.32);
+  color: #99f6e4;
+}
+.drawer-payload-tag.payload-decision {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.32);
+  color: #fcd34d;
+}
+
+.drawer-file-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.drawer-file-mode {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  min-width: 46px;
+  text-align: center;
+}
+.drawer-file-mode.mode-write {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.32);
+  color: #fcd34d;
+}
+.drawer-file-path {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #d4d4d8;
+  overflow-wrap: anywhere;
+}
+
+.drawer-pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: #08080a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #d4d4d8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.drawer-command-card,
+.drawer-finding-card,
+.drawer-io-card {
+  background-color: #0c0c0e;
+  border: 1px solid #27272a;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.drawer-command-exit {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+.drawer-command-exit.is-success {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+.drawer-command-exit.is-error {
+  background-color: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+.drawer-command-argv {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #f4f4f5;
+  background-color: #08080a;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  margin: 6px 0;
+  overflow-x: auto;
+}
+
+.drawer-finding-card.severity-critical {
+  border-left: 3px solid #f87171;
+}
+.drawer-finding-card.severity-important {
+  border-left: 3px solid #fb923c;
+}
+.drawer-finding-card.severity-suggestion {
+  border-left: 3px solid #38bdf8;
+}
+.drawer-finding-severity {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+.drawer-finding-severity.critical {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+.drawer-finding-severity.important {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+.drawer-finding-severity.suggestion {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}

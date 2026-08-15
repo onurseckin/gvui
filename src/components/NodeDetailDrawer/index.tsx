@@ -7,6 +7,7 @@ import {
   IconInfoCircle,
   IconShieldSearch,
   IconTerminal,
+  IconX,
 } from "@tabler/icons-react";
 import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
@@ -28,14 +29,12 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
-  const handleClose = useCallback(() => {
-    setSelectedNodeId(null);
-  }, [setSelectedNodeId]);
+  const handleClose = useCallback(() => setSelectedNodeId(null), [setSelectedNodeId]);
 
   useEffect(() => {
     if (!selectedNodeId) return;
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setSelectedNodeId(null);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedNodeId(null);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -43,12 +42,12 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
 
   const node: GraphNodeData | null = useMemo(() => {
     if (!selectedNodeId || !dataset) return null;
-    return dataset.nodes.find((candidate) => candidate.id === selectedNodeId) ?? null;
+    return dataset.nodes.find((c) => c.id === selectedNodeId) ?? null;
   }, [selectedNodeId, dataset]);
 
   const nodeNamesById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const candidate of dataset?.nodes ?? []) map.set(candidate.id, candidate.name);
+    for (const c of dataset?.nodes ?? []) map.set(c.id, c.name);
     return map;
   }, [dataset]);
 
@@ -83,7 +82,6 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const hasRepairOrCritic =
     ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
 
-  // Tab definitions
   const tabs = [
     { id: "overview" as TabId, label: "Overview", icon: IconInfoCircle, count: 0, visible: true },
     {
@@ -144,19 +142,7 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             aria-label="Close details"
             title="Close (Esc)"
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <IconX size={16} />
           </button>
         </div>
         <div className="drawer-header-meta">

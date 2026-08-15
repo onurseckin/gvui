@@ -46,6 +46,7 @@ export interface GraphState {
   positionedEdges: PositionedEdge[];
   selectedNodeId: string | null;
   selectedStep: number | null;
+  selectedSteps: Set<number>;
   searchQuery: string;
   activeFilter: FilterCategory;
   layoutMode: LayoutMode;
@@ -62,6 +63,9 @@ export interface GraphActions {
   setPositionedGraph: (nodes: PositionedNode[], edges: PositionedEdge[]) => void;
   setSelectedNodeId: (nodeId: string | null) => void;
   setSelectedStep: (step: number | null | ((prev: number | null) => number | null)) => void;
+  toggleSelectedStep: (step: number) => void;
+  selectAllSteps: () => void;
+  clearSelectedSteps: () => void;
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: FilterCategory) => void;
   setLayoutMode: (mode: LayoutMode | string) => void;
@@ -90,6 +94,7 @@ export const useGraphStore = create<GraphStore>()((set) => ({
   positionedEdges: [],
   selectedNodeId: null,
   selectedStep: null,
+  selectedSteps: new Set<number>(),
   searchQuery: "",
   activeFilter: "all",
   layoutMode: "layered",
@@ -107,6 +112,15 @@ export const useGraphStore = create<GraphStore>()((set) => ({
     set((state) => ({
       selectedStep: typeof step === "function" ? step(state.selectedStep) : step,
     })),
+  toggleSelectedStep: (step) =>
+    set((state) => {
+      const next = new Set(state.selectedSteps);
+      if (next.has(step)) next.delete(step);
+      else next.add(step);
+      return { selectedSteps: next, selectedStep: null };
+    }),
+  selectAllSteps: () => set({ selectedSteps: new Set<number>(), selectedStep: null }),
+  clearSelectedSteps: () => set({ selectedSteps: new Set<number>([-999]), selectedStep: null }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveFilter: (filter) => set({ activeFilter: filter }),
   setLayoutMode: (mode) =>
@@ -165,6 +179,7 @@ export const usePositionedNodes = () => useGraphStore((state) => state.positione
 export const usePositionedEdges = () => useGraphStore((state) => state.positionedEdges);
 export const useSelectedNodeId = () => useGraphStore((state) => state.selectedNodeId);
 export const useSelectedStep = () => useGraphStore((state) => state.selectedStep);
+export const useSelectedSteps = () => useGraphStore((state) => state.selectedSteps);
 export const useSearchQuery = () => useGraphStore((state) => state.searchQuery);
 export const useActiveFilter = () => useGraphStore((state) => state.activeFilter);
 export const useLayoutMode = () => useGraphStore((state) => state.layoutMode);

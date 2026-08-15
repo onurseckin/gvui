@@ -1,12 +1,6 @@
 import type { FC } from "react";
 import { memo } from "react";
-import {
-  IconAlertCircle,
-  IconClock,
-  IconCode,
-  IconFiles,
-  IconShieldCheck,
-} from "@tabler/icons-react";
+import { IconAlertCircle, IconClock, IconCode, IconShieldCheck } from "@tabler/icons-react";
 import type { GraphNodeData } from "../../../types/graphData";
 import { formatDuration } from "./nodeCardModel";
 
@@ -16,39 +10,6 @@ export interface NodeCardMiniChipsProps {
 
 export const NodeCardMiniChips: FC<NodeCardMiniChipsProps> = memo(({ node }) => {
   const chips: React.ReactNode[] = [];
-
-  // Files chip
-  const filesCount = node.files?.length ?? 0;
-  const writeScope = (node.metadata?.writeScope as string[]) ?? [];
-  if (filesCount > 0) {
-    const firstFile = node.files?.[0];
-    const totalAdd = node.files?.reduce((acc, f) => acc + (f.additions ?? 0), 0) ?? 0;
-    const totalDel = node.files?.reduce((acc, f) => acc + (f.deletions ?? 0), 0) ?? 0;
-    const churnStr = totalAdd > 0 || totalDel > 0 ? ` (+${totalAdd}, -${totalDel})` : "";
-    const label =
-      filesCount === 1 && firstFile?.path
-        ? `${firstFile.path.split("/").pop()}${churnStr}`
-        : `${filesCount} files${churnStr}`;
-
-    chips.push(
-      <span key="files-chip" className="node-card-mini-chip" title={`Touched files: ${filesCount}`}>
-        <IconFiles size={11} className="mini-chip-icon" />
-        <span>{label}</span>
-      </span>,
-    );
-  } else if (writeScope.length > 0) {
-    const scopeLabel = writeScope[0].split("/").filter(Boolean).pop() ?? writeScope[0];
-    chips.push(
-      <span
-        key="scope-chip"
-        className="node-card-mini-chip"
-        title={`Write scope: ${writeScope.join(", ")}`}
-      >
-        <IconFiles size={11} className="mini-chip-icon" />
-        <span>{scopeLabel}/</span>
-      </span>,
-    );
-  }
 
   // Duration chip
   const durationMs = node.metrics?.durationMs ?? (node.metadata?.durationMs as number | undefined);

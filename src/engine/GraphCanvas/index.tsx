@@ -1,6 +1,7 @@
 import type { CSSProperties, FC } from "react";
 import { useCallback, useEffect, useMemo } from "react";
 import { LoadingOverlay } from "../../components/Controls/LoadingOverlay";
+import { describeNodeKind } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { buildEdgePath } from "../layout/custom/edgePath";
@@ -9,7 +10,6 @@ import "./GraphCanvas.css";
 import { GraphHtmlLayer } from "./GraphHtmlLayer";
 import { GraphSectionsLayer } from "./GraphSectionsLayer";
 import { GraphSvgLayer } from "./GraphSvgLayer";
-import { StepScrubber } from "./StepScrubber";
 import { useLayoutComputation } from "./useLayoutComputation";
 import { usePanZoom } from "./usePanZoom";
 
@@ -22,6 +22,7 @@ export const GraphCanvas: FC = () => {
   const positionedEdges = useGraphStore((state) => state.positionedEdges);
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
   const selectedStep = useGraphStore((state) => state.selectedStep);
+  const selectedSteps = useGraphStore((state) => state.selectedSteps);
   const searchQuery = useGraphStore((state) => state.searchQuery);
   const activeFilter = useGraphStore((state) => state.activeFilter);
   const collapsedNodeIds = useGraphStore((state) => state.collapsedNodeIds);
@@ -92,6 +93,18 @@ export const GraphCanvas: FC = () => {
     return hidden;
   }, [collapsedNodeIds, positionedEdges]);
 
+  const { connectedNodeIds, selectedNodeAccent } = useMemo(() => {
+    if (!selectedNodeId) return { connectedNodeIds: undefined, selectedNodeAccent: undefined };
+    const connected = new Set<string>();
+    for (const edge of positionedEdges) {
+      if (edge.source === selectedNodeId) connected.add(edge.target);
+      if (edge.target === selectedNodeId) connected.add(edge.source);
+    }
+    const selNode = positionedNodes.find((n) => n.id === selectedNodeId);
+    const accent = selNode ? describeNodeKind(selNode).accent : undefined;
+    return { connectedNodeIds: connected, selectedNodeAccent: accent };
+  }, [selectedNodeId, positionedEdges, positionedNodes]);
+
   const transformStyle: CSSProperties = useMemo(
     () => ({
       transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
@@ -107,7 +120,6 @@ export const GraphCanvas: FC = () => {
       onMouseDown={handleMouseDown}
       onClick={handleDeselectNode}
     >
-      <StepScrubber />
       {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
         <GraphSectionsLayer
@@ -119,13 +131,16 @@ export const GraphCanvas: FC = () => {
           styledEdges={styledEdges}
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
+          selectedNodeAccent={selectedNodeAccent}
         />
         <GraphHtmlLayer
           positionedNodes={positionedNodes}
           hiddenNodeIds={hiddenNodeIds}
           collapsedNodeIds={collapsedNodeIds}
           selectedNodeId={selectedNodeId}
+          connectedNodeIds={connectedNodeIds}
           selectedStep={selectedStep}
+          selectedSteps={selectedSteps}
           searchQuery={searchQuery}
           activeFilter={activeFilter}
           onSelectNode={handleSelectNode}

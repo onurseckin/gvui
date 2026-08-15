@@ -138,19 +138,23 @@ describe("graph generator", () => {
     expect(terminalNode?.kind).toBe("terminal");
     expect(terminalNode?.badge?.icon).toBe("IconFlagCheck");
 
-    // Sections
-    expect(dataset.sections).toHaveLength(4);
+    // Sections are empty (no background phase overlays)
+    expect(dataset.sections ?? []).toHaveLength(0);
 
-    // Edge badges
+    // Edge badges and containers
     const spawnEdge = dataset.edges.find((e) => e.kind === "spawn");
     expect(spawnEdge?.badge?.icon).toBe("IconRocket");
+    expect(spawnEdge?.container?.stepBadge).toBe("2");
+    expect(spawnEdge?.container?.title).toBe("Dispatches Worker");
 
     const loopEdge = dataset.edges.find((e) => e.kind === "loop");
     expect(loopEdge?.isCycle).toBe(true);
     expect(loopEdge?.badge?.icon).toBe("IconAlertCircle");
-    expect(loopEdge?.badge?.text).toContain("Pushback: Round 1");
+    expect(loopEdge?.container?.title).toContain("Validator Pushback");
+    expect(loopEdge?.stepNumber).toBe("3 -> 2");
 
     const joinEdge = dataset.edges.find((e) => e.kind === "join");
     expect(joinEdge?.badge?.icon).toBe("IconFileText");
+    expect(joinEdge?.container?.title).toBe("Evidence Report");
   });
 });

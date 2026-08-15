@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { IconFileText, IconMenu2 } from "@tabler/icons-react";
 import { CommandPalette } from "./components/CommandPalette";
 import { CanvasToolbar } from "./components/Controls/CanvasToolbar";
 import { SearchHeader } from "./components/Controls/SearchHeader";
@@ -41,7 +42,6 @@ export const AppContent: FC = () => {
       const stored = loadStoredViewport(fileId, signature);
 
       if (stored) {
-        const collapsedSet = new Set(stored.collapsedNodeIds ?? []);
         useGraphStore.setState({
           dataset: data,
           currentFile: fileId,
@@ -49,7 +49,7 @@ export const AppContent: FC = () => {
           panOffset: stored.panOffset,
           selectedNodeId: nodeId ?? stored.selectedNodeId,
           layoutMode: stored.layoutMode,
-          collapsedNodeIds: collapsedSet,
+          collapsedNodeIds: new Set(stored.collapsedNodeIds ?? []),
           shouldAutoFit: false,
         });
       } else {
@@ -77,11 +77,8 @@ export const AppContent: FC = () => {
         setIsCommandPaletteOpen(true);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleNavigateNode = useCallback(
@@ -112,41 +109,17 @@ export const AppContent: FC = () => {
   }, [fileIdFromRoute, initialNodeId, loadGraphFile]);
 
   const handleSelectSample = useCallback(
-    (selectedFileId: string) => {
-      void navigate({
-        to: "/graphs/$fileId",
-        params: { fileId: selectedFileId },
-      });
-    },
+    (fileId: string) => void navigate({ to: "/graphs/$fileId", params: { fileId } }),
     [navigate],
   );
-
-  const handleOpenSettings = useCallback(() => {
-    void navigate({ to: "/testing" });
-  }, [navigate]);
-
+  const handleOpenSettings = useCallback(() => void navigate({ to: "/testing" }), [navigate]);
   const handleGraphFileUploaded = useCallback(
-    (fileId: string) => {
-      void navigate({ to: "/graphs/$fileId", params: { fileId } });
-    },
+    (fileId: string) => void navigate({ to: "/graphs/$fileId", params: { fileId } }),
     [navigate],
   );
-
-  const handleGraphFileUploadError = useCallback((message: string) => {
-    setUploadError(message);
+  const handleGraphFileUploadError = useCallback((msg: string) => {
+    setUploadError(msg);
     setTimeout(() => setUploadError(null), 5000);
-  }, []);
-
-  const handleOpenCommandPalette = useCallback(() => {
-    setIsCommandPaletteOpen(true);
-  }, []);
-
-  const handleCloseCommandPalette = useCallback(() => {
-    setIsCommandPaletteOpen(false);
-  }, []);
-
-  const handleToggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
   }, []);
 
   return (
@@ -156,23 +129,29 @@ export const AppContent: FC = () => {
           <Button
             variant="icon"
             size="sm"
-            onClick={handleToggleSidebar}
+            onClick={() => setIsSidebarOpen((p) => !p)}
             className="sidebar-toggle-btn"
             title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            ☰
+            <IconMenu2 size={16} />
           </Button>
           <UploadGraphButton
             onUploaded={handleGraphFileUploaded}
             onError={handleGraphFileUploadError}
           />
-          <span className="navbar-file-title">📄 {currentFile || fileIdFromRoute}</span>
+          <span
+            className="navbar-file-title"
+            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+          >
+            <IconFileText size={14} />
+            <span>{currentFile || fileIdFromRoute}</span>
+          </span>
           {uploadError && <span className="navbar-upload-error">{uploadError}</span>}
         </div>
         <div className="navbar-right">
           <CanvasToolbar />
-          <SearchHeader onOpenCommandPalette={handleOpenCommandPalette} />
+          <SearchHeader onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
         </div>
       </header>
       <div className="app-body">
@@ -192,7 +171,7 @@ export const AppContent: FC = () => {
       </div>
       <CommandPalette
         isOpen={isCommandPaletteOpen}
-        onClose={handleCloseCommandPalette}
+        onClose={() => setIsCommandPaletteOpen(false)}
         currentFile={currentFile || fileIdFromRoute}
         onNavigateNode={handleNavigateNode}
       />

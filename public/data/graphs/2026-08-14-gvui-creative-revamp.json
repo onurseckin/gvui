@@ -1,0 +1,895 @@
+{
+  "id": "2026-08-14-gvui-creative-revamp",
+  "title": "Execution Trajectory: 2026-08-14-gvui-creative-revamp",
+  "description": "Execution graph dataset and trajectory for run 2026-08-14-gvui-creative-revamp",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [
+    {
+      "id": "sec-planning",
+      "title": "Phase 1: Planning & Setup",
+      "nodeIds": ["node-input-prompt", "node-orchestrator-plan"]
+    },
+    {
+      "id": "sec-execution",
+      "title": "Phase 2: Task Execution",
+      "nodeIds": [
+        "node-task-T-01",
+        "node-task-T-02",
+        "node-task-T-03",
+        "node-task-T-04",
+        "node-task-T-05",
+        "node-task-T-06"
+      ]
+    },
+    {
+      "id": "sec-validation",
+      "title": "Phase 3: Validation Gates",
+      "nodeIds": [
+        "node-gate-T-01",
+        "node-gate-T-02",
+        "node-gate-T-03",
+        "node-gate-T-04",
+        "node-gate-T-05",
+        "node-gate-T-06"
+      ]
+    },
+    {
+      "id": "sec-review",
+      "title": "Phase 4: Completeness & Review",
+      "nodeIds": ["node-critic-authority", "node-terminal-complete"]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "Stdin (Verified)",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "Implement the Creative Visual Graph Revamp & Generalized Observability System across skills and gvui:\n- Distinct node archetypes with geometric shapes (Input stadium, Planner board",
+      "sectionId": "sec-planning",
+      "prompt": "Implement the Creative Visual Graph Revamp & Generalized Observability System across skills and gvui:\n- Distinct node archetypes with geometric shapes (Input stadium, Planner board, Agent worker with Model Tier and churn chips, Tool monospace terminal, Router diamond, Gate shield, Critic scorecard, Terminal capsule).\n- Prominent Step numbers on nodes and rich edge information containers.\n- Remove left-side border bars and colored status dots.\n- Top navbar Steps dropdown with multi-select checkboxes, Select/Clear All, and Playback controls (removing on-canvas scrubber).\n- Expanded 560px-680px detail drawer with adaptive tabs (Overview, I/O, Files & Diffs with syntax highlighting, CLI Executions, Quality Reviews accordion, Raw JSON).\n- Dynamic canvas path highlighting with dominant accent color on node click.\n- 100% test pass rate and visual verification with Chrome MCP.\n",
+      "io": {
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "Implement the Creative Visual Graph Revamp & Generalized Observability System across skills and gvui:\n- Distinct node archetypes with geometric shapes (Input stadium, Planner board, Agent worker with Model Tier and churn chips, Tool monospace terminal, Router diamond, Gate shield, Critic scorecard, Terminal capsule).\n- Prominent Step numbers on nodes and rich edge information containers.\n- Remove left-side border bars and colored status dots.\n- Top navbar Steps dropdown with multi-select checkboxes, Select/Clear All, and Playback controls (removing on-canvas scrubber).\n- Expanded 560px-680px detail drawer with adaptive tabs (Overview, I/O, Files & Diffs with syntax highlighting, CLI Executions, Quality Reviews accordion, Raw JSON).\n- Dynamic canvas path highlighting with dominant accent color on node click.\n- 100% test pass rate and visual verification with Chrome MCP.\n",
+            "tokens": 221
+          }
+        ]
+      }
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "6 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 6 tasks and 6 waves.",
+      "sectionId": "sec-planning",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "Implement the Creative Visual Graph Revamp & Generalized Observability System across skills and gvui"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "6 discrete work scopes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "node-task-T-01",
+      "name": "Group A: Skills Synthesis Pipeline & Data Contracts",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Wave 1 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t01",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Updated GraphNodeData and GraphEdgeData contracts with stepNumber, container, unclipped fields, and empty sections",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "orchestrating-long-tasks/scripts/src/summary/types.ts",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Updated GraphNodeData and GraphEdgeData contracts with stepNumber, container, unclipped fields, and empty sections",
+            "preview": "Updated GraphNodeData and GraphEdgeData contracts with stepNumber, container, unclipped fields, and empty sections"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "orchestrating-long-tasks/scripts/src/summary/types.ts",
+          "orchestrating-long-tasks/scripts/src/summary/graph-generator.ts",
+          "orchestrating-long-tasks/scripts/src/summary/graph-generator-helpers.ts",
+          "orchestrating-long-tasks/scripts/src/summary/step-calculator.ts"
+        ],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-2512683b-da01-4530-8a22-85ddbd55cf2d",
+            "argv": ["bun", "test", "tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1748,
+            "startedAt": "2026-08-15T05:31:56.483Z",
+            "finishedAt": "2026-08-15T05:31:58.231Z",
+            "logPath": "commands/C-2512683b-da01-4530-8a22-85ddbd55cf2d/record.json"
+          },
+          {
+            "id": "C-31459d55-7143-424c-aa8c-e7452327b5b2",
+            "argv": ["bun", "test", "tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1140,
+            "startedAt": "2026-08-15T05:23:32.899Z",
+            "finishedAt": "2026-08-15T05:23:34.039Z",
+            "logPath": "commands/C-31459d55-7143-424c-aa8c-e7452327b5b2/record.json"
+          },
+          {
+            "id": "C-53789011-ca87-49f0-bbb3-5b0550c05de4",
+            "argv": ["bun", "test", "/Users/onurseckinsenoglu/repos/skills/tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1150,
+            "startedAt": "2026-08-15T05:23:22.150Z",
+            "finishedAt": "2026-08-15T05:23:23.300Z",
+            "logPath": "commands/C-53789011-ca87-49f0-bbb3-5b0550c05de4/record.json"
+          },
+          {
+            "id": "C-e5edb38d-74d7-4a43-9154-09baa80eb6cf",
+            "argv": ["bun", "test", "tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1083,
+            "startedAt": "2026-08-15T05:31:27.623Z",
+            "finishedAt": "2026-08-15T05:31:28.706Z",
+            "logPath": "commands/C-e5edb38d-74d7-4a43-9154-09baa80eb6cf/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t01"
+      }
+    },
+    {
+      "id": "node-gate-T-01",
+      "name": "Gate: Group A: Skills Synthesis Pipeline & Data Contracts",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Step 3: Wave 1 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Group A: Skills Synthesis Pipeline & Data Contracts.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-task-T-02",
+      "name": "Group A: Skills Unit Tests & Validation",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Wave 2 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t02",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Skills unit tests and validation complete",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "tests/unit/summary",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Dependency Output: T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Skills unit tests and validation complete",
+            "preview": "Skills unit tests and validation complete"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["tests/unit/summary"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-f0ee97c6-6b68-4295-a69a-d2e9546cfbc4",
+            "argv": ["bun", "test", "tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1943,
+            "startedAt": "2026-08-15T05:32:14.234Z",
+            "finishedAt": "2026-08-15T05:32:16.177Z",
+            "logPath": "commands/C-f0ee97c6-6b68-4295-a69a-d2e9546cfbc4/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t02"
+      }
+    },
+    {
+      "id": "node-gate-T-02",
+      "name": "Gate: Group A: Skills Unit Tests & Validation",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Wave 2 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Group A: Skills Unit Tests & Validation.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-task-T-03",
+      "name": "Group B: GVUI Types & Distinct Node Card Archetypes",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Wave 2 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t03",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "GVUI types and distinct node card archetypes implemented",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "src/types/graphData.ts",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Dependency Output: T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "GVUI types and distinct node card archetypes implemented",
+            "preview": "GVUI types and distinct node card archetypes implemented"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/types/graphData.ts", "src/primitives/nodes/NodeCard"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-a265478a-5600-4b03-a316-966a8a5f015d",
+            "argv": ["bun", "test", "src/primitives/nodes/NodeCard"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 875,
+            "startedAt": "2026-08-15T05:32:51.907Z",
+            "finishedAt": "2026-08-15T05:32:52.782Z",
+            "logPath": "commands/C-a265478a-5600-4b03-a316-966a8a5f015d/record.json"
+          },
+          {
+            "id": "C-bf50ee63-8d9c-4dc5-a9c7-ce9e95c1064a",
+            "argv": ["bun", "test", "src/primitives/nodes/NodeCard"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 987,
+            "startedAt": "2026-08-15T05:33:11.765Z",
+            "finishedAt": "2026-08-15T05:33:12.752Z",
+            "logPath": "commands/C-bf50ee63-8d9c-4dc5-a9c7-ce9e95c1064a/record.json"
+          },
+          {
+            "id": "C-e700887e-9a50-4fd6-b834-145f26ed1b20",
+            "argv": ["bun", "test", "src/primitives/nodes/NodeCard"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 844,
+            "startedAt": "2026-08-15T05:32:34.208Z",
+            "finishedAt": "2026-08-15T05:32:35.052Z",
+            "logPath": "commands/C-e700887e-9a50-4fd6-b834-145f26ed1b20/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t03"
+      }
+    },
+    {
+      "id": "node-gate-T-03",
+      "name": "Gate: Group B: GVUI Types & Distinct Node Card Archetypes",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Wave 2 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Group B: GVUI Types & Distinct Node Card Archetypes.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-task-T-04",
+      "name": "Group B: GVUI Rich Edge Containers & Dynamic Accent Highlighter",
+      "kind": "agent",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Step 6: Wave 3 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t04",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Rich edge containers and dynamic accent highlighter implemented",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "src/primitives/edges/GraphEdge",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-03",
+            "kind": "artifact",
+            "label": "Dependency Output: T-03"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Rich edge containers and dynamic accent highlighter implemented",
+            "preview": "Rich edge containers and dynamic accent highlighter implemented"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/primitives/edges/GraphEdge", "src/engine/GraphCanvas"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-e830cfed-6d79-4c21-8e3c-5855a254ca4e",
+            "argv": ["bun", "test", "src/primitives/edges/GraphEdge/EdgeBadgeOverlay.test.tsx"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1198,
+            "startedAt": "2026-08-15T05:33:32.595Z",
+            "finishedAt": "2026-08-15T05:33:33.793Z",
+            "logPath": "commands/C-e830cfed-6d79-4c21-8e3c-5855a254ca4e/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t04"
+      }
+    },
+    {
+      "id": "node-gate-T-04",
+      "name": "Gate: Group B: GVUI Rich Edge Containers & Dynamic Accent Highlighter",
+      "kind": "gate",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Step 7: Wave 3 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Group B: GVUI Rich Edge Containers & Dynamic Accent Highlighter.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-task-T-05",
+      "name": "Group B: GVUI Top Nav Steps Dropdown & Expanded Detail Drawer",
+      "kind": "agent",
+      "status": "success",
+      "step": 8,
+      "stepLabel": "Step 8: Wave 4 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t05",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Top nav Steps multi-select dropdown and detail drawer complete",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "src/components/Controls",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-03",
+            "kind": "artifact",
+            "label": "Dependency Output: T-03"
+          },
+          {
+            "node": "node-gate-T-04",
+            "kind": "artifact",
+            "label": "Dependency Output: T-04"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Top nav Steps multi-select dropdown and detail drawer complete",
+            "preview": "Top nav Steps multi-select dropdown and detail drawer complete"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "src/components/Controls",
+          "src/components/NodeDetailDrawer",
+          "src/AppContent.tsx",
+          "src/state/useGraphStore.ts"
+        ],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-a586bc59-d0e8-4b86-9ba9-7e112bc3f2c8",
+            "argv": ["bun", "test", "src/components/Controls/CanvasToolbar.test.tsx"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1161,
+            "startedAt": "2026-08-15T05:33:53.431Z",
+            "finishedAt": "2026-08-15T05:33:54.592Z",
+            "logPath": "commands/C-a586bc59-d0e8-4b86-9ba9-7e112bc3f2c8/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t05"
+      }
+    },
+    {
+      "id": "node-gate-T-05",
+      "name": "Gate: Group B: GVUI Top Nav Steps Dropdown & Expanded Detail Drawer",
+      "kind": "gate",
+      "status": "success",
+      "step": 9,
+      "stepLabel": "Step 9: Wave 4 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Group B: GVUI Top Nav Steps Dropdown & Expanded Detail Drawer.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-task-T-06",
+      "name": "End-to-End Integration, Capsule Import & Chrome DevTools Visual Verification",
+      "kind": "agent",
+      "status": "success",
+      "step": 10,
+      "stepLabel": "Step 10: Wave 5 Tasks",
+      "badge": {
+        "text": "Worker: agent-worker-t06",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "End-to-end integration and capsule import complete",
+      "sectionId": "sec-execution",
+      "files": [
+        {
+          "path": "scripts/import-capsule.ts",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-02",
+            "kind": "artifact",
+            "label": "Dependency Output: T-02"
+          },
+          {
+            "node": "node-gate-T-05",
+            "kind": "artifact",
+            "label": "Dependency Output: T-05"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "End-to-end integration and capsule import complete",
+            "preview": "End-to-end integration and capsule import complete"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["scripts/import-capsule.ts", "tests"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-4e75b070-e831-46b4-b73c-5d6ed775ff79",
+            "argv": ["bun", "run", "test"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 4677,
+            "startedAt": "2026-08-15T05:34:09.519Z",
+            "finishedAt": "2026-08-15T05:34:14.196Z",
+            "logPath": "commands/C-4e75b070-e831-46b4-b73c-5d6ed775ff79/record.json"
+          }
+        ],
+        "findings": [],
+        "leaseAgent": "agent-worker-t06"
+      }
+    },
+    {
+      "id": "node-gate-T-06",
+      "name": "Gate: End-to-End Integration, Capsule Import & Chrome DevTools Visual Verification",
+      "kind": "gate",
+      "status": "success",
+      "step": 11,
+      "stepLabel": "Step 11: Wave 5 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for End-to-End Integration, Capsule Import & Chrome DevTools Visual Verification.",
+      "sectionId": "sec-validation",
+      "metadata": {
+        "findings": []
+      }
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 12,
+      "stepLabel": "Step 12: Completeness Critic",
+      "badge": {
+        "text": "Authority Review",
+        "variant": "warning",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off.",
+      "sectionId": "sec-review"
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 13,
+      "stepLabel": "Step 13: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis.",
+      "sectionId": "sec-review"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "badge": {
+        "text": "Plan Initialization",
+        "variant": "info",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-plan-T-01",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-01",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-01",
+      "source": "node-task-T-01",
+      "target": "node-gate-T-01",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-join-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-plan-T-02",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-02",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-02",
+      "source": "node-task-T-02",
+      "target": "node-gate-T-02",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-dep-T-01-T-02",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-02",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-02",
+      "source": "node-gate-T-02",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-plan-T-03",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-03",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-03",
+      "source": "node-task-T-03",
+      "target": "node-gate-T-03",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-dep-T-01-T-03",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-03",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-03",
+      "source": "node-gate-T-03",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-plan-T-04",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-04",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-04",
+      "source": "node-task-T-04",
+      "target": "node-gate-T-04",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-dep-T-03-T-04",
+      "source": "node-gate-T-03",
+      "target": "node-task-T-04",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-04",
+      "source": "node-gate-T-04",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-plan-T-05",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-05",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-05",
+      "source": "node-task-T-05",
+      "target": "node-gate-T-05",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-dep-T-03-T-05",
+      "source": "node-gate-T-03",
+      "target": "node-task-T-05",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-04-T-05",
+      "source": "node-gate-T-04",
+      "target": "node-task-T-05",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-05",
+      "source": "node-gate-T-05",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-plan-T-06",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-06",
+      "kind": "spawn",
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket"
+      }
+    },
+    {
+      "id": "edge-task-gate-T-06",
+      "source": "node-task-T-06",
+      "target": "node-gate-T-06",
+      "kind": "sequence",
+      "badge": {
+        "text": "Submit for Review",
+        "variant": "neutral",
+        "icon": "IconArrowRight"
+      }
+    },
+    {
+      "id": "edge-dep-T-02-T-06",
+      "source": "node-gate-T-02",
+      "target": "node-task-T-06",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-05-T-06",
+      "source": "node-gate-T-05",
+      "target": "node-task-T-06",
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-06",
+      "source": "node-gate-T-06",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence"
+    }
+  ]
+}

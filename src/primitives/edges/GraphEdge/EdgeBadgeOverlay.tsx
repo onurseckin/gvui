@@ -1,14 +1,8 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useCallback } from "react";
-import {
-  IconAlertCircle,
-  IconArrowRight,
-  IconFileText,
-  IconGitMerge,
-  IconRocket,
-} from "@tabler/icons-react";
+import { IconAlertCircle, IconFileText, IconRocket } from "@tabler/icons-react";
 import type { Point, Rect } from "../../../engine/layout/custom/types";
-import type { BadgeDetail } from "../../../types/graphData";
+import type { BadgeDetail, EdgeContainerDetail } from "../../../types/graphData";
 import { getTablerIconComponent } from "../../nodes/NodeCard/nodeKinds";
 
 export interface EdgeBadgeOverlayProps {
@@ -16,6 +10,8 @@ export interface EdgeBadgeOverlayProps {
   y: number;
   label?: string;
   badge?: BadgeDetail;
+  container?: EdgeContainerDetail;
+  stepNumber?: number | string;
   isCycle?: boolean;
   isSelected?: boolean;
   badgeRect?: Rect;
@@ -30,6 +26,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
     y,
     label,
     badge,
+    container,
+    stepNumber,
     isCycle = false,
     isSelected = false,
     badgeRect,
@@ -38,7 +36,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
     onClick,
   }) => {
     const handleClick = useCallback(
-      (e: MouseEvent<SVGGElement>): void => {
+      (e: MouseEvent<SVGGElement>) => {
         e.stopPropagation();
         onClick?.(e);
       },
@@ -46,7 +44,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
     );
 
     const handleKeyDown = useCallback(
-      (e: KeyboardEvent<SVGGElement>): void => {
+      (e: KeyboardEvent<SVGGElement>) => {
         if ((e.key === "Enter" || e.key === " ") && onClick) {
           e.preventDefault();
           onClick(e as unknown as MouseEvent<SVGGElement>);
@@ -55,31 +53,40 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
       [onClick],
     );
 
-    const badgeText = badge?.text ?? label;
-    const hasBadge = Boolean(badgeText && badgeText.trim().length > 0) || isCycle;
+    const effectiveStep =
+      container?.stepBadge ?? (stepNumber !== undefined ? String(stepNumber) : undefined);
+    const titleText = container?.title ?? badge?.text ?? label;
+    const detailText = container?.detail;
+    const hasBadge =
+      Boolean(titleText && titleText.trim().length > 0) || Boolean(effectiveStep) || isCycle;
     if (!hasBadge) return null;
 
     const displayText = isCycle
-      ? badgeText && badgeText.trim().length > 0
-        ? `CYCLE (${badgeText})`
+      ? titleText && titleText.trim().length > 0
+        ? `CYCLE (${titleText})`
         : "CYCLE"
-      : (badgeText ?? "");
+      : (titleText ?? (effectiveStep ? `Step ${effectiveStep}` : ""));
 
-    const iconKey = badge?.icon;
+    const iconKey = container?.icon ?? badge?.icon;
     let IconComp = getTablerIconComponent(iconKey);
-    if (!IconComp) {
-      if (isCycle || badge?.variant === "warning") IconComp = IconAlertCircle;
-      else if (badge?.variant === "info") IconComp = IconRocket;
-      else if (badge?.variant === "success") IconComp = IconFileText;
-      else if (badge?.text?.toLowerCase().includes("join")) IconComp = IconGitMerge;
-      else if (badge?.text) IconComp = IconArrowRight;
+    if (!IconComp && iconKey) {
+      if (isCycle || container?.variant === "warning" || badge?.variant === "warning")
+        IconComp = IconAlertCircle;
+      else if (container?.variant === "info" || badge?.variant === "info") IconComp = IconRocket;
+      else if (container?.variant === "success" || badge?.variant === "success")
+        IconComp = IconFileText;
+    } else if (isCycle && !IconComp) {
+      IconComp = IconAlertCircle;
     }
 
-    const iconPadding = IconComp ? 20 : 0;
-    const width = badgeRect
-      ? badgeRect.width
-      : Math.max(64, displayText.length * 7.5 + 24 + iconPadding);
-    const height = badgeRect ? badgeRect.height : 28;
+    const stepPillWidth = effectiveStep ? effectiveStep.length * 6.5 + 16 : 0;
+    const iconWidth = IconComp ? 16 : 0;
+    const textWidth = displayText.length * 6.8;
+    const detailWidth = detailText ? detailText.length * 6.0 + 12 : 0;
+    const computedWidth = Math.max(68, stepPillWidth + iconWidth + textWidth + detailWidth + 24);
+
+    const width = badgeRect ? badgeRect.width : computedWidth;
+    const height = badgeRect ? badgeRect.height : 26;
     const renderX = badgeRect ? badgeRect.x + badgeRect.width / 2 : x;
     const renderY = badgeRect ? badgeRect.y + badgeRect.height / 2 : y;
 
@@ -94,7 +101,6 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
 
     const showLeaderPath = anchorIsOutsideBadge && hasLeaderPoints;
     const showLeaderLine = anchorIsOutsideBadge && !hasLeaderPoints && anchorPoint !== undefined;
-
     const leaderSvgPath =
       showLeaderPath && leaderPoints
         ? leaderPoints
@@ -102,7 +108,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
             .trim()
         : "";
 
-    const variant = isCycle ? "warning" : (badge?.variant ?? "neutral");
+    const variant = isCycle ? "warning" : (container?.variant ?? badge?.variant ?? "neutral");
     const isClickable = badge?.clickable ?? Boolean(onClick);
 
     return (
@@ -140,10 +146,9 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
           y={-height / 2}
           width={width}
           height={height}
-          rx={14}
-          ry={14}
-          fill="#18181b"
-          opacity={1}
+          rx={6}
+          ry={6}
+          fill="#111114"
           className={`edge-badge-rect variant-${variant} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
         />
         <foreignObject
@@ -162,12 +167,40 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(
               width: "100%",
               height: "100%",
               gap: "5px",
-              padding: "0 8px",
+              padding: "0 6px",
               boxSizing: "border-box",
             }}
           >
-            {IconComp ? <IconComp size={13} className="edge-badge-icon" /> : null}
+            {effectiveStep && (
+              <span
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  padding: "0 4px",
+                  borderRadius: "3px",
+                  backgroundColor: "rgba(255, 255, 255, 0.12)",
+                  color: "#f4f4f5",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {effectiveStep}
+              </span>
+            )}
+            {IconComp ? <IconComp size={12} className="edge-badge-icon" /> : null}
             <span className="edge-badge-label">{displayText}</span>
+            {detailText && (
+              <span
+                style={{
+                  fontSize: "9.5px",
+                  opacity: 0.8,
+                  padding: "0 3px",
+                  borderRadius: "2px",
+                  backgroundColor: "rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                {detailText}
+              </span>
+            )}
           </div>
         </foreignObject>
       </g>

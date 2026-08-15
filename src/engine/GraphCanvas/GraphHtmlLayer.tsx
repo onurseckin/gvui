@@ -8,7 +8,9 @@ export interface GraphHtmlLayerProps {
   hiddenNodeIds: Set<string>;
   collapsedNodeIds: Set<string>;
   selectedNodeId: string | null;
+  connectedNodeIds?: Set<string>;
   selectedStep: number | null;
+  selectedSteps?: Set<number>;
   searchQuery: string;
   activeFilter: string;
   onSelectNode: (id: string) => void;
@@ -20,18 +22,31 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
   hiddenNodeIds,
   collapsedNodeIds,
   selectedNodeId,
+  connectedNodeIds,
   selectedStep,
+  selectedSteps,
   searchQuery,
   activeFilter,
   onSelectNode,
   onToggleCollapse,
 }) {
+  const isMultiStepActive = Boolean(selectedSteps && selectedSteps.size > 0);
   const isFilterActive =
-    activeFilter !== "all" || searchQuery.trim() !== "" || selectedStep !== null;
+    activeFilter !== "all" ||
+    searchQuery.trim() !== "" ||
+    selectedStep !== null ||
+    isMultiStepActive;
 
   const isNodeMatching = useCallback(
     (node: PositionedNode): boolean => {
       if (selectedStep !== null && node.step !== selectedStep) {
+        return false;
+      }
+      if (
+        isMultiStepActive &&
+        selectedSteps &&
+        (node.step === undefined || !selectedSteps.has(node.step))
+      ) {
         return false;
       }
 
@@ -68,7 +83,7 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
 
       return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
     },
-    [activeFilter, searchQuery, selectedStep],
+    [activeFilter, searchQuery, selectedStep, selectedSteps, isMultiStepActive],
   );
 
   return (
@@ -77,8 +92,10 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
         if (hiddenNodeIds.has(node.id)) return null;
 
         const isSelected = selectedNodeId === node.id;
+        const isHighlighted =
+          selectedNodeId === null || isSelected || Boolean(connectedNodeIds?.has(node.id));
         const matchesFilter = isNodeMatching(node);
-        const isFiltered = isFilterActive && !matchesFilter;
+        const isFiltered = (isFilterActive && !matchesFilter) || !isHighlighted;
         const isCollapsed = collapsedNodeIds.has(node.id);
 
         return (

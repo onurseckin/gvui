@@ -149,6 +149,14 @@ export interface EdgeHandoff {
   tokens?: number;
 }
 
+export interface EdgeContainerDetail {
+  stepBadge: string;
+  title: string;
+  detail?: string;
+  variant: "info" | "warning" | "error" | "success" | "neutral" | "cyan";
+  icon?: string;
+}
+
 export interface GraphEdgeData {
   id: string;
   source: string;
@@ -158,7 +166,9 @@ export interface GraphEdgeData {
   isCycle?: boolean;
   kind?: EdgeKind;
   condition?: string;
+  stepNumber?: number | string;
   badge?: BadgeDetail;
+  container?: EdgeContainerDetail;
   handoff?: EdgeHandoff;
   layoutRole?: EdgeLayoutHint;
   weight?: number;

@@ -1,7 +1,7 @@
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback } from "react";
 import type { GraphNodeData } from "../../../types/graphData";
-import { describeNodeKind, describeNodeStatus, resolveModelTier } from "./nodeKinds";
+import { describeNodeKind, resolveModelTier } from "./nodeKinds";
 
 export interface NodeCardHeaderProps {
   node: GraphNodeData;
@@ -20,18 +20,12 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
     );
 
     const kind = describeNodeKind(node);
-    const status = describeNodeStatus(node);
     const tier = resolveModelTier(node);
     const IconComp = kind.IconComponent;
 
     return (
       <header className="node-card-header">
         <div className="node-card-header-main">
-          <span
-            className={`node-card-status-dot ${status.animated ? "is-animated" : ""}`.trim()}
-            style={{ color: status.color }}
-            title={`Status: ${status.label}`}
-          />
           <span className="node-card-kind-icon" style={{ color: kind.accent }}>
             <IconComp size={14} color={kind.accent} />
           </span>
@@ -39,11 +33,13 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
             {node.name}
           </h3>
           {node.type ? <span className="node-card-type-tag">{node.type}</span> : null}
-          {node.step !== undefined ? (
-            <span className="node-card-step-badge">Step {node.step}</span>
-          ) : null}
         </div>
         <div className="node-card-header-aside">
+          {node.step !== undefined ? (
+            <span className="node-card-step-badge" title={`Execution Step ${node.step}`}>
+              Step {node.step}
+            </span>
+          ) : null}
           {node.badge ? (
             <span className={`node-card-badge-chip variant-${node.badge.variant ?? "info"}`}>
               {node.badge.text}
