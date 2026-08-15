@@ -4,6 +4,8 @@ import { EngineOptionsPanel } from "../../features/GraphTesting/components/Engin
 import { useGraphStore, useLayoutConfig, type LayoutMode } from "../../state/useGraphStore";
 import { Button, DirectionSelectDropdown, LayoutSelectDropdown } from "../../ui";
 import { calculateFitView } from "../../utils/fitView";
+import { generateDatasetSignature } from "../../utils/fileStorage";
+import { localDb } from "../../utils/localDb";
 import type { CustomLayoutConfig, Direction } from "../../engine/layout/custom/config";
 import { ExportMenu } from "./ExportMenu";
 import { StepsDropdown } from "./StepsDropdown";
@@ -63,6 +65,30 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
     useGraphStore.setState({ collapsedNodeIds: new Set<string>() });
   }, [resetViewport, setPanOffset, setZoomLevel]);
 
+  const handleResetView = useCallback(() => {
+    const { dataset } = useGraphStore.getState();
+    if (dataset) {
+      const baseSignature = generateDatasetSignature(dataset);
+      // Clean stored layout cache specifically for this graph
+      const rows = localDb.getTableRows<{ key: string; file_signature?: string }>("graph_layouts");
+      for (const row of rows) {
+        if (row.file_signature?.startsWith(baseSignature) || row.key.includes(baseSignature)) {
+          localDb.deleteRow("graph_layouts", row.key);
+        }
+      }
+      // Re-trigger layout computation with fresh calculation
+      useGraphStore.setState({
+        dataset: { ...dataset },
+        zoomLevel: 1,
+        panOffset: { x: 0, y: 0 },
+        collapsedNodeIds: new Set<string>(),
+        shouldAutoFit: true,
+      });
+    } else {
+      resetViewport();
+    }
+  }, [resetViewport]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -81,12 +107,12 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
         handleFitView();
       } else if (e.key === "r" || e.key === "R") {
         e.preventDefault();
-        resetViewport();
+        handleResetView();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleFitView, resetViewport]);
+  }, [handleFitView, handleResetView]);
 
   const handleLayoutChange = useCallback(
     (mode: LayoutMode) => setLayoutMode(mode),
@@ -141,7 +167,7 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
       <Button
         variant="outline"
         size="sm"
-        onClick={resetViewport}
+        onClick={handleResetView}
         title="Reset View (R)"
         className="toolbar-btn"
       >

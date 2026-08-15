@@ -29,6 +29,16 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
         if (hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target)) {
           return null;
         }
+        // Only render badge overlay if the edge has a valid positioned badgeRect, label coordinates, or route points
+        const hasPlacement =
+          edge.badgeRect !== undefined ||
+          (edge.labelX !== undefined && edge.labelY !== undefined) ||
+          (edge.points !== undefined && edge.points.length > 0);
+
+        if (!hasPlacement) {
+          return null;
+        }
+
         const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
 
         const placement = {
