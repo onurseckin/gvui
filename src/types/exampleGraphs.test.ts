@@ -147,5 +147,31 @@ for (const stem of stems) {
         .map((node) => node.id);
       expect(contradictory).toEqual([]);
     });
+
+    it("successfully computes full WASM layout with finite coordinates and non-colliding bounds", async () => {
+      // Imports the WASM layout engine adapter and runs full layered layout calculation
+      const { computeCustomEngineGraphLayoutWasm } =
+        await import("../engine/layout/custom/wasmLayoutAdapter");
+      const layoutResult = await computeCustomEngineGraphLayoutWasm(dataset, undefined, "layered");
+
+      expect(layoutResult).toBeDefined();
+      expect(layoutResult.nodes.length).toBe(dataset.nodes.length);
+      expect(layoutResult.edges.length).toBe(dataset.edges.length);
+
+      // Verify every node receives finite coordinates and positive dimensions
+      for (const node of layoutResult.nodes) {
+        expect(Number.isFinite(node.x)).toBe(true);
+        expect(Number.isFinite(node.y)).toBe(true);
+        expect(node.width).toBeGreaterThan(0);
+        expect(node.height).toBeGreaterThan(0);
+      }
+
+      // Verify every edge receives a valid SVG path
+      for (const edge of layoutResult.edges) {
+        expect(edge.path).toBeDefined();
+        expect(edge.path.length).toBeGreaterThan(0);
+        expect(edge.path.startsWith("M")).toBe(true);
+      }
+    });
   });
 }
