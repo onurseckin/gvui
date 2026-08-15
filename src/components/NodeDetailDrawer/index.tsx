@@ -148,7 +148,6 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
         <div className="drawer-header-meta">
           <span className="drawer-kind-label">{kind.label}</span>
           <span className="drawer-status-pill" style={{ color: status.color }}>
-            <span className="drawer-status-dot" />
             {status.label}
           </span>
           {node.step !== undefined ? (
