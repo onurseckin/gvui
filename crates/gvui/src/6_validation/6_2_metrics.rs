@@ -128,7 +128,15 @@ pub fn compute_metrics(
         .count();
     let unresolved_badge_count = badges
         .iter()
-        .filter(|b| !rect_is_finite(&b.rect) || b.rect.width <= 0.0 || b.rect.height <= 0.0)
+        .filter(|b| {
+            !rect_is_finite(&b.rect)
+                || b.rect.width <= 0.0
+                || b.rect.height <= 0.0
+                || !is_finite_point(&b.anchor_point)
+                || b.leader_points
+                    .as_ref()
+                    .is_some_and(|pts| pts.iter().any(|p| !is_finite_point(p)))
+        })
         .count();
 
     // ---- constraint counters; every one of these is a bug when nonzero ------------------------
@@ -276,6 +284,7 @@ fn port_side_balance(nodes: &[PositionedNode], routes: &[RoutedPath]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::EdgeStyle;
     use crate::types::{EdgeChain, EdgeRole, Item, ItemKind, Point, PortRef, Rect};
 
     fn cfg() -> CustomLayoutConfig {
@@ -615,5 +624,320 @@ mod tests {
         assert_eq!(m.geometric_crossings, 1);
         assert_eq!(m.leader_count, 3);
         assert_eq!(m.lane_depth_max, 5);
+    }
+
+    #[test]
+    fn all_seven_collision_metrics_plus_collinear_measured_exactly() {
+        // 1. Two overlapping nodes -> node_node_overlaps = 1
+        let nodes = vec![
+            node("n0", 0.0, 0.0, 100.0, 50.0),
+            node("n1", 50.0, 20.0, 100.0, 50.0), // overlaps n0
+            node("obstacle", 330.0, 0.0, 100.0, 50.0),
+        ];
+
+        // 2. Edge e0 penetrates obstacle -> edge_node_penetrations = 1
+        // 3. Edges e1 and e2 share a collinear run -> collinear_edge_overlaps = 1
+        // 4. Edge e3 is degenerate (< 2 pts) -> unresolved_route_count = 1
+        let routes = vec![
+            // Penetrates obstacle at (330..430, 0..50)
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 250.0, y: 25.0 }, Point { x: 450.0, y: 25.0 }],
+                source_port: port("n0", Side::Right, Point { x: 250.0, y: 25.0 }),
+                target_port: port("obstacle", Side::Left, Point { x: 450.0, y: 25.0 }),
+            },
+            // Collinear segment 1
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 0.0, y: 200.0 }, Point { x: 100.0, y: 200.0 }],
+                source_port: port("n0", Side::Bottom, Point { x: 0.0, y: 200.0 }),
+                target_port: port("n1", Side::Bottom, Point { x: 100.0, y: 200.0 }),
+            },
+            // Collinear segment 2 overlapping e1
+            RoutedPath {
+                edge_id: "e2".to_string(),
+                points: vec![Point { x: 50.0, y: 200.0 }, Point { x: 150.0, y: 200.0 }],
+                source_port: port("n0", Side::Bottom, Point { x: 50.0, y: 200.0 }),
+                target_port: port("n1", Side::Bottom, Point { x: 150.0, y: 200.0 }),
+            },
+            // Degenerate unresolved route
+            RoutedPath {
+                edge_id: "e3".to_string(),
+                points: vec![Point { x: 0.0, y: 0.0 }],
+                source_port: port("n0", Side::Top, Point { x: 0.0, y: 0.0 }),
+                target_port: port("n1", Side::Top, Point { x: 0.0, y: 0.0 }),
+            },
+        ];
+
+        // 5. Badge b0 overlaps node n0 -> badge_node_overlaps = 1
+        // 6. Badges b1 and b2 overlap each other -> badge_badge_overlaps = 1
+        // 7. Route e0 penetrates badge b1 (owned by e1) -> badge_edge_penetrations = 1
+        // 8. Badge b3 has zero width -> unresolved_badge_count = 1
+        let badges = vec![
+            // Overlaps n0 (0..100, 0..50) but not n1 (50..150)
+            BadgePlacement {
+                edge_id: "e0".to_string(),
+                label: "b0".to_string(),
+                rect: Rect {
+                    x: 10.0,
+                    y: 10.0,
+                    width: 30.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 10.0, y: 10.0 },
+                leader_points: None,
+            },
+            // Sits at (280..320, 15..35) penetrated by e0 at y=25
+            BadgePlacement {
+                edge_id: "e1".to_string(),
+                label: "b1".to_string(),
+                rect: Rect {
+                    x: 280.0,
+                    y: 15.0,
+                    width: 40.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 280.0, y: 15.0 },
+                leader_points: None,
+            },
+            // Overlaps b1 in (290..320, 30..35); not penetrated by e0 at y=25
+            BadgePlacement {
+                edge_id: "e2".to_string(),
+                label: "b2".to_string(),
+                rect: Rect {
+                    x: 290.0,
+                    y: 30.0,
+                    width: 40.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 290.0, y: 30.0 },
+                leader_points: None,
+            },
+            // Unresolved zero-size badge
+            BadgePlacement {
+                edge_id: "e3".to_string(),
+                label: "b3".to_string(),
+                rect: Rect {
+                    x: 800.0,
+                    y: 800.0,
+                    width: 0.0,
+                    height: 0.0,
+                },
+                anchor_point: Point { x: 800.0, y: 800.0 },
+                leader_points: None,
+            },
+        ];
+
+        let m = compute_metrics(&nodes, &routes, &badges, &[], None, 0, 0, 0, &cfg());
+
+        assert_eq!(m.node_node_overlaps, 1, "node_node_overlaps mismatch");
+        assert_eq!(
+            m.edge_node_penetrations, 1,
+            "edge_node_penetrations mismatch"
+        );
+        assert_eq!(m.badge_node_overlaps, 1, "badge_node_overlaps mismatch");
+        assert_eq!(m.badge_badge_overlaps, 1, "badge_badge_overlaps mismatch");
+        assert_eq!(
+            m.badge_edge_penetrations, 1,
+            "badge_edge_penetrations mismatch"
+        );
+        assert_eq!(
+            m.unresolved_route_count, 1,
+            "unresolved_route_count mismatch"
+        );
+        assert_eq!(
+            m.unresolved_badge_count, 1,
+            "unresolved_badge_count mismatch"
+        );
+        assert_eq!(
+            m.collinear_edge_overlaps, 1,
+            "collinear_edge_overlaps mismatch"
+        );
+    }
+
+    #[test]
+    fn radial_clean_layout_metrics_are_all_zero() {
+        let root = node("root", 200.0, 200.0, 80.0, 80.0);
+        let c0 = node("c0", 350.0, 200.0, 60.0, 40.0);
+        let c1 = node("c1", 50.0, 200.0, 60.0, 40.0);
+        let nodes = vec![root, c0, c1];
+
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 280.0, y: 240.0 }, Point { x: 350.0, y: 220.0 }],
+                source_port: port("root", Side::Right, Point { x: 280.0, y: 240.0 }),
+                target_port: port("c0", Side::Left, Point { x: 350.0, y: 220.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 200.0, y: 240.0 }, Point { x: 110.0, y: 220.0 }],
+                source_port: port("root", Side::Left, Point { x: 200.0, y: 240.0 }),
+                target_port: port("c1", Side::Right, Point { x: 110.0, y: 220.0 }),
+            },
+        ];
+
+        let badges = vec![
+            BadgePlacement {
+                edge_id: "e0".to_string(),
+                label: "badge0".to_string(),
+                rect: Rect {
+                    x: 300.0,
+                    y: 260.0,
+                    width: 40.0,
+                    height: 16.0,
+                },
+                anchor_point: Point { x: 315.0, y: 230.0 },
+                leader_points: None,
+            },
+            BadgePlacement {
+                edge_id: "e1".to_string(),
+                label: "badge1".to_string(),
+                rect: Rect {
+                    x: 130.0,
+                    y: 260.0,
+                    width: 40.0,
+                    height: 16.0,
+                },
+                anchor_point: Point { x: 155.0, y: 230.0 },
+                leader_points: None,
+            },
+        ];
+
+        let mut radial_cfg = cfg();
+        radial_cfg.edge_style = EdgeStyle::Straight;
+
+        let m = compute_metrics(&nodes, &routes, &badges, &[], None, 0, 0, 0, &radial_cfg);
+        assert_eq!(m.node_node_overlaps, 0);
+        assert_eq!(m.edge_node_penetrations, 0);
+        assert_eq!(m.badge_node_overlaps, 0);
+        assert_eq!(m.badge_badge_overlaps, 0);
+        assert_eq!(m.badge_edge_penetrations, 0);
+        assert_eq!(m.unresolved_route_count, 0);
+        assert_eq!(m.unresolved_badge_count, 0);
+        assert_eq!(m.collinear_edge_overlaps, 0);
+    }
+
+    #[test]
+    fn stress_test_metrics_dense_parallel_bundles() {
+        let nodes = vec![
+            node("src", 0.0, 0.0, 100.0, 500.0),
+            node("tgt", 600.0, 0.0, 100.0, 500.0),
+        ];
+
+        let n_routes = 16;
+        let mut routes = Vec::new();
+        for i in 0..n_routes {
+            let y = 20.0 + (i as f64) * 20.0;
+            routes.push(RoutedPath {
+                edge_id: format!("e_{}", i),
+                points: vec![Point { x: 100.0, y }, Point { x: 600.0, y }],
+                source_port: port("src", Side::Right, Point { x: 100.0, y }),
+                target_port: port("tgt", Side::Left, Point { x: 600.0, y }),
+            });
+        }
+
+        let mut badges = Vec::new();
+        for i in 0..n_routes {
+            let y = 20.0 + (i as f64) * 20.0;
+            let x = 150.0 + (i as f64) * 25.0;
+            badges.push(BadgePlacement {
+                edge_id: format!("e_{}", i),
+                label: format!("badge_{}", i),
+                rect: Rect {
+                    x,
+                    y: y - 5.0,
+                    width: 40.0,
+                    height: 10.0,
+                },
+                anchor_point: Point { x: x + 20.0, y },
+                leader_points: None,
+            });
+        }
+
+        // Clean bundle: zero violations across all metric counters
+        let m_clean = compute_metrics(&nodes, &routes, &badges, &[], None, 0, 0, 0, &cfg());
+        assert_eq!(m_clean.badge_edge_penetrations, 0);
+        assert_eq!(m_clean.badge_badge_overlaps, 0);
+        assert_eq!(m_clean.badge_node_overlaps, 0);
+        assert_eq!(m_clean.node_node_overlaps, 0);
+
+        // Inject 2 penetrations and 1 overlap
+        badges[2].rect.x = 400.0;
+        badges[2].rect.y = 45.0;
+        badges[2].rect.height = 40.0; // penetrates e_3 (y=80)
+        badges[6].rect.x = 200.0;
+        badges[6].rect.y = 130.0;
+        badges[6].rect.height = 20.0;
+        badges[7].rect.x = 210.0;
+        badges[7].rect.y = 145.0;
+        badges[7].rect.height = 20.0; // overlaps badge 6
+        badges[10].rect.x = 500.0;
+        badges[10].rect.y = 205.0;
+        badges[10].rect.height = 40.0; // penetrates e_11 (y=240)
+
+        let m_adv = compute_metrics(&nodes, &routes, &badges, &[], None, 0, 0, 0, &cfg());
+        assert_eq!(
+            m_adv.badge_edge_penetrations, 2,
+            "m_adv badge_edge_penetrations mismatch"
+        );
+        assert_eq!(
+            m_adv.badge_badge_overlaps, 1,
+            "m_adv badge_badge_overlaps mismatch"
+        );
+    }
+
+    #[test]
+    fn validation_metric_invariants_and_zero_tolerance_bounds() {
+        // Invariant 1: Clean layout produces exactly 0 for all collision/defect metrics
+        let nodes = vec![
+            node("n1", 0.0, 0.0, 100.0, 50.0),
+            node("n2", 200.0, 0.0, 100.0, 50.0),
+        ];
+        let routes = vec![RoutedPath {
+            edge_id: "e1".to_string(),
+            points: vec![Point { x: 100.0, y: 25.0 }, Point { x: 200.0, y: 25.0 }],
+            source_port: port("n1", Side::Right, Point { x: 100.0, y: 25.0 }),
+            target_port: port("n2", Side::Left, Point { x: 200.0, y: 25.0 }),
+        }];
+        let badges = vec![BadgePlacement {
+            edge_id: "e1".to_string(),
+            label: "clean".to_string(),
+            rect: Rect {
+                x: 130.0,
+                y: 15.0,
+                width: 40.0,
+                height: 20.0,
+            },
+            anchor_point: Point { x: 150.0, y: 25.0 },
+            leader_points: None,
+        }];
+        let m = compute_metrics(&nodes, &routes, &badges, &[], None, 0, 0, 0, &cfg());
+        assert_eq!(m.node_node_overlaps, 0);
+        assert_eq!(m.edge_node_penetrations, 0);
+        assert_eq!(m.badge_node_overlaps, 0);
+        assert_eq!(m.badge_badge_overlaps, 0);
+        assert_eq!(m.badge_edge_penetrations, 0);
+        assert_eq!(m.unresolved_route_count, 0);
+        assert_eq!(m.unresolved_badge_count, 0);
+        assert_eq!(m.collinear_edge_overlaps, 0);
+
+        // Invariant 2: Symmetry - node ordering in input does not alter overlap detection
+        let nodes_rev = vec![nodes[1].clone(), nodes[0].clone()];
+        let m_rev = compute_metrics(&nodes_rev, &routes, &badges, &[], None, 0, 0, 0, &cfg());
+        assert_eq!(m.node_node_overlaps, m_rev.node_node_overlaps);
+        assert_eq!(m.edge_node_penetrations, m_rev.edge_node_penetrations);
+
+        // Invariant 3: Additivity - independent violations in disjoint subgraphs sum linearly
+        let nodes_disjoint = vec![
+            // Overlapping pair 1 at origin
+            node("a1", 0.0, 0.0, 100.0, 50.0),
+            node("a2", 50.0, 20.0, 100.0, 50.0),
+            // Overlapping pair 2 far away at (1000, 1000)
+            node("b1", 1000.0, 1000.0, 100.0, 50.0),
+            node("b2", 1050.0, 1020.0, 100.0, 50.0),
+        ];
+        let m_disjoint = compute_metrics(&nodes_disjoint, &[], &[], &[], None, 0, 0, 0, &cfg());
+        assert_eq!(m_disjoint.node_node_overlaps, 2);
     }
 }

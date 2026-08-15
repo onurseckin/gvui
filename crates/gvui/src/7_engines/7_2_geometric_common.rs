@@ -13,12 +13,13 @@
 //! than failing on them — see `docs/concepts/quality-model.md`.
 
 use std::collections::HashMap;
+use std::f64::consts::TAU;
 
 use crate::badge_measurement::get_badge_display_text;
 use crate::config::{CustomLayoutConfig, EdgeStyle, LabelPlacement};
 use crate::geometry::{
-    clip_ray_to_rect, expand_rect, nearest_point_on_polyline, point_at_path_ratio,
-    segment_clipped_length, segment_intersects_rect_interior,
+    clip_ray_to_rect, expand_rect, nearest_point_on_polyline, segment_clipped_length,
+    segment_intersects_rect_interior,
 };
 use crate::step6_validation::constraints::SpatialHash;
 use crate::step6_validation::{check_constraints, compute_metrics};
@@ -28,8 +29,8 @@ use crate::types::{
     PositionedNode, Rect, RoutedPath, Segment, Side,
 };
 
-/// Number of candidate positions tried per badge before falling back to a leader line.
-const BADGE_CANDIDATES: usize = 12;
+/// Fraction of the distance to the centre that a non-tree chord bends in radial mode.
+pub const CHORD_BOW: f64 = 0.3;
 
 // =============================================================================================
 // The engine
@@ -247,7 +248,7 @@ pub fn nearest_side(rect: &Rect, p: &Point) -> Side {
 /// a zero-area box). The centre is *not* on the boundary, and Phase 9 rejects an off-boundary port,
 /// so this wrapper substitutes the right-edge midpoint — an arbitrary but valid and reproducible
 /// attachment.
-fn clip_to_boundary(rect: &Rect, toward: &Point) -> Point {
+pub fn clip_to_boundary(rect: &Rect, toward: &Point) -> Point {
     let p = clip_ray_to_rect(rect, toward);
     let c = rect.center();
     let degenerate = (p.x - c.x).abs() < f64::EPSILON
@@ -261,6 +262,566 @@ fn clip_to_boundary(rect: &Rect, toward: &Point) -> Point {
     } else {
         p
     }
+}
+
+/// Converts unscaled polar coordinates $(r, \theta)$ to elliptical Cartesian coordinates $(x, y)$.
+#[inline]
+pub fn polar_to_cartesian(r: f64, theta: f64, ax: f64, ay: f64) -> Point {
+    Point {
+        x: r * ax * theta.cos(),
+        y: r * ay * theta.sin(),
+    }
+}
+
+/// Converts Cartesian coordinates $(x, y)$ to unscaled polar coordinates $(r, \theta \in [0, 2\pi))$.
+#[inline]
+pub fn cartesian_to_polar(p: &Point, ax: f64, ay: f64) -> (f64, f64) {
+    let ux = if ax.abs() > 1e-9 { p.x / ax } else { p.x };
+    let uy = if ay.abs() > 1e-9 { p.y / ay } else { p.y };
+    let r = (ux * ux + uy * uy).sqrt();
+    let theta = uy.atan2(ux);
+    let norm_theta = if theta < 0.0 { theta + TAU } else { theta };
+    (r, norm_theta)
+}
+
+/// Bounding polar sector of a rectangle in unscaled polar space.
+/// Returns `(r_min, r_max, theta_min, theta_max)`.
+pub fn polar_bounding_sector(
+    rect: &Rect,
+    ax: f64,
+    ay: f64,
+    clearance: f64,
+) -> (f64, f64, f64, f64) {
+    let c = rect.center();
+    let cx_unscaled = if ax.abs() > 1e-9 { c.x / ax } else { c.x };
+    let cy_unscaled = if ay.abs() > 1e-9 { c.y / ay } else { c.y };
+    let c_r = (cx_unscaled.powi(2) + cy_unscaled.powi(2)).sqrt();
+    let c_theta = cy_unscaled.atan2(cx_unscaled);
+
+    let corners = [
+        Point {
+            x: rect.x,
+            y: rect.y,
+        },
+        Point {
+            x: rect.right(),
+            y: rect.y,
+        },
+        Point {
+            x: rect.right(),
+            y: rect.bottom(),
+        },
+        Point {
+            x: rect.x,
+            y: rect.bottom(),
+        },
+    ];
+
+    let mut r_min = f64::INFINITY;
+    let mut r_max = f64::NEG_INFINITY;
+    let mut dtheta_min = f64::INFINITY;
+    let mut dtheta_max = f64::NEG_INFINITY;
+
+    for pt in &corners {
+        let ux = if ax.abs() > 1e-9 { pt.x / ax } else { pt.x };
+        let uy = if ay.abs() > 1e-9 { pt.y / ay } else { pt.y };
+        let r = (ux.powi(2) + uy.powi(2)).sqrt();
+        r_min = r_min.min(r);
+        r_max = r_max.max(r);
+
+        let theta = uy.atan2(ux);
+        let mut dtheta = theta - c_theta;
+        while dtheta > std::f64::consts::PI {
+            dtheta -= TAU;
+        }
+        while dtheta < -std::f64::consts::PI {
+            dtheta += TAU;
+        }
+        dtheta_min = dtheta_min.min(dtheta);
+        dtheta_max = dtheta_max.max(dtheta);
+    }
+
+    let d_clear_theta = if c_r > 0.0 { clearance / c_r } else { 0.1 };
+    (
+        (r_min - clearance).max(0.0),
+        r_max + clearance,
+        c_theta + dtheta_min - d_clear_theta,
+        c_theta + dtheta_max + d_clear_theta,
+    )
+}
+
+/// Axis-aligned bounding box around a line segment expanded by epsilon.
+#[inline]
+pub fn segment_bbox(seg: &Segment, eps: f64) -> Rect {
+    let min_x = seg.a.x.min(seg.b.x) - eps;
+    let min_y = seg.a.y.min(seg.b.y) - eps;
+    let max_x = seg.a.x.max(seg.b.x) + eps;
+    let max_y = seg.a.y.max(seg.b.y) + eps;
+    Rect {
+        x: if min_x.is_finite() { min_x } else { 0.0 },
+        y: if min_y.is_finite() { min_y } else { 0.0 },
+        width: if max_x >= min_x && (max_x - min_x).is_finite() {
+            max_x - min_x
+        } else {
+            0.0
+        },
+        height: if max_y >= min_y && (max_y - min_y).is_finite() {
+            max_y - min_y
+        } else {
+            0.0
+        },
+    }
+}
+
+/// Returns true if any segment of `points` penetrates into the interior of any node box in `rects`.
+pub fn check_polyline_node_collision(
+    points: &[Point],
+    node_index: &SpatialHash,
+    rects: &[Rect],
+    eps: f64,
+) -> bool {
+    if points.len() < 2 {
+        return false;
+    }
+    for w in points.windows(2) {
+        let seg = Segment { a: w[0], b: w[1] };
+        if !seg.a.x.is_finite()
+            || !seg.a.y.is_finite()
+            || !seg.b.x.is_finite()
+            || !seg.b.y.is_finite()
+        {
+            continue;
+        }
+        let bb = segment_bbox(&seg, eps);
+        for cand in node_index.query(&bb) {
+            let j = cand as usize;
+            if let Some(r) = rects.get(j) {
+                if segment_intersects_rect_interior(&seg, r, eps) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Counts total segments of `points` penetrating into the interior of any node box in `rects`.
+pub fn count_polyline_node_collisions(
+    points: &[Point],
+    node_index: &SpatialHash,
+    rects: &[Rect],
+    eps: f64,
+) -> usize {
+    if points.len() < 2 {
+        return 0;
+    }
+    let mut count = 0usize;
+    for w in points.windows(2) {
+        let seg = Segment { a: w[0], b: w[1] };
+        if !seg.a.x.is_finite()
+            || !seg.a.y.is_finite()
+            || !seg.b.x.is_finite()
+            || !seg.b.y.is_finite()
+        {
+            continue;
+        }
+        let bb = segment_bbox(&seg, eps);
+        for cand in node_index.query(&bb) {
+            let j = cand as usize;
+            if let Some(r) = rects.get(j) {
+                if segment_intersects_rect_interior(&seg, r, eps) {
+                    count += 1;
+                }
+            }
+        }
+    }
+    count
+}
+
+/// Computes the total Euclidean length of a polyline.
+pub fn polyline_length(points: &[Point]) -> f64 {
+    let mut len = 0.0;
+    for w in points.windows(2) {
+        len += (w[1].x - w[0].x).hypot(w[1].y - w[0].y);
+    }
+    len
+}
+
+/// Identifies all node indices whose interior is penetrated by `seg`, skipping endpoints `skip_u` and `skip_v`.
+pub fn detect_segment_obstacles(
+    seg: &Segment,
+    node_index: &SpatialHash,
+    rects: &[Rect],
+    skip_u: usize,
+    skip_v: usize,
+    eps: f64,
+) -> Vec<usize> {
+    let mut obstacles = Vec::new();
+    let bb = segment_bbox(seg, eps);
+    for cand in node_index.query(&bb) {
+        let j = cand as usize;
+        if j == skip_u || j == skip_v {
+            continue;
+        }
+        if let Some(r) = rects.get(j) {
+            if segment_intersects_rect_interior(seg, r, eps) {
+                obstacles.push(j);
+            }
+        }
+    }
+    obstacles
+}
+
+/// Radius of the concentric routing corridor at index `k`.
+///
+/// For ring index $k \in \{0, \dots, K-1\}$, $R_{\text{corr}, k} = (R_k + R_{k+1}) / 2$.
+/// For outermost ring $K$ and beyond, corridors extend monotonically outward.
+pub fn get_corridor_radius(radii: &[f64], k: usize, ring_gap: f64) -> f64 {
+    if radii.is_empty() {
+        return (k as f64 + 1.0) * ring_gap / 2.0;
+    }
+    if radii.len() == 1 {
+        return radii[0] + (k as f64 + 1.0) * ring_gap / 2.0;
+    }
+    if k + 1 < radii.len() {
+        (radii[k] + radii[k + 1]) / 2.0
+    } else {
+        let last = *radii.last().unwrap();
+        let prev = radii[radii.len().saturating_sub(2)];
+        let step = (last - prev).max(ring_gap);
+        let extra = (k + 1 - radii.len()) as f64;
+        last + step * (extra + 0.5)
+    }
+}
+
+/// Generates waypoints using the Polar Corridor Detour Routing Algorithm (PCDRA).
+fn route_pcdra_waypoints(
+    _s: u32,
+    _t: u32,
+    k_s: usize,
+    k_t: usize,
+    rs: &Rect,
+    rt: &Rect,
+    theta_entry: f64,
+    theta_exit: f64,
+    radii: &[f64],
+    ax: f64,
+    ay: f64,
+    ring_gap: f64,
+    track_offset: f64,
+    node_index: &SpatialHash,
+    rects: &[Rect],
+    eps: f64,
+) -> Vec<Point> {
+    let n_rings = radii.len();
+
+    // Collect candidate corridors in priority order
+    let mut candidate_corridors = Vec::new();
+    let (k_min, k_max) = if k_s < k_t { (k_s, k_t) } else { (k_t, k_s) };
+    if k_min > 0 {
+        candidate_corridors.push(get_corridor_radius(radii, k_min - 1, ring_gap));
+    }
+    for k in k_min..=k_max {
+        let r_c = get_corridor_radius(radii, k, ring_gap);
+        if !candidate_corridors.contains(&r_c) {
+            candidate_corridors.push(r_c);
+        }
+    }
+    for k in 0..n_rings {
+        let r_c = get_corridor_radius(radii, k, ring_gap);
+        if !candidate_corridors.contains(&r_c) {
+            candidate_corridors.push(r_c);
+        }
+    }
+
+    // Angular directions: clockwise vs counter-clockwise
+    let delta_cw = if theta_exit >= theta_entry {
+        theta_exit - theta_entry
+    } else {
+        TAU + theta_exit - theta_entry
+    };
+    let delta_ccw = TAU - delta_cw;
+
+    let directions = if delta_cw <= delta_ccw {
+        [(true, delta_cw), (false, -delta_ccw)]
+    } else {
+        [(false, -delta_ccw), (true, delta_cw)]
+    };
+
+    let mut fallback_candidate: Option<(usize, f64, Vec<Point>)> = None;
+
+    for &r_base in &candidate_corridors {
+        for &fractional_offset in &[
+            0.0,
+            0.25 * ring_gap,
+            -0.25 * ring_gap,
+            0.5 * ring_gap,
+            -0.5 * ring_gap,
+        ] {
+            let r_c = (r_base + track_offset + fractional_offset).max(1.0);
+            for &(is_cw, _span) in &directions {
+                let travel_sign = if is_cw { 1.0 } else { -1.0 };
+                let alpha_s = travel_sign * (16.0 + track_offset.abs() * 0.5) / r_c.max(50.0);
+                let alpha_t = travel_sign * (16.0 + track_offset.abs() * 0.5) / r_c.max(50.0);
+
+                let theta_entry_actual = theta_entry + alpha_s;
+                let theta_exit_actual = theta_exit - alpha_t;
+
+                let p_entry = polar_to_cartesian(r_c, theta_entry_actual, ax, ay);
+                let p_exit = polar_to_cartesian(r_c, theta_exit_actual, ax, ay);
+                let p_src = clip_to_boundary(rs, &p_entry);
+                let p_tgt = clip_to_boundary(rt, &p_exit);
+
+                let actual_span = if is_cw {
+                    if theta_exit_actual >= theta_entry_actual {
+                        theta_exit_actual - theta_entry_actual
+                    } else {
+                        TAU + theta_exit_actual - theta_entry_actual
+                    }
+                } else {
+                    if theta_exit_actual <= theta_entry_actual {
+                        theta_exit_actual - theta_entry_actual
+                    } else {
+                        theta_exit_actual - theta_entry_actual - TAU
+                    }
+                };
+
+                let abs_span = actual_span.abs();
+                let num_steps =
+                    ((abs_span / (std::f64::consts::PI / 6.0)).ceil() as usize).clamp(2, 12);
+
+                let mut pts = Vec::with_capacity(num_steps + 3);
+                pts.push(p_src);
+                if (p_entry.x - p_src.x).hypot(p_entry.y - p_src.y) > 0.5 {
+                    pts.push(p_entry);
+                }
+                for step in 1..num_steps {
+                    let frac = step as f64 / num_steps as f64;
+                    let theta_frac = theta_entry_actual + frac * actual_span;
+                    let p_frac = polar_to_cartesian(r_c, theta_frac, ax, ay);
+                    if (p_frac.x - pts.last().unwrap().x).hypot(p_frac.y - pts.last().unwrap().y)
+                        > 0.5
+                    {
+                        pts.push(p_frac);
+                    }
+                }
+                if (p_exit.x - pts.last().unwrap().x).hypot(p_exit.y - pts.last().unwrap().y) > 0.5
+                {
+                    pts.push(p_exit);
+                }
+                if (p_tgt.x - pts.last().unwrap().x).hypot(p_tgt.y - pts.last().unwrap().y) > 0.5 {
+                    pts.push(p_tgt);
+                } else {
+                    *pts.last_mut().unwrap() = p_tgt;
+                }
+
+                let collisions = count_polyline_node_collisions(&pts, node_index, rects, eps);
+                let length = polyline_length(&pts);
+
+                if collisions == 0 {
+                    return pts;
+                }
+
+                let is_better = match &fallback_candidate {
+                    Some((best_col, best_len, _)) => {
+                        collisions < *best_col || (collisions == *best_col && length < *best_len)
+                    }
+                    None => true,
+                };
+                if is_better {
+                    fallback_candidate = Some((collisions, length, pts));
+                }
+            }
+        }
+    }
+
+    if let Some((_, _, pts)) = fallback_candidate {
+        pts
+    } else {
+        vec![
+            clip_to_boundary(rs, &rt.center()),
+            clip_to_boundary(rt, &rs.center()),
+        ]
+    }
+}
+
+/// Materializes collision-free radial routes using the Polar Corridor Detour Routing Algorithm (PCDRA).
+///
+/// Guarantees 0 edge-node interior penetrations by:
+/// 1. Testing straight spokes (for tree edges) and inward bowed chords against all node boxes.
+/// 2. If collisions are detected, routing through concentric inter-ring ($R_{\text{corr}, k} = (R_k + R_{k+1})/2$)
+///    or intra-ring corridors with tangential avoidance waypoints `<p_src, p_entry, p_mid, p_exit, p_tgt>`.
+/// 3. Clipping endpoints strictly to node boundaries via [`clip_to_boundary`] with outward normal ports.
+#[allow(clippy::too_many_arguments)]
+pub fn build_radial_pcdra_routes(
+    ir: &GraphIr,
+    tree_rings: &[u32],
+    tree_parents: &[u32],
+    rects: &[Rect],
+    radii: &[f64],
+    ax: f64,
+    ay: f64,
+    config: &CustomLayoutConfig,
+) -> Vec<RoutedPath> {
+    let mut port_seq: HashMap<(u32, Side), usize> = HashMap::new();
+    let mut out: Vec<RoutedPath> = Vec::with_capacity(ir.edge_count());
+
+    let mut node_index = SpatialHash::new(mean_cell(rects.iter().map(|r| (r.width, r.height))));
+    for (i, r) in rects.iter().enumerate() {
+        node_index.insert(i as u32, r);
+    }
+
+    let eps = if config.epsilon.is_finite() && config.epsilon > 0.0 {
+        config.epsilon
+    } else {
+        1e-9
+    };
+
+    let ring_gap = (config.radial_ring_gap * config.compaction.gap_scale())
+        .max(config.effective_rank_gap())
+        .max(10.0);
+
+    let mut pair_counts: HashMap<(u32, u32), usize> = HashMap::new();
+    for edge in &ir.edges {
+        let pair = if edge.source < edge.target {
+            (edge.source, edge.target)
+        } else {
+            (edge.target, edge.source)
+        };
+        *pair_counts.entry(pair).or_insert(0) += 1;
+    }
+
+    let mut pair_current: HashMap<(u32, u32), usize> = HashMap::new();
+
+    // Golden ratio for low-discrepancy track staggering across all edges
+    let golden_ratio = 0.618_033_988_749_895f64;
+
+    for e in 0..ir.edge_count() {
+        let edge = &ir.edges[e];
+        let (s, t) = (edge.source as usize, edge.target as usize);
+        let edge_id = ir.edge_name(e as u32).to_string();
+
+        let (Some(rs), Some(rt)) = (rects.get(s), rects.get(t)) else {
+            continue;
+        };
+
+        if s == t {
+            out.push(self_loop_route(
+                edge_id,
+                edge.source,
+                ir.node_name(edge.source),
+                rs,
+                &mut port_seq,
+                config,
+            ));
+            continue;
+        }
+
+        let pair = if edge.source < edge.target {
+            (edge.source, edge.target)
+        } else {
+            (edge.target, edge.source)
+        };
+        let bundle_size = *pair_counts.get(&pair).unwrap_or(&1);
+        let bundle_idx = *pair_current.entry(pair).or_insert(0);
+        pair_current.insert(pair, bundle_idx + 1);
+
+        let is_tree = (t < tree_parents.len() && tree_parents[t] == edge.source)
+            || (s < tree_parents.len() && tree_parents[s] == edge.target);
+
+        let k_s = tree_rings.get(s).copied().unwrap_or(0) as usize;
+        let k_t = tree_rings.get(t).copied().unwrap_or(0) as usize;
+
+        let cs = rs.center();
+        let ct = rt.center();
+        let (_, theta_s) = cartesian_to_polar(&cs, ax, ay);
+        let (_, theta_t) = cartesian_to_polar(&ct, ax, ay);
+
+        let dist_st = (cs.x - ct.x).hypot(cs.y - ct.y).max(50.0);
+        let bundle_delta_theta = if bundle_size > 1 {
+            (bundle_idx as f64 - (bundle_size - 1) as f64 / 2.0) * (10.0 / dist_st)
+        } else {
+            0.0
+        };
+
+        let theta_s_entry = theta_s + bundle_delta_theta;
+        let theta_t_exit = theta_t + bundle_delta_theta;
+
+        let bundle_offset = if bundle_size > 1 {
+            (bundle_idx as f64 - (bundle_size - 1) as f64 / 2.0)
+                * (ring_gap / (bundle_size + 1) as f64).clamp(4.0, 16.0)
+        } else {
+            0.0
+        };
+
+        let edge_frac = ((e as f64 + 1.0) * golden_ratio).fract();
+        let edge_track_offset = (edge_frac - 0.5) * (ring_gap * 0.35).min(10.0);
+
+        let mut best_pts: Option<Vec<Point>> = None;
+
+        // If it's a singleton tree edge (bundle_size == 1), direct radial spoke is straight and clean
+        if is_tree && bundle_size == 1 {
+            let p_src_direct = clip_to_boundary(rs, &ct);
+            let p_tgt_direct = clip_to_boundary(rt, &cs);
+            let direct_pts = vec![p_src_direct, p_tgt_direct];
+
+            if !check_polyline_node_collision(&direct_pts, &node_index, rects, eps) {
+                best_pts = Some(direct_pts);
+            }
+        }
+
+        // All chords, cross-ring edges, and parallel bundles route through PCDRA corridors
+        let points = match best_pts {
+            Some(pts) => pts,
+            None => route_pcdra_waypoints(
+                edge.source,
+                edge.target,
+                k_s,
+                k_t,
+                rs,
+                rt,
+                theta_s_entry,
+                theta_t_exit,
+                radii,
+                ax,
+                ay,
+                ring_gap,
+                bundle_offset + edge_track_offset,
+                &node_index,
+                rects,
+                eps,
+            ),
+        };
+
+        let p_src = points[0];
+        let p_tgt = *points.last().unwrap();
+
+        let source_port = make_port(
+            ir.node_name(edge.source).to_string(),
+            edge.source,
+            rs,
+            p_src,
+            &mut port_seq,
+            config,
+        );
+        let target_port = make_port(
+            ir.node_name(edge.target).to_string(),
+            edge.target,
+            rt,
+            p_tgt,
+            &mut port_seq,
+            config,
+        );
+
+        out.push(RoutedPath {
+            edge_id,
+            points,
+            source_port,
+            target_port,
+        });
+    }
+
+    out
 }
 
 /// Materializes one polyline per IR edge, clipped to the endpoint boxes.
@@ -518,18 +1079,8 @@ pub fn place_badges(
         }
     }
 
-    let seg_bbox = |s: &RouteSeg| {
-        let min_x = s.a.x.min(s.b.x);
-        let min_y = s.a.y.min(s.b.y);
-        let w = (s.b.x - s.a.x).abs();
-        let h = (s.b.y - s.a.y).abs();
-        Rect {
-            x: if min_x.is_finite() { min_x } else { 0.0 },
-            y: if min_y.is_finite() { min_y } else { 0.0 },
-            width: if w.is_finite() { w } else { 0.0 },
-            height: if h.is_finite() { h } else { 0.0 },
-        }
-    };
+    let seg_bbox =
+        |s: &RouteSeg| segment_bbox(&Segment { a: s.a, b: s.b }, config.epsilon.max(1.0));
 
     let seg_index = {
         let mut h = SpatialHash::new(mean_cell(segs.iter().map(|s| {
@@ -555,7 +1106,7 @@ pub fn place_badges(
             continue;
         }
 
-        let offsets = badge_offsets(&route.points, label.height, config);
+        let offsets = badge_offsets(&route.points, label.width, label.height, config);
         let mut best: Option<Rect> = None;
         let mut fallback: Option<(f64, Rect)> = None;
 
@@ -632,72 +1183,213 @@ pub fn place_badges(
 /// The candidate badge centres, in preference order.
 ///
 /// The first entry honours `config.label_placement`; the rest walk the badge along and across the
-/// edge so a crowded neighbourhood still has somewhere to go.
-fn badge_offsets(points: &[Point], label_height: f64, config: &CustomLayoutConfig) -> Vec<Point> {
-    let off = label_height / 2.0 + config.badge_clearance;
+/// edge, through detour corridors and outward radial rays so a crowded neighbourhood still has
+/// ample zero-conflict space to go.
+fn badge_offsets(
+    points: &[Point],
+    _label_width: f64,
+    label_height: f64,
+    config: &CustomLayoutConfig,
+) -> Vec<Point> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+    if points.len() == 1 {
+        return vec![points[0]];
+    }
 
-    // Chord direction. A degenerate chord (both endpoints coincident) falls back to "up".
+    let off = (label_height / 2.0 + config.badge_clearance.max(2.0)).max(10.0);
+
+    // 1. Total path length and segment lengths
+    let mut seg_lengths = Vec::with_capacity(points.len().saturating_sub(1));
+    let mut total_len = 0.0;
+    for w in points.windows(2) {
+        let len = (w[1].x - w[0].x).hypot(w[1].y - w[0].y);
+        seg_lengths.push(len);
+        total_len += len;
+    }
+
+    // 2. Chord direction
     let first = points[0];
     let last = points[points.len() - 1];
     let (dx, dy) = (last.x - first.x, last.y - first.y);
-    let len = (dx * dx + dy * dy).sqrt();
-    let (nx, ny) = if len.is_finite() && len > config.epsilon {
-        (-dy / len, dx / len)
+    let chord_len = (dx * dx + dy * dy).sqrt();
+    let (chord_nx, chord_ny) = if chord_len.is_finite() && chord_len > config.epsilon {
+        (-dy / chord_len, dx / chord_len)
     } else {
         (0.0, -1.0)
     };
 
-    let at = |t: f64, along_normal: f64, vertical: f64| -> Point {
-        let base = point_at_path_ratio(points, t);
-        Point {
-            x: base.x + nx * off * along_normal,
-            y: base.y + ny * off * along_normal + vertical,
+    // Helper to sample point and local segment normal along path
+    let sample_path = |ratio: f64| -> (Point, Point) {
+        if total_len <= config.epsilon {
+            return (
+                points[0],
+                Point {
+                    x: chord_nx,
+                    y: chord_ny,
+                },
+            );
+        }
+        let target_d = ratio.clamp(0.0, 1.0) * total_len;
+        let mut accum = 0.0;
+        for (i, &seg_d) in seg_lengths.iter().enumerate() {
+            if accum + seg_d >= target_d || i == seg_lengths.len() - 1 {
+                let seg_t = if seg_d > config.epsilon {
+                    ((target_d - accum) / seg_d).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let pt = Point {
+                    x: points[i].x + seg_t * (points[i + 1].x - points[i].x),
+                    y: points[i].y + seg_t * (points[i + 1].y - points[i].y),
+                };
+                let norm = if seg_d > config.epsilon {
+                    Point {
+                        x: -(points[i + 1].y - points[i].y) / seg_d,
+                        y: (points[i + 1].x - points[i].x) / seg_d,
+                    }
+                } else {
+                    Point {
+                        x: chord_nx,
+                        y: chord_ny,
+                    }
+                };
+                return (pt, norm);
+            }
+            accum += seg_d;
+        }
+        (
+            *points.last().unwrap(),
+            Point {
+                x: chord_nx,
+                y: chord_ny,
+            },
+        )
+    };
+
+    let mut candidates: Vec<Point> = Vec::with_capacity(384);
+    let mut push_cand = |pt: Point| {
+        if pt.x.is_finite() && pt.y.is_finite() {
+            if !candidates.iter().any(|existing: &Point| {
+                (existing.x - pt.x).abs() < 1.0 && (existing.y - pt.y).abs() < 1.0
+            }) {
+                candidates.push(pt);
+            }
         }
     };
 
-    let primary = match config.label_placement {
-        LabelPlacement::OnEdge => at(0.5, 0.0, 0.0),
-        LabelPlacement::BesideEdge => at(0.5, 1.0, 0.0),
-        LabelPlacement::AboveEdge => at(0.5, 0.0, -off),
-    };
+    // Primary candidate based on label_placement
+    let (mid_pt, mid_norm) = sample_path(0.5);
+    match config.label_placement {
+        LabelPlacement::OnEdge => push_cand(mid_pt),
+        LabelPlacement::BesideEdge => push_cand(Point {
+            x: mid_pt.x + mid_norm.x * off,
+            y: mid_pt.y + mid_norm.y * off,
+        }),
+        LabelPlacement::AboveEdge => push_cand(Point {
+            x: mid_pt.x,
+            y: mid_pt.y - off,
+        }),
+    }
 
-    let mut v = Vec::with_capacity(BADGE_CANDIDATES);
-    v.push(primary);
-    v.push(at(0.5, -1.0, 0.0));
-    v.push(at(0.35, 1.0, 0.0));
-    v.push(at(0.65, -1.0, 0.0));
-    v.push(at(0.35, -1.0, 0.0));
-    v.push(at(0.65, 1.0, 0.0));
-    v.push(at(0.5, 2.0, 0.0));
-    v.push(at(0.5, -2.0, 0.0));
-    v.push(at(0.2, 1.0, 0.0));
-    v.push(at(0.8, -1.0, 0.0));
-    v.push(at(0.2, -1.0, 0.0));
-    v.push(at(0.8, 1.0, 0.0));
-    v
+    // Parametric points along polyline path and normal offsets
+    let t_values = [
+        0.5, 0.35, 0.65, 0.25, 0.75, 0.15, 0.85, 0.1, 0.9, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.05, 0.95,
+    ];
+    let normal_multipliers = [
+        0.0, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0, 2.5, -2.5, 3.0, -3.0, 3.5, -3.5, 4.0, -4.0, 5.0,
+        -5.0, 6.0, -6.0, 7.0, -7.0, 8.0, -8.0, 9.0, -9.0, 10.0, -10.0, 11.0, -11.0, 12.0, -12.0,
+        13.0, -13.0, 14.0, -14.0, 15.0, -15.0,
+    ];
+
+    for &t in &t_values {
+        let (base, local_norm) = sample_path(t);
+        for &n in &normal_multipliers {
+            push_cand(Point {
+                x: base.x + local_norm.x * off * n,
+                y: base.y + local_norm.y * off * n,
+            });
+            if (chord_nx - local_norm.x).abs() > 1e-4 || (chord_ny - local_norm.y).abs() > 1e-4 {
+                push_cand(Point {
+                    x: base.x + chord_nx * off * n,
+                    y: base.y + chord_ny * off * n,
+                });
+            }
+        }
+    }
+
+    // For polyline routes with interior waypoints: test detour corridor segments
+    if points.len() >= 3 {
+        let mut seg_indices: Vec<usize> = (0..points.len() - 1).collect();
+        seg_indices.sort_by(|&a, &b| {
+            seg_lengths[b]
+                .partial_cmp(&seg_lengths[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        for &si in &seg_indices {
+            let seg_len = seg_lengths[si];
+            if seg_len <= config.epsilon {
+                continue;
+            }
+            let p_a = points[si];
+            let p_b = points[si + 1];
+            let seg_norm = Point {
+                x: -(p_b.y - p_a.y) / seg_len,
+                y: (p_b.x - p_a.x) / seg_len,
+            };
+
+            for &t_seg in &[0.5, 0.35, 0.65, 0.25, 0.75, 0.15, 0.85, 0.1, 0.9] {
+                let p_seg = Point {
+                    x: p_a.x + t_seg * (p_b.x - p_a.x),
+                    y: p_a.y + t_seg * (p_b.y - p_a.y),
+                };
+                for &n in &[
+                    0.0, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0, 2.5, -2.5, 3.0, -3.0, 4.0, -4.0, 5.0,
+                    -5.0, 6.0, -6.0, 8.0, -8.0, 10.0, -10.0, 12.0, -12.0, 15.0, -15.0,
+                ] {
+                    push_cand(Point {
+                        x: p_seg.x + seg_norm.x * off * n,
+                        y: p_seg.y + seg_norm.y * off * n,
+                    });
+                }
+            }
+        }
+    }
+
+    // Outward radial ray expansion where wedge space expands as R increases
+    for &t in &[0.5, 0.35, 0.65, 0.25, 0.75, 0.15, 0.85, 0.4, 0.6, 0.2, 0.8] {
+        let (base, _) = sample_path(t);
+        let r_len = base.x.hypot(base.y);
+        if r_len > 1.0 {
+            let rx = base.x / r_len;
+            let ry = base.y / r_len;
+            let tx = -ry;
+            let ty = rx;
+
+            for &r_step in &[
+                15.0, 30.0, 45.0, 60.0, 80.0, 100.0, 130.0, 160.0, 200.0, 240.0, 280.0, 320.0,
+                -15.0, -30.0, -45.0, -60.0, -80.0, -100.0, -130.0, -160.0, -200.0, -240.0, -280.0,
+            ] {
+                for &tangent_step in &[0.0, 15.0, -15.0, 30.0, -30.0, 50.0, -50.0, 80.0, -80.0] {
+                    push_cand(Point {
+                        x: base.x + rx * r_step + tx * tangent_step,
+                        y: base.y + ry * r_step + ty * tangent_step,
+                    });
+                }
+            }
+        }
+    }
+
+    candidates
 }
 
-/// Total overlap area between `rect` and the node boxes, already-placed badges,
+/// Total overlap area between `rect` and node boxes, already-placed badges,
 /// and crossing/adjacent edge routes.
 ///
-/// ### Architectural Rationale:
-/// In geometric engines (e.g. Radial, Force, Topological DAG without dummy reservation chains),
-/// edge routing occurs after node placement without reserving dedicated rank-level badge boxes.
-/// As a consequence, adjacent or crossing edges often share narrow corridors or cross at acute
-/// angles. Placing a badge at a naive midpoint can occlude crossing edge strokes or be pierced by
-/// them, violating the readability invariant.
-///
-/// `conflict_area` indexes all line segments from non-owner edge routes in a spatial hash and
-/// evaluates interior penetration against the candidate badge rectangle (expanded by `clearance`).
-/// The penalty `len * clearance.max(12.0) + (rect.width * rect.height * 0.5)` combines:
-/// 1. A continuous penalty proportional to the length of the segment crossing the clearance box,
-///    so that glancing touches are preferred over central bisections.
-/// 2. A discrete base penalty proportional to badge area, ensuring that fully clear positions
-///    strictly dominate any position with partial edge penetration.
-///
-/// Returning a continuous scalar conflict area rather than a boolean enables the placement loop to
-/// pick the least-conflicting candidate when dense edge meshes preclude a 100% collision-free
-/// placement, and seamlessly emit a leader line connecting the displaced badge back to its route anchor.
+/// Ensures that a candidate position with 0 node overlap, 0 badge overlap, and 0 edge penetration
+/// returns exactly `0.0`, so it is immediately selected without triggering a leader line.
 fn conflict_area(
     rect: &Rect,
     current_edge_index: usize,
@@ -719,41 +1411,63 @@ fn conflict_area(
         return f64::INFINITY;
     }
 
-    let clearance = if config.badge_clearance.is_finite() {
-        config.badge_clearance.max(0.0)
-    } else {
-        0.0
-    };
     let eps = if config.epsilon.is_finite() && config.epsilon > 0.0 {
         config.epsilon
     } else {
         1e-9
     };
-    let padded = expand_rect(rect, clearance);
-    let mut total = 0.0;
-    for id in node_index.query(&padded) {
+
+    let mut hard_node_overlap_area = 0.0;
+    let mut hard_node_count = 0usize;
+    for id in node_index.query(rect) {
         if let Some(other) = node_rects.get(id as usize) {
-            total += overlap_area(rect, other);
+            let area = overlap_area(rect, other);
+            if area > eps * eps {
+                hard_node_count += 1;
+                hard_node_overlap_area += area;
+            }
         }
     }
-    for id in badge_index.query(&padded) {
+
+    let mut hard_badge_overlap_area = 0.0;
+    let mut hard_badge_count = 0usize;
+    for id in badge_index.query(rect) {
         if let Some(other) = placed.get(id as usize) {
-            total += overlap_area(rect, other);
+            let area = overlap_area(rect, other);
+            if area > eps * eps {
+                hard_badge_count += 1;
+                hard_badge_overlap_area += area;
+            }
         }
     }
-    for id in seg_index.query(&padded) {
+
+    let mut hard_edge_pen_len = 0.0;
+    let mut hard_edge_count = 0usize;
+    for id in seg_index.query(rect) {
         if let Some(seg) = segs.get(id as usize) {
             if seg.route_index == current_edge_index {
                 continue;
             }
             let s = Segment { a: seg.a, b: seg.b };
-            if segment_intersects_rect_interior(&s, &padded, eps) {
-                let len = segment_clipped_length(&s, &padded, eps);
-                total += len * clearance.max(12.0) + (rect.width * rect.height * 0.5);
+            if segment_intersects_rect_interior(&s, rect, eps) {
+                let len = segment_clipped_length(&s, rect, eps);
+                hard_edge_count += 1;
+                hard_edge_pen_len += len;
             }
         }
     }
-    total
+
+    if hard_node_count == 0 && hard_badge_count == 0 && hard_edge_count == 0 {
+        return 0.0;
+    }
+
+    let node_penalty = hard_node_count as f64 * 100_000.0 + hard_node_overlap_area * 10.0;
+    let badge_penalty = hard_badge_count as f64 * 100_000.0 + hard_badge_overlap_area * 10.0;
+    let edge_penalty = hard_edge_count as f64 * 10_000.0
+        + hard_edge_pen_len * 50.0
+        + (rect.width * rect.height * 0.5);
+
+    node_penalty + badge_penalty + edge_penalty
 }
 
 fn overlap_area(a: &Rect, b: &Rect) -> f64 {
@@ -1591,6 +2305,17 @@ mod tests {
         // Crossing edges create an unavoidable mesh covering the corridor:
         // e1 runs vertically through the middle from (225, 50) to (225, 400)
         // e2 runs horizontally very close to e0 at y=210 and y=240
+        let mut e1_pts = Vec::new();
+        for x_step in (-50..=100).map(|i| i as f64 * 10.0) {
+            e1_pts.push(Point {
+                x: x_step,
+                y: -1000.0,
+            });
+            e1_pts.push(Point {
+                x: x_step,
+                y: 1000.0,
+            });
+        }
         let routes = vec![
             RoutedPath {
                 edge_id: "e0".to_string(),
@@ -1600,14 +2325,7 @@ mod tests {
             },
             RoutedPath {
                 edge_id: "e1".to_string(),
-                points: vec![
-                    Point { x: 150.0, y: 50.0 },
-                    Point { x: 150.0, y: 400.0 },
-                    Point { x: 225.0, y: 50.0 },
-                    Point { x: 225.0, y: 400.0 },
-                    Point { x: 300.0, y: 50.0 },
-                    Point { x: 300.0, y: 400.0 },
-                ],
+                points: e1_pts,
                 source_port: dummy_port("n1"),
                 target_port: dummy_port("n2"),
             },
@@ -1637,5 +2355,91 @@ mod tests {
         assert_eq!(leader.len(), 2);
         assert_eq!(leader[0], b.anchor_point);
         assert_eq!(leader[1], b.rect.center());
+    }
+
+    #[test]
+    fn polar_cartesian_round_trip() {
+        let ax = 1.5;
+        let ay = 1.0 / 1.5;
+        let r = 120.0;
+        let theta = 1.234;
+        let pt = polar_to_cartesian(r, theta, ax, ay);
+        let (r2, theta2) = cartesian_to_polar(&pt, ax, ay);
+        assert!((r - r2).abs() < 1e-6, "radius round-trip: {r} vs {r2}");
+        assert!(
+            (theta - theta2).abs() < 1e-6,
+            "theta round-trip: {theta} vs {theta2}"
+        );
+    }
+
+    #[test]
+    fn polar_bounding_sector_covers_corners() {
+        let rect = Rect {
+            x: 100.0,
+            y: 50.0,
+            width: 80.0,
+            height: 40.0,
+        };
+        let (r_min, r_max, theta_min, theta_max) = polar_bounding_sector(&rect, 1.0, 1.0, 5.0);
+        assert!(r_min > 0.0);
+        assert!(r_max > r_min);
+        assert!(theta_max > theta_min);
+    }
+
+    #[test]
+    fn pcdra_corridor_radius_spacing() {
+        let radii = vec![0.0, 100.0, 200.0, 300.0];
+        let r_corr0 = get_corridor_radius(&radii, 0, 50.0);
+        let r_corr1 = get_corridor_radius(&radii, 1, 50.0);
+        let r_corr2 = get_corridor_radius(&radii, 2, 50.0);
+        let r_corr3 = get_corridor_radius(&radii, 3, 50.0);
+
+        assert_eq!(r_corr0, 50.0);
+        assert_eq!(r_corr1, 150.0);
+        assert_eq!(r_corr2, 250.0);
+        assert!(r_corr3 > 300.0);
+    }
+
+    #[test]
+    fn check_polyline_node_collision_detection() {
+        let rects = vec![
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+            },
+            Rect {
+                x: 200.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+            }, // obstacle at x in [200, 300]
+            Rect {
+                x: 400.0,
+                y: 0.0,
+                width: 100.0,
+                height: 100.0,
+            },
+        ];
+        let mut index = SpatialHash::new(100.0);
+        for (i, r) in rects.iter().enumerate() {
+            index.insert(i as u32, r);
+        }
+
+        // Segment going right through the middle of obstacle at x=250, y=50
+        let colliding = vec![Point { x: 100.0, y: 50.0 }, Point { x: 400.0, y: 50.0 }];
+        assert!(check_polyline_node_collision(
+            &colliding, &index, &rects, 1e-6
+        ));
+
+        // Detour going over the top of the obstacle at y=-50
+        let clear = vec![
+            Point { x: 100.0, y: 50.0 },
+            Point { x: 100.0, y: -50.0 },
+            Point { x: 400.0, y: -50.0 },
+            Point { x: 400.0, y: 50.0 },
+        ];
+        assert!(!check_polyline_node_collision(&clear, &index, &rects, 1e-6));
     }
 }

@@ -14,6 +14,7 @@ import {
   computeCustomLayoutWasm,
   ensureWasmInitialized,
 } from "./wasmLayoutAdapter";
+import { isCustomLayoutResult, validateWasmLayoutResult, WasmLayoutBoundaryError } from "./types";
 
 describe("wasmLayoutAdapter", () => {
   it("initializes WASM module", async () => {
@@ -33,6 +34,7 @@ describe("wasmLayoutAdapter", () => {
     expect(result.nodes.length).toBe(2);
     expect(result.edges.length).toBe(1);
     expect(result.status).toBe("success");
+    expect(isCustomLayoutResult(result)).toBe(true);
   });
 
   it("computes custom engine graph layout for GraphDataset with an explicit v2 mode", async () => {
@@ -52,5 +54,66 @@ describe("wasmLayoutAdapter", () => {
     expect(typeof result.nodes[0].x).toBe("number");
     expect(typeof result.nodes[0].y).toBe("number");
     expect(result.edges[0].path).toContain("M");
+  });
+
+  describe("WASM boundary schema validation & zero-any type safety", () => {
+    it("validates well-formed CustomLayoutResult", () => {
+      const validPayload = {
+        nodes: [{ id: "n1", label: "N1", width: 100, height: 50, x: 0, y: 0 }],
+        edges: [
+          {
+            edgeId: "e1",
+            points: [
+              { x: 0, y: 0 },
+              { x: 0, y: 50 },
+            ],
+            segmentCount: 1,
+          },
+        ],
+        badges: [],
+        crossings: [],
+        validation: {
+          isValid: true,
+          metrics: { crossings: 0 },
+          crossings: [],
+          diagnostics: [],
+        },
+        status: "success",
+      };
+
+      expect(isCustomLayoutResult(validPayload)).toBe(true);
+      const validated = validateWasmLayoutResult(validPayload);
+      expect(validated.status).toBe("success");
+    });
+
+    it("rejects non-object and null values", () => {
+      expect(isCustomLayoutResult(null)).toBe(false);
+      expect(isCustomLayoutResult(undefined)).toBe(false);
+      expect(isCustomLayoutResult("string")).toBe(false);
+      expect(isCustomLayoutResult(123)).toBe(false);
+      expect(() => validateWasmLayoutResult(null)).toThrow(WasmLayoutBoundaryError);
+    });
+
+    it("rejects payloads with missing required arrays or status", () => {
+      const missingNodes = {
+        edges: [],
+        badges: [],
+        crossings: [],
+        validation: {},
+        status: "success",
+      };
+      expect(isCustomLayoutResult(missingNodes)).toBe(false);
+      expect(() => validateWasmLayoutResult(missingNodes)).toThrow(WasmLayoutBoundaryError);
+
+      const missingValidation = {
+        nodes: [],
+        edges: [],
+        badges: [],
+        crossings: [],
+        status: "success",
+      };
+      expect(isCustomLayoutResult(missingValidation)).toBe(false);
+      expect(() => validateWasmLayoutResult(missingValidation)).toThrow(WasmLayoutBoundaryError);
+    });
   });
 });

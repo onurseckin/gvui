@@ -893,4 +893,303 @@ mod tests {
         assert!(r.validation.is_valid);
         assert_eq!(r.status, "success");
     }
+
+    #[test]
+    fn emit_complex_parallel_multi_edge_bundle() {
+        let mut ir = ir_pair();
+        ir.edge_names = vec!["e0".to_string(), "e1".to_string(), "e2".to_string()];
+        ir.edges = vec![
+            IrEdge {
+                name: 0,
+                source: 0,
+                target: 1,
+                label: None,
+                weight: 1.0,
+                min_len: 1,
+                hint: None,
+                bundle: None,
+            },
+            IrEdge {
+                name: 1,
+                source: 0,
+                target: 1,
+                label: None,
+                weight: 1.0,
+                min_len: 1,
+                hint: None,
+                bundle: None,
+            },
+            IrEdge {
+                name: 2,
+                source: 0,
+                target: 1,
+                label: None,
+                weight: 1.0,
+                min_len: 1,
+                hint: None,
+                bundle: None,
+            },
+        ];
+
+        let layered = Layered {
+            items: vec![real_item(0, 0, 0.0, 0.0), real_item(1, 1, 0.0, 200.0)],
+            rank_ranges: vec![0..1, 1..2],
+            chains: vec![
+                EdgeChain {
+                    edge: 0,
+                    reversed: false,
+                    role: EdgeRole::Forward,
+                    items: vec![0, 1],
+                    label_at: None,
+                },
+                EdgeChain {
+                    edge: 1,
+                    reversed: false,
+                    role: EdgeRole::Forward,
+                    items: vec![0, 1],
+                    label_at: None,
+                },
+                EdgeChain {
+                    edge: 2,
+                    reversed: false,
+                    role: EdgeRole::Forward,
+                    items: vec![0, 1],
+                    label_at: None,
+                },
+            ],
+            item_of_node: vec![0, 1],
+            ..Default::default()
+        };
+
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 30.0, y: 50.0 }, Point { x: 30.0, y: 200.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 30.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 30.0, y: 200.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 50.0, y: 50.0 }, Point { x: 50.0, y: 200.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 200.0 }),
+            },
+            RoutedPath {
+                edge_id: "e2".to_string(),
+                points: vec![Point { x: 70.0, y: 50.0 }, Point { x: 70.0, y: 200.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 70.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 70.0, y: 200.0 }),
+            },
+        ];
+
+        let badges = vec![
+            BadgePlacement {
+                edge_id: "e0".to_string(),
+                label: "b0".to_string(),
+                rect: Rect {
+                    x: 20.0,
+                    y: 100.0,
+                    width: 18.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 30.0, y: 110.0 },
+                leader_points: None,
+            },
+            BadgePlacement {
+                edge_id: "e1".to_string(),
+                label: "b1".to_string(),
+                rect: Rect {
+                    x: 42.0,
+                    y: 100.0,
+                    width: 18.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 50.0, y: 110.0 },
+                leader_points: None,
+            },
+            BadgePlacement {
+                edge_id: "e2".to_string(),
+                label: "b2".to_string(),
+                rect: Rect {
+                    x: 64.0,
+                    y: 100.0,
+                    width: 18.0,
+                    height: 20.0,
+                },
+                anchor_point: Point { x: 70.0, y: 110.0 },
+                leader_points: None,
+            },
+        ];
+
+        let res = emit(&ir, &layered, routes, badges);
+        assert!(res.validation.is_valid, "{:?}", res.validation.diagnostics);
+        assert_eq!(res.status, "success");
+        assert_eq!(res.edges.len(), 3);
+        assert_eq!(res.badges.len(), 3);
+        assert_eq!(res.validation.metrics.collinear_edge_overlaps, 0);
+        assert_eq!(res.validation.metrics.badge_badge_overlaps, 0);
+    }
+
+    #[test]
+    fn emit_collinear_overlap_marks_invalid_hard_failure() {
+        let ir = ir_pair();
+        let layered = layered_pair(false);
+
+        // Two identical collinear routes e0 and e0_dup
+        let routes = vec![
+            route_pair(),
+            RoutedPath {
+                edge_id: "e0_dup".to_string(),
+                points: vec![Point { x: 50.0, y: 50.0 }, Point { x: 50.0, y: 200.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 200.0 }),
+            },
+        ];
+
+        let res = emit(&ir, &layered, routes, vec![]);
+        assert!(!res.validation.is_valid);
+        assert_eq!(res.status, "invalid_hard_failure");
+        assert!(res
+            .validation
+            .diagnostics
+            .iter()
+            .any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+        assert_eq!(res.validation.metrics.collinear_edge_overlaps, 1);
+    }
+
+    #[test]
+    fn emit_complex_cycle_feedback_unreversal() {
+        // 3-node cycle: A -> B -> C -> A
+        let ir = GraphIr {
+            node_names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            edge_names: vec!["e_ab".to_string(), "e_bc".to_string(), "e_ca".to_string()],
+            node_labels: vec![None, None, None],
+            nodes: vec![
+                IrNode {
+                    name: 0,
+                    width: 100.0,
+                    height: 50.0,
+                    pinned_rank: None,
+                    degree: 2,
+                },
+                IrNode {
+                    name: 1,
+                    width: 100.0,
+                    height: 50.0,
+                    pinned_rank: None,
+                    degree: 2,
+                },
+                IrNode {
+                    name: 2,
+                    width: 100.0,
+                    height: 50.0,
+                    pinned_rank: None,
+                    degree: 2,
+                },
+            ],
+            edges: vec![
+                IrEdge {
+                    name: 0,
+                    source: 0,
+                    target: 1,
+                    label: None,
+                    weight: 1.0,
+                    min_len: 1,
+                    hint: None,
+                    bundle: None,
+                },
+                IrEdge {
+                    name: 1,
+                    source: 1,
+                    target: 2,
+                    label: None,
+                    weight: 1.0,
+                    min_len: 1,
+                    hint: None,
+                    bundle: None,
+                },
+                IrEdge {
+                    name: 2,
+                    source: 2,
+                    target: 0,
+                    label: None,
+                    weight: 1.0,
+                    min_len: 1,
+                    hint: None,
+                    bundle: None,
+                },
+            ],
+            components: vec![vec![0, 1, 2]],
+            ..Default::default()
+        };
+
+        // In layered DAG, e_ca was reversed (so it ran 0 -> 2 in layered graph)
+        let layered = Layered {
+            items: vec![
+                real_item(0, 0, 0.0, 0.0),
+                real_item(1, 1, 0.0, 100.0),
+                real_item(2, 2, 0.0, 200.0),
+            ],
+            rank_ranges: vec![0..1, 1..2, 2..3],
+            chains: vec![
+                EdgeChain {
+                    edge: 0,
+                    reversed: false,
+                    role: EdgeRole::Forward,
+                    items: vec![0, 1],
+                    label_at: None,
+                },
+                EdgeChain {
+                    edge: 1,
+                    reversed: false,
+                    role: EdgeRole::Forward,
+                    items: vec![1, 2],
+                    label_at: None,
+                },
+                EdgeChain {
+                    edge: 2,
+                    reversed: true,
+                    role: EdgeRole::Feedback,
+                    items: vec![0, 2],
+                    label_at: None,
+                },
+            ],
+            item_of_node: vec![0, 1, 2],
+            ..Default::default()
+        };
+
+        let routes = vec![
+            RoutedPath {
+                edge_id: "e_ab".to_string(),
+                points: vec![Point { x: 50.0, y: 50.0 }, Point { x: 50.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e_bc".to_string(),
+                points: vec![Point { x: 50.0, y: 150.0 }, Point { x: 50.0, y: 200.0 }],
+                source_port: port("b", Side::Bottom, Point { x: 50.0, y: 150.0 }),
+                target_port: port("c", Side::Top, Point { x: 50.0, y: 200.0 }),
+            },
+            // The feedback route routed in DAG from 0 -> 2
+            RoutedPath {
+                edge_id: "e_ca".to_string(),
+                points: vec![
+                    Point { x: 100.0, y: 25.0 },
+                    Point { x: 150.0, y: 25.0 },
+                    Point { x: 150.0, y: 225.0 },
+                    Point { x: 100.0, y: 225.0 },
+                ],
+                source_port: port("a", Side::Right, Point { x: 100.0, y: 25.0 }),
+                target_port: port("c", Side::Right, Point { x: 100.0, y: 225.0 }),
+            },
+        ];
+
+        let res = emit(&ir, &layered, routes, vec![]);
+        assert!(res.validation.is_valid, "{:?}", res.validation.diagnostics);
+        let e_ca = res.edges.iter().find(|e| e.edge_id == "e_ca").unwrap();
+        // Emitted e_ca must have source 'c' and target 'a' (unreversed)
+        assert_eq!(e_ca.source_port.node_id, "c");
+        assert_eq!(e_ca.target_port.node_id, "a");
+    }
 }

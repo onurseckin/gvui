@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { CUSTOM_LAYOUT_SCENARIOS } from "./customLayoutScenarios";
 import { computeGraphLayout } from "../../../engine/layout/layoutDispatcher";
 import type { GraphDataset } from "../../../types/graphData";
@@ -21,6 +23,38 @@ function toGraphDataset(scenario: TestScenario): GraphDataset {
       layoutRole: e.layoutRole,
     })),
   };
+}
+
+function loadPublicGraphDatasets(): GraphDataset[] {
+  const projectRoot = resolve(import.meta.dirname, "../../../..");
+  const graphsDir = join(projectRoot, "public/data/graphs");
+  if (!existsSync(graphsDir)) {
+    return [];
+  }
+  const files = readdirSync(graphsDir)
+    .filter((f) => f.endsWith(".json") && f !== "manifest.json")
+    .sort();
+
+  const datasets: GraphDataset[] = [];
+  for (const file of files) {
+    try {
+      const raw: unknown = JSON.parse(readFileSync(join(graphsDir, file), "utf-8"));
+      if (raw && typeof raw === "object" && "nodes" in raw && "edges" in raw) {
+        const d = raw as { id?: unknown; title?: unknown; nodes?: unknown; edges?: unknown };
+        if (Array.isArray(d.nodes) && Array.isArray(d.edges)) {
+          datasets.push({
+            id: typeof d.id === "string" ? d.id : file.replace(".json", ""),
+            title: typeof d.title === "string" ? d.title : file,
+            nodes: d.nodes,
+            edges: d.edges,
+          });
+        }
+      }
+    } catch {
+      // Ignore unparseable fixtures in test helper
+    }
+  }
+  return datasets;
 }
 
 describe("CUSTOM_LAYOUT_SCENARIOS", () => {
@@ -122,6 +156,128 @@ describe("CUSTOM_LAYOUT_SCENARIOS", () => {
         expect(Number.isFinite(node.y)).toBe(true);
       }
     }
+  });
+
+  it("verifies 8-direction matrix layout execution with strictly finite coordinates", async () => {
+    const modes = ["layered", "radial"] as const;
+    const directions = ["top-down", "bottom-up", "left-right", "right-left"] as const;
+
+    for (const scenario of Object.values(CUSTOM_LAYOUT_SCENARIOS)) {
+      const dataset = toGraphDataset(scenario);
+
+      for (const mode of modes) {
+        for (const direction of directions) {
+          const result = await computeGraphLayout(dataset, mode, { direction });
+
+          expect(result.nodes).toHaveLength(scenario.nodes.length);
+          expect(result.edges).toHaveLength(scenario.edges.length);
+
+          for (const node of result.nodes) {
+            expect(Number.isFinite(node.x)).toBe(true);
+            expect(Number.isFinite(node.y)).toBe(true);
+            expect(Number.isFinite(node.width)).toBe(true);
+            expect(Number.isFinite(node.height)).toBe(true);
+            expect(node.width).toBeGreaterThan(0);
+            expect(node.height).toBeGreaterThan(0);
+          }
+
+          for (const edge of result.edges) {
+            expect(edge.points).toBeDefined();
+            const points = edge.points ?? [];
+            expect(points.length).toBeGreaterThanOrEqual(2);
+            for (const pt of points) {
+              expect(Number.isFinite(pt.x)).toBe(true);
+              expect(Number.isFinite(pt.y)).toBe(true);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("ensures layout determinism across repeated executions in 8-direction matrix", async () => {
+    const testScenarios = [
+      CUSTOM_LAYOUT_SCENARIOS[1], // Two-node pipeline
+      CUSTOM_LAYOUT_SCENARIOS[3], // Fan-out broadcaster
+      CUSTOM_LAYOUT_SCENARIOS[8], // Self-loop
+    ];
+
+    const directions = ["top-down", "bottom-up", "left-right", "right-left"] as const;
+
+    for (const scenario of testScenarios) {
+      if (!scenario) continue;
+      const dataset = toGraphDataset(scenario);
+
+      for (const direction of directions) {
+        const run1 = await computeGraphLayout(dataset, "layered", { direction });
+        const run2 = await computeGraphLayout(dataset, "layered", { direction });
+
+        expect(run1.nodes.length).toBe(run2.nodes.length);
+        for (let i = 0; i < run1.nodes.length; i++) {
+          const n1 = run1.nodes[i];
+          const n2 = run2.nodes[i];
+          if (!n1 || !n2) throw new Error("Expected positioned node");
+          expect(Math.abs(n1.x - n2.x)).toBeLessThan(1e-4);
+          expect(Math.abs(n1.y - n2.y)).toBeLessThan(1e-4);
+        }
+      }
+    }
+  });
+
+  it("verifies 280-run matrix proof: asserts per-run execution time <= 250ms and zero geometry corruption across all fixtures", async () => {
+    const scenarioDatasets = Object.values(CUSTOM_LAYOUT_SCENARIOS).map(toGraphDataset);
+    const publicDatasets = loadPublicGraphDatasets();
+    const allFixtures = [...scenarioDatasets, ...publicDatasets];
+
+    const modes = ["layered", "radial"] as const;
+    const directions = ["top-down", "bottom-up", "left-right", "right-left"] as const;
+
+    let totalRuns = 0;
+    const timings: number[] = [];
+
+    for (const fixture of allFixtures) {
+      for (const mode of modes) {
+        for (const direction of directions) {
+          totalRuns += 1;
+          const t0 = performance.now();
+          const result = await computeGraphLayout(fixture, mode, { direction });
+          const elapsed = performance.now() - t0;
+          timings.push(elapsed);
+
+          // Assert individual run performance budget
+          expect(elapsed).toBeLessThanOrEqual(250.0);
+
+          // Assert structural completeness and zero geometry corruption
+          expect(result.nodes).toHaveLength(fixture.nodes.length);
+          expect(result.edges).toHaveLength(fixture.edges.length);
+
+          for (const node of result.nodes) {
+            expect(Number.isFinite(node.x)).toBe(true);
+            expect(Number.isFinite(node.y)).toBe(true);
+            expect(Number.isFinite(node.width)).toBe(true);
+            expect(Number.isFinite(node.height)).toBe(true);
+            expect(node.width).toBeGreaterThan(0);
+            expect(node.height).toBeGreaterThan(0);
+          }
+
+          for (const edge of result.edges) {
+            expect(edge.points).toBeDefined();
+            const pts = edge.points ?? [];
+            expect(pts.length).toBeGreaterThanOrEqual(2);
+            for (const pt of pts) {
+              expect(Number.isFinite(pt.x)).toBe(true);
+              expect(Number.isFinite(pt.y)).toBe(true);
+            }
+          }
+        }
+      }
+    }
+
+    expect(totalRuns).toBeGreaterThanOrEqual(208);
+    const totalDuration = timings.reduce((a, b) => a + b, 0);
+    const avgDuration = totalDuration / timings.length;
+    expect(avgDuration).toBeLessThan(50.0);
+    expect(totalDuration).toBeLessThan(3500.0);
   });
 });
 

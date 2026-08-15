@@ -1,7 +1,7 @@
 {
-  "id": "2026-08-15-gvui-observability-findings-execution",
-  "title": "Execution Trajectory: 2026-08-15-gvui-observability-findings-execution",
-  "description": "Execution graph dataset and trajectory for run 2026-08-15-gvui-observability-findings-execution",
+  "id": "2026-08-15-deep-audit-hardening-planning",
+  "title": "Execution Trajectory: 2026-08-15-deep-audit-hardening-planning",
+  "description": "Execution graph dataset and trajectory for run 2026-08-15-deep-audit-hardening-planning",
   "directed": true,
   "entry": "node-input-prompt",
   "exits": ["node-terminal-complete"],
@@ -15,19 +15,19 @@
       "step": 1,
       "stepLabel": "Step 1: User Prompt",
       "badge": {
-        "text": "4.3 KB",
+        "text": "0.2 KB",
         "variant": "neutral",
         "icon": "IconTerminal2"
       },
-      "description": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all research findings and optimizations across skills and gvui.\n\nRepositories:\n- skills: /Users/onurseckin...",
-      "prompt": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all research findings and optimizations across skills and gvui.\n\nRepositories:\n- skills: /Users/onurseckinsenoglu/repos/skills\n- gvui: /Users/onurseckinsenoglu/repos/gvui\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-gvui-observability-findings-execution\n\n### Core Directives & Standards:\n1. You are the SOLE coordinator for all task execution. All worker and validator subagents you deploy must report strictly to you. Never report intermediate task progress to the main chat.\n2. Reference the planning specifications:\n   - skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md\n   - skills/docs/planning/gvui-execution-graph/06-host-telemetry-and-agent-detection-plan.md\n3. Initialize the run capsule:\n   plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run-id 2026-08-15-gvui-observability-findings-execution with prompt capture.\n4. Add and execute tasks across parallel worker-validator pairs:\n   - Task T-01 (Host Discovery & Token/Cache Telemetry in Skills):\n     - Scope: skills/orchestrating-long-tasks/scripts/src/summary\n     - Implement pluggable host telemetry (Antigravity CLI, Claude Code, Cursor), parse model name + thinking level (e.g. Gemini 3.7 Flash (High)), parse inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens, and costUsd.\n     - Zero fallback fabrication: if undetected, return undefined.\n     - Gate: bun test tests/unit/summary in skills.\n   - Task T-02 (Canvas Rendering Performance Optimization in GVUI):\n     - Scope: gvui/src/engine/GraphCanvas, gvui/src/engine/layout/custom\n     - Optimize GraphBadgeLayer.tsx: use precalculated edge.badgeRect from layout engine; eliminate redundant per-frame O(E x N) collision loop.\n     - Debounce saveStoredViewport in GraphCanvas/index.tsx so drag frames remain buttery smooth at 60–120 FPS.\n     - Reusable singleton Web Worker in customLayoutWorkerClient.ts.\n     - Gate: bun test src/engine/GraphCanvas && bun test src/engine/layout/custom in gvui.\n   - Task T-03 (Node Internal Layout & Height Void Synchronization in GVUI):\n     - Scope: gvui/src/engine/layout/measurement, gvui/src/primitives/nodes/NodeCard\n     - Sync nodeTemplate.ts with NodeCard.css:\n       - Set maxLines: 2 on description to match MAX_DESCRIPTION_LINES = 2 (eliminates 90px void).\n       - Measure only rendered elements (single file summary chip, no body badges).\n       - Set mini-chip itemChrome to 26 (matching CSS padding + border + icon + gap).\n       - Set FONT_KEYS.nodeTitle to 13px in types.ts.\n       - Header aside max-width: 60%; flex-shrink: 1; so title always gets full space.\n     - Gate: bun test src/engine/layout/measurement && bun test src/primitives/nodes/NodeCard in gvui.\n   - Task T-04 (Edge Badge Single-Line Measurement & Compactness Fix in GVUI):\n     - Scope: gvui/src/engine/layout/customLayoutAdapter.ts, gvui/src/primitives/edges/GraphEdge\n     - Measure composite single-line badge text (container.title ?? badge?.text ?? label) with +32px chrome in customLayoutAdapter.ts.\n     - Ensure EdgeBadgeOverlay.tsx uses Math.max(badgeRect?.width ?? 0, computedWidth) so badges never get squished.\n     - Forward traffic, isHighTraffic, bundleCount in GraphBadgeLayer.tsx.\n     - Gate: bun test src/primitives/edges in gvui.\n   - Task T-05 (E2E Integration, WASM Layout Engine Verification & Manifest Registration):\n     - Scope: gvui/public/data/graphs\n     - Export final summary into public/data/graphs/2026-08-15-gvui-observability-findings-execution.json.\n     - Update manifest.json.\n     - Run WASM layout test suite bun test src/types/exampleGraphs.test.ts and full repo suite bun test src.\n5. For each task:\n   - Claim task with worker agent, submit report.\n   - Dispatch independent validator with validation lease, run gate command with run:exec, perform adversarial invariant audit, resolve findings, and approve with task:review --status pass.\n6. Run completion gate run:exec --gate gate-run-completion, completeness critic critic:start/critic:review, and seal capsule with run:complete.\n7. Re-export summary so final JSON contains sealed status.\n8. Format, commit, and push both repositories to origin/main.\n9. Send a completion report only when 100% of the entire pipeline is complete and certified.\n",
+      "description": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Routing, and Zero-Tolerance Collision Gates across all 35 GVUI...",
+      "prompt": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Routing, and Zero-Tolerance Collision Gates across all 35 GVUI graph fixtures.\n",
       "io": {
         "outputs": [
           {
             "kind": "prompt",
             "label": "User Instruction",
-            "preview": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all research findings and optimizations across skills and gvui.\n\nRepositories:\n- skills: /Users/onurseckinsenoglu/repos/skills\n- gvui: /Users/onurseckinsenoglu/repos/gvui\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-gvui-observability-findings-execution\n\n### Core Directives & Standards:\n1. You are the SOLE coordinator for all task execution. All worker and validator subagents you deploy must report strictly to you. Never report intermediate task progress to the main chat.\n2. Reference the planning specifications:\n   - skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md\n   - skills/docs/planning/gvui-execution-graph/06-host-telemetry-and-agent-detection-plan.md\n3. Initialize the run capsule:\n   plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run-id 2026-08-15-gvui-observability-findings-execution with prompt capture.\n4. Add and execute tasks across parallel worker-validator pairs:\n   - Task T-01 (Host Discovery & Token/Cache Telemetry in Skills):\n     - Scope: skills/orchestrating-long-tasks/scripts/src/summary\n     - Implement pluggable host telemetry (Antigravity CLI, Claude Code, Cursor), parse model name + thinking level (e.g. Gemini 3.7 Flash (High)), parse inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens, and costUsd.\n     - Zero fallback fabrication: if undetected, return undefined.\n     - Gate: bun test tests/unit/summary in skills.\n   - Task T-02 (Canvas Rendering Performance Optimization in GVUI):\n     - Scope: gvui/src/engine/GraphCanvas, gvui/src/engine/layout/custom\n     - Optimize GraphBadgeLayer.tsx: use precalculated edge.badgeRect from layout engine; eliminate redundant per-frame O(E x N) collision loop.\n     - Debounce saveStoredViewport in GraphCanvas/index.tsx so drag frames remain buttery smooth at 60–120 FPS.\n     - Reusable singleton Web Worker in customLayoutWorkerClient.ts.\n     - Gate: bun test src/engine/GraphCanvas && bun test src/engine/layout/custom in gvui.\n   - Task T-03 (Node Internal Layout & Height Void Synchronization in GVUI):\n     - Scope: gvui/src/engine/layout/measurement, gvui/src/primitives/nodes/NodeCard\n     - Sync nodeTemplate.ts with NodeCard.css:\n       - Set maxLines: 2 on description to match MAX_DESCRIPTION_LINES = 2 (eliminates 90px void).\n       - Measure only rendered elements (single file summary chip, no body badges).\n       - Set mini-chip itemChrome to 26 (matching CSS padding + border + icon + gap).\n       - Set FONT_KEYS.nodeTitle to 13px in types.ts.\n       - Header aside max-width: 60%; flex-shrink: 1; so title always gets full space.\n     - Gate: bun test src/engine/layout/measurement && bun test src/primitives/nodes/NodeCard in gvui.\n   - Task T-04 (Edge Badge Single-Line Measurement & Compactness Fix in GVUI):\n     - Scope: gvui/src/engine/layout/customLayoutAdapter.ts, gvui/src/primitives/edges/GraphEdge\n     - Measure composite single-line badge text (container.title ?? badge?.text ?? label) with +32px chrome in customLayoutAdapter.ts.\n     - Ensure EdgeBadgeOverlay.tsx uses Math.max(badgeRect?.width ?? 0, computedWidth) so badges never get squished.\n     - Forward traffic, isHighTraffic, bundleCount in GraphBadgeLayer.tsx.\n     - Gate: bun test src/primitives/edges in gvui.\n   - Task T-05 (E2E Integration, WASM Layout Engine Verification & Manifest Registration):\n     - Scope: gvui/public/data/graphs\n     - Export final summary into public/data/graphs/2026-08-15-gvui-observability-findings-execution.json.\n     - Update manifest.json.\n     - Run WASM layout test suite bun test src/types/exampleGraphs.test.ts and full repo suite bun test src.\n5. For each task:\n   - Claim task with worker agent, submit report.\n   - Dispatch independent validator with validation lease, run gate command with run:exec, perform adversarial invariant audit, resolve findings, and approve with task:review --status pass.\n6. Run completion gate run:exec --gate gate-run-completion, completeness critic critic:start/critic:review, and seal capsule with run:complete.\n7. Re-export summary so final JSON contains sealed status.\n8. Format, commit, and push both repositories to origin/main.\n9. Send a completion report only when 100% of the entire pipeline is complete and certified.\n",
-            "tokens": 1112
+            "preview": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Routing, and Zero-Tolerance Collision Gates across all 35 GVUI graph fixtures.\n",
+            "tokens": 54
           }
         ]
       }
@@ -51,7 +51,7 @@
             "node": "node-input-prompt",
             "kind": "prompt",
             "label": "User Prompt",
-            "preview": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all resea"
+            "preview": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Ma"
           }
         ],
         "outputs": [
@@ -64,8 +64,8 @@
       }
     },
     {
-      "id": "node-task-T-01",
-      "name": "Host Discovery & Token/Cache Telemetry in Skills",
+      "id": "node-task-task-01-audit-matrix-gap-analysis",
+      "name": "Audit Matrix & Failure Taxonomy Research",
       "kind": "agent",
       "status": "success",
       "step": 2,
@@ -73,14 +73,14 @@
       "model": "Gemini 3.7 Flash (High)",
       "tier": "l",
       "badge": {
-        "text": "Worker: worker-t01",
+        "text": "Worker: director",
         "variant": "info",
         "icon": "IconRobot"
       },
-      "description": "Implemented pluggable host telemetry adapters (Antigravity CLI, Claude Code, Cursor) with zero fabrication fallback, model and thinking level parsing, token/cache breakdown data models, and verified summary test suite.",
+      "description": "Completed Module 1: Comprehensive Audit Matrix & Failure Taxonomy Research with 280-run matrix catalog and radial collision gap analysis",
       "files": [
         {
-          "path": "skills/orchestrating-long-tasks/scripts/src/summary",
+          "path": "docs/planning/audit-matrix",
           "mode": "write"
         }
       ],
@@ -89,44 +89,84 @@
         "outputs": [
           {
             "kind": "summary",
-            "label": "Implemented pluggable host telemetry adapters (Antigravity CLI, Claude Code, Cursor) with zero fabrication fallback, model and thinking level parsing, token/cache breakdown data models, and verified summary test suite.",
-            "preview": "Implemented pluggable host telemetry adapters (Antigravity CLI, Claude Code, Cursor) with zero fabrication fallback, model and thinking level parsing, token/cache breakdown data models, and verified summary test suite."
+            "label": "Completed Module 1: Comprehensive Audit Matrix & Failure Taxonomy Research with 280-run matrix catalog and radial collision gap analysis",
+            "preview": "Completed Module 1: Comprehensive Audit Matrix & Failure Taxonomy Research with 280-run matrix catalog and radial collision gap analysis"
           }
         ]
       },
       "metadata": {
-        "writeScope": ["skills/orchestrating-long-tasks/scripts/src/summary"],
+        "writeScope": ["docs/planning/audit-matrix"],
         "repairRounds": 0,
         "commands": [
           {
-            "id": "C-a528b75f-fad8-4134-a2f2-11a37ff6f423",
-            "argv": ["bun", "test", "tests/unit/summary"],
+            "id": "C-358efffe-7456-449e-8aa0-3b9806c5abc5",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 1677,
-            "startedAt": "2026-08-15T07:36:26.092Z",
-            "finishedAt": "2026-08-15T07:36:27.769Z",
-            "logPath": "commands/C-a528b75f-fad8-4134-a2f2-11a37ff6f423/record.json"
+            "durationMs": 881,
+            "startedAt": "2026-08-15T11:18:13.289Z",
+            "finishedAt": "2026-08-15T11:18:14.170Z",
+            "logPath": "commands/C-358efffe-7456-449e-8aa0-3b9806c5abc5/record.json"
           },
           {
-            "id": "C-a7337929-b663-4706-a054-03bbbd3bb222",
-            "argv": ["bun", "test", "tests/unit/summary"],
+            "id": "C-5b315024-37e8-4138-b126-56e624b5858c",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
-            "exitCode": 1,
-            "durationMs": 1876,
-            "startedAt": "2026-08-15T07:35:50.332Z",
-            "finishedAt": "2026-08-15T07:35:52.208Z",
-            "logPath": "commands/C-a7337929-b663-4706-a054-03bbbd3bb222/record.json"
+            "exitCode": 0,
+            "durationMs": 901,
+            "startedAt": "2026-08-15T11:18:20.804Z",
+            "finishedAt": "2026-08-15T11:18:21.705Z",
+            "logPath": "commands/C-5b315024-37e8-4138-b126-56e624b5858c/record.json"
           },
           {
-            "id": "C-c2cb49c2-ac2d-48a7-a35d-86805d56f6bd",
-            "argv": ["bun", "test", "tests/unit/summary"],
+            "id": "C-66deee4e-56ea-415a-be03-4fdbadd2e2e3",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
-            "exitCode": 1,
-            "durationMs": 1954,
-            "startedAt": "2026-08-15T07:34:42.773Z",
-            "finishedAt": "2026-08-15T07:34:44.727Z",
-            "logPath": "commands/C-c2cb49c2-ac2d-48a7-a35d-86805d56f6bd/record.json"
+            "exitCode": 0,
+            "durationMs": 897,
+            "startedAt": "2026-08-15T11:15:41.689Z",
+            "finishedAt": "2026-08-15T11:15:42.586Z",
+            "logPath": "commands/C-66deee4e-56ea-415a-be03-4fdbadd2e2e3/record.json"
+          },
+          {
+            "id": "C-93499139-951a-4eb7-b032-e5131ab3be6d",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 228,
+            "startedAt": "2026-08-15T11:15:15.381Z",
+            "finishedAt": "2026-08-15T11:15:15.609Z",
+            "logPath": "commands/C-93499139-951a-4eb7-b032-e5131ab3be6d/record.json"
+          },
+          {
+            "id": "C-b3eed3fd-6470-4363-8782-16f5b9acc2ff",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 871,
+            "startedAt": "2026-08-15T11:18:03.963Z",
+            "finishedAt": "2026-08-15T11:18:04.834Z",
+            "logPath": "commands/C-b3eed3fd-6470-4363-8782-16f5b9acc2ff/record.json"
+          },
+          {
+            "id": "C-e8ec6134-8998-4f79-92b3-dc5200e08712",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1137,
+            "startedAt": "2026-08-15T11:15:03.949Z",
+            "finishedAt": "2026-08-15T11:15:05.086Z",
+            "logPath": "commands/C-e8ec6134-8998-4f79-92b3-dc5200e08712/record.json"
+          },
+          {
+            "id": "C-ebd0a867-c4d3-4dfc-80c5-baddc0982f57",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 910,
+            "startedAt": "2026-08-15T11:17:56.194Z",
+            "finishedAt": "2026-08-15T11:17:57.104Z",
+            "logPath": "commands/C-ebd0a867-c4d3-4dfc-80c5-baddc0982f57/record.json"
           }
         ],
         "findings": [],
@@ -141,18 +181,18 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 1677,
+          "durationMs": 881,
           "browser": "chromium",
           "status": "passed"
         },
-        "leaseAgent": "worker-t01"
+        "leaseAgent": "director"
       },
       "mediaAssets": [],
       "screenshots": []
     },
     {
-      "id": "node-gate-T-01",
-      "name": "Gate: Host Discovery & Token/Cache Telemetry in Skills",
+      "id": "node-gate-task-01-audit-matrix-gap-analysis",
+      "name": "Gate: Audit Matrix & Failure Taxonomy Research",
       "kind": "gate",
       "status": "success",
       "step": 3,
@@ -162,7 +202,7 @@
         "variant": "success",
         "icon": "IconShieldCheck"
       },
-      "description": "Independent verification gate for Host Discovery & Token/Cache Telemetry in Skills.",
+      "description": "Independent verification gate for Audit Matrix & Failure Taxonomy Research.",
       "metadata": {
         "findings": [],
         "mediaAssets": [],
@@ -175,7 +215,7 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 1677,
+          "durationMs": 881,
           "browser": "chromium",
           "status": "passed"
         }
@@ -184,8 +224,8 @@
       "screenshots": []
     },
     {
-      "id": "node-task-T-02",
-      "name": "Canvas Rendering Performance Optimization in GVUI",
+      "id": "node-task-task-02-radial-collision-geometry-design",
+      "name": "Radial Obstacle Detour Geometry Design",
       "kind": "agent",
       "status": "success",
       "step": 2,
@@ -193,14 +233,14 @@
       "model": "Gemini 3.7 Flash (High)",
       "tier": "l",
       "badge": {
-        "text": "Worker: worker-t02",
+        "text": "Worker: director",
         "variant": "info",
         "icon": "IconRobot"
       },
-      "description": "Optimized GraphBadgeLayer by directly consuming precomputed badgeRects from the Rust layout engine and eliminating redundant per-frame collision checks, debounced stored viewport saves in GraphCanvas by 400ms to preserve 60-120 FPS panning, and verified worker layout client.",
+      "description": "Completed Module 2: Radial Obstacle Detour Geometry Design with Polar Corridor Detour Routing Algorithm",
       "files": [
         {
-          "path": "src/engine/GraphCanvas",
+          "path": "docs/planning/radial-obstacle-geometry",
           "mode": "write"
         }
       ],
@@ -209,34 +249,34 @@
         "outputs": [
           {
             "kind": "summary",
-            "label": "Optimized GraphBadgeLayer by directly consuming precomputed badgeRects from the Rust layout engine and eliminating redundant per-frame collision checks, debounced stored viewport saves in GraphCanvas by 400ms to preserve 60-120 FPS panning, and verified worker layout client.",
-            "preview": "Optimized GraphBadgeLayer by directly consuming precomputed badgeRects from the Rust layout engine and eliminating redundant per-frame collision checks, debounced stored viewport saves in GraphCanvas by 400ms to preserve 60-120 FPS panning, and verified worker layout client."
+            "label": "Completed Module 2: Radial Obstacle Detour Geometry Design with Polar Corridor Detour Routing Algorithm",
+            "preview": "Completed Module 2: Radial Obstacle Detour Geometry Design with Polar Corridor Detour Routing Algorithm"
           }
         ]
       },
       "metadata": {
-        "writeScope": ["src/engine/GraphCanvas", "src/engine/layout/custom"],
+        "writeScope": ["docs/planning/radial-obstacle-geometry"],
         "repairRounds": 0,
         "commands": [
           {
-            "id": "C-4c2768f2-8d4c-4a81-b271-6a2f3501a7c3",
-            "argv": ["bun", "test", "src/engine/layout/custom"],
+            "id": "C-772b8e83-2a0c-419f-9888-7004ceaffcb3",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 300,
-            "startedAt": "2026-08-15T07:37:42.948Z",
-            "finishedAt": "2026-08-15T07:37:43.248Z",
-            "logPath": "commands/C-4c2768f2-8d4c-4a81-b271-6a2f3501a7c3/record.json"
+            "durationMs": 1008,
+            "startedAt": "2026-08-15T11:16:17.348Z",
+            "finishedAt": "2026-08-15T11:16:18.356Z",
+            "logPath": "commands/C-772b8e83-2a0c-419f-9888-7004ceaffcb3/record.json"
           },
           {
-            "id": "C-540414dd-4df4-4ae1-b24c-cce88c2a4024",
-            "argv": ["bun", "test", "src/engine/GraphCanvas"],
+            "id": "C-95bdf698-f727-4006-8337-15d4849f297c",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 1168,
-            "startedAt": "2026-08-15T07:37:32.418Z",
-            "finishedAt": "2026-08-15T07:37:33.586Z",
-            "logPath": "commands/C-540414dd-4df4-4ae1-b24c-cce88c2a4024/record.json"
+            "durationMs": 999,
+            "startedAt": "2026-08-15T11:16:06.548Z",
+            "finishedAt": "2026-08-15T11:16:07.547Z",
+            "logPath": "commands/C-95bdf698-f727-4006-8337-15d4849f297c/record.json"
           }
         ],
         "findings": [],
@@ -251,18 +291,18 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 300,
+          "durationMs": 1008,
           "browser": "chromium",
           "status": "passed"
         },
-        "leaseAgent": "worker-t02"
+        "leaseAgent": "director"
       },
       "mediaAssets": [],
       "screenshots": []
     },
     {
-      "id": "node-gate-T-02",
-      "name": "Gate: Canvas Rendering Performance Optimization in GVUI",
+      "id": "node-gate-task-02-radial-collision-geometry-design",
+      "name": "Gate: Radial Obstacle Detour Geometry Design",
       "kind": "gate",
       "status": "success",
       "step": 3,
@@ -272,7 +312,7 @@
         "variant": "success",
         "icon": "IconShieldCheck"
       },
-      "description": "Independent verification gate for Canvas Rendering Performance Optimization in GVUI.",
+      "description": "Independent verification gate for Radial Obstacle Detour Geometry Design.",
       "metadata": {
         "findings": [],
         "mediaAssets": [],
@@ -285,7 +325,7 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 300,
+          "durationMs": 1008,
           "browser": "chromium",
           "status": "passed"
         }
@@ -294,8 +334,8 @@
       "screenshots": []
     },
     {
-      "id": "node-task-T-03",
-      "name": "Node Internal Layout & Height Void Synchronization in GVUI",
+      "id": "node-task-task-03-radial-badge-clearance-design",
+      "name": "Radial Badge Clearance Allocation Design",
       "kind": "agent",
       "status": "success",
       "step": 2,
@@ -303,14 +343,14 @@
       "model": "Gemini 3.7 Flash (High)",
       "tier": "l",
       "badge": {
-        "text": "Worker: worker-t03",
+        "text": "Worker: director",
         "variant": "info",
         "icon": "IconRobot"
       },
-      "description": "Synchronized node template measurement with DOM CSS: clamped description to 2 lines, pruned unrendered ghost rows, corrected mini-chip chrome to 26px, synced nodeTitle font size to 13px, and adjusted header aside flex constraints to eliminate 90px height voids.",
+      "description": "Completed Module 3: Radial Badge Clearance Allocation Design with Polar Sector Reservation Model",
       "files": [
         {
-          "path": "src/engine/layout/measurement",
+          "path": "docs/planning/radial-badge-clearance",
           "mode": "write"
         }
       ],
@@ -319,24 +359,34 @@
         "outputs": [
           {
             "kind": "summary",
-            "label": "Synchronized node template measurement with DOM CSS: clamped description to 2 lines, pruned unrendered ghost rows, corrected mini-chip chrome to 26px, synced nodeTitle font size to 13px, and adjusted header aside flex constraints to eliminate 90px height voids.",
-            "preview": "Synchronized node template measurement with DOM CSS: clamped description to 2 lines, pruned unrendered ghost rows, corrected mini-chip chrome to 26px, synced nodeTitle font size to 13px, and adjusted header aside flex constraints to eliminate 90px height voids."
+            "label": "Completed Module 3: Radial Badge Clearance Allocation Design with Polar Sector Reservation Model",
+            "preview": "Completed Module 3: Radial Badge Clearance Allocation Design with Polar Sector Reservation Model"
           }
         ]
       },
       "metadata": {
-        "writeScope": ["src/engine/layout/measurement", "src/primitives/nodes/NodeCard"],
+        "writeScope": ["docs/planning/radial-badge-clearance"],
         "repairRounds": 0,
         "commands": [
           {
-            "id": "C-5569a2a6-06f1-4169-8c3e-5de4cca733c1",
-            "argv": ["bun", "test", "src/engine/layout/measurement"],
+            "id": "C-885b5a85-3705-4673-aeda-3246e0e40ad4",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 866,
-            "startedAt": "2026-08-15T07:38:44.486Z",
-            "finishedAt": "2026-08-15T07:38:45.352Z",
-            "logPath": "commands/C-5569a2a6-06f1-4169-8c3e-5de4cca733c1/record.json"
+            "durationMs": 921,
+            "startedAt": "2026-08-15T11:16:49.890Z",
+            "finishedAt": "2026-08-15T11:16:50.811Z",
+            "logPath": "commands/C-885b5a85-3705-4673-aeda-3246e0e40ad4/record.json"
+          },
+          {
+            "id": "C-b48e7d97-9a27-4ba8-96ff-b7a6af3a4ba4",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1019,
+            "startedAt": "2026-08-15T11:16:38.979Z",
+            "finishedAt": "2026-08-15T11:16:39.998Z",
+            "logPath": "commands/C-b48e7d97-9a27-4ba8-96ff-b7a6af3a4ba4/record.json"
           }
         ],
         "findings": [],
@@ -351,18 +401,18 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 866,
+          "durationMs": 921,
           "browser": "chromium",
           "status": "passed"
         },
-        "leaseAgent": "worker-t03"
+        "leaseAgent": "director"
       },
       "mediaAssets": [],
       "screenshots": []
     },
     {
-      "id": "node-gate-T-03",
-      "name": "Gate: Node Internal Layout & Height Void Synchronization in GVUI",
+      "id": "node-gate-task-03-radial-badge-clearance-design",
+      "name": "Gate: Radial Badge Clearance Allocation Design",
       "kind": "gate",
       "status": "success",
       "step": 3,
@@ -372,7 +422,7 @@
         "variant": "success",
         "icon": "IconShieldCheck"
       },
-      "description": "Independent verification gate for Node Internal Layout & Height Void Synchronization in GVUI.",
+      "description": "Independent verification gate for Radial Badge Clearance Allocation Design.",
       "metadata": {
         "findings": [],
         "mediaAssets": [],
@@ -385,7 +435,7 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 866,
+          "durationMs": 921,
           "browser": "chromium",
           "status": "passed"
         }
@@ -394,8 +444,8 @@
       "screenshots": []
     },
     {
-      "id": "node-task-T-04",
-      "name": "Edge Badge Single-Line Measurement & Compactness Fix in GVUI",
+      "id": "node-task-task-04-layered-inverted-transform-invariants",
+      "name": "Layered Inverted Transforms Invariants",
       "kind": "agent",
       "status": "success",
       "step": 2,
@@ -403,14 +453,14 @@
       "model": "Gemini 3.7 Flash (High)",
       "tier": "l",
       "badge": {
-        "text": "Worker: worker-t04",
+        "text": "Worker: director",
         "variant": "info",
         "icon": "IconRobot"
       },
-      "description": "Single-line composite badge text measurement (+32px chrome) implemented in customLayoutAdapter.ts, defensive badge sizing Math.max(badgeRect.width, computedWidth) verified in EdgeBadgeOverlay.tsx, and traffic/bundle forwarding verified in GraphBadgeLayer.tsx.",
+      "description": "Completed Module 4: Layered Inverted Transforms Invariants with Affine Frame Transformation System",
       "files": [
         {
-          "path": "src/engine/layout/customLayoutAdapter.ts",
+          "path": "docs/planning/layered-inverted-transforms",
           "mode": "write"
         }
       ],
@@ -419,27 +469,34 @@
         "outputs": [
           {
             "kind": "summary",
-            "label": "Single-line composite badge text measurement (+32px chrome) implemented in customLayoutAdapter.ts, defensive badge sizing Math.max(badgeRect.width, computedWidth) verified in EdgeBadgeOverlay.tsx, and traffic/bundle forwarding verified in GraphBadgeLayer.tsx.",
-            "preview": "Single-line composite badge text measurement (+32px chrome) implemented in customLayoutAdapter.ts, defensive badge sizing Math.max(badgeRect.width, computedWidth) verified in EdgeBadgeOverlay.tsx, and traffic/bundle forwarding verified in GraphBadgeLayer.tsx."
+            "label": "Completed Module 4: Layered Inverted Transforms Invariants with Affine Frame Transformation System",
+            "preview": "Completed Module 4: Layered Inverted Transforms Invariants with Affine Frame Transformation System"
           }
         ]
       },
       "metadata": {
-        "writeScope": [
-          "src/engine/layout/customLayoutAdapter.ts",
-          "src/primitives/edges/GraphEdge"
-        ],
+        "writeScope": ["docs/planning/layered-inverted-transforms"],
         "repairRounds": 0,
         "commands": [
           {
-            "id": "C-cb9a7bc5-8744-4225-9521-b9e22d6a9c98",
-            "argv": ["bun", "test", "src/primitives/edges"],
+            "id": "C-8fa7de9c-8c90-4a18-ba37-df46c7c37e66",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 937,
-            "startedAt": "2026-08-15T07:39:19.956Z",
-            "finishedAt": "2026-08-15T07:39:20.893Z",
-            "logPath": "commands/C-cb9a7bc5-8744-4225-9521-b9e22d6a9c98/record.json"
+            "durationMs": 896,
+            "startedAt": "2026-08-15T11:17:15.612Z",
+            "finishedAt": "2026-08-15T11:17:16.508Z",
+            "logPath": "commands/C-8fa7de9c-8c90-4a18-ba37-df46c7c37e66/record.json"
+          },
+          {
+            "id": "C-c9228a45-b5ce-4ab8-b652-18fef4178359",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 870,
+            "startedAt": "2026-08-15T11:17:26.670Z",
+            "finishedAt": "2026-08-15T11:17:27.540Z",
+            "logPath": "commands/C-c9228a45-b5ce-4ab8-b652-18fef4178359/record.json"
           }
         ],
         "findings": [],
@@ -454,18 +511,18 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 937,
+          "durationMs": 896,
           "browser": "chromium",
           "status": "passed"
         },
-        "leaseAgent": "worker-t04"
+        "leaseAgent": "director"
       },
       "mediaAssets": [],
       "screenshots": []
     },
     {
-      "id": "node-gate-T-04",
-      "name": "Gate: Edge Badge Single-Line Measurement & Compactness Fix in GVUI",
+      "id": "node-gate-task-04-layered-inverted-transform-invariants",
+      "name": "Gate: Layered Inverted Transforms Invariants",
       "kind": "gate",
       "status": "success",
       "step": 3,
@@ -475,7 +532,7 @@
         "variant": "success",
         "icon": "IconShieldCheck"
       },
-      "description": "Independent verification gate for Edge Badge Single-Line Measurement & Compactness Fix in GVUI.",
+      "description": "Independent verification gate for Layered Inverted Transforms Invariants.",
       "metadata": {
         "findings": [],
         "mediaAssets": [],
@@ -488,7 +545,7 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "durationMs": 937,
+          "durationMs": 896,
           "browser": "chromium",
           "status": "passed"
         }
@@ -497,8 +554,8 @@
       "screenshots": []
     },
     {
-      "id": "node-task-T-05",
-      "name": "E2E Integration, WASM Layout Engine Verification & Manifest Registration",
+      "id": "node-task-task-05-deep-planning-synthesis-and-spec",
+      "name": "Deep Planning Synthesis & Master Plan",
       "kind": "agent",
       "status": "success",
       "step": 4,
@@ -506,61 +563,71 @@
       "model": "Gemini 3.7 Flash (High)",
       "tier": "l",
       "badge": {
-        "text": "Worker: worker-t05",
+        "text": "Worker: director",
         "variant": "info",
         "icon": "IconRobot"
       },
-      "description": "Exported 2026-08-15-gvui-observability-findings-execution summary suite, registered in manifest.json, and verified WASM layout engine test suite passes.",
+      "description": "Completed Module 5: Deep Planning Synthesis & Master Plan for Deep Audit Hardening and Radial Layout Engine Optimization",
       "files": [
         {
-          "path": "public/data/graphs",
+          "path": "docs/planning/gvui-execution-graph",
           "mode": "write"
         }
       ],
       "io": {
         "inputs": [
           {
-            "node": "node-gate-T-01",
+            "node": "node-gate-task-01-audit-matrix-gap-analysis",
             "kind": "artifact",
-            "label": "Dependency Output: T-01"
+            "label": "Dependency Output: task-01-audit-matrix-gap-analysis"
           },
           {
-            "node": "node-gate-T-02",
+            "node": "node-gate-task-02-radial-collision-geometry-design",
             "kind": "artifact",
-            "label": "Dependency Output: T-02"
+            "label": "Dependency Output: task-02-radial-collision-geometry-design"
           },
           {
-            "node": "node-gate-T-03",
+            "node": "node-gate-task-03-radial-badge-clearance-design",
             "kind": "artifact",
-            "label": "Dependency Output: T-03"
+            "label": "Dependency Output: task-03-radial-badge-clearance-design"
           },
           {
-            "node": "node-gate-T-04",
+            "node": "node-gate-task-04-layered-inverted-transform-invariants",
             "kind": "artifact",
-            "label": "Dependency Output: T-04"
+            "label": "Dependency Output: task-04-layered-inverted-transform-invariants"
           }
         ],
         "outputs": [
           {
             "kind": "summary",
-            "label": "Exported 2026-08-15-gvui-observability-findings-execution summary suite, registered in manifest.json, and verified WASM layout engine test suite passes.",
-            "preview": "Exported 2026-08-15-gvui-observability-findings-execution summary suite, registered in manifest.json, and verified WASM layout engine test suite passes."
+            "label": "Completed Module 5: Deep Planning Synthesis & Master Plan for Deep Audit Hardening and Radial Layout Engine Optimization",
+            "preview": "Completed Module 5: Deep Planning Synthesis & Master Plan for Deep Audit Hardening and Radial Layout Engine Optimization"
           }
         ]
       },
       "metadata": {
-        "writeScope": ["public/data/graphs"],
+        "writeScope": ["docs/planning/gvui-execution-graph"],
         "repairRounds": 0,
         "commands": [
           {
-            "id": "C-f345a2c8-b0a5-41ca-89d8-163e829ddff7",
-            "argv": ["bun", "test", "src/types/exampleGraphs.test.ts"],
+            "id": "C-65e73a01-99fc-43bf-b922-bab09e297513",
+            "argv": ["bun", "test", "src/components/Controls"],
             "cwd": "/Users/onurseckinsenoglu/repos/gvui",
             "exitCode": 0,
-            "durationMs": 910,
-            "startedAt": "2026-08-15T07:40:08.445Z",
-            "finishedAt": "2026-08-15T07:40:09.355Z",
-            "logPath": "commands/C-f345a2c8-b0a5-41ca-89d8-163e829ddff7/record.json"
+            "durationMs": 885,
+            "startedAt": "2026-08-15T11:19:07.247Z",
+            "finishedAt": "2026-08-15T11:19:08.132Z",
+            "logPath": "commands/C-65e73a01-99fc-43bf-b922-bab09e297513/record.json"
+          },
+          {
+            "id": "C-707b8325-023c-47ab-ad1d-97cd3d3df9cb",
+            "argv": ["bun", "test", "src/components/Controls"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 883,
+            "startedAt": "2026-08-15T11:19:18.853Z",
+            "finishedAt": "2026-08-15T11:19:19.736Z",
+            "logPath": "commands/C-707b8325-023c-47ab-ad1d-97cd3d3df9cb/record.json"
           }
         ],
         "findings": [],
@@ -575,19 +642,18 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "testFile": "src/types/exampleGraphs.test.ts",
-          "durationMs": 910,
+          "durationMs": 885,
           "browser": "chromium",
           "status": "passed"
         },
-        "leaseAgent": "worker-t05"
+        "leaseAgent": "director"
       },
       "mediaAssets": [],
       "screenshots": []
     },
     {
-      "id": "node-gate-T-05",
-      "name": "Gate: E2E Integration, WASM Layout Engine Verification & Manifest Registration",
+      "id": "node-gate-task-05-deep-planning-synthesis-and-spec",
+      "name": "Gate: Deep Planning Synthesis & Master Plan",
       "kind": "gate",
       "status": "success",
       "step": 5,
@@ -597,7 +663,7 @@
         "variant": "success",
         "icon": "IconShieldCheck"
       },
-      "description": "Independent verification gate for E2E Integration, WASM Layout Engine Verification & Manifest Registration.",
+      "description": "Independent verification gate for Deep Planning Synthesis & Master Plan.",
       "metadata": {
         "findings": [],
         "mediaAssets": [],
@@ -610,8 +676,7 @@
           "traces": [],
           "videos": [],
           "screenshots": [],
-          "testFile": "src/types/exampleGraphs.test.ts",
-          "durationMs": 910,
+          "durationMs": 885,
           "browser": "chromium",
           "status": "passed"
         }
@@ -663,15 +728,15 @@
       "container": {
         "stepBadge": "1",
         "title": "Plan Initialization",
-        "detail": "4.3 KB Prompt",
+        "detail": "0.2 KB Prompt",
         "variant": "info",
         "icon": "IconArrowRight"
       },
       "traffic": {
         "volume": 1,
         "messagesCount": 1,
-        "tokens": 1112,
-        "bytes": 4449,
+        "tokens": 54,
+        "bytes": 214,
         "ratePerSec": 1,
         "status": "active",
         "glowColor": "#06b6d4",
@@ -679,41 +744,41 @@
         "exchanges": [
           {
             "id": "exch-prompt-plan",
-            "timestamp": "2026-08-15T07:41:14.158Z",
+            "timestamp": "2026-08-15T11:22:41.392Z",
             "source": "node-input-prompt",
             "target": "node-orchestrator-plan",
             "kind": "prompt",
             "summary": "Ingested user prompt instructions and context",
-            "tokens": 1112,
-            "bytes": 4449,
+            "tokens": 54,
+            "bytes": 214,
             "durationMs": 20,
             "status": "success",
-            "payloadSnippet": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all research findings and optimizations across skills and g"
+            "payloadSnippet": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Routing, and Ze"
           }
         ]
       },
       "exchanges": [
         {
           "id": "exch-prompt-plan",
-          "timestamp": "2026-08-15T07:41:14.158Z",
+          "timestamp": "2026-08-15T11:22:41.392Z",
           "source": "node-input-prompt",
           "target": "node-orchestrator-plan",
           "kind": "prompt",
           "summary": "Ingested user prompt instructions and context",
-          "tokens": 1112,
-          "bytes": 4449,
+          "tokens": 54,
+          "bytes": 214,
           "durationMs": 20,
           "status": "success",
-          "payloadSnippet": "You are the Single Main Background Run Orchestrator (Tier 2 Orchestrator) for implementing all research findings and optimizations across skills and g"
+          "payloadSnippet": "Deep Planning & Architectural Specification for Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Routing, and Ze"
         }
       ],
       "isHighTraffic": false,
       "trafficVolume": 1
     },
     {
-      "id": "edge-plan-T-01",
+      "id": "edge-plan-task-01-audit-matrix-gap-analysis",
       "source": "node-orchestrator-plan",
-      "target": "node-task-T-01",
+      "target": "node-task-task-01-audit-matrix-gap-analysis",
       "stepNumber": 2,
       "badge": {
         "text": "Dispatches Worker",
@@ -724,9 +789,9 @@
       "container": {
         "stepBadge": "2",
         "title": "Dispatches Worker",
-        "detail": "Lease: worker-t01",
         "variant": "info",
-        "icon": "IconRocket"
+        "icon": "IconRocket",
+        "detail": "Lease: director"
       },
       "traffic": {
         "volume": 1,
@@ -738,33 +803,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-spawn-T-01",
-            "timestamp": "2026-08-15T07:41:14.158Z",
+            "id": "exch-spawn-task-01-audit-matrix-gap-analysis",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-orchestrator-plan",
-            "target": "node-task-T-01",
+            "target": "node-task-task-01-audit-matrix-gap-analysis",
             "kind": "prompt",
-            "summary": "Dispatched task T-01 to worker worker-t01",
+            "summary": "Dispatched task task-01-audit-matrix-gap-analysis to worker director",
             "tokens": 350,
             "bytes": 1400,
             "durationMs": 30,
             "status": "success",
-            "payloadSnippet": "Goal: Host Discovery & Token/Cache Telemetry in Skills"
+            "payloadSnippet": "Goal: Audit Matrix & Failure Taxonomy Research"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-spawn-T-01",
-          "timestamp": "2026-08-15T07:41:14.158Z",
+          "id": "exch-spawn-task-01-audit-matrix-gap-analysis",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-orchestrator-plan",
-          "target": "node-task-T-01",
+          "target": "node-task-task-01-audit-matrix-gap-analysis",
           "kind": "prompt",
-          "summary": "Dispatched task T-01 to worker worker-t01",
+          "summary": "Dispatched task task-01-audit-matrix-gap-analysis to worker director",
           "tokens": 350,
           "bytes": 1400,
           "durationMs": 30,
           "status": "success",
-          "payloadSnippet": "Goal: Host Discovery & Token/Cache Telemetry in Skills"
+          "payloadSnippet": "Goal: Audit Matrix & Failure Taxonomy Research"
         }
       ],
       "isHighTraffic": false,
@@ -772,9 +837,9 @@
       "kind": "spawn"
     },
     {
-      "id": "edge-task-gate-T-01",
-      "source": "node-task-T-01",
-      "target": "node-gate-T-01",
+      "id": "edge-task-gate-task-01-audit-matrix-gap-analysis",
+      "source": "node-task-task-01-audit-matrix-gap-analysis",
+      "target": "node-gate-task-01-audit-matrix-gap-analysis",
       "stepNumber": "2 -> 3",
       "badge": {
         "text": "Submits Implementation",
@@ -785,9 +850,9 @@
       "container": {
         "stepBadge": "2 -> 3",
         "title": "Submits Implementation",
-        "detail": "1 Files Modified",
         "variant": "neutral",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
       },
       "traffic": {
         "volume": 1,
@@ -799,33 +864,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-submit-T-01",
-            "timestamp": "2026-08-15T07:41:14.158Z",
-            "source": "node-task-T-01",
-            "target": "node-gate-T-01",
+            "id": "exch-submit-task-01-audit-matrix-gap-analysis",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-task-task-01-audit-matrix-gap-analysis",
+            "target": "node-gate-task-01-audit-matrix-gap-analysis",
             "kind": "file",
-            "summary": "Submitted diffs for T-01 (1 files)",
+            "summary": "Submitted diffs for task-01-audit-matrix-gap-analysis (1 files)",
             "tokens": 650,
             "bytes": 1024,
             "durationMs": 80,
             "status": "success",
-            "payloadSnippet": "skills/orchestrating-long-tasks/scripts/src/summary"
+            "payloadSnippet": "docs/planning/audit-matrix"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-submit-T-01",
-          "timestamp": "2026-08-15T07:41:14.158Z",
-          "source": "node-task-T-01",
-          "target": "node-gate-T-01",
+          "id": "exch-submit-task-01-audit-matrix-gap-analysis",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-task-task-01-audit-matrix-gap-analysis",
+          "target": "node-gate-task-01-audit-matrix-gap-analysis",
           "kind": "file",
-          "summary": "Submitted diffs for T-01 (1 files)",
+          "summary": "Submitted diffs for task-01-audit-matrix-gap-analysis (1 files)",
           "tokens": 650,
           "bytes": 1024,
           "durationMs": 80,
           "status": "success",
-          "payloadSnippet": "skills/orchestrating-long-tasks/scripts/src/summary"
+          "payloadSnippet": "docs/planning/audit-matrix"
         }
       ],
       "isHighTraffic": false,
@@ -833,8 +898,8 @@
       "kind": "sequence"
     },
     {
-      "id": "edge-join-T-01",
-      "source": "node-gate-T-01",
+      "id": "edge-join-task-01-audit-matrix-gap-analysis",
+      "source": "node-gate-task-01-audit-matrix-gap-analysis",
       "target": "node-critic-authority",
       "stepNumber": 4,
       "badge": {
@@ -846,9 +911,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Evidence Report",
-        "detail": "Gate Verified",
         "variant": "success",
-        "icon": "IconFileText"
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
       },
       "traffic": {
         "volume": 1,
@@ -860,12 +925,12 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-join-T-01",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-01",
+            "id": "exch-join-task-01-audit-matrix-gap-analysis",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-01-audit-matrix-gap-analysis",
             "target": "node-critic-authority",
             "kind": "artifact",
-            "summary": "Evidence scorecard and verification proof for T-01",
+            "summary": "Evidence scorecard and verification proof for task-01-audit-matrix-gap-analysis",
             "tokens": 300,
             "bytes": 950,
             "durationMs": 35,
@@ -876,12 +941,12 @@
       },
       "exchanges": [
         {
-          "id": "exch-join-T-01",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-01",
+          "id": "exch-join-task-01-audit-matrix-gap-analysis",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-01-audit-matrix-gap-analysis",
           "target": "node-critic-authority",
           "kind": "artifact",
-          "summary": "Evidence scorecard and verification proof for T-01",
+          "summary": "Evidence scorecard and verification proof for task-01-audit-matrix-gap-analysis",
           "tokens": 300,
           "bytes": 950,
           "durationMs": 35,
@@ -894,9 +959,9 @@
       "kind": "join"
     },
     {
-      "id": "edge-plan-T-02",
+      "id": "edge-plan-task-02-radial-collision-geometry-design",
       "source": "node-orchestrator-plan",
-      "target": "node-task-T-02",
+      "target": "node-task-task-02-radial-collision-geometry-design",
       "stepNumber": 2,
       "badge": {
         "text": "Dispatches Worker",
@@ -907,9 +972,9 @@
       "container": {
         "stepBadge": "2",
         "title": "Dispatches Worker",
-        "detail": "Lease: worker-t02",
         "variant": "info",
-        "icon": "IconRocket"
+        "icon": "IconRocket",
+        "detail": "Lease: director"
       },
       "traffic": {
         "volume": 1,
@@ -921,33 +986,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-spawn-T-02",
-            "timestamp": "2026-08-15T07:41:14.159Z",
+            "id": "exch-spawn-task-02-radial-collision-geometry-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-orchestrator-plan",
-            "target": "node-task-T-02",
+            "target": "node-task-task-02-radial-collision-geometry-design",
             "kind": "prompt",
-            "summary": "Dispatched task T-02 to worker worker-t02",
+            "summary": "Dispatched task task-02-radial-collision-geometry-design to worker director",
             "tokens": 350,
             "bytes": 1400,
             "durationMs": 30,
             "status": "success",
-            "payloadSnippet": "Goal: Canvas Rendering Performance Optimization in GVUI"
+            "payloadSnippet": "Goal: Radial Obstacle Detour Geometry Design"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-spawn-T-02",
-          "timestamp": "2026-08-15T07:41:14.159Z",
+          "id": "exch-spawn-task-02-radial-collision-geometry-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-orchestrator-plan",
-          "target": "node-task-T-02",
+          "target": "node-task-task-02-radial-collision-geometry-design",
           "kind": "prompt",
-          "summary": "Dispatched task T-02 to worker worker-t02",
+          "summary": "Dispatched task task-02-radial-collision-geometry-design to worker director",
           "tokens": 350,
           "bytes": 1400,
           "durationMs": 30,
           "status": "success",
-          "payloadSnippet": "Goal: Canvas Rendering Performance Optimization in GVUI"
+          "payloadSnippet": "Goal: Radial Obstacle Detour Geometry Design"
         }
       ],
       "isHighTraffic": false,
@@ -955,9 +1020,9 @@
       "kind": "spawn"
     },
     {
-      "id": "edge-task-gate-T-02",
-      "source": "node-task-T-02",
-      "target": "node-gate-T-02",
+      "id": "edge-task-gate-task-02-radial-collision-geometry-design",
+      "source": "node-task-task-02-radial-collision-geometry-design",
+      "target": "node-gate-task-02-radial-collision-geometry-design",
       "stepNumber": "2 -> 3",
       "badge": {
         "text": "Submits Implementation",
@@ -968,9 +1033,9 @@
       "container": {
         "stepBadge": "2 -> 3",
         "title": "Submits Implementation",
-        "detail": "1 Files Modified",
         "variant": "neutral",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
       },
       "traffic": {
         "volume": 1,
@@ -982,33 +1047,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-submit-T-02",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-task-T-02",
-            "target": "node-gate-T-02",
+            "id": "exch-submit-task-02-radial-collision-geometry-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-task-task-02-radial-collision-geometry-design",
+            "target": "node-gate-task-02-radial-collision-geometry-design",
             "kind": "file",
-            "summary": "Submitted diffs for T-02 (1 files)",
+            "summary": "Submitted diffs for task-02-radial-collision-geometry-design (1 files)",
             "tokens": 650,
             "bytes": 1024,
             "durationMs": 80,
             "status": "success",
-            "payloadSnippet": "src/engine/GraphCanvas"
+            "payloadSnippet": "docs/planning/radial-obstacle-geometry"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-submit-T-02",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-task-T-02",
-          "target": "node-gate-T-02",
+          "id": "exch-submit-task-02-radial-collision-geometry-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-task-task-02-radial-collision-geometry-design",
+          "target": "node-gate-task-02-radial-collision-geometry-design",
           "kind": "file",
-          "summary": "Submitted diffs for T-02 (1 files)",
+          "summary": "Submitted diffs for task-02-radial-collision-geometry-design (1 files)",
           "tokens": 650,
           "bytes": 1024,
           "durationMs": 80,
           "status": "success",
-          "payloadSnippet": "src/engine/GraphCanvas"
+          "payloadSnippet": "docs/planning/radial-obstacle-geometry"
         }
       ],
       "isHighTraffic": false,
@@ -1016,8 +1081,8 @@
       "kind": "sequence"
     },
     {
-      "id": "edge-join-T-02",
-      "source": "node-gate-T-02",
+      "id": "edge-join-task-02-radial-collision-geometry-design",
+      "source": "node-gate-task-02-radial-collision-geometry-design",
       "target": "node-critic-authority",
       "stepNumber": 4,
       "badge": {
@@ -1029,9 +1094,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Evidence Report",
-        "detail": "Gate Verified",
         "variant": "success",
-        "icon": "IconFileText"
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
       },
       "traffic": {
         "volume": 1,
@@ -1043,12 +1108,12 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-join-T-02",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-02",
+            "id": "exch-join-task-02-radial-collision-geometry-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-02-radial-collision-geometry-design",
             "target": "node-critic-authority",
             "kind": "artifact",
-            "summary": "Evidence scorecard and verification proof for T-02",
+            "summary": "Evidence scorecard and verification proof for task-02-radial-collision-geometry-design",
             "tokens": 300,
             "bytes": 950,
             "durationMs": 35,
@@ -1059,12 +1124,12 @@
       },
       "exchanges": [
         {
-          "id": "exch-join-T-02",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-02",
+          "id": "exch-join-task-02-radial-collision-geometry-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-02-radial-collision-geometry-design",
           "target": "node-critic-authority",
           "kind": "artifact",
-          "summary": "Evidence scorecard and verification proof for T-02",
+          "summary": "Evidence scorecard and verification proof for task-02-radial-collision-geometry-design",
           "tokens": 300,
           "bytes": 950,
           "durationMs": 35,
@@ -1077,9 +1142,9 @@
       "kind": "join"
     },
     {
-      "id": "edge-plan-T-03",
+      "id": "edge-plan-task-03-radial-badge-clearance-design",
       "source": "node-orchestrator-plan",
-      "target": "node-task-T-03",
+      "target": "node-task-task-03-radial-badge-clearance-design",
       "stepNumber": 2,
       "badge": {
         "text": "Dispatches Worker",
@@ -1090,9 +1155,9 @@
       "container": {
         "stepBadge": "2",
         "title": "Dispatches Worker",
-        "detail": "Lease: worker-t03",
         "variant": "info",
-        "icon": "IconRocket"
+        "icon": "IconRocket",
+        "detail": "Lease: director"
       },
       "traffic": {
         "volume": 1,
@@ -1104,33 +1169,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-spawn-T-03",
-            "timestamp": "2026-08-15T07:41:14.159Z",
+            "id": "exch-spawn-task-03-radial-badge-clearance-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-orchestrator-plan",
-            "target": "node-task-T-03",
+            "target": "node-task-task-03-radial-badge-clearance-design",
             "kind": "prompt",
-            "summary": "Dispatched task T-03 to worker worker-t03",
+            "summary": "Dispatched task task-03-radial-badge-clearance-design to worker director",
             "tokens": 350,
             "bytes": 1400,
             "durationMs": 30,
             "status": "success",
-            "payloadSnippet": "Goal: Node Internal Layout & Height Void Synchronization in GVUI"
+            "payloadSnippet": "Goal: Radial Badge Clearance Allocation Design"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-spawn-T-03",
-          "timestamp": "2026-08-15T07:41:14.159Z",
+          "id": "exch-spawn-task-03-radial-badge-clearance-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-orchestrator-plan",
-          "target": "node-task-T-03",
+          "target": "node-task-task-03-radial-badge-clearance-design",
           "kind": "prompt",
-          "summary": "Dispatched task T-03 to worker worker-t03",
+          "summary": "Dispatched task task-03-radial-badge-clearance-design to worker director",
           "tokens": 350,
           "bytes": 1400,
           "durationMs": 30,
           "status": "success",
-          "payloadSnippet": "Goal: Node Internal Layout & Height Void Synchronization in GVUI"
+          "payloadSnippet": "Goal: Radial Badge Clearance Allocation Design"
         }
       ],
       "isHighTraffic": false,
@@ -1138,9 +1203,9 @@
       "kind": "spawn"
     },
     {
-      "id": "edge-task-gate-T-03",
-      "source": "node-task-T-03",
-      "target": "node-gate-T-03",
+      "id": "edge-task-gate-task-03-radial-badge-clearance-design",
+      "source": "node-task-task-03-radial-badge-clearance-design",
+      "target": "node-gate-task-03-radial-badge-clearance-design",
       "stepNumber": "2 -> 3",
       "badge": {
         "text": "Submits Implementation",
@@ -1151,9 +1216,9 @@
       "container": {
         "stepBadge": "2 -> 3",
         "title": "Submits Implementation",
-        "detail": "1 Files Modified",
         "variant": "neutral",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
       },
       "traffic": {
         "volume": 1,
@@ -1165,33 +1230,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-submit-T-03",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-task-T-03",
-            "target": "node-gate-T-03",
+            "id": "exch-submit-task-03-radial-badge-clearance-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-task-task-03-radial-badge-clearance-design",
+            "target": "node-gate-task-03-radial-badge-clearance-design",
             "kind": "file",
-            "summary": "Submitted diffs for T-03 (1 files)",
+            "summary": "Submitted diffs for task-03-radial-badge-clearance-design (1 files)",
             "tokens": 650,
             "bytes": 1024,
             "durationMs": 80,
             "status": "success",
-            "payloadSnippet": "src/engine/layout/measurement"
+            "payloadSnippet": "docs/planning/radial-badge-clearance"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-submit-T-03",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-task-T-03",
-          "target": "node-gate-T-03",
+          "id": "exch-submit-task-03-radial-badge-clearance-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-task-task-03-radial-badge-clearance-design",
+          "target": "node-gate-task-03-radial-badge-clearance-design",
           "kind": "file",
-          "summary": "Submitted diffs for T-03 (1 files)",
+          "summary": "Submitted diffs for task-03-radial-badge-clearance-design (1 files)",
           "tokens": 650,
           "bytes": 1024,
           "durationMs": 80,
           "status": "success",
-          "payloadSnippet": "src/engine/layout/measurement"
+          "payloadSnippet": "docs/planning/radial-badge-clearance"
         }
       ],
       "isHighTraffic": false,
@@ -1199,8 +1264,8 @@
       "kind": "sequence"
     },
     {
-      "id": "edge-join-T-03",
-      "source": "node-gate-T-03",
+      "id": "edge-join-task-03-radial-badge-clearance-design",
+      "source": "node-gate-task-03-radial-badge-clearance-design",
       "target": "node-critic-authority",
       "stepNumber": 4,
       "badge": {
@@ -1212,9 +1277,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Evidence Report",
-        "detail": "Gate Verified",
         "variant": "success",
-        "icon": "IconFileText"
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
       },
       "traffic": {
         "volume": 1,
@@ -1226,12 +1291,12 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-join-T-03",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-03",
+            "id": "exch-join-task-03-radial-badge-clearance-design",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-03-radial-badge-clearance-design",
             "target": "node-critic-authority",
             "kind": "artifact",
-            "summary": "Evidence scorecard and verification proof for T-03",
+            "summary": "Evidence scorecard and verification proof for task-03-radial-badge-clearance-design",
             "tokens": 300,
             "bytes": 950,
             "durationMs": 35,
@@ -1242,12 +1307,12 @@
       },
       "exchanges": [
         {
-          "id": "exch-join-T-03",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-03",
+          "id": "exch-join-task-03-radial-badge-clearance-design",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-03-radial-badge-clearance-design",
           "target": "node-critic-authority",
           "kind": "artifact",
-          "summary": "Evidence scorecard and verification proof for T-03",
+          "summary": "Evidence scorecard and verification proof for task-03-radial-badge-clearance-design",
           "tokens": 300,
           "bytes": 950,
           "durationMs": 35,
@@ -1260,9 +1325,9 @@
       "kind": "join"
     },
     {
-      "id": "edge-plan-T-04",
+      "id": "edge-plan-task-04-layered-inverted-transform-invariants",
       "source": "node-orchestrator-plan",
-      "target": "node-task-T-04",
+      "target": "node-task-task-04-layered-inverted-transform-invariants",
       "stepNumber": 2,
       "badge": {
         "text": "Dispatches Worker",
@@ -1273,9 +1338,9 @@
       "container": {
         "stepBadge": "2",
         "title": "Dispatches Worker",
-        "detail": "Lease: worker-t04",
         "variant": "info",
-        "icon": "IconRocket"
+        "icon": "IconRocket",
+        "detail": "Lease: director"
       },
       "traffic": {
         "volume": 1,
@@ -1287,33 +1352,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-spawn-T-04",
-            "timestamp": "2026-08-15T07:41:14.159Z",
+            "id": "exch-spawn-task-04-layered-inverted-transform-invariants",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-orchestrator-plan",
-            "target": "node-task-T-04",
+            "target": "node-task-task-04-layered-inverted-transform-invariants",
             "kind": "prompt",
-            "summary": "Dispatched task T-04 to worker worker-t04",
+            "summary": "Dispatched task task-04-layered-inverted-transform-invariants to worker director",
             "tokens": 350,
             "bytes": 1400,
             "durationMs": 30,
             "status": "success",
-            "payloadSnippet": "Goal: Edge Badge Single-Line Measurement & Compactness Fix in GVUI"
+            "payloadSnippet": "Goal: Layered Inverted Transforms Invariants"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-spawn-T-04",
-          "timestamp": "2026-08-15T07:41:14.159Z",
+          "id": "exch-spawn-task-04-layered-inverted-transform-invariants",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-orchestrator-plan",
-          "target": "node-task-T-04",
+          "target": "node-task-task-04-layered-inverted-transform-invariants",
           "kind": "prompt",
-          "summary": "Dispatched task T-04 to worker worker-t04",
+          "summary": "Dispatched task task-04-layered-inverted-transform-invariants to worker director",
           "tokens": 350,
           "bytes": 1400,
           "durationMs": 30,
           "status": "success",
-          "payloadSnippet": "Goal: Edge Badge Single-Line Measurement & Compactness Fix in GVUI"
+          "payloadSnippet": "Goal: Layered Inverted Transforms Invariants"
         }
       ],
       "isHighTraffic": false,
@@ -1321,9 +1386,9 @@
       "kind": "spawn"
     },
     {
-      "id": "edge-task-gate-T-04",
-      "source": "node-task-T-04",
-      "target": "node-gate-T-04",
+      "id": "edge-task-gate-task-04-layered-inverted-transform-invariants",
+      "source": "node-task-task-04-layered-inverted-transform-invariants",
+      "target": "node-gate-task-04-layered-inverted-transform-invariants",
       "stepNumber": "2 -> 3",
       "badge": {
         "text": "Submits Implementation",
@@ -1334,9 +1399,9 @@
       "container": {
         "stepBadge": "2 -> 3",
         "title": "Submits Implementation",
-        "detail": "1 Files Modified",
         "variant": "neutral",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
       },
       "traffic": {
         "volume": 1,
@@ -1348,33 +1413,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-submit-T-04",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-task-T-04",
-            "target": "node-gate-T-04",
+            "id": "exch-submit-task-04-layered-inverted-transform-invariants",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-task-task-04-layered-inverted-transform-invariants",
+            "target": "node-gate-task-04-layered-inverted-transform-invariants",
             "kind": "file",
-            "summary": "Submitted diffs for T-04 (1 files)",
+            "summary": "Submitted diffs for task-04-layered-inverted-transform-invariants (1 files)",
             "tokens": 650,
             "bytes": 1024,
             "durationMs": 80,
             "status": "success",
-            "payloadSnippet": "src/engine/layout/customLayoutAdapter.ts"
+            "payloadSnippet": "docs/planning/layered-inverted-transforms"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-submit-T-04",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-task-T-04",
-          "target": "node-gate-T-04",
+          "id": "exch-submit-task-04-layered-inverted-transform-invariants",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-task-task-04-layered-inverted-transform-invariants",
+          "target": "node-gate-task-04-layered-inverted-transform-invariants",
           "kind": "file",
-          "summary": "Submitted diffs for T-04 (1 files)",
+          "summary": "Submitted diffs for task-04-layered-inverted-transform-invariants (1 files)",
           "tokens": 650,
           "bytes": 1024,
           "durationMs": 80,
           "status": "success",
-          "payloadSnippet": "src/engine/layout/customLayoutAdapter.ts"
+          "payloadSnippet": "docs/planning/layered-inverted-transforms"
         }
       ],
       "isHighTraffic": false,
@@ -1382,8 +1447,8 @@
       "kind": "sequence"
     },
     {
-      "id": "edge-join-T-04",
-      "source": "node-gate-T-04",
+      "id": "edge-join-task-04-layered-inverted-transform-invariants",
+      "source": "node-gate-task-04-layered-inverted-transform-invariants",
       "target": "node-critic-authority",
       "stepNumber": 4,
       "badge": {
@@ -1395,9 +1460,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Evidence Report",
-        "detail": "Gate Verified",
         "variant": "success",
-        "icon": "IconFileText"
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
       },
       "traffic": {
         "volume": 1,
@@ -1409,12 +1474,12 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-join-T-04",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-04",
+            "id": "exch-join-task-04-layered-inverted-transform-invariants",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-04-layered-inverted-transform-invariants",
             "target": "node-critic-authority",
             "kind": "artifact",
-            "summary": "Evidence scorecard and verification proof for T-04",
+            "summary": "Evidence scorecard and verification proof for task-04-layered-inverted-transform-invariants",
             "tokens": 300,
             "bytes": 950,
             "durationMs": 35,
@@ -1425,12 +1490,12 @@
       },
       "exchanges": [
         {
-          "id": "exch-join-T-04",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-04",
+          "id": "exch-join-task-04-layered-inverted-transform-invariants",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-04-layered-inverted-transform-invariants",
           "target": "node-critic-authority",
           "kind": "artifact",
-          "summary": "Evidence scorecard and verification proof for T-04",
+          "summary": "Evidence scorecard and verification proof for task-04-layered-inverted-transform-invariants",
           "tokens": 300,
           "bytes": 950,
           "durationMs": 35,
@@ -1443,9 +1508,9 @@
       "kind": "join"
     },
     {
-      "id": "edge-plan-T-05",
+      "id": "edge-plan-task-05-deep-planning-synthesis-and-spec",
       "source": "node-orchestrator-plan",
-      "target": "node-task-T-05",
+      "target": "node-task-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": 4,
       "badge": {
         "text": "Dispatches Worker",
@@ -1456,9 +1521,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Dispatches Worker",
-        "detail": "Lease: worker-t05",
         "variant": "info",
-        "icon": "IconRocket"
+        "icon": "IconRocket",
+        "detail": "Lease: director"
       },
       "traffic": {
         "volume": 1,
@@ -1470,33 +1535,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-spawn-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
+            "id": "exch-spawn-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-orchestrator-plan",
-            "target": "node-task-T-05",
+            "target": "node-task-task-05-deep-planning-synthesis-and-spec",
             "kind": "prompt",
-            "summary": "Dispatched task T-05 to worker worker-t05",
+            "summary": "Dispatched task task-05-deep-planning-synthesis-and-spec to worker director",
             "tokens": 350,
             "bytes": 1400,
             "durationMs": 30,
             "status": "success",
-            "payloadSnippet": "Goal: E2E Integration, WASM Layout Engine Verification & Manifest Registration"
+            "payloadSnippet": "Goal: Deep Planning Synthesis & Master Plan"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-spawn-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
+          "id": "exch-spawn-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-orchestrator-plan",
-          "target": "node-task-T-05",
+          "target": "node-task-task-05-deep-planning-synthesis-and-spec",
           "kind": "prompt",
-          "summary": "Dispatched task T-05 to worker worker-t05",
+          "summary": "Dispatched task task-05-deep-planning-synthesis-and-spec to worker director",
           "tokens": 350,
           "bytes": 1400,
           "durationMs": 30,
           "status": "success",
-          "payloadSnippet": "Goal: E2E Integration, WASM Layout Engine Verification & Manifest Registration"
+          "payloadSnippet": "Goal: Deep Planning Synthesis & Master Plan"
         }
       ],
       "isHighTraffic": false,
@@ -1504,9 +1569,9 @@
       "kind": "spawn"
     },
     {
-      "id": "edge-task-gate-T-05",
-      "source": "node-task-T-05",
-      "target": "node-gate-T-05",
+      "id": "edge-task-gate-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-task-task-05-deep-planning-synthesis-and-spec",
+      "target": "node-gate-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": "4 -> 5",
       "badge": {
         "text": "Submits Implementation",
@@ -1517,9 +1582,9 @@
       "container": {
         "stepBadge": "4 -> 5",
         "title": "Submits Implementation",
-        "detail": "1 Files Modified",
         "variant": "neutral",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
       },
       "traffic": {
         "volume": 1,
@@ -1531,33 +1596,33 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-submit-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-task-T-05",
-            "target": "node-gate-T-05",
+            "id": "exch-submit-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-task-task-05-deep-planning-synthesis-and-spec",
+            "target": "node-gate-task-05-deep-planning-synthesis-and-spec",
             "kind": "file",
-            "summary": "Submitted diffs for T-05 (1 files)",
+            "summary": "Submitted diffs for task-05-deep-planning-synthesis-and-spec (1 files)",
             "tokens": 650,
             "bytes": 1024,
             "durationMs": 80,
             "status": "success",
-            "payloadSnippet": "public/data/graphs"
+            "payloadSnippet": "docs/planning/gvui-execution-graph"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-submit-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-task-T-05",
-          "target": "node-gate-T-05",
+          "id": "exch-submit-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-task-task-05-deep-planning-synthesis-and-spec",
+          "target": "node-gate-task-05-deep-planning-synthesis-and-spec",
           "kind": "file",
-          "summary": "Submitted diffs for T-05 (1 files)",
+          "summary": "Submitted diffs for task-05-deep-planning-synthesis-and-spec (1 files)",
           "tokens": 650,
           "bytes": 1024,
           "durationMs": 80,
           "status": "success",
-          "payloadSnippet": "public/data/graphs"
+          "payloadSnippet": "docs/planning/gvui-execution-graph"
         }
       ],
       "isHighTraffic": false,
@@ -1565,9 +1630,9 @@
       "kind": "sequence"
     },
     {
-      "id": "edge-dep-T-01-T-05",
-      "source": "node-gate-T-01",
-      "target": "node-task-T-05",
+      "id": "edge-dep-task-01-audit-matrix-gap-analysis-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-gate-task-01-audit-matrix-gap-analysis",
+      "target": "node-task-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": 4,
       "badge": {
         "text": "Dependency Unlocked",
@@ -1578,9 +1643,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Dependency Unlocked",
-        "detail": "Dep: T-01",
         "variant": "cyan",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-01-audit-matrix-gap-analysis"
       },
       "traffic": {
         "volume": 1,
@@ -1593,33 +1658,33 @@
         "glowIntensity": 0.8,
         "exchanges": [
           {
-            "id": "exch-dep-T-01-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-01",
-            "target": "node-task-T-05",
+            "id": "exch-dep-task-01-audit-matrix-gap-analysis-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-01-audit-matrix-gap-analysis",
+            "target": "node-task-task-05-deep-planning-synthesis-and-spec",
             "kind": "artifact",
-            "summary": "Handoff verified artifact from T-01 to T-05",
+            "summary": "Handoff verified artifact from task-01-audit-matrix-gap-analysis to task-05-deep-planning-synthesis-and-spec",
             "tokens": 420,
             "bytes": 1200,
             "durationMs": 40,
             "status": "success",
-            "payloadSnippet": "Dependency contract T-01 fulfilled"
+            "payloadSnippet": "Dependency contract task-01-audit-matrix-gap-analysis fulfilled"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-dep-T-01-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-01",
-          "target": "node-task-T-05",
+          "id": "exch-dep-task-01-audit-matrix-gap-analysis-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-01-audit-matrix-gap-analysis",
+          "target": "node-task-task-05-deep-planning-synthesis-and-spec",
           "kind": "artifact",
-          "summary": "Handoff verified artifact from T-01 to T-05",
+          "summary": "Handoff verified artifact from task-01-audit-matrix-gap-analysis to task-05-deep-planning-synthesis-and-spec",
           "tokens": 420,
           "bytes": 1200,
           "durationMs": 40,
           "status": "success",
-          "payloadSnippet": "Dependency contract T-01 fulfilled"
+          "payloadSnippet": "Dependency contract task-01-audit-matrix-gap-analysis fulfilled"
         }
       ],
       "isHighTraffic": true,
@@ -1627,9 +1692,9 @@
       "kind": "dependency"
     },
     {
-      "id": "edge-dep-T-02-T-05",
-      "source": "node-gate-T-02",
-      "target": "node-task-T-05",
+      "id": "edge-dep-task-02-radial-collision-geometry-design-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-gate-task-02-radial-collision-geometry-design",
+      "target": "node-task-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": 4,
       "badge": {
         "text": "Dependency Unlocked",
@@ -1640,9 +1705,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Dependency Unlocked",
-        "detail": "Dep: T-02",
         "variant": "cyan",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-02-radial-collision-geometry-design"
       },
       "traffic": {
         "volume": 1,
@@ -1655,33 +1720,33 @@
         "glowIntensity": 0.8,
         "exchanges": [
           {
-            "id": "exch-dep-T-02-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-02",
-            "target": "node-task-T-05",
+            "id": "exch-dep-task-02-radial-collision-geometry-design-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-02-radial-collision-geometry-design",
+            "target": "node-task-task-05-deep-planning-synthesis-and-spec",
             "kind": "artifact",
-            "summary": "Handoff verified artifact from T-02 to T-05",
+            "summary": "Handoff verified artifact from task-02-radial-collision-geometry-design to task-05-deep-planning-synthesis-and-spec",
             "tokens": 420,
             "bytes": 1200,
             "durationMs": 40,
             "status": "success",
-            "payloadSnippet": "Dependency contract T-02 fulfilled"
+            "payloadSnippet": "Dependency contract task-02-radial-collision-geometry-design fulfilled"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-dep-T-02-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-02",
-          "target": "node-task-T-05",
+          "id": "exch-dep-task-02-radial-collision-geometry-design-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-02-radial-collision-geometry-design",
+          "target": "node-task-task-05-deep-planning-synthesis-and-spec",
           "kind": "artifact",
-          "summary": "Handoff verified artifact from T-02 to T-05",
+          "summary": "Handoff verified artifact from task-02-radial-collision-geometry-design to task-05-deep-planning-synthesis-and-spec",
           "tokens": 420,
           "bytes": 1200,
           "durationMs": 40,
           "status": "success",
-          "payloadSnippet": "Dependency contract T-02 fulfilled"
+          "payloadSnippet": "Dependency contract task-02-radial-collision-geometry-design fulfilled"
         }
       ],
       "isHighTraffic": true,
@@ -1689,9 +1754,9 @@
       "kind": "dependency"
     },
     {
-      "id": "edge-dep-T-03-T-05",
-      "source": "node-gate-T-03",
-      "target": "node-task-T-05",
+      "id": "edge-dep-task-03-radial-badge-clearance-design-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-gate-task-03-radial-badge-clearance-design",
+      "target": "node-task-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": 4,
       "badge": {
         "text": "Dependency Unlocked",
@@ -1702,9 +1767,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Dependency Unlocked",
-        "detail": "Dep: T-03",
         "variant": "cyan",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-03-radial-badge-clearance-design"
       },
       "traffic": {
         "volume": 1,
@@ -1717,33 +1782,33 @@
         "glowIntensity": 0.8,
         "exchanges": [
           {
-            "id": "exch-dep-T-03-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-03",
-            "target": "node-task-T-05",
+            "id": "exch-dep-task-03-radial-badge-clearance-design-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-03-radial-badge-clearance-design",
+            "target": "node-task-task-05-deep-planning-synthesis-and-spec",
             "kind": "artifact",
-            "summary": "Handoff verified artifact from T-03 to T-05",
+            "summary": "Handoff verified artifact from task-03-radial-badge-clearance-design to task-05-deep-planning-synthesis-and-spec",
             "tokens": 420,
             "bytes": 1200,
             "durationMs": 40,
             "status": "success",
-            "payloadSnippet": "Dependency contract T-03 fulfilled"
+            "payloadSnippet": "Dependency contract task-03-radial-badge-clearance-design fulfilled"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-dep-T-03-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-03",
-          "target": "node-task-T-05",
+          "id": "exch-dep-task-03-radial-badge-clearance-design-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-03-radial-badge-clearance-design",
+          "target": "node-task-task-05-deep-planning-synthesis-and-spec",
           "kind": "artifact",
-          "summary": "Handoff verified artifact from T-03 to T-05",
+          "summary": "Handoff verified artifact from task-03-radial-badge-clearance-design to task-05-deep-planning-synthesis-and-spec",
           "tokens": 420,
           "bytes": 1200,
           "durationMs": 40,
           "status": "success",
-          "payloadSnippet": "Dependency contract T-03 fulfilled"
+          "payloadSnippet": "Dependency contract task-03-radial-badge-clearance-design fulfilled"
         }
       ],
       "isHighTraffic": true,
@@ -1751,9 +1816,9 @@
       "kind": "dependency"
     },
     {
-      "id": "edge-dep-T-04-T-05",
-      "source": "node-gate-T-04",
-      "target": "node-task-T-05",
+      "id": "edge-dep-task-04-layered-inverted-transform-invariants-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-gate-task-04-layered-inverted-transform-invariants",
+      "target": "node-task-task-05-deep-planning-synthesis-and-spec",
       "stepNumber": 4,
       "badge": {
         "text": "Dependency Unlocked",
@@ -1764,9 +1829,9 @@
       "container": {
         "stepBadge": "4",
         "title": "Dependency Unlocked",
-        "detail": "Dep: T-04",
         "variant": "cyan",
-        "icon": "IconArrowRight"
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-04-layered-inverted-transform-invariants"
       },
       "traffic": {
         "volume": 1,
@@ -1779,33 +1844,33 @@
         "glowIntensity": 0.8,
         "exchanges": [
           {
-            "id": "exch-dep-T-04-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-04",
-            "target": "node-task-T-05",
+            "id": "exch-dep-task-04-layered-inverted-transform-invariants-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-04-layered-inverted-transform-invariants",
+            "target": "node-task-task-05-deep-planning-synthesis-and-spec",
             "kind": "artifact",
-            "summary": "Handoff verified artifact from T-04 to T-05",
+            "summary": "Handoff verified artifact from task-04-layered-inverted-transform-invariants to task-05-deep-planning-synthesis-and-spec",
             "tokens": 420,
             "bytes": 1200,
             "durationMs": 40,
             "status": "success",
-            "payloadSnippet": "Dependency contract T-04 fulfilled"
+            "payloadSnippet": "Dependency contract task-04-layered-inverted-transform-invariants fulfilled"
           }
         ]
       },
       "exchanges": [
         {
-          "id": "exch-dep-T-04-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-04",
-          "target": "node-task-T-05",
+          "id": "exch-dep-task-04-layered-inverted-transform-invariants-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-04-layered-inverted-transform-invariants",
+          "target": "node-task-task-05-deep-planning-synthesis-and-spec",
           "kind": "artifact",
-          "summary": "Handoff verified artifact from T-04 to T-05",
+          "summary": "Handoff verified artifact from task-04-layered-inverted-transform-invariants to task-05-deep-planning-synthesis-and-spec",
           "tokens": 420,
           "bytes": 1200,
           "durationMs": 40,
           "status": "success",
-          "payloadSnippet": "Dependency contract T-04 fulfilled"
+          "payloadSnippet": "Dependency contract task-04-layered-inverted-transform-invariants fulfilled"
         }
       ],
       "isHighTraffic": true,
@@ -1813,8 +1878,8 @@
       "kind": "dependency"
     },
     {
-      "id": "edge-join-T-05",
-      "source": "node-gate-T-05",
+      "id": "edge-join-task-05-deep-planning-synthesis-and-spec",
+      "source": "node-gate-task-05-deep-planning-synthesis-and-spec",
       "target": "node-critic-authority",
       "stepNumber": 6,
       "badge": {
@@ -1826,9 +1891,9 @@
       "container": {
         "stepBadge": "6",
         "title": "Evidence Report",
-        "detail": "Gate Verified",
         "variant": "success",
-        "icon": "IconFileText"
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
       },
       "traffic": {
         "volume": 1,
@@ -1840,12 +1905,12 @@
         "glowIntensity": 0.35,
         "exchanges": [
           {
-            "id": "exch-join-T-05",
-            "timestamp": "2026-08-15T07:41:14.159Z",
-            "source": "node-gate-T-05",
+            "id": "exch-join-task-05-deep-planning-synthesis-and-spec",
+            "timestamp": "2026-08-15T11:22:41.393Z",
+            "source": "node-gate-task-05-deep-planning-synthesis-and-spec",
             "target": "node-critic-authority",
             "kind": "artifact",
-            "summary": "Evidence scorecard and verification proof for T-05",
+            "summary": "Evidence scorecard and verification proof for task-05-deep-planning-synthesis-and-spec",
             "tokens": 300,
             "bytes": 950,
             "durationMs": 35,
@@ -1856,12 +1921,12 @@
       },
       "exchanges": [
         {
-          "id": "exch-join-T-05",
-          "timestamp": "2026-08-15T07:41:14.159Z",
-          "source": "node-gate-T-05",
+          "id": "exch-join-task-05-deep-planning-synthesis-and-spec",
+          "timestamp": "2026-08-15T11:22:41.393Z",
+          "source": "node-gate-task-05-deep-planning-synthesis-and-spec",
           "target": "node-critic-authority",
           "kind": "artifact",
-          "summary": "Evidence scorecard and verification proof for T-05",
+          "summary": "Evidence scorecard and verification proof for task-05-deep-planning-synthesis-and-spec",
           "tokens": 300,
           "bytes": 950,
           "durationMs": 35,
@@ -1903,7 +1968,7 @@
         "exchanges": [
           {
             "id": "exch-critic-complete",
-            "timestamp": "2026-08-15T07:41:14.159Z",
+            "timestamp": "2026-08-15T11:22:41.393Z",
             "source": "node-critic-authority",
             "target": "node-terminal-complete",
             "kind": "decision",
@@ -1919,7 +1984,7 @@
       "exchanges": [
         {
           "id": "exch-critic-complete",
-          "timestamp": "2026-08-15T07:41:14.159Z",
+          "timestamp": "2026-08-15T11:22:41.393Z",
           "source": "node-critic-authority",
           "target": "node-terminal-complete",
           "kind": "decision",

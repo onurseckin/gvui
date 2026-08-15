@@ -23,11 +23,12 @@ use crate::config::CustomLayoutConfig;
 use crate::step0_common::ingest::build_graph_ir;
 use crate::types::{
     get_now_ms, CustomLayoutResult, GraphIr, NormalizedEdge, NormalizedNode, OptimizationStats,
-    PhaseTimings, Point, Rect,
+    PhaseTimings, Rect,
 };
 
 use super::geometric_common::{
-    build_routes, finish_geometric_layout, place_badges, remove_overlaps, undirected_adjacency,
+    build_radial_pcdra_routes, finish_geometric_layout, place_badges, remove_overlaps,
+    undirected_adjacency,
 };
 
 /// Slack multiplier on the arc a ring must provide for its boxes.
@@ -35,9 +36,6 @@ use super::geometric_common::{
 /// A ring is a circle, its contents are rectangles, and a rectangle's chord is shorter than its arc;
 /// 15% covers that plus the accumulated rounding of the wedge split.
 const RING_ARC_SLACK: f64 = 1.15;
-
-/// Fraction of the distance to the centre that a non-tree chord bends.
-const CHORD_BOW: f64 = 0.3;
 
 /// Bounds on `target_aspect_ratio` when it is turned into an elliptical stretch. Outside this range
 /// the rings degenerate into slots and the mode stops being radial.
@@ -92,7 +90,7 @@ pub fn layout_radial(
     // sizing below can be exact instead of a conservative bound.
     let t = get_now_ms();
     let leaves = leaf_counts(&tree, n);
-    let angles = assign_wedges(&tree, &leaves, n, root);
+    let angles = assign_wedges(&tree, &leaves, n, root, config.direction);
     let (ax, ay) = ellipse_axes(config.target_aspect_ratio);
     let radii = ring_radii(&ir, &tree, &angles, config, ax.min(ay));
     timings.rank = get_now_ms() - t;
@@ -122,8 +120,16 @@ pub fn layout_radial(
 
     // ---- routes -------------------------------------------------------------------------------
     let t = get_now_ms();
-    let bows = chord_bows(&ir, &tree, &rects);
-    let routes = build_routes(&ir, &rects, &bows, config);
+    let routes = build_radial_pcdra_routes(
+        &ir,
+        &tree.ring,
+        &tree.parent,
+        &rects,
+        &radii,
+        ax,
+        ay,
+        config,
+    );
     timings.route = get_now_ms() - t;
 
     let (badges, leader_count) = place_badges(&ir, edges, &rects, &routes, config);
@@ -268,13 +274,28 @@ fn leaf_counts(tree: &RadialTree, n: usize) -> Vec<u64> {
 /// their leaf counts, so a subtree with ten leaves gets ten times the arc of one with a single leaf
 /// and both end up with the same angular room *per drawn box*. Uniform `2*PI*i/n` allocation gives
 /// the ten-leaf subtree the same arc as the singleton and is why v1's radial mode collided.
-fn assign_wedges(tree: &RadialTree, leaves: &[u64], n: usize, root: u32) -> Vec<f64> {
+///
+/// The 4 flow directions offset the starting angle by 0°, 90°, 180°, and 270°.
+fn assign_wedges(
+    tree: &RadialTree,
+    leaves: &[u64],
+    n: usize,
+    root: u32,
+    direction: crate::config::Direction,
+) -> Vec<f64> {
     let mut angles = vec![0.0f64; n];
     if n == 0 {
         return angles;
     }
 
-    let mut stack: Vec<(u32, f64, f64)> = vec![(root, 0.0, TAU)];
+    let base_angle = match direction {
+        crate::config::Direction::TopDown => 0.0,
+        crate::config::Direction::LeftRight => TAU * 0.25,
+        crate::config::Direction::BottomUp => TAU * 0.5,
+        crate::config::Direction::RightLeft => TAU * 0.75,
+    };
+
+    let mut stack: Vec<(u32, f64, f64)> = vec![(root, base_angle, base_angle + TAU)];
     while let Some((v, a0, a1)) = stack.pop() {
         angles[v as usize] = (a0 + a1) / 2.0;
         let total = leaves[v as usize] as f64;
@@ -376,40 +397,6 @@ fn ring_radii(
     radii
 }
 
-/// One interior waypoint per IR edge: `None` for tree edges, a point bowed toward the centre for
-/// chords.
-///
-/// A chord is bent [`CHORD_BOW`] of the way to the origin — the layout is centred there before the
-/// final translation — which reads as "this connection is not part of the hierarchy" without every
-/// chord piling onto the same point the way v1's through-the-centre Beziers did.
-fn chord_bows(ir: &GraphIr, tree: &RadialTree, rects: &[Rect]) -> Vec<Option<Point>> {
-    let mut bows = vec![None; ir.edge_count()];
-    for (e, edge) in ir.edges.iter().enumerate() {
-        let (s, t) = (edge.source, edge.target);
-        if s == t {
-            continue;
-        }
-        let is_tree = tree.parent[t as usize] == s || tree.parent[s as usize] == t;
-        if is_tree {
-            continue;
-        }
-        let (Some(rs), Some(rt)) = (rects.get(s as usize), rects.get(t as usize)) else {
-            continue;
-        };
-        let a = rs.center();
-        let b = rt.center();
-        let mid = Point {
-            x: (a.x + b.x) / 2.0,
-            y: (a.y + b.y) / 2.0,
-        };
-        bows[e] = Some(Point {
-            x: mid.x * (1.0 - CHORD_BOW),
-            y: mid.y * (1.0 - CHORD_BOW),
-        });
-    }
-    bows
-}
-
 /// `(ring, position within ring)` per node, positions ordered by angle then index.
 fn ring_placement(tree: &RadialTree, angles: &[f64], n: usize) -> Vec<(usize, usize)> {
     let ring_count = tree.max_ring as usize + 1;
@@ -440,6 +427,7 @@ fn ring_placement(tree: &RadialTree, angles: &[f64], n: usize) -> Vec<(usize, us
 mod tests {
     use super::*;
     use crate::config::DEFAULT_CUSTOM_LAYOUT_CONFIG;
+    use crate::types::Point;
 
     fn node(id: &str, w: f64, h: f64) -> NormalizedNode {
         NormalizedNode {
@@ -646,7 +634,7 @@ mod tests {
         let root = choose_root(&ir, &cfg);
         let tree = build_spanning_tree(&adj, ir.node_count(), root);
         let leaves = leaf_counts(&tree, ir.node_count());
-        let angles = assign_wedges(&tree, &leaves, ir.node_count(), root);
+        let angles = assign_wedges(&tree, &leaves, ir.node_count(), root, cfg.direction);
 
         let idx = |name: &str| -> usize {
             ir.node_names
@@ -681,10 +669,9 @@ mod tests {
         let tree_edge = out.edges.iter().find(|e| e.edge_id == "e0").expect("e0");
         let chord = out.edges.iter().find(|e| e.edge_id == "e2").expect("e2");
         assert_eq!(tree_edge.points.len(), 2, "tree edges are straight");
-        assert_eq!(
-            chord.points.len(),
-            3,
-            "chords bend through one control point"
+        assert!(
+            chord.points.len() >= 3,
+            "chords bend through intermediate control points"
         );
     }
 
@@ -745,5 +732,375 @@ mod tests {
         assert_eq!(out.nodes[0].rank, 0);
         let p = DEFAULT_CUSTOM_LAYOUT_CONFIG.graph_padding;
         assert!((out.nodes[0].x - p).abs() < 1e-6);
+    }
+
+    fn complex_multi_ring_graph_with_chords() -> (Vec<NormalizedNode>, Vec<NormalizedEdge>) {
+        let mut nodes = vec![node("root", 140.0, 60.0)];
+        let mut edges = Vec::new();
+        for i in 0..6 {
+            let cid = format!("c{}", i);
+            nodes.push(node(&cid, 110.0, 45.0));
+            edges.push(edge(&format!("spoke_{}", i), "root", &cid));
+            for j in 0..3 {
+                let gid = format!("g{}_{}", i, j);
+                nodes.push(node(&gid, 90.0, 35.0));
+                edges.push(edge(&format!("spoke_{}_{}", i, j), &cid, &gid));
+            }
+        }
+        // Intra-ring and inter-ring chords
+        for i in 0..6 {
+            let next = (i + 1) % 6;
+            edges.push(edge(
+                &format!("chord_c_{}", i),
+                &format!("c{}", i),
+                &format!("c{}", next),
+            ));
+            edges.push(edge(
+                &format!("cross_cg_{}", i),
+                &format!("c{}", i),
+                &format!("g{}_1", next),
+            ));
+        }
+        (nodes, edges)
+    }
+
+    #[test]
+    fn radial_flow_rotation_top_down_zero_penetrations_and_overlaps() {
+        use crate::config::Direction;
+        let (nodes, edges) = complex_multi_ring_graph_with_chords();
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.direction = Direction::TopDown;
+        let out = layout_radial(&nodes, &edges, &cfg);
+        assert_eq!(out.nodes.len(), nodes.len());
+        assert_eq!(out.edges.len(), edges.len());
+        assert_eq!(
+            out.validation.metrics.node_node_overlaps, 0,
+            "TopDown: node overlaps must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "TopDown: edge-node penetrations must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "TopDown: collinear edge overlaps must be 0"
+        );
+        assert!(out
+            .validation
+            .diagnostics
+            .iter()
+            .all(|d| d.severity != "error"));
+    }
+
+    #[test]
+    fn radial_flow_rotation_left_right_zero_penetrations_and_overlaps() {
+        use crate::config::Direction;
+        let (nodes, edges) = complex_multi_ring_graph_with_chords();
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.direction = Direction::LeftRight;
+        let out = layout_radial(&nodes, &edges, &cfg);
+        assert_eq!(out.nodes.len(), nodes.len());
+        assert_eq!(out.edges.len(), edges.len());
+        assert_eq!(
+            out.validation.metrics.node_node_overlaps, 0,
+            "LeftRight: node overlaps must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "LeftRight: edge-node penetrations must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "LeftRight: collinear edge overlaps must be 0"
+        );
+        assert!(out
+            .validation
+            .diagnostics
+            .iter()
+            .all(|d| d.severity != "error"));
+    }
+
+    #[test]
+    fn radial_flow_rotation_bottom_up_zero_penetrations_and_overlaps() {
+        use crate::config::Direction;
+        let (nodes, edges) = complex_multi_ring_graph_with_chords();
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.direction = Direction::BottomUp;
+        let out = layout_radial(&nodes, &edges, &cfg);
+        assert_eq!(out.nodes.len(), nodes.len());
+        assert_eq!(out.edges.len(), edges.len());
+        assert_eq!(
+            out.validation.metrics.node_node_overlaps, 0,
+            "BottomUp: node overlaps must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "BottomUp: edge-node penetrations must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "BottomUp: collinear edge overlaps must be 0"
+        );
+        assert!(out
+            .validation
+            .diagnostics
+            .iter()
+            .all(|d| d.severity != "error"));
+    }
+
+    #[test]
+    fn radial_flow_rotation_right_left_zero_penetrations_and_overlaps() {
+        use crate::config::Direction;
+        let (nodes, edges) = complex_multi_ring_graph_with_chords();
+        let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+        cfg.direction = Direction::RightLeft;
+        let out = layout_radial(&nodes, &edges, &cfg);
+        assert_eq!(out.nodes.len(), nodes.len());
+        assert_eq!(out.edges.len(), edges.len());
+        assert_eq!(
+            out.validation.metrics.node_node_overlaps, 0,
+            "RightLeft: node overlaps must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "RightLeft: edge-node penetrations must be 0"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "RightLeft: collinear edge overlaps must be 0"
+        );
+        assert!(out
+            .validation
+            .diagnostics
+            .iter()
+            .all(|d| d.severity != "error"));
+    }
+
+    #[test]
+    fn radial_layout_supports_all_4_flow_rotations() {
+        use crate::config::Direction;
+        let (nodes, edges) = star(4, 1);
+        let directions = [
+            Direction::TopDown,
+            Direction::BottomUp,
+            Direction::LeftRight,
+            Direction::RightLeft,
+        ];
+
+        for dir in directions {
+            let mut cfg = DEFAULT_CUSTOM_LAYOUT_CONFIG;
+            cfg.direction = dir;
+            let out = layout_radial(&nodes, &edges, &cfg);
+            assert_eq!(out.nodes.len(), nodes.len());
+            assert_eq!(out.edges.len(), edges.len());
+            assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+            assert_eq!(out.validation.metrics.edge_node_penetrations, 0);
+            assert!(out.nodes.iter().all(|n| n.x.is_finite() && n.y.is_finite()));
+            assert!(out.edges.iter().all(|e| e.points.len() >= 2));
+        }
+    }
+
+    #[test]
+    fn radial_deep_chain_has_zero_edge_node_penetrations() {
+        // Deep linear chain: n0 -> n1 -> n2 -> ... -> n9
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        for i in 0..10 {
+            nodes.push(node(&format!("n{}", i), 140.0, 60.0));
+            if i > 0 {
+                edges.push(edge(
+                    &format!("e{}", i),
+                    &format!("n{}", i - 1),
+                    &format!("n{}", i),
+                ));
+            }
+        }
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "deep chain must have 0 edge-node penetrations"
+        );
+    }
+
+    #[test]
+    fn radial_cross_cutting_chords_have_zero_edge_node_penetrations() {
+        // Star graph with multiple rings and cross-cutting chords skipping intermediate rings
+        let (nodes, mut edges) = star(6, 2);
+        // Add cross-cutting chords between distant nodes
+        edges.push(edge("chord1", "g0_0", "g3_1"));
+        edges.push(edge("chord2", "c1", "g4_0"));
+        edges.push(edge("chord3", "g1_1", "c5"));
+        edges.push(edge("chord4", "g2_0", "g5_1"));
+
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "cross-cutting chords must have 0 edge-node penetrations"
+        );
+    }
+
+    #[test]
+    fn radial_dense_mesh_zero_edge_node_penetrations() {
+        // Scenario 21 / 25 style dense mesh with intra-ring and inter-ring chords
+        let mut nodes = vec![node("center", 140.0, 60.0)];
+        let mut edges = Vec::new();
+        for i in 0..8 {
+            let id = format!("peer{}", i);
+            nodes.push(node(&id, 140.0, 60.0));
+            edges.push(edge(&format!("spoke{}", i), "center", &id));
+        }
+        // Add full intra-ring peer ring chords
+        for i in 0..8 {
+            let next = (i + 1) % 8;
+            edges.push(edge(
+                &format!("ring_chord{}", i),
+                &format!("peer{}", i),
+                &format!("peer{}", next),
+            ));
+            let across = (i + 3) % 8;
+            edges.push(edge(
+                &format!("cross_chord{}", i),
+                &format!("peer{}", i),
+                &format!("peer{}", across),
+            ));
+        }
+
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "dense radial mesh must have 0 edge-node penetrations"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "dense radial mesh must have 0 collinear edge overlaps"
+        );
+    }
+
+    #[test]
+    fn single_ring_dense_chords_zero_collinear_and_zero_penetrations() {
+        // Star with 12 children on Ring 1, all interconnected with chords
+        let mut nodes = vec![node("root", 120.0, 50.0)];
+        let mut edges = Vec::new();
+        for i in 0..12 {
+            nodes.push(node(&format!("c{}", i), 100.0, 40.0));
+            edges.push(edge(&format!("spoke_{}", i), "root", &format!("c{}", i)));
+        }
+        // Chords between ring 1 nodes
+        for i in 0..12 {
+            let next = (i + 1) % 12;
+            let opp = (i + 6) % 12;
+            edges.push(edge(
+                &format!("chord_next_{}", i),
+                &format!("c{}", i),
+                &format!("c{}", next),
+            ));
+            edges.push(edge(
+                &format!("chord_opp_{}", i),
+                &format!("c{}", i),
+                &format!("c{}", opp),
+            ));
+        }
+
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+        assert_eq!(out.validation.metrics.edge_node_penetrations, 0);
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "single-ring chords must not create collinear edge overlaps"
+        );
+    }
+
+    #[test]
+    fn multi_ring_cross_chords_zero_collinear_and_zero_penetrations() {
+        // Multi-tier hierarchy: Root (Ring 0) -> 4 Children (Ring 1) -> 16 Grandchildren (Ring 2) -> 32 Great-grandchildren (Ring 3)
+        let mut nodes = vec![node("root", 120.0, 50.0)];
+        let mut edges = Vec::new();
+
+        for i in 0..4 {
+            let cid = format!("c{}", i);
+            nodes.push(node(&cid, 100.0, 40.0));
+            edges.push(edge(&format!("e_r_{}", i), "root", &cid));
+
+            for j in 0..4 {
+                let gid = format!("g{}_{}", i, j);
+                nodes.push(node(&gid, 90.0, 35.0));
+                edges.push(edge(&format!("e_c_{}_{}", i, j), &cid, &gid));
+
+                for k in 0..2 {
+                    let ggid = format!("gg{}_{}_{}", i, j, k);
+                    nodes.push(node(&ggid, 80.0, 30.0));
+                    edges.push(edge(&format!("e_g_{}_{}_{}", i, j, k), &gid, &ggid));
+                }
+            }
+        }
+
+        // Cross-ring chords skipping 1, 2, and 3 rings
+        edges.push(edge("cross_0_3", "root", "gg0_0_0"));
+        edges.push(edge("cross_1_3_a", "c0", "gg2_1_1"));
+        edges.push(edge("cross_1_3_b", "c1", "gg3_2_0"));
+        edges.push(edge("cross_2_3_a", "g0_1", "gg1_3_1"));
+        edges.push(edge("cross_2_3_b", "g2_0", "gg0_2_0"));
+        edges.push(edge("cross_3_3_opp", "gg0_0_1", "gg2_2_1"));
+
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.validation.metrics.node_node_overlaps, 0);
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "multi-ring cross chords must have 0 edge-node penetrations"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "multi-ring cross chords must have 0 collinear edge overlaps"
+        );
+    }
+
+    #[test]
+    fn stress_test_high_degree_hub_node_zero_penetrations_and_zero_overlaps() {
+        // Massive hub node (root) connected to 64 children on Ring 1
+        // and one secondary hub child connected to 32 grandchildren on Ring 2
+        let mut nodes = vec![node("hub_root", 160.0, 70.0)];
+        let mut edges = Vec::new();
+
+        for i in 0..64 {
+            let cid = format!("leaf_{}", i);
+            nodes.push(node(&cid, 90.0, 40.0));
+            edges.push(edge(&format!("spoke_{}", i), "hub_root", &cid));
+        }
+
+        // Secondary hub on Ring 1
+        nodes.push(node("secondary_hub", 140.0, 60.0));
+        edges.push(edge("spoke_sec", "hub_root", "secondary_hub"));
+
+        for j in 0..32 {
+            let gid = format!("subleaf_{}", j);
+            nodes.push(node(&gid, 80.0, 35.0));
+            edges.push(edge(&format!("sec_spoke_{}", j), "secondary_hub", &gid));
+        }
+
+        // Cross chords between distant leaves
+        for k in 0..16 {
+            let src = format!("leaf_{}", k * 2);
+            let tgt = format!("leaf_{}", (k * 2 + 33) % 64);
+            edges.push(edge(&format!("chord_{}", k), &src, &tgt));
+        }
+
+        let out = layout_radial(&nodes, &edges, &DEFAULT_CUSTOM_LAYOUT_CONFIG);
+        assert_eq!(out.nodes.len(), nodes.len());
+        assert_eq!(out.edges.len(), edges.len());
+        assert_eq!(
+            out.validation.metrics.node_node_overlaps, 0,
+            "high degree hub must have 0 node-node overlaps"
+        );
+        assert_eq!(
+            out.validation.metrics.edge_node_penetrations, 0,
+            "high degree hub must have 0 edge-node penetrations"
+        );
+        assert_eq!(
+            out.validation.metrics.collinear_edge_overlaps, 0,
+            "high degree hub must have 0 collinear edge overlaps"
+        );
     }
 }

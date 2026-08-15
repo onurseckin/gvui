@@ -394,6 +394,18 @@ export function validateCustomLayoutConfig(config: CustomLayoutConfig): void {
     }
   }
 
+  const VALID_DIRECTIONS: readonly Direction[] = [
+    "top-down",
+    "bottom-up",
+    "left-right",
+    "right-left",
+  ];
+  if (!VALID_DIRECTIONS.includes(config.direction)) {
+    throw new LayoutConfigurationError(
+      `Configuration property 'direction' must be one of ${VALID_DIRECTIONS.join(", ")}, got ${String(config.direction)}`,
+    );
+  }
+
   if (config.maxNodeWidth < config.minNodeWidth) {
     throw new LayoutConfigurationError(
       `Configuration property 'maxNodeWidth' (${config.maxNodeWidth}) must be >= 'minNodeWidth' (${config.minNodeWidth})`,
@@ -417,11 +429,20 @@ export function resolveCustomLayoutConfig(
     for (const key of keys) {
       const value = partial[key];
       if (value !== undefined) {
-        // Each field of CustomLayoutConfig is independently typed on both sides of this
-        // assignment (both indexed by the same `key`), but TS cannot express "assign a value of
-        // matching key" across a homomorphic mapped type without losing the union. This is the
-        // single documented bridge cast for that structural gap, not a loosening of field types.
-        (resolved as Record<keyof CustomLayoutConfig, unknown>)[key] = value;
+        if (
+          key === "direction" &&
+          ((value as unknown) === "bottom-top" ||
+            (value as unknown) === "bottom_top" ||
+            (value as unknown) === "bottom_up")
+        ) {
+          resolved.direction = "bottom-up";
+        } else {
+          // Each field of CustomLayoutConfig is independently typed on both sides of this
+          // assignment (both indexed by the same `key`), but TS cannot express "assign a value of
+          // matching key" across a homomorphic mapped type without losing the union. This is the
+          // single documented bridge cast for that structural gap, not a loosening of field types.
+          (resolved as Record<keyof CustomLayoutConfig, unknown>)[key] = value;
+        }
       }
     }
   }

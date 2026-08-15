@@ -243,7 +243,7 @@ pub fn scan_node_node_overlaps(
     let hash = build_node_index(nodes);
     for (i, ni) in nodes.iter().enumerate() {
         let ri = node_rect(ni);
-        if !rect_is_finite(&ri) {
+        if !rect_is_finite(&ri) || ri.width <= 0.0 || ri.height <= 0.0 {
             continue;
         }
         for cand in hash.query(&ri) {
@@ -253,7 +253,7 @@ pub fn scan_node_node_overlaps(
             }
             let Some(nj) = nodes.get(j) else { continue };
             let rj = node_rect(nj);
-            if !rect_is_finite(&rj) {
+            if !rect_is_finite(&rj) || rj.width <= 0.0 || rj.height <= 0.0 {
                 continue;
             }
             if rects_overlap_area(&ri, &rj, epsilon) {
@@ -301,7 +301,7 @@ pub fn scan_edge_node_penetrations(
                 let ni = cand as usize;
                 let Some(node) = nodes.get(ni) else { continue };
                 let nr = node_rect(node);
-                if !rect_is_finite(&nr) {
+                if !rect_is_finite(&nr) || nr.width <= 0.0 || nr.height <= 0.0 {
                     continue;
                 }
                 if segment_intersects_rect_interior(&seg, &nr, epsilon) {
@@ -324,14 +324,14 @@ pub fn scan_badge_node_overlaps(
     }
     let hash = build_node_index(nodes);
     for (bi, badge) in badges.iter().enumerate() {
-        if !rect_is_finite(&badge.rect) {
+        if !rect_is_finite(&badge.rect) || badge.rect.width <= 0.0 || badge.rect.height <= 0.0 {
             continue;
         }
         for cand in hash.query(&badge.rect) {
             let ni = cand as usize;
             let Some(node) = nodes.get(ni) else { continue };
             let nr = node_rect(node);
-            if !rect_is_finite(&nr) {
+            if !rect_is_finite(&nr) || nr.width <= 0.0 || nr.height <= 0.0 {
                 continue;
             }
             if rects_overlap_area(&badge.rect, &nr, epsilon) {
@@ -349,7 +349,7 @@ pub fn scan_badge_badge_overlaps(
 ) {
     let hash = build_badge_index(badges);
     for (i, bi) in badges.iter().enumerate() {
-        if !rect_is_finite(&bi.rect) {
+        if !rect_is_finite(&bi.rect) || bi.rect.width <= 0.0 || bi.rect.height <= 0.0 {
             continue;
         }
         for cand in hash.query(&bi.rect) {
@@ -358,7 +358,7 @@ pub fn scan_badge_badge_overlaps(
                 continue;
             }
             let Some(bj) = badges.get(j) else { continue };
-            if !rect_is_finite(&bj.rect) {
+            if !rect_is_finite(&bj.rect) || bj.rect.width <= 0.0 || bj.rect.height <= 0.0 {
                 continue;
             }
             if rects_overlap_area(&bi.rect, &bj.rect, epsilon) {
@@ -398,7 +398,10 @@ pub fn scan_badge_edge_penetrations(
                 let Some(badge) = badges.get(bi) else {
                     continue;
                 };
-                if !rect_is_finite(&badge.rect) {
+                if !rect_is_finite(&badge.rect)
+                    || badge.rect.width <= 0.0
+                    || badge.rect.height <= 0.0
+                {
                     continue;
                 }
                 // An edge is allowed to carry its own badge (e.g. OnEdge label placement);
@@ -414,19 +417,58 @@ pub fn scan_badge_edge_penetrations(
     }
 }
 
-/// Reports every unordered pair of *different* routes that draw an axis-aligned run along the same
-/// line with overlapping extent, as `(route i, route j)` with `i < j`.
+/// True when two finite segments of length > epsilon lie along the same line and overlap by > epsilon.
+pub fn segments_collinear_overlap(s1: &Segment, s2: &Segment, eps: f64) -> bool {
+    let dx1 = s1.b.x - s1.a.x;
+    let dy1 = s1.b.y - s1.a.y;
+    let len1_sq = dx1 * dx1 + dy1 * dy1;
+    if len1_sq <= eps * eps {
+        return false;
+    }
+    let dx2 = s2.b.x - s2.a.x;
+    let dy2 = s2.b.y - s2.a.y;
+    let len2_sq = dx2 * dx2 + dy2 * dy2;
+    if len2_sq <= eps * eps {
+        return false;
+    }
+
+    let len1 = len1_sq.sqrt();
+    let ux1 = dx1 / len1;
+    let uy1 = dy1 / len1;
+
+    // Normal to s1
+    let nx1 = -uy1;
+    let ny1 = ux1;
+
+    // Distance of s2 endpoints to the infinite line containing s1
+    let dist_a2 = ((s2.a.x - s1.a.x) * nx1 + (s2.a.y - s1.a.y) * ny1).abs();
+    let dist_b2 = ((s2.b.x - s1.a.x) * nx1 + (s2.b.y - s1.a.y) * ny1).abs();
+
+    if dist_a2 > eps || dist_b2 > eps {
+        return false;
+    }
+
+    // Project s2 endpoints along s1 direction (origin at s1.a)
+    let t_a2 = (s2.a.x - s1.a.x) * ux1 + (s2.a.y - s1.a.y) * uy1;
+    let t_b2 = (s2.b.x - s1.a.x) * ux1 + (s2.b.y - s1.a.y) * uy1;
+
+    let lo2 = t_a2.min(t_b2);
+    let hi2 = t_a2.max(t_b2);
+
+    let overlap = len1.min(hi2) - 0.0f64.max(lo2);
+    overlap > eps
+}
+
+/// Reports every unordered pair of *different* routes that draw a segment along the same line
+/// with overlapping extent (orthogonal or diagonal), as `(route i, route j)` with `i < j`.
 ///
 /// This is the failure the geometric crossing count cannot see. Two edges sharing a line do not
-/// *intersect* — [`super::super::step3_crossing_minimization::crossing_counting`] reports proper
-/// intersections only, and rightly so — they **merge**, and the reader loses one of them entirely.
-/// It is also strictly worse than a crossing, which at least stays legible.
+/// *intersect* — they **merge**, and the reader loses one of them entirely. It is also strictly
+/// worse than a crossing, which at least stays legible.
 ///
-/// Runs are compared in a single line-keyed pass rather than all-pairs: two runs can only conflict
-/// when they share an orientation and a coordinate, so bucketing on the rounded coordinate reduces
-/// the scan to the runs actually in contention. The bucket key is quantised to `epsilon`, and each
-/// run is probed against its own bucket and the two neighbouring ones so a pair straddling a bucket
-/// boundary is not missed.
+/// Uses spatial hashing on segment bounding boxes so candidate pairs are reduced to local
+/// neighbourhoods in O(E) time. Collinear overlap is strict: sharing a single endpoint is not
+/// an overlap.
 ///
 /// A route is never compared with itself: a polyline that doubles back along its own run is a
 /// corner-reduction artefact, not two edges merging.
@@ -440,79 +482,61 @@ pub fn scan_collinear_edge_overlaps(
     } else {
         1e-9
     };
-    // Bucket width is deliberately coarser than `eps`: it only has to be fine enough that two runs
-    // in the same bucket are worth comparing, and the +/-1 probe covers the rest.
-    let quantum = (eps * 100.0).max(0.5);
 
-    /// `(orientation, line coordinate, run start, run end, route)`.
-    struct Run {
-        vertical: bool,
-        line: f64,
-        lo: f64,
-        hi: f64,
+    struct SegEntry {
         route: usize,
+        seg: Segment,
     }
 
-    let mut runs: Vec<Run> = Vec::new();
+    let mut entries: Vec<SegEntry> = Vec::new();
+    let mut bboxes: Vec<Rect> = Vec::new();
+
     for (ri, route) in routes.iter().enumerate() {
+        if route.points.len() < 2 {
+            continue;
+        }
         for w in route.points.windows(2) {
-            let (a, b) = (w[0], w[1]);
-            if !is_finite_point(&a) || !is_finite_point(&b) {
+            let seg = Segment { a: w[0], b: w[1] };
+            if !is_finite_point(&seg.a) || !is_finite_point(&seg.b) {
                 continue;
             }
-            let horizontal = (a.y - b.y).abs() <= eps;
-            let vertical = (a.x - b.x).abs() <= eps;
-            // A degenerate point is neither; a diagonal is both false and skipped, which matches
-            // the orthogonal-only scope of every other constraint scan here.
-            let (line, lo, hi) = match (horizontal, vertical) {
-                (true, false) => (a.y, a.x.min(b.x), a.x.max(b.x)),
-                (false, true) => (a.x, a.y.min(b.y), a.y.max(b.y)),
-                _ => continue,
-            };
-            if hi - lo <= eps {
+            let dx = seg.b.x - seg.a.x;
+            let dy = seg.b.y - seg.a.y;
+            if dx * dx + dy * dy <= eps * eps {
                 continue;
             }
-            runs.push(Run {
-                vertical,
-                line,
-                lo,
-                hi,
-                route: ri,
-            });
+            let bb = segment_bbox(&seg, eps);
+            bboxes.push(bb);
+            entries.push(SegEntry { route: ri, seg });
         }
     }
 
-    let mut buckets: HashMap<(bool, i64), Vec<usize>> = HashMap::new();
-    for (i, run) in runs.iter().enumerate() {
-        let key = (run.vertical, (run.line / quantum).round() as i64);
-        buckets.entry(key).or_default().push(i);
+    if entries.is_empty() {
+        return;
+    }
+
+    let mut hash = SpatialHash::new(cell_for(bboxes.iter().map(|b| (b.width, b.height))));
+    for (i, bb) in bboxes.iter().enumerate() {
+        hash.insert(i as u32, bb);
     }
 
     let mut seen: HashSet<(usize, usize)> = HashSet::new();
-    for (i, run) in runs.iter().enumerate() {
-        let centre = (run.line / quantum).round() as i64;
-        for delta in -1..=1 {
-            let Some(bucket) = buckets.get(&(run.vertical, centre + delta)) else {
+    for (i, entry_i) in entries.iter().enumerate() {
+        let bb_i = &bboxes[i];
+        for cand in hash.query(bb_i) {
+            let j = cand as usize;
+            if j <= i {
                 continue;
-            };
-            for &j in bucket {
-                if j <= i {
-                    continue;
-                }
-                let other = &runs[j];
-                if other.route == run.route {
-                    continue;
-                }
-                if (other.line - run.line).abs() > eps {
-                    continue;
-                }
-                if run.lo >= other.hi - eps || other.lo >= run.hi - eps {
-                    continue;
-                }
-                let pair = if run.route < other.route {
-                    (run.route, other.route)
+            }
+            let entry_j = &entries[j];
+            if entry_i.route == entry_j.route {
+                continue;
+            }
+            if segments_collinear_overlap(&entry_i.seg, &entry_j.seg, eps) {
+                let pair = if entry_i.route < entry_j.route {
+                    (entry_i.route, entry_j.route)
                 } else {
-                    (other.route, run.route)
+                    (entry_j.route, entry_i.route)
                 };
                 if seen.insert(pair) {
                     on_hit(pair.0, pair.1);
@@ -568,11 +592,14 @@ pub fn check_constraints(
     // the report interpretable.
     let mut non_finite = 0usize;
     for n in nodes {
-        if !(n.x.is_finite() && n.y.is_finite() && n.width.is_finite() && n.height.is_finite()) {
+        if !(n.x.is_finite() && n.y.is_finite() && n.width.is_finite() && n.height.is_finite())
+            || n.width <= 0.0
+            || n.height <= 0.0
+        {
             if non_finite < MAX_REPORTS_PER_CODE {
                 out.push(LayoutDiagnostic::error(
                     "NON_FINITE_COORDINATE",
-                    format!("Node '{}' has a non-finite box", n.id),
+                    format!("Node '{}' has a non-finite or non-positive box", n.id),
                     vec![n.id.clone()],
                 ));
             }
@@ -595,6 +622,8 @@ pub fn check_constraints(
     }
     for b in badges {
         let bad = !rect_is_finite(&b.rect)
+            || b.rect.width <= 0.0
+            || b.rect.height <= 0.0
             || !is_finite_point(&b.anchor_point)
             || b.leader_points
                 .as_ref()
@@ -603,7 +632,10 @@ pub fn check_constraints(
             if non_finite < MAX_REPORTS_PER_CODE {
                 out.push(LayoutDiagnostic::error(
                     "NON_FINITE_COORDINATE",
-                    format!("Badge for edge '{}' has a non-finite coordinate", b.edge_id),
+                    format!(
+                        "Badge for edge '{}' has a non-finite coordinate or non-positive box",
+                        b.edge_id
+                    ),
                     vec![b.edge_id.clone()],
                 ));
             }
@@ -689,6 +721,24 @@ pub fn check_constraints(
                         b.edge_id, seg, r.edge_id
                     ),
                     vec![b.edge_id.clone(), r.edge_id.clone()],
+                ));
+            }
+        }
+        reported += 1;
+    });
+
+    // ---- COLLINEAR_EDGE_OVERLAP ---------------------------------------------------------------
+    reported = 0;
+    scan_collinear_edge_overlaps(routes, eps, |i, j| {
+        if reported < MAX_REPORTS_PER_CODE {
+            if let (Some(a), Some(b)) = (routes.get(i), routes.get(j)) {
+                out.push(LayoutDiagnostic::error(
+                    "COLLINEAR_EDGE_OVERLAP",
+                    format!(
+                        "Edges '{}' and '{}' share a collinear overlapping segment",
+                        a.edge_id, b.edge_id
+                    ),
+                    vec![a.edge_id.clone(), b.edge_id.clone()],
                 ));
             }
         }
@@ -1210,5 +1260,603 @@ mod tests {
         }];
         let d4 = check_constraints(&nodes, &routes_own, &badges, &[], &cfg());
         assert!(!d4.iter().any(|x| x.code == "BADGE_EDGE_PENETRATION"));
+    }
+
+    #[test]
+    fn collinear_edge_overlaps_detects_orthogonal_and_diagonal_overlaps() {
+        let (nodes, _) = clean_layout();
+
+        // 1. Horizontal overlapping pair
+        let routes_horiz = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 0.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 0.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 100.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 40.0, y: 100.0 }, Point { x: 140.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 40.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 140.0, y: 100.0 }),
+            },
+        ];
+        let d_horiz = check_constraints(&nodes, &routes_horiz, &[], &[], &cfg());
+        assert!(d_horiz.iter().any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+
+        // 2. Vertical overlapping pair
+        let routes_vert = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 50.0, y: 0.0 }, Point { x: 50.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 0.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 50.0, y: 30.0 }, Point { x: 50.0, y: 120.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 30.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 120.0 }),
+            },
+        ];
+        let d_vert = check_constraints(&nodes, &routes_vert, &[], &[], &cfg());
+        assert!(d_vert.iter().any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+
+        // 3. Diagonal overlapping pair (such as radial rays / chords)
+        let routes_diag = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 0.0, y: 0.0 }, Point { x: 100.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 0.0, y: 0.0 }),
+                target_port: port("b", Side::Top, Point { x: 100.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 25.0, y: 25.0 }, Point { x: 75.0, y: 75.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 25.0, y: 25.0 }),
+                target_port: port("b", Side::Top, Point { x: 75.0, y: 75.0 }),
+            },
+        ];
+        let mut diag_cfg = cfg();
+        diag_cfg.edge_style = EdgeStyle::Straight;
+        let d_diag = check_constraints(&nodes, &routes_diag, &[], &[], &diag_cfg);
+        let col_diag: Vec<&LayoutDiagnostic> = d_diag
+            .iter()
+            .filter(|d| d.code == "COLLINEAR_EDGE_OVERLAP")
+            .collect();
+        assert_eq!(col_diag.len(), 1);
+        assert_eq!(
+            col_diag[0].ids.as_deref(),
+            Some(&["e0".to_string(), "e1".to_string()][..])
+        );
+    }
+
+    #[test]
+    fn collinear_edge_overlaps_negative_cases() {
+        let (nodes, _) = clean_layout();
+
+        // 1. Touching at endpoint only (sharing endpoint is NOT overlap)
+        let routes_touch = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 0.0, y: 100.0 }, Point { x: 50.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 0.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 50.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 100.0, y: 100.0 }),
+            },
+        ];
+        let d_touch = check_constraints(&nodes, &routes_touch, &[], &[], &cfg());
+        assert!(!d_touch.iter().any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+
+        // 2. Disjoint segments on same line
+        let routes_disjoint = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 0.0, y: 100.0 }, Point { x: 40.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 0.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 40.0, y: 100.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 60.0, y: 100.0 }, Point { x: 100.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 60.0, y: 100.0 }),
+                target_port: port("b", Side::Top, Point { x: 100.0, y: 100.0 }),
+            },
+        ];
+        let d_disjoint = check_constraints(&nodes, &routes_disjoint, &[], &[], &cfg());
+        assert!(!d_disjoint
+            .iter()
+            .any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+
+        // 3. Crossing segments (perpendicular crossing is geometric crossing, not collinear overlap)
+        let routes_cross = vec![
+            RoutedPath {
+                edge_id: "e0".to_string(),
+                points: vec![Point { x: 0.0, y: 50.0 }, Point { x: 100.0, y: 50.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 0.0, y: 50.0 }),
+                target_port: port("b", Side::Top, Point { x: 100.0, y: 50.0 }),
+            },
+            RoutedPath {
+                edge_id: "e1".to_string(),
+                points: vec![Point { x: 50.0, y: 0.0 }, Point { x: 50.0, y: 100.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 0.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 100.0 }),
+            },
+        ];
+        let d_cross = check_constraints(&nodes, &routes_cross, &[], &[], &cfg());
+        assert!(!d_cross.iter().any(|d| d.code == "COLLINEAR_EDGE_OVERLAP"));
+    }
+
+    #[test]
+    fn parallel_multi_edge_bundles_and_multi_badge_clearance() {
+        let nodes = vec![
+            node("src", 0.0, 0.0, 120.0, 60.0),
+            node("tgt", 400.0, 0.0, 120.0, 60.0),
+        ];
+
+        // 3 parallel routes between src and tgt, spaced out by 15px along Y
+        let routes_spaced = vec![
+            RoutedPath {
+                edge_id: "e_bundle_0".to_string(),
+                points: vec![Point { x: 120.0, y: 15.0 }, Point { x: 400.0, y: 15.0 }],
+                source_port: port("src", Side::Right, Point { x: 120.0, y: 15.0 }),
+                target_port: port("tgt", Side::Left, Point { x: 400.0, y: 15.0 }),
+            },
+            RoutedPath {
+                edge_id: "e_bundle_1".to_string(),
+                points: vec![Point { x: 120.0, y: 30.0 }, Point { x: 400.0, y: 30.0 }],
+                source_port: port("src", Side::Right, Point { x: 120.0, y: 30.0 }),
+                target_port: port("tgt", Side::Left, Point { x: 400.0, y: 30.0 }),
+            },
+            RoutedPath {
+                edge_id: "e_bundle_2".to_string(),
+                points: vec![Point { x: 120.0, y: 45.0 }, Point { x: 400.0, y: 45.0 }],
+                source_port: port("src", Side::Right, Point { x: 120.0, y: 45.0 }),
+                target_port: port("tgt", Side::Left, Point { x: 400.0, y: 45.0 }),
+            },
+        ];
+
+        // Badges placed on their respective edges with adequate clearance
+        let badges_clear = vec![
+            badge("e_bundle_0", 200.0, 5.0, 50.0, 8.0),
+            badge("e_bundle_1", 200.0, 26.0, 50.0, 8.0),
+            badge("e_bundle_2", 200.0, 41.0, 50.0, 8.0),
+        ];
+
+        let d_clean = check_constraints(&nodes, &routes_spaced, &badges_clear, &[], &cfg());
+        assert!(
+            d_clean.is_empty(),
+            "clean bundle had unexpected violations: {:?}",
+            d_clean
+        );
+
+        // Now test conflicting badges: badge 0 and badge 1 overlap
+        let badges_overlap = vec![
+            badge("e_bundle_0", 200.0, 10.0, 50.0, 20.0),
+            badge("e_bundle_1", 200.0, 20.0, 50.0, 20.0), // overlaps badge 0!
+        ];
+        let d_badge_overlap =
+            check_constraints(&nodes, &routes_spaced, &badges_overlap, &[], &cfg());
+        assert!(d_badge_overlap
+            .iter()
+            .any(|d| d.code == "BADGE_BADGE_OVERLAP"));
+    }
+
+    #[test]
+    fn cyclic_graphs_and_feedback_chord_obstacle_penetrations() {
+        let nodes = vec![
+            node("n0", 0.0, 0.0, 80.0, 40.0),
+            node("n1", 200.0, 0.0, 80.0, 40.0),
+            node("n2", 100.0, 150.0, 80.0, 40.0),
+            // Central obstacle node placed right in the path of the feedback chord
+            node("obstacle", 60.0, 70.0, 60.0, 40.0),
+        ];
+
+        // Feedback chord from n2 back to n0 piercing the obstacle
+        let routes_piercing = vec![
+            RoutedPath {
+                edge_id: "e_0_1".to_string(),
+                points: vec![Point { x: 80.0, y: 20.0 }, Point { x: 200.0, y: 20.0 }],
+                source_port: port("n0", Side::Right, Point { x: 80.0, y: 20.0 }),
+                target_port: port("n1", Side::Left, Point { x: 200.0, y: 20.0 }),
+            },
+            RoutedPath {
+                edge_id: "e_1_2".to_string(),
+                points: vec![Point { x: 240.0, y: 40.0 }, Point { x: 140.0, y: 150.0 }],
+                source_port: port("n1", Side::Bottom, Point { x: 240.0, y: 40.0 }),
+                target_port: port("n2", Side::Top, Point { x: 140.0, y: 150.0 }),
+            },
+            // Straight chord n2 -> n0 directly passes through obstacle at (60..120, 70..110)
+            RoutedPath {
+                edge_id: "e_2_0_pierce".to_string(),
+                points: vec![Point { x: 140.0, y: 150.0 }, Point { x: 40.0, y: 40.0 }],
+                source_port: port("n2", Side::Top, Point { x: 140.0, y: 150.0 }),
+                target_port: port("n0", Side::Bottom, Point { x: 40.0, y: 40.0 }),
+            },
+        ];
+
+        let mut straight_cfg = cfg();
+        straight_cfg.edge_style = EdgeStyle::Straight;
+        let d_pierce = check_constraints(&nodes, &routes_piercing, &[], &[], &straight_cfg);
+        let pen: Vec<&LayoutDiagnostic> = d_pierce
+            .iter()
+            .filter(|d| d.code == "EDGE_NODE_PENETRATION")
+            .collect();
+        assert_eq!(pen.len(), 1);
+        assert_eq!(
+            pen[0].ids.as_deref(),
+            Some(&["e_2_0_pierce".to_string(), "obstacle".to_string()][..])
+        );
+
+        // Detour routing: chord routes around the obstacle through waypoints outside obstacle box
+        let routes_detour = vec![
+            routes_piercing[0].clone(),
+            routes_piercing[1].clone(),
+            RoutedPath {
+                edge_id: "e_2_0_detour".to_string(),
+                points: vec![
+                    Point { x: 100.0, y: 170.0 },
+                    Point { x: 0.0, y: 170.0 },
+                    Point { x: 0.0, y: 40.0 },
+                ],
+                source_port: port("n2", Side::Left, Point { x: 100.0, y: 170.0 }),
+                target_port: port("n0", Side::Bottom, Point { x: 0.0, y: 40.0 }),
+            },
+        ];
+        let d_detour = check_constraints(&nodes, &routes_detour, &[], &[], &cfg());
+        assert!(!d_detour.iter().any(|d| d.code == "EDGE_NODE_PENETRATION"));
+    }
+
+    #[test]
+    fn radial_polar_sector_clearance_and_multi_badge_chords() {
+        // Radial star layout: central root at (200, 200), leaves on ring
+        let root = node("root", 160.0, 160.0, 80.0, 80.0);
+        let leaf_0 = node("leaf_0", 350.0, 200.0, 60.0, 40.0); // right
+        let leaf_1 = node("leaf_1", 200.0, 350.0, 60.0, 40.0); // bottom
+        let leaf_2 = node("leaf_2", 50.0, 200.0, 60.0, 40.0); // left
+        let leaf_3 = node("leaf_3", 200.0, 50.0, 60.0, 40.0); // top
+
+        let nodes = vec![root, leaf_0, leaf_1, leaf_2, leaf_3];
+
+        // Chords between opposite leaves (e.g. leaf_0 <-> leaf_2)
+        // A direct straight chord leaf_0 -> leaf_2 pierces root in the center
+        let routes = vec![RoutedPath {
+            edge_id: "chord_piercing".to_string(),
+            points: vec![Point { x: 350.0, y: 200.0 }, Point { x: 110.0, y: 200.0 }],
+            source_port: port("leaf_0", Side::Left, Point { x: 350.0, y: 200.0 }),
+            target_port: port("leaf_2", Side::Right, Point { x: 110.0, y: 200.0 }),
+        }];
+
+        let mut straight_cfg = cfg();
+        straight_cfg.edge_style = EdgeStyle::Straight;
+        let d = check_constraints(&nodes, &routes, &[], &[], &straight_cfg);
+        let pens: Vec<&LayoutDiagnostic> = d
+            .iter()
+            .filter(|x| x.code == "EDGE_NODE_PENETRATION")
+            .collect();
+        assert_eq!(pens.len(), 1);
+        assert_eq!(
+            pens[0].ids.as_deref(),
+            Some(&["chord_piercing".to_string(), "root".to_string()][..])
+        );
+
+        // Badge sector clearance: badge placed in clear polar sector vs on root
+        let badge_on_root = vec![badge("chord_piercing", 180.0, 180.0, 40.0, 20.0)];
+        let d_badge = check_constraints(&nodes, &routes, &badge_on_root, &[], &straight_cfg);
+        assert!(d_badge.iter().any(|x| x.code == "BADGE_NODE_OVERLAP"));
+
+        let badge_clear = vec![badge("chord_piercing", 280.0, 240.0, 40.0, 20.0)];
+        let d_clear_badge = check_constraints(&nodes, &routes, &badge_clear, &[], &straight_cfg);
+        assert!(!d_clear_badge.iter().any(|x| x.code == "BADGE_NODE_OVERLAP"));
+    }
+
+    #[test]
+    fn zero_sized_nodes_and_boundary_epsilon_precision() {
+        // 1. Zero-width and zero-height nodes are identified under NON_FINITE_COORDINATE
+        let zero_nodes = vec![
+            node("n_zero_w", 10.0, 10.0, 0.0, 50.0),
+            node("n_zero_h", 100.0, 10.0, 50.0, 0.0),
+            node("n_normal", 200.0, 10.0, 50.0, 50.0),
+        ];
+        let d_zero = check_constraints(&zero_nodes, &[], &[], &[], &cfg());
+        let non_finite_diags: Vec<&LayoutDiagnostic> = d_zero
+            .iter()
+            .filter(|x| x.code == "NON_FINITE_COORDINATE")
+            .collect();
+        assert_eq!(non_finite_diags.len(), 2);
+
+        // 2. Exact boundary touch between nodes (x = 100) -> NO NODE_NODE_OVERLAP
+        let touch_nodes = vec![
+            node("n_left", 0.0, 0.0, 100.0, 50.0),
+            node("n_right", 100.0, 0.0, 100.0, 50.0),
+        ];
+        let mut overlap_count = 0usize;
+        scan_node_node_overlaps(&touch_nodes, 1e-4, |_, _| overlap_count += 1);
+        assert_eq!(overlap_count, 0);
+
+        // 3. Edge running along the exterior boundary of a node -> NO EDGE_NODE_PENETRATION
+        // Node sits at (0..100, 0..50). Edge runs from (0, 0) to (100, 0) right along the top boundary.
+        let boundary_route = vec![RoutedPath {
+            edge_id: "e_boundary".to_string(),
+            points: vec![Point { x: 0.0, y: 0.0 }, Point { x: 100.0, y: 0.0 }],
+            source_port: port("n_left", Side::Top, Point { x: 0.0, y: 0.0 }),
+            target_port: port("n_right", Side::Top, Point { x: 100.0, y: 0.0 }),
+        }];
+        let mut pen_count = 0usize;
+        scan_edge_node_penetrations(&touch_nodes, &boundary_route, 1e-4, |_, _, _| {
+            pen_count += 1
+        });
+        assert_eq!(pen_count, 0);
+
+        // 4. Badges touching exact boundary (x = 100) -> NO BADGE_BADGE_OVERLAP
+        let touch_badges = vec![
+            badge("e0", 0.0, 0.0, 100.0, 20.0),
+            badge("e1", 100.0, 0.0, 100.0, 20.0),
+        ];
+        let mut badge_overlap_count = 0usize;
+        scan_badge_badge_overlaps(&touch_badges, 1e-4, |_, _| badge_overlap_count += 1);
+        assert_eq!(badge_overlap_count, 0);
+    }
+
+    #[test]
+    fn stress_test_dense_parallel_bundle_badge_penetrations_and_overlaps() {
+        let nodes = vec![
+            node("src", 0.0, 0.0, 100.0, 500.0),
+            node("tgt", 600.0, 0.0, 100.0, 500.0),
+        ];
+
+        // 16 dense parallel routes running from src (x=100) to tgt (x=600) at y = 20, 40, 60, ..., 320
+        let n_routes = 16;
+        let mut routes = Vec::new();
+        for i in 0..n_routes {
+            let y = 20.0 + (i as f64) * 20.0;
+            routes.push(RoutedPath {
+                edge_id: format!("e_{}", i),
+                points: vec![Point { x: 100.0, y }, Point { x: 600.0, y }],
+                source_port: port("src", Side::Right, Point { x: 100.0, y }),
+                target_port: port("tgt", Side::Left, Point { x: 600.0, y }),
+            });
+        }
+
+        // Clean badges: placed with staggered X and height=10 so they don't overlap or get penetrated
+        let mut clean_badges = Vec::new();
+        for i in 0..n_routes {
+            let y = 20.0 + (i as f64) * 20.0;
+            let x = 150.0 + (i as f64) * 25.0;
+            clean_badges.push(badge(&format!("e_{}", i), x, y - 5.0, 40.0, 10.0));
+        }
+
+        let d_clean = check_constraints(&nodes, &routes, &clean_badges, &[], &cfg());
+        assert!(
+            d_clean.is_empty(),
+            "clean bundle should have 0 violations: {:?}",
+            d_clean
+        );
+
+        // Adversarial badges:
+        // 1. Badge on e_2 (y=60) placed at x=400..450, y=45..85 (height 40) penetrates e_3 (y=80)
+        // 2. Badge on e_6 (x in 200..240, y in 130..150) and Badge on e_7 (x in 210..250, y in 145..165) overlap
+        // 3. Badge on e_10 placed at x=500..550, y=205..245 (height 40) penetrates e_11 (y=240)
+        let mut adversarial_badges = clean_badges.clone();
+        adversarial_badges[2] = badge("e_2", 400.0, 45.0, 50.0, 40.0);
+        adversarial_badges[6] = badge("e_6", 200.0, 130.0, 40.0, 20.0);
+        adversarial_badges[7] = badge("e_7", 210.0, 145.0, 40.0, 20.0);
+        adversarial_badges[10] = badge("e_10", 500.0, 205.0, 50.0, 40.0);
+
+        let d_adv = check_constraints(&nodes, &routes, &adversarial_badges, &[], &cfg());
+        let pens: Vec<&LayoutDiagnostic> = d_adv
+            .iter()
+            .filter(|x| x.code == "BADGE_EDGE_PENETRATION")
+            .collect();
+        let badge_overlaps: Vec<&LayoutDiagnostic> = d_adv
+            .iter()
+            .filter(|x| x.code == "BADGE_BADGE_OVERLAP")
+            .collect();
+
+        assert_eq!(
+            pens.len(),
+            2,
+            "Expected exactly 2 badge-edge penetrations, got: {:?}",
+            pens
+        );
+        assert_eq!(
+            badge_overlaps.len(),
+            1,
+            "Expected exactly 1 badge-badge overlap, got: {:?}",
+            badge_overlaps
+        );
+    }
+
+    #[test]
+    fn all_ten_diagnostic_codes_negative_assertion_paths_and_descriptions() {
+        // Base clean layout: 2 nodes, 1 valid route e0, no badges
+        let (clean_nodes, clean_routes) = clean_layout();
+        let clean_ids = vec!["e0".to_string()];
+
+        // 1. Invariant: Clean layout produces ZERO diagnostics of ANY code
+        let d_clean = check_constraints(&clean_nodes, &clean_routes, &[], &clean_ids, &cfg());
+        assert!(
+            d_clean.is_empty(),
+            "clean layout had diagnostics: {:?}",
+            d_clean
+        );
+
+        // 2. Test each of the 10 diagnostic codes individually:
+
+        // CODE 1: NON_FINITE_COORDINATE
+        let bad_node = vec![node("n_nan", f64::NAN, 0.0, 100.0, 50.0)];
+        let d1 = check_constraints(&bad_node, &[], &[], &[], &cfg());
+        let diag1 = d1
+            .iter()
+            .find(|d| d.code == "NON_FINITE_COORDINATE")
+            .unwrap();
+        assert_eq!(diag1.severity, "error");
+        assert!(diag1
+            .message
+            .contains("Node 'n_nan' has a non-finite or non-positive box"));
+        assert_eq!(diag1.ids.as_deref(), Some(&["n_nan".to_string()][..]));
+
+        // CODE 2: NODE_NODE_OVERLAP
+        let overlap_nodes = vec![
+            node("n1", 0.0, 0.0, 100.0, 50.0),
+            node("n2", 50.0, 20.0, 100.0, 50.0),
+        ];
+        let d2 = check_constraints(&overlap_nodes, &[], &[], &[], &cfg());
+        let diag2 = d2.iter().find(|d| d.code == "NODE_NODE_OVERLAP").unwrap();
+        assert_eq!(diag2.severity, "error");
+        assert!(diag2.message.contains("Nodes 'n1' and 'n2' overlap"));
+        assert_eq!(
+            diag2.ids.as_deref(),
+            Some(&["n1".to_string(), "n2".to_string()][..])
+        );
+
+        // CODE 3: EDGE_NODE_PENETRATION
+        let mut nodes3 = clean_nodes.clone();
+        nodes3.push(node("obstacle", 20.0, 100.0, 60.0, 40.0));
+        let d3 = check_constraints(&nodes3, &clean_routes, &[], &clean_ids, &cfg());
+        let diag3 = d3
+            .iter()
+            .find(|d| d.code == "EDGE_NODE_PENETRATION")
+            .unwrap();
+        assert_eq!(diag3.severity, "error");
+        assert!(diag3
+            .message
+            .contains("passes through the interior of node 'obstacle'"));
+        assert_eq!(
+            diag3.ids.as_deref(),
+            Some(&["e0".to_string(), "obstacle".to_string()][..])
+        );
+
+        // CODE 4: BADGE_NODE_OVERLAP
+        let badge_on_node = vec![badge("e0", 10.0, 10.0, 40.0, 20.0)];
+        let d4 = check_constraints(
+            &clean_nodes,
+            &clean_routes,
+            &badge_on_node,
+            &clean_ids,
+            &cfg(),
+        );
+        let diag4 = d4.iter().find(|d| d.code == "BADGE_NODE_OVERLAP").unwrap();
+        assert_eq!(diag4.severity, "error");
+        assert!(diag4
+            .message
+            .contains("Badge for edge 'e0' overlaps node 'a'"));
+        assert_eq!(
+            diag4.ids.as_deref(),
+            Some(&["e0".to_string(), "a".to_string()][..])
+        );
+
+        // CODE 5: BADGE_BADGE_OVERLAP
+        let badges_overlap = vec![
+            badge("e0", 200.0, 200.0, 50.0, 30.0),
+            badge("e1", 220.0, 210.0, 50.0, 30.0),
+        ];
+        let d5 = check_constraints(
+            &clean_nodes,
+            &clean_routes,
+            &badges_overlap,
+            &clean_ids,
+            &cfg(),
+        );
+        let diag5 = d5.iter().find(|d| d.code == "BADGE_BADGE_OVERLAP").unwrap();
+        assert_eq!(diag5.severity, "error");
+        assert!(diag5
+            .message
+            .contains("Badges for edges 'e0' and 'e1' overlap"));
+        assert_eq!(
+            diag5.ids.as_deref(),
+            Some(&["e0".to_string(), "e1".to_string()][..])
+        );
+
+        // CODE 6: BADGE_EDGE_PENETRATION
+        let mut routes6 = clean_routes.clone();
+        routes6.push(RoutedPath {
+            edge_id: "e1".to_string(),
+            points: vec![Point { x: 0.0, y: 120.0 }, Point { x: 200.0, y: 120.0 }],
+            source_port: port("a", Side::Left, Point { x: 0.0, y: 120.0 }),
+            target_port: port("b", Side::Right, Point { x: 200.0, y: 120.0 }),
+        });
+        let badges6 = vec![badge("e0", 40.0, 100.0, 40.0, 40.0)]; // covers y=100..140, penetrated by e1 at y=120
+        let d6 = check_constraints(&clean_nodes, &routes6, &badges6, &[], &cfg());
+        let diag6 = d6
+            .iter()
+            .find(|d| d.code == "BADGE_EDGE_PENETRATION")
+            .unwrap();
+        assert_eq!(diag6.severity, "error");
+        assert!(diag6
+            .message
+            .contains("Badge for edge 'e0' is penetrated by segment 0 of edge 'e1'"));
+        assert_eq!(
+            diag6.ids.as_deref(),
+            Some(&["e0".to_string(), "e1".to_string()][..])
+        );
+
+        // CODE 7: COLLINEAR_EDGE_OVERLAP
+        let routes7 = vec![
+            clean_routes[0].clone(),
+            RoutedPath {
+                edge_id: "e_collinear".to_string(),
+                points: vec![Point { x: 50.0, y: 80.0 }, Point { x: 50.0, y: 180.0 }],
+                source_port: port("a", Side::Bottom, Point { x: 50.0, y: 80.0 }),
+                target_port: port("b", Side::Top, Point { x: 50.0, y: 180.0 }),
+            },
+        ];
+        let d7 = check_constraints(&clean_nodes, &routes7, &[], &[], &cfg());
+        let diag7 = d7
+            .iter()
+            .find(|d| d.code == "COLLINEAR_EDGE_OVERLAP")
+            .unwrap();
+        assert_eq!(diag7.severity, "error");
+        assert!(diag7
+            .message
+            .contains("share a collinear overlapping segment"));
+        assert_eq!(
+            diag7.ids.as_deref(),
+            Some(&["e0".to_string(), "e_collinear".to_string()][..])
+        );
+
+        // CODE 8: NON_ORTHOGONAL_SEGMENT
+        let mut routes8 = clean_routes.clone();
+        routes8[0].points = vec![
+            Point { x: 50.0, y: 50.0 },
+            Point { x: 75.0, y: 120.0 }, // diagonal slant
+            Point { x: 50.0, y: 200.0 },
+        ];
+        let d8 = check_constraints(&clean_nodes, &routes8, &[], &clean_ids, &cfg());
+        let diag8 = d8
+            .iter()
+            .find(|d| d.code == "NON_ORTHOGONAL_SEGMENT")
+            .unwrap();
+        assert_eq!(diag8.severity, "error");
+        assert!(diag8.message.contains("is not axis-aligned"));
+        assert_eq!(diag8.ids.as_deref(), Some(&["e0".to_string()][..]));
+
+        // CODE 9: ENDPOINT_OFF_BOUNDARY
+        let mut routes9 = clean_routes.clone();
+        routes9[0].source_port.point = Point { x: 50.0, y: 25.0 }; // inside node "a", not on boundary
+        let d9 = check_constraints(&clean_nodes, &routes9, &[], &clean_ids, &cfg());
+        let diag9 = d9
+            .iter()
+            .find(|d| d.code == "ENDPOINT_OFF_BOUNDARY")
+            .unwrap();
+        assert_eq!(diag9.severity, "error");
+        assert!(diag9.message.contains("is not on the boundary of node 'a'"));
+        assert_eq!(
+            diag9.ids.as_deref(),
+            Some(&["e0".to_string(), "a".to_string()][..])
+        );
+
+        // CODE 10: MISSING_ROUTE
+        let expected_ids = vec!["e0".to_string(), "e_unrouted".to_string()];
+        let d10 = check_constraints(&clean_nodes, &clean_routes, &[], &expected_ids, &cfg());
+        let diag10 = d10.iter().find(|d| d.code == "MISSING_ROUTE").unwrap();
+        assert_eq!(diag10.severity, "error");
+        assert!(diag10.message.contains("Edge 'e_unrouted' has no route"));
+        assert_eq!(diag10.ids.as_deref(), Some(&["e_unrouted".to_string()][..]));
     }
 }

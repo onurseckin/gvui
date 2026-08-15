@@ -138,19 +138,48 @@ describe("computeCustomEngineGraphLayout label measurement forwarding", () => {
     }));
   });
 
+  const createFakeResult = (): CustomLayoutResult => ({
+    nodes: [],
+    edges: [],
+    badges: [],
+    crossings: [],
+    validation: {
+      isValid: true,
+      metrics: {
+        crossings: 0,
+        geometricCrossings: 0,
+        bendCount: 0,
+        totalLength: 0,
+        straightChainRatio: 1,
+        area: 0,
+        aspectRatio: 1,
+        laneDepthMax: 0,
+        portSideBalance: 0,
+        leaderCount: 0,
+        labelsTruncated: 0,
+        nodeCount: 0,
+        edgeCount: 0,
+        rankCount: 0,
+        dummyCount: 0,
+        nodeNodeOverlaps: 0,
+        edgeNodePenetrations: 0,
+        badgeNodeOverlaps: 0,
+        badgeBadgeOverlaps: 0,
+        badgeEdgePenetrations: 0,
+        unresolvedRouteCount: 0,
+        unresolvedBadgeCount: 0,
+        collinearEdgeOverlaps: 0,
+      },
+      crossings: [],
+      diagnostics: [],
+    },
+    status: "success",
+  });
+
   it("forwards measured labelWidth/labelHeight for a labeled edge to the engine", async () => {
     let capturedEdges: NormalizedEdge[] | undefined;
 
-    const fakeResult: CustomLayoutResult = {
-      nodes: [],
-      edges: [],
-      badges: [],
-      crossings: [],
-      // The mock only needs to satisfy the shape computeCustomEngineGraphLayout reads before this
-      // test's assertions run (it never inspects `validation`), so a minimal bridge here is safe.
-      validation: undefined as unknown as CustomLayoutResult["validation"],
-      status: "success",
-    };
+    const fakeResult = createFakeResult();
 
     mock.module("./custom/computeCustomLayout", () => ({
       computeCustomLayout: (
@@ -189,14 +218,7 @@ describe("computeCustomEngineGraphLayout label measurement forwarding", () => {
   it("omits labelWidth/labelHeight for an edge with no label", async () => {
     let capturedEdges: NormalizedEdge[] | undefined;
 
-    const fakeResult: CustomLayoutResult = {
-      nodes: [],
-      edges: [],
-      badges: [],
-      crossings: [],
-      validation: undefined as unknown as CustomLayoutResult["validation"],
-      status: "success",
-    };
+    const fakeResult = createFakeResult();
 
     mock.module("./custom/computeCustomLayout", () => ({
       computeCustomLayout: (

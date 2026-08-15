@@ -48,9 +48,9 @@ export interface RouteSearchStats {
 
 export interface LayoutDiagnostic {
   code: string;
-  severity: "error" | "warning";
+  severity: "error" | "warning" | "info" | string;
   message: string;
-  ids: string[];
+  ids?: string[];
 }
 
 export interface NormalizedNode {
@@ -290,6 +290,8 @@ export interface LayoutMetrics {
   badgeEdgePenetrations: number;
   unresolvedRouteCount: number;
   unresolvedBadgeCount: number;
+  /** Pairs of edges drawing an axis-aligned run along the same line, so that one hides the other. */
+  collinearEdgeOverlaps: number;
 }
 
 /** Per-phase wall-clock in milliseconds. Mirrors Rust's `PhaseTimings`. */
@@ -373,9 +375,49 @@ export interface CustomLayoutResult {
   badges: BadgePlacement[];
   crossings: EdgeCrossing[];
   validation: LayoutValidationResult;
-  status: "success" | "unresolved_soft_conflicts" | "invalid_hard_failure";
+  status: "success" | "unresolved_soft_conflicts" | "invalid_hard_failure" | string;
   optimizationStats?: OptimizationStats;
   nodePositions?: Map<string, Point>;
   rankBandMap?: Map<number, { topY: number; height: number; centerY: number }>;
   boundingBox?: Rect;
+}
+
+/** Error thrown when data returned from WebAssembly violates the CustomLayoutResult contract. */
+export class WasmLayoutBoundaryError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "WasmLayoutBoundaryError";
+  }
+}
+
+/**
+ * Type guard asserting that an unknown value received from the WASM bridge conforms
+ * to the CustomLayoutResult shape.
+ */
+export function isCustomLayoutResult(val: unknown): val is CustomLayoutResult {
+  if (typeof val !== "object" || val === null) {
+    return false;
+  }
+  const candidate = val as Record<string, unknown>;
+  return (
+    Array.isArray(candidate.nodes) &&
+    Array.isArray(candidate.edges) &&
+    Array.isArray(candidate.badges) &&
+    Array.isArray(candidate.crossings) &&
+    typeof candidate.status === "string" &&
+    typeof candidate.validation === "object" &&
+    candidate.validation !== null
+  );
+}
+
+/**
+ * Validates and casts an unknown boundary payload to CustomLayoutResult.
+ */
+export function validateWasmLayoutResult(val: unknown): CustomLayoutResult {
+  if (!isCustomLayoutResult(val)) {
+    throw new WasmLayoutBoundaryError(
+      "Invalid payload returned across WebAssembly layout boundary",
+    );
+  }
+  return val;
 }
