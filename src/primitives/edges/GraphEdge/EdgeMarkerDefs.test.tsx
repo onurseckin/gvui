@@ -30,6 +30,26 @@ describe("EdgeMarkerDefs", () => {
     expect(html).toContain('id="edge-circle-connected"');
   });
 
+  it("harmonizes arrowhead marker colors dynamically using fill='context-stroke'", () => {
+    const html = renderToString(
+      <svg>
+        <EdgeMarkerDefs />
+      </svg>,
+    );
+
+    // All arrowheads and connected circles should dynamically inherit stroke color via context-stroke
+    expect(html).toContain('fill="context-stroke"');
+
+    // Confirm that hardcoded color fills are not used on arrowhead paths
+    expect(html).not.toContain('fill="#06b6d4"');
+    expect(html).not.toContain('fill="#6366f1"');
+    expect(html).not.toContain('fill="#64748b"');
+    expect(html).not.toContain('fill="#f43f5e"');
+    expect(html).not.toContain('fill="#f59e0b"');
+    expect(html).not.toContain('fill="#10b981"');
+    expect(html).not.toContain('fill="#eab308"');
+  });
+
   it("supports idPrefix when provided", () => {
     const html = renderToString(
       <svg>

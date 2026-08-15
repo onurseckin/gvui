@@ -8,6 +8,54 @@ export interface CollisionOptions {
   maxDisplacement?: number;
 }
 
+/**
+ * Computes the exact arc-length parametric midpoint along a polyline path.
+ * Returns null if points array is empty or has fewer than 2 points.
+ */
+export function computePolylineMidpoint(points: readonly Point[]): Point | null {
+  if (!points || points.length < 2) return null;
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
+      return null;
+    }
+  }
+  if (points.length === 2) {
+    return {
+      x: (points[0].x + points[1].x) / 2,
+      y: (points[0].y + points[1].y) / 2,
+    };
+  }
+
+  let totalLength = 0;
+  const segLengths: number[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segLengths.push(len);
+    totalLength += len;
+  }
+
+  if (!Number.isFinite(totalLength) || totalLength === 0) return points[0];
+
+  const target = totalLength / 2;
+  let accumulated = 0;
+  for (let i = 0; i < segLengths.length; i++) {
+    const segLen = segLengths[i];
+    if (accumulated + segLen >= target) {
+      const t = segLen > 0 ? (target - accumulated) / segLen : 0;
+      return {
+        x: points[i].x + t * (points[i + 1].x - points[i].x),
+        y: points[i].y + t * (points[i + 1].y - points[i].y),
+      };
+    }
+    accumulated += segLen;
+  }
+
+  return points[points.length - 1];
+}
+
 export interface CollisionResolutionResult {
   rect: Rect;
   adjusted: boolean;
@@ -229,4 +277,127 @@ export function computeSafeBadgePlacement(
     anchorPoint: resolution.anchorPoint,
     leaderPoints: resolution.leaderPoints ?? edge.leaderPoints,
   };
+}
+
+export interface SafeBadgePlacement {
+  x: number;
+  y: number;
+  badgeRect?: Rect;
+  anchorPoint?: Point;
+  leaderPoints?: Point[];
+}
+
+/**
+ * Computes the total Euclidean arc length of a polyline.
+ * Returns 0 if points array has fewer than 2 points.
+ */
+export function computePolylineLength(points: readonly Point[]): number {
+  if (!points || points.length < 2) return 0;
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
+      return 0;
+    }
+  }
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    total += Math.sqrt(dx * dx + dy * dy);
+  }
+  return Number.isFinite(total) ? total : 0;
+}
+
+/**
+ * Resolves a safe coordinate and layout geometry for an edge badge.
+ * - Respects pre-computed `edge.badgeRect` if present with positive dimensions and finite coordinates.
+ * - Respects explicit non-origin finite `labelX` / `labelY`.
+ * - Computes polyline midpoint if `edge.points` has non-zero total arc length (even if midpoint is (0,0)).
+ * - Strictly suppresses (returns null) for unpositioned (0,0) ghost badges, empty/zero-length polylines at origin, or missing/non-finite coordinates.
+ */
+export function resolveSafeBadgePlacement(edge: PositionedEdge): SafeBadgePlacement | null {
+  // Case 1: Pre-computed layout bounding box
+  if (
+    edge.badgeRect &&
+    Number.isFinite(edge.badgeRect.x) &&
+    Number.isFinite(edge.badgeRect.y) &&
+    Number.isFinite(edge.badgeRect.width) &&
+    Number.isFinite(edge.badgeRect.height) &&
+    edge.badgeRect.width > 0 &&
+    edge.badgeRect.height > 0
+  ) {
+    // Guard against uninitialized default origin badgeRect:
+    // If badgeRect is at (0,0), anchorPoint is missing, and points is empty/missing or zero-length, treat as uninitialized default and suppress
+    const isOriginBadgeRect = edge.badgeRect.x === 0 && edge.badgeRect.y === 0;
+    const hasNoAnchor = !edge.anchorPoint;
+    const hasNoOrZeroPoints =
+      !edge.points ||
+      edge.points.length === 0 ||
+      (computePolylineLength(edge.points) === 0 &&
+        edge.points[0]?.x === 0 &&
+        edge.points[0]?.y === 0);
+
+    if (isOriginBadgeRect && hasNoAnchor && hasNoOrZeroPoints) {
+      return null;
+    }
+
+    return {
+      x: edge.badgeRect.x + edge.badgeRect.width / 2,
+      y: edge.badgeRect.y + edge.badgeRect.height / 2,
+      badgeRect: edge.badgeRect,
+      anchorPoint: edge.anchorPoint,
+      leaderPoints: edge.leaderPoints,
+    };
+  }
+
+  // Case 2: Explicit non-zero label coordinates
+  if (
+    typeof edge.labelX === "number" &&
+    typeof edge.labelY === "number" &&
+    Number.isFinite(edge.labelX) &&
+    Number.isFinite(edge.labelY) &&
+    (edge.labelX !== 0 || edge.labelY !== 0)
+  ) {
+    return {
+      x: edge.labelX,
+      y: edge.labelY,
+      anchorPoint: edge.anchorPoint,
+      leaderPoints: edge.leaderPoints,
+    };
+  }
+
+  // Case 3: Polyline midpoint calculation
+  if (edge.points && edge.points.length >= 2) {
+    const totalLength = computePolylineLength(edge.points);
+    if (totalLength > 0) {
+      const mid = computePolylineMidpoint(edge.points);
+      if (mid) {
+        return {
+          x: mid.x,
+          y: mid.y,
+          anchorPoint: edge.anchorPoint,
+          leaderPoints: edge.leaderPoints,
+        };
+      }
+    } else {
+      // Coincident points: allow if at non-origin position and finite
+      const first = edge.points[0];
+      if (
+        first &&
+        Number.isFinite(first.x) &&
+        Number.isFinite(first.y) &&
+        (first.x !== 0 || first.y !== 0)
+      ) {
+        return {
+          x: first.x,
+          y: first.y,
+          anchorPoint: edge.anchorPoint,
+          leaderPoints: edge.leaderPoints,
+        };
+      }
+    }
+  }
+
+  // Strict Invariant: Suppress ghost text when no valid position exists or unassigned (0,0)
+  return null;
 }

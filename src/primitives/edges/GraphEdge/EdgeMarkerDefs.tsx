@@ -24,7 +24,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="var(--edge-marker, #71717a)"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -45,7 +45,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="var(--accent, #818cf8)"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -66,7 +66,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="var(--accent, #818cf8)"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -87,7 +87,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#06b6d4"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -108,7 +108,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#52525b"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -129,7 +129,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#6366f1"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -150,7 +150,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#64748b"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -171,7 +171,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#f43f5e"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -192,7 +192,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#f59e0b"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -213,7 +213,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#10b981"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -234,7 +234,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#eab308"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -280,7 +280,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
           cx="5"
           cy="5"
           r="3.5"
-          fill="var(--accent, #818cf8)"
+          fill="context-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />

@@ -14,9 +14,9 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
   if (findings.length === 0 && repairRounds === 0 && node.kind !== "critic") {
     return (
       <div className="drawer-tab-content">
-        <p className="drawer-prose" style={{ color: "#71717a", padding: "16px" }}>
+        <div className="drawer-empty-state">
           No validation findings or pushback cycles recorded for this node.
-        </p>
+        </div>
       </div>
     );
   }

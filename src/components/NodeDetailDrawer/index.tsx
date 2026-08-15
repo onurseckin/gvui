@@ -12,7 +12,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphNodeData, IoPort } from "../../types/graphData";
-import { edgeToPort } from "./DrawerSection";
+import { edgeToPort } from "./streamUtils";
 import { AssetsTab } from "./tabs/AssetsTab";
 import { CommandsTab } from "./tabs/CommandsTab";
 import { FilesTab } from "./tabs/FilesTab";
@@ -40,8 +40,10 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelectedNodeId(null);
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
   }, [selectedNodeId, setSelectedNodeId]);
 
   const node: GraphNodeData | null = useMemo(() => {

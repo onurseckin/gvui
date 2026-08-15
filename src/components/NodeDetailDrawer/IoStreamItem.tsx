@@ -1,4 +1,5 @@
 import {
+  IconAlignLeft,
   IconCheck,
   IconChevronDown,
   IconChevronRight,
@@ -10,7 +11,7 @@ import type { FC, MouseEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { formatTokens } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import type { IoPort } from "../../types/graphData";
-import { formatBytes, getByteLength } from "./streamUtils";
+import { copyToClipboard, formatBytes, getByteLength } from "./streamUtils";
 
 export interface IoStreamItemProps {
   port: IoPort;
@@ -21,8 +22,9 @@ export interface IoStreamItemProps {
 
 /**
  * Interactive, expandable/collapsible accordion item for Input & Output streams.
- * Includes unclipped payload rendering, clipboard copy, byte/token counters,
- * and eliminates boilerplate `(handoff)` text and redundant `SUMMARY` pills.
+ * Includes unclipped payload rendering, clipboard copy with visual feedback ("Copied!"),
+ * byte, word, and token estimation counters, and eliminates boilerplate `(handoff)` text
+ * and redundant `SUMMARY` pills.
  */
 export const IoStreamItem: FC<IoStreamItemProps> = ({
   port,
@@ -48,15 +50,23 @@ export const IoStreamItem: FC<IoStreamItemProps> = ({
   const payloadText = port.preview ?? "";
   const byteCount = useMemo(() => getByteLength(payloadText), [payloadText]);
 
+  const wordCount = useMemo(() => {
+    const trimmed = payloadText.trim();
+    return trimmed ? trimmed.split(/\s+/).length : 0;
+  }, [payloadText]);
+
+  const estimatedTokens = useMemo(() => {
+    if (typeof port.tokens === "number") return port.tokens;
+    if (!payloadText) return undefined;
+    // Standard rule of thumb: ~4 bytes per token for typical code / prose
+    return Math.max(1, Math.ceil(byteCount / 4));
+  }, [port.tokens, payloadText, byteCount]);
+
   const handleCopy = useCallback(
-    (e: MouseEvent<HTMLButtonElement>) => {
+    async (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       const textToCopy = payloadText || displayLabel;
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(textToCopy).catch(() => {
-          // Clipboard write failure handled gracefully in headless environments
-        });
-      }
+      await copyToClipboard(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     },
@@ -95,6 +105,18 @@ export const IoStreamItem: FC<IoStreamItemProps> = ({
             <span className="drawer-stream-chip drawer-stream-chip--tokens">
               {formatTokens(port.tokens)} tok
             </span>
+          ) : estimatedTokens !== undefined ? (
+            <span
+              className="drawer-stream-chip drawer-stream-chip--tokens"
+              title="Estimated token count"
+            >
+              ~{formatTokens(estimatedTokens)} tok
+            </span>
+          ) : null}
+          {wordCount > 0 ? (
+            <span className="drawer-stream-chip drawer-stream-chip--words">
+              {wordCount.toLocaleString()} words
+            </span>
           ) : null}
           {byteCount > 0 ? (
             <span className="drawer-stream-chip drawer-stream-chip--bytes">
@@ -111,6 +133,15 @@ export const IoStreamItem: FC<IoStreamItemProps> = ({
               {typeof port.tokens === "number" ? (
                 <span className="drawer-stream-counter-item">
                   <IconCpu size={12} /> {formatTokens(port.tokens)} tokens
+                </span>
+              ) : estimatedTokens !== undefined ? (
+                <span className="drawer-stream-counter-item">
+                  <IconCpu size={12} /> ~{formatTokens(estimatedTokens)} tokens (est)
+                </span>
+              ) : null}
+              {wordCount > 0 ? (
+                <span className="drawer-stream-counter-item">
+                  <IconAlignLeft size={12} /> {wordCount.toLocaleString()} words
                 </span>
               ) : null}
               {byteCount > 0 ? (

@@ -1,22 +1,31 @@
-import type { FC, MouseEvent } from "react";
+import type { CSSProperties, FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useCallback } from "react";
 
 import type { PositionedEdge } from "../../../types/graphData";
 
 import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
+import { resolveSafeBadgePlacement } from "./collision";
 import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
 import "./GraphEdge.css";
 
-export type { CollisionOptions, CollisionResolutionResult } from "./collision";
+export type { CollisionOptions, CollisionResolutionResult, SafeBadgePlacement } from "./collision";
 export {
+  computePolylineLength,
+  computePolylineMidpoint,
   computeSafeBadgePlacement,
   doesRectOverlap,
   findCollidingNodes,
   preventBadgeCollision,
   rectContainsPoint,
+  resolveSafeBadgePlacement,
 } from "./collision";
 export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
-export { EdgeBadgeOverlay, sanitizeStepBadge } from "./EdgeBadgeOverlay";
+export {
+  EdgeBadgeOverlay,
+  MAX_BADGE_WIDTH,
+  resolveEdgeDisplayText,
+  sanitizeStepBadge,
+} from "./EdgeBadgeOverlay";
 export type { EdgeMarkerDefsProps } from "./EdgeMarkerDefs";
 export { EdgeMarkerDefs } from "./EdgeMarkerDefs";
 export type { EdgeKindDescriptor, SemanticEdgeKind } from "./edgeKinds";
@@ -39,6 +48,7 @@ export interface GraphEdgeProps {
   isHighlighted?: boolean;
   renderBadge?: boolean;
   showPorts?: boolean;
+  sourceAccentColor?: string;
   onClick?: (edgeId: string) => void;
 }
 
@@ -54,6 +64,7 @@ const areGraphEdgePropsEqual = (prevProps: GraphEdgeProps, nextProps: GraphEdgeP
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.renderBadge === nextProps.renderBadge &&
     prevProps.showPorts === nextProps.showPorts &&
+    prevProps.sourceAccentColor === nextProps.sourceAccentColor &&
     prevProps.onClick === nextProps.onClick
   );
 };
@@ -66,31 +77,54 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     targetX,
     targetY,
     isSelected = false,
+    isHovered = false,
     isHighlighted = false,
     renderBadge = true,
     showPorts = false,
+    sourceAccentColor,
     onClick,
   }) => {
     let dPath = edge.path || "";
-    let badgeX = edge.labelX ?? 0;
-    let badgeY = edge.labelY ?? 0;
+    let placement = resolveSafeBadgePlacement(edge);
 
     if (
       (!dPath || dPath.trim().length === 0) &&
       typeof sourceX === "number" &&
       typeof sourceY === "number" &&
       typeof targetX === "number" &&
-      typeof targetY === "number"
+      typeof targetY === "number" &&
+      Number.isFinite(sourceX) &&
+      Number.isFinite(sourceY) &&
+      Number.isFinite(targetX) &&
+      Number.isFinite(targetY)
     ) {
       dPath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
-      badgeX = (sourceX + targetX) / 2;
-      badgeY = (sourceY + targetY) / 2;
+      if (!placement && (sourceX !== targetX || sourceY !== targetY)) {
+        placement = {
+          x: (sourceX + targetX) / 2,
+          y: (sourceY + targetY) / 2,
+        };
+      }
     }
+
+    const isInteractive = Boolean(onClick);
 
     const handleEdgeClick = useCallback(
       (e: MouseEvent<SVGGElement>): void => {
         e.stopPropagation();
         onClick?.(edge.id);
+      },
+      [onClick, edge.id],
+    );
+
+    const handleKeyDown = useCallback(
+      (e: KeyboardEvent<SVGGElement>): void => {
+        if (!onClick) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick(edge.id);
+        }
       },
       [onClick, edge.id],
     );
@@ -109,7 +143,9 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     );
 
     const glowColor =
-      edge.traffic?.glowColor ?? (edge.isCycle ? "#f59e0b" : isHighTraffic ? "#06b6d4" : undefined);
+      edge.traffic?.glowColor ??
+      sourceAccentColor ??
+      (edge.isCycle ? "#f59e0b" : isHighTraffic ? "#06b6d4" : undefined);
 
     const markerId = isSelected
       ? "url(#edge-arrowhead-selected)"
@@ -119,10 +155,49 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
           ? "url(#edge-arrowhead-cycle)"
           : `url(#${descriptor.markerId})`;
 
+    const edgeGroupStyle: CSSProperties | undefined = sourceAccentColor
+      ? ({ "--edge-source-accent": sourceAccentColor } as CSSProperties)
+      : undefined;
+
+    const ariaLabel = isInteractive
+      ? edge.label
+        ? `Edge ${edge.label}`
+        : `Edge ${edge.id}`
+      : undefined;
+
+    const groupClassName = [
+      "graph-edge-group",
+      `kind-${semanticKind}`,
+      isHighTraffic && "high-traffic",
+      isSelected && "selected",
+      isHighlightedEdge && "is-highlighted",
+      isHovered && "is-hovered",
+      isInteractive && "is-clickable",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const pathClassName = [
+      "graph-edge-path",
+      `kind-${semanticKind}`,
+      isSelected && "selected",
+      isHighlightedEdge && "is-highlighted",
+      isHovered && "is-hovered",
+      (edge.isCycle || semanticKind === "loop") && "cycle",
+      isHighTraffic && "high-traffic",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return (
       <g
-        className={`graph-edge-group kind-${semanticKind} ${isHighTraffic ? "high-traffic" : ""} ${isSelected ? "selected" : ""} ${isHighlightedEdge ? "is-highlighted" : ""}`}
-        onClick={handleEdgeClick}
+        className={groupClassName}
+        style={edgeGroupStyle}
+        onClick={isInteractive ? handleEdgeClick : undefined}
+        onKeyDown={isInteractive ? handleKeyDown : undefined}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
+        aria-label={ariaLabel}
         shapeRendering="geometricPrecision"
         textRendering="geometricPrecision"
       >
@@ -145,7 +220,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
         )}
         <path
           d={dPath}
-          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${isHighlightedEdge ? "is-highlighted" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${isHighTraffic ? "high-traffic" : ""}`}
+          className={pathClassName}
           markerEnd={edge.directed !== false ? markerId : undefined}
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
@@ -178,10 +253,10 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             className="port-attachment-point target-port"
           />
         )}
-        {renderBadge && (
+        {renderBadge && placement !== null && (
           <EdgeBadgeOverlay
-            x={badgeX}
-            y={badgeY}
+            x={placement.x}
+            y={placement.y}
             label={edge.label}
             badge={edge.badge}
             container={edge.container}
@@ -189,13 +264,15 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             stepNumber={edge.stepNumber}
             isCycle={edge.isCycle}
             isSelected={isSelected}
-            badgeRect={edge.badgeRect}
-            anchorPoint={edge.anchorPoint}
-            leaderPoints={edge.leaderPoints}
+            isHovered={isHovered}
+            badgeRect={placement.badgeRect ?? edge.badgeRect}
+            anchorPoint={placement.anchorPoint ?? edge.anchorPoint}
+            leaderPoints={placement.leaderPoints ?? edge.leaderPoints}
             traffic={edge.traffic}
             isHighTraffic={isHighTraffic}
             bundleCount={edge.bundleCount}
-            onClick={handleEdgeClick}
+            sourceAccentColor={sourceAccentColor}
+            onClick={isInteractive ? handleEdgeClick : undefined}
           />
         )}
       </g>

@@ -1,9 +1,6 @@
 import type { FC, ReactNode } from "react";
 import { formatTokens } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import type { IoPort } from "../../types/graphData";
-import { edgeToPort, formatBytes, getByteLength } from "./streamUtils";
-
-export { edgeToPort, formatBytes, getByteLength };
 
 export interface DrawerSectionProps {
   title: string;

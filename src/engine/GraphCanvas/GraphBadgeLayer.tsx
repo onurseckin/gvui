@@ -1,19 +1,41 @@
 import type { FC } from "react";
-import { memo } from "react";
-import { EdgeBadgeOverlay } from "../../primitives/edges/GraphEdge";
-import type { PositionedEdge } from "../../types/graphData";
+import { memo, useMemo } from "react";
+import { EdgeBadgeOverlay, resolveSafeBadgePlacement } from "../../primitives/edges/GraphEdge";
+import type { SafeBadgePlacement } from "../../primitives/edges/GraphEdge";
+import { describeNodeKind } from "../../primitives/nodes/NodeCard/nodeKinds";
+import type { PositionedEdge, PositionedNode } from "../../types/graphData";
+
+export type { SafeBadgePlacement };
+export { resolveSafeBadgePlacement };
 
 export interface GraphBadgeLayerProps {
   positionedEdges: PositionedEdge[];
   hiddenNodeIds: Set<string>;
   selectedNodeId: string | null;
+  positionedNodes?: PositionedNode[];
+  nodeAccentMap?: Map<string, string>;
+  onSelectEdge?: (edgeId: string, sourceNodeId?: string) => void;
 }
 
 export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadgeLayer({
   positionedEdges,
   hiddenNodeIds,
   selectedNodeId,
+  positionedNodes,
+  nodeAccentMap: propNodeAccentMap,
+  onSelectEdge,
 }) {
+  const nodeAccentMap = useMemo(() => {
+    if (propNodeAccentMap) return propNodeAccentMap;
+    const map = new Map<string, string>();
+    if (positionedNodes) {
+      for (const node of positionedNodes) {
+        map.set(node.id, describeNodeKind(node).accent);
+      }
+    }
+    return map;
+  }, [propNodeAccentMap, positionedNodes]);
+
   return (
     <svg
       className="graph-svg-badge-layer"
@@ -29,25 +51,14 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
         if (hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target)) {
           return null;
         }
-        // Only render badge overlay if the edge has a valid positioned badgeRect, label coordinates, or route points
-        const hasPlacement =
-          edge.badgeRect !== undefined ||
-          (edge.labelX !== undefined && edge.labelY !== undefined) ||
-          (edge.points !== undefined && edge.points.length > 0);
 
-        if (!hasPlacement) {
+        const placement = resolveSafeBadgePlacement(edge);
+        if (!placement) {
           return null;
         }
 
         const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
-
-        const placement = {
-          x: edge.labelX ?? 0,
-          y: edge.labelY ?? 0,
-          badgeRect: edge.badgeRect,
-          anchorPoint: edge.anchorPoint,
-          leaderPoints: edge.leaderPoints,
-        };
+        const sourceAccentColor = nodeAccentMap.get(edge.source);
 
         return (
           <g key={`badge-${edge.id}`} style={{ pointerEvents: "auto" }}>
@@ -67,6 +78,8 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
               traffic={edge.traffic}
               isHighTraffic={edge.isHighTraffic}
               bundleCount={edge.bundleCount}
+              sourceAccentColor={sourceAccentColor}
+              onClick={onSelectEdge ? () => onSelectEdge(edge.id, edge.source) : undefined}
             />
           </g>
         );

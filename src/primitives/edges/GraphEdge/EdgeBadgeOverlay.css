@@ -1,0 +1,111 @@
+/* EdgeBadgeOverlay Component Styles */
+
+.edge-badge-group {
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+}
+
+.edge-badge-group:focus-visible {
+  outline: 2px solid var(--accent-color, #818cf8);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.edge-badge-group:focus-visible .edge-badge-rect {
+  stroke: var(--accent-color, #818cf8);
+  fill: color-mix(in srgb, var(--current-edge-stroke, #18181f) 22%, #18181f 78%);
+  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.6));
+}
+
+.edge-badge-rect {
+  fill: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
+  stroke: var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
+  transition:
+    fill 0.2s ease,
+    stroke 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Badge Semantic Kinds */
+.edge-badge-group.kind-spawn {
+  --edge-kind-stroke: #06b6d4;
+}
+
+.edge-badge-group.kind-sequence {
+  --edge-kind-stroke: #3f3f46;
+}
+
+.edge-badge-group.kind-data {
+  --edge-kind-stroke: #6366f1;
+}
+
+.edge-badge-group.kind-dependency {
+  --edge-kind-stroke: #64748b;
+}
+
+.edge-badge-group.kind-loop,
+.edge-badge-group.cycle {
+  --edge-kind-stroke: #f43f5e;
+}
+
+.edge-badge-group.kind-gate {
+  --edge-kind-stroke: #10b981;
+}
+
+.edge-badge-group.kind-critic {
+  --edge-kind-stroke: #eab308;
+}
+
+/* Badge Typography & Centered Alignment */
+.edge-badge-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: center;
+  line-height: 1.2;
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--edge-text-color, #f4f4f5);
+  user-select: none;
+  letter-spacing: 0.02em;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.edge-badge-label {
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.edge-badge-group:hover .edge-badge-rect,
+.edge-badge-group.is-hovered .edge-badge-rect {
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #18181f) 18%, #18181f 82%);
+  filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.5)));
+}
+
+.edge-badge-group.selected .edge-badge-rect,
+.edge-badge-group.is-highlighted .edge-badge-rect {
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #18181f) 22%, #18181f 78%);
+  filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.5)));
+}
+
+.edge-badge-group.high-traffic .edge-badge-rect {
+  stroke-width: 2px;
+}

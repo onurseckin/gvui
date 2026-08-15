@@ -4,27 +4,45 @@ import {
   IconClock,
   IconDeviceDesktop,
   IconFileText,
+  IconHierarchy,
   IconMaximize,
+  IconNotes,
   IconPhoto,
+  IconPhotoOff,
   IconPlayerPlay,
   IconVolume,
   IconX,
 } from "@tabler/icons-react";
 import type { FC } from "react";
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import type { GraphNodeData, MediaAsset, PlaywrightMetadata } from "../../../types/graphData";
-import { DrawerSection, formatBytes } from "../DrawerSection";
+import { DrawerSection } from "../DrawerSection";
 import { LightboxDialog } from "../LightboxDialog";
+import { formatBytes } from "../streamUtils";
 
 export interface AssetsTabProps {
   node: GraphNodeData;
 }
 
-type AssetFilter = "all" | "image" | "video" | "audio" | "document";
+export type AssetFilter = "all" | "screenshots" | "diagrams" | "documents" | "logs";
 
+/**
+ * Assets and media gallery tab supporting Playwright E2E execution summaries,
+ * interactive media filters (All, Screenshots, Diagrams, Documents, Logs),
+ * thumbnail cards, and full-resolution interactive Lightbox modal dialogs.
+ */
 export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   const [activeFilter, setActiveFilter] = useState<AssetFilter>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [failedThumbnails, setFailedThumbnails] = useState<Set<string>>(new Set());
+
+  const handleThumbnailError = useCallback((id: string) => {
+    setFailedThumbnails((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   const assets: MediaAsset[] = useMemo(() => {
     const list: MediaAsset[] = [];
@@ -52,17 +70,74 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
 
   const playwright: PlaywrightMetadata | undefined = node.metadata?.playwrightMetadata;
 
+  const isScreenshot = (a: MediaAsset) => {
+    const isDiag =
+      a.type === "diagram" ||
+      a.url.toLowerCase().includes("diagram") ||
+      (a.title && a.title.toLowerCase().includes("diagram"));
+    return (
+      !isDiag &&
+      (a.type === "image" ||
+        a.type === "screenshot" ||
+        !a.type ||
+        a.url.toLowerCase().includes("screenshot") ||
+        (a.title && a.title.toLowerCase().includes("screenshot")))
+    );
+  };
+
+  const isDiagram = (a: MediaAsset) => {
+    return (
+      a.type === "diagram" ||
+      a.url.toLowerCase().includes("diagram") ||
+      (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
+    );
+  };
+
+  const isDocument = (a: MediaAsset) => {
+    return (
+      a.type === "document" ||
+      a.type === "code" ||
+      (a.mimeType !== undefined && a.mimeType.startsWith("text/"))
+    );
+  };
+
+  const isLog = (a: MediaAsset) => {
+    return (
+      a.type === "log" ||
+      a.url.toLowerCase().endsWith(".log") ||
+      (a.title !== undefined && a.title.toLowerCase().includes("log"))
+    );
+  };
+
   const filteredAssets = useMemo(() => {
     if (activeFilter === "all") return assets;
-    if (activeFilter === "image") return assets.filter((a) => a.type === "image" || !a.type);
-    if (activeFilter === "video") return assets.filter((a) => a.type === "video");
-    if (activeFilter === "audio") return assets.filter((a) => a.type === "audio");
-    if (activeFilter === "document")
-      return assets.filter((a) => a.type === "document" || a.type === "code" || a.type === "log");
+    if (activeFilter === "screenshots") return assets.filter(isScreenshot);
+    if (activeFilter === "diagrams") return assets.filter(isDiagram);
+    if (activeFilter === "documents") return assets.filter(isDocument);
+    if (activeFilter === "logs") return assets.filter(isLog);
     return assets;
   }, [assets, activeFilter]);
 
-  const getAssetIcon = (type?: string) => {
+  const screenshotsCount = useMemo(() => assets.filter(isScreenshot).length, [assets]);
+  const diagramsCount = useMemo(() => assets.filter(isDiagram).length, [assets]);
+  const documentsCount = useMemo(() => assets.filter(isDocument).length, [assets]);
+  const logsCount = useMemo(() => assets.filter(isLog).length, [assets]);
+
+  const getAssetIcon = (type?: string, url?: string, title?: string) => {
+    if (
+      type === "diagram" ||
+      url?.toLowerCase().includes("diagram") ||
+      title?.toLowerCase().includes("diagram")
+    ) {
+      return <IconHierarchy size={14} />;
+    }
+    if (
+      type === "log" ||
+      url?.toLowerCase().endsWith(".log") ||
+      title?.toLowerCase().includes("log")
+    ) {
+      return <IconNotes size={14} />;
+    }
     switch (type) {
       case "video":
         return <IconPlayerPlay size={14} />;
@@ -70,19 +145,13 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
         return <IconVolume size={14} />;
       case "document":
       case "code":
-      case "log":
         return <IconFileText size={14} />;
       case "image":
+      case "screenshot":
       default:
         return <IconPhoto size={14} />;
     }
   };
-
-  const imageCount = assets.filter((a) => a.type === "image" || !a.type).length;
-  const videoCount = assets.filter((a) => a.type === "video").length;
-  const docCount = assets.filter(
-    (a) => a.type === "document" || a.type === "code" || a.type === "log",
-  ).length;
 
   return (
     <div className="drawer-tab-content">
@@ -100,12 +169,18 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                 className={`drawer-status-pill ${
                   playwright.status === "passed"
                     ? "drawer-status-pill--success"
-                    : "drawer-status-pill--warn"
+                    : playwright.status === "timedOut"
+                      ? "drawer-status-pill--warn"
+                      : "drawer-status-pill--error"
                 }`}
               >
                 {playwright.status === "passed" ? (
                   <>
                     <IconCheck size={12} /> Passed
+                  </>
+                ) : playwright.status === "timedOut" ? (
+                  <>
+                    <IconClock size={12} /> Timed Out
                   </>
                 ) : (
                   <>
@@ -159,48 +234,61 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
         </DrawerSection>
       )}
 
-      <DrawerSection title="Validator Media &amp; Inspection Assets" count={assets.length}>
-        {assets.length > 3 && (
-          <div className="drawer-asset-filter-bar">
+      <DrawerSection title="Validator Media & Inspection Assets" count={assets.length}>
+        {assets.length > 1 && (
+          <div className="drawer-asset-filter-bar" role="tablist" aria-label="Asset filters">
             <button
               type="button"
               className={`drawer-filter-chip ${activeFilter === "all" ? "is-active" : ""}`}
               onClick={() => setActiveFilter("all")}
             >
-              All ({assets.length})
+              {`All (${assets.length})`}
             </button>
-            {imageCount > 0 && (
+            {screenshotsCount > 0 && (
               <button
                 type="button"
-                className={`drawer-filter-chip ${activeFilter === "image" ? "is-active" : ""}`}
-                onClick={() => setActiveFilter("image")}
+                className={`drawer-filter-chip ${activeFilter === "screenshots" ? "is-active" : ""}`}
+                onClick={() => setActiveFilter("screenshots")}
               >
-                Images ({imageCount})
+                {`Screenshots (${screenshotsCount})`}
               </button>
             )}
-            {videoCount > 0 && (
+            {diagramsCount > 0 && (
               <button
                 type="button"
-                className={`drawer-filter-chip ${activeFilter === "video" ? "is-active" : ""}`}
-                onClick={() => setActiveFilter("video")}
+                className={`drawer-filter-chip ${activeFilter === "diagrams" ? "is-active" : ""}`}
+                onClick={() => setActiveFilter("diagrams")}
               >
-                Videos ({videoCount})
+                {`Diagrams (${diagramsCount})`}
               </button>
             )}
-            {docCount > 0 && (
+            {documentsCount > 0 && (
               <button
                 type="button"
-                className={`drawer-filter-chip ${activeFilter === "document" ? "is-active" : ""}`}
-                onClick={() => setActiveFilter("document")}
+                className={`drawer-filter-chip ${activeFilter === "documents" ? "is-active" : ""}`}
+                onClick={() => setActiveFilter("documents")}
               >
-                Docs & Logs ({docCount})
+                {`Documents (${documentsCount})`}
+              </button>
+            )}
+            {logsCount > 0 && (
+              <button
+                type="button"
+                className={`drawer-filter-chip ${activeFilter === "logs" ? "is-active" : ""}`}
+                onClick={() => setActiveFilter("logs")}
+              >
+                {`Logs (${logsCount})`}
               </button>
             )}
           </div>
         )}
 
         {filteredAssets.length === 0 ? (
-          <div className="drawer-empty-state">No assets matching the selected filter.</div>
+          <div className="drawer-empty-state">
+            {assets.length === 0
+              ? "No assets or media artifacts recorded for this node."
+              : "No assets matching the selected filter."}
+          </div>
         ) : (
           <div className="drawer-asset-gallery-grid">
             {filteredAssets.map((asset, index) => {
@@ -231,16 +319,22 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                       <div className="drawer-asset-thumb-placeholder">
                         <IconFileText size={28} />
                       </div>
+                    ) : failedThumbnails.has(asset.id) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--error">
+                        <IconPhotoOff size={24} />
+                        <span className="drawer-asset-thumb-error-label">Failed to load</span>
+                      </div>
                     ) : (
                       <img
                         src={asset.thumbnailUrl ?? asset.url}
                         alt={asset.title ?? asset.id}
                         className="drawer-asset-thumb"
                         loading="lazy"
+                        onError={() => handleThumbnailError(asset.id)}
                       />
                     )}
                     <span className="drawer-asset-type-badge">
-                      {getAssetIcon(asset.type)}
+                      {getAssetIcon(asset.type, asset.url, asset.title)}
                       <span>{asset.type ?? "image"}</span>
                     </span>
                     <div className="drawer-asset-hover-overlay">

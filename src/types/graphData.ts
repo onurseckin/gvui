@@ -43,7 +43,7 @@ export type NodeStatus =
   | "skipped"
   | "cached";
 export type ModelTier = "xs" | "s" | "m" | "l";
-export type FileMode = "read" | "write" | "attach";
+export type FileMode = "read" | "write" | "create" | "delete" | "attach";
 export type EdgeKind =
   | "sequence"
   | "spawn"
@@ -80,12 +80,46 @@ export interface IoPort {
   dataRef?: string;
 }
 
+export interface TokenUsageDetail {
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  cacheCreationTokens?: number;
+  cacheReadTokens?: number;
+  totalTokens?: number;
+  [key: string]: unknown;
+}
+
+export interface TimingBreakdown {
+  wallDurationMs?: number;
+  toolDurationMs?: number;
+  activeCommandDurationMs?: number;
+  thinkDurationMs?: number;
+  cognitiveLatencyMs?: number;
+  [key: string]: unknown;
+}
+
+export interface HostAgentDetail {
+  tool?: string;
+  name?: string;
+  model?: string;
+  tier?: ModelTier | string;
+  reasoningEffort?: "high" | "medium" | "low" | "off" | string;
+  thinkingLevel?: "high" | "medium" | "low" | "off" | string;
+  [key: string]: unknown;
+}
+
 export interface NodeMetrics {
   tokensIn?: number;
   tokensOut?: number;
+  tokens?: TokenUsageDetail;
   costUsd?: number;
   durationMs?: number;
   retries?: number;
+  repairRounds?: number;
+  timingBreakdown?: TimingBreakdown;
+  timing?: TimingBreakdown;
+  [key: string]: unknown;
 }
 
 export interface CommandExecutionDetail {
@@ -239,12 +273,16 @@ export interface NodeMetadata {
   findings?: FindingDetail[];
   writeScope?: string[];
   leaseAgent?: string;
+  hostAgent?: HostAgentDetail;
   repairRounds?: number;
   durationMs?: number;
   mediaAssets?: MediaAsset[];
   screenshots?: MediaAsset[];
   assets?: MediaAsset[];
   playwrightMetadata?: PlaywrightMetadata;
+  timingBreakdown?: TimingBreakdown;
+  timing?: TimingBreakdown;
+  tokens?: TokenUsageDetail;
   [key: string]: unknown;
 }
 
@@ -262,6 +300,7 @@ export interface GraphNodeData {
   model?: string;
   harnessModel?: string;
   tier?: ModelTier;
+  hostAgent?: HostAgentDetail;
   sectionId?: string;
   tools?: NodeTool[];
   files?: FileRef[];

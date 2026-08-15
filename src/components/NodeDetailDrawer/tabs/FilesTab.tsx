@@ -6,6 +6,10 @@ interface FilesTabProps {
   node: GraphNodeData;
 }
 
+/**
+ * Filesystem touchpoints and code diff tab presenting assigned write scopes,
+ * touched file modes, addition/deletion churn statistics, and line-level diff highlighting.
+ */
 export const FilesTab: FC<FilesTabProps> = ({ node }) => {
   const files = node.files ?? [];
   const writeScope = (node.metadata?.writeScope as string[]) ?? [];
@@ -30,47 +34,56 @@ export const FilesTab: FC<FilesTabProps> = ({ node }) => {
           <ul className="drawer-file-list">
             {files.map((file, index) => {
               const hasChurn = (file.additions ?? 0) > 0 || (file.deletions ?? 0) > 0;
+              const diffLines = file.diff ? file.diff.split("\n") : [];
+
               return (
                 <li key={`${file.path}-${index}`} className="drawer-file-row">
                   <span className={`drawer-file-mode mode-${file.mode ?? "read"}`}>
                     {file.mode ?? "read"}
                   </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                      width: "100%",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
+                  <div className="drawer-file-detail">
+                    <div className="drawer-file-header">
                       <code className="drawer-file-path">
                         {file.path}
                         {file.lines ? `:${file.lines}` : ""}
                       </code>
                       {hasChurn ? (
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontFamily: "var(--font-mono)",
-                          }}
-                        >
-                          <span style={{ color: "#34d399" }}>+{file.additions ?? 0}</span>{" "}
-                          <span style={{ color: "#f87171" }}>-{file.deletions ?? 0}</span>
+                        <span className="drawer-file-churn">
+                          {(file.additions ?? 0) > 0 && (
+                            <span className="drawer-churn-add">{`+${file.additions}`}</span>
+                          )}
+                          {(file.deletions ?? 0) > 0 && (
+                            <span className="drawer-churn-del">{`-${file.deletions}`}</span>
+                          )}
                         </span>
                       ) : null}
                     </div>
-                    {file.diff ? (
-                      <pre className="drawer-pre" style={{ maxHeight: "220px" }}>
-                        {file.diff}
-                      </pre>
-                    ) : null}
+
+                    {file.diff && (
+                      <div
+                        className="drawer-diff-viewer"
+                        tabIndex={0}
+                        role="region"
+                        aria-label={`Diff for ${file.path}`}
+                      >
+                        {diffLines.map((line, lineIdx) => {
+                          let lineType = "context";
+                          if (line.startsWith("+")) lineType = "add";
+                          else if (line.startsWith("-")) lineType = "del";
+                          else if (line.startsWith("@")) lineType = "hunk";
+
+                          return (
+                            <div
+                              key={lineIdx}
+                              className={`drawer-diff-line drawer-diff-line--${lineType}`}
+                            >
+                              <span className="drawer-diff-lineno">{lineIdx + 1}</span>
+                              <span className="drawer-diff-text">{line}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </li>
               );
@@ -78,9 +91,7 @@ export const FilesTab: FC<FilesTabProps> = ({ node }) => {
           </ul>
         </DrawerSection>
       ) : (
-        <p className="drawer-prose" style={{ color: "#71717a", padding: "16px" }}>
-          No file modifications recorded for this node.
-        </p>
+        <div className="drawer-empty-state">No file modifications recorded for this node.</div>
       )}
     </div>
   );

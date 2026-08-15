@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import type { PositionedEdge } from "../../../types/graphData";
 import { GraphEdge } from "./index";
@@ -152,6 +153,34 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain('marker-end="url(#edge-arrowhead-highlighted)"');
   });
 
+  it("applies is-hovered class on group, path, and badge overlay when isHovered is true", () => {
+    const hoverEdge: PositionedEdge = {
+      ...baseEdge,
+      label: "hovered step",
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={hoverEdge} isHovered={true} />
+      </svg>,
+    );
+
+    expect(html).toContain("is-hovered");
+    expect(html).toContain("graph-edge-group");
+    expect(html).toContain("graph-edge-path");
+    expect(html).toContain("edge-badge-group");
+  });
+
+  it("applies sourceAccentColor as --edge-source-accent custom property and passes to badge", () => {
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#a855f7" />
+      </svg>,
+    );
+
+    expect(html).toContain("--edge-source-accent:#a855f7");
+  });
+
   it("renders ports when showPorts is true", () => {
     const edgeWithPorts: PositionedEdge = {
       ...baseEdge,
@@ -206,5 +235,190 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain("shared-anchor-junction");
     expect(html).toContain('cx="55"');
     expect(html).toContain('cy="55"');
+  });
+
+  it("suppresses badge overlay rendering when edge is unpositioned or ghost edge (labelX: 0, labelY: 0 without points)", () => {
+    const ghostEdge: PositionedEdge = {
+      id: "ghost-edge-1",
+      source: "n1",
+      target: "n2",
+      path: "M 0 0 L 100 100",
+      label: "Ghost Action",
+      labelX: 0,
+      labelY: 0,
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={ghostEdge} />
+      </svg>,
+    );
+
+    expect(html).toContain("graph-edge-group");
+    expect(html).not.toContain("edge-badge-group");
+    expect(html).not.toContain("Ghost Action");
+  });
+
+  it("renders badge overlay for valid origin-crossing polyline at (0, 0)", () => {
+    const originPolyEdge: PositionedEdge = {
+      id: "origin-poly-edge",
+      source: "n1",
+      target: "n2",
+      path: "M -100 0 L 100 0",
+      label: "Origin Action",
+      points: [
+        { x: -100, y: 0 },
+        { x: 100, y: 0 },
+      ],
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={originPolyEdge} />
+      </svg>,
+    );
+
+    expect(html).toContain("graph-edge-group");
+    expect(html).toContain("edge-badge-group");
+    expect(html).toContain('transform="translate(0, 0)"');
+    expect(html).toContain("Origin Action");
+  });
+
+  it("renders fallback midpoint badge when source/target coords are provided for unpositioned path", () => {
+    const unpositionedEdge: PositionedEdge = {
+      id: "fallback-edge",
+      source: "n1",
+      target: "n2",
+      path: "",
+      label: "Fallback Midpoint",
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge
+          edge={unpositionedEdge}
+          sourceX={100}
+          sourceY={100}
+          targetX={300}
+          targetY={300}
+        />
+      </svg>,
+    );
+
+    expect(html).toContain('d="M 100 100 L 300 300"');
+    expect(html).toContain("edge-badge-group");
+    expect(html).toContain('transform="translate(200, 200)"');
+    expect(html).toContain("Fallback Midpoint");
+  });
+
+  it("does not attach button role or tabIndex when onClick is omitted", () => {
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} />
+      </svg>,
+    );
+
+    expect(html).not.toContain('role="button"');
+    expect(html).not.toContain('tabindex="0"');
+    expect(html).not.toContain("is-clickable");
+  });
+
+  it("attaches role='button', tabIndex={0}, and aria-label when onClick is provided", () => {
+    const edgeWithLabel: PositionedEdge = {
+      ...baseEdge,
+      label: "Workflow Step",
+    };
+
+    const htmlWithLabel = renderToString(
+      <svg>
+        <GraphEdge edge={edgeWithLabel} onClick={() => {}} />
+      </svg>,
+    );
+
+    expect(htmlWithLabel).toContain('role="button"');
+    expect(htmlWithLabel).toContain('tabindex="0"');
+    expect(htmlWithLabel).toContain('aria-label="Edge Workflow Step"');
+    expect(htmlWithLabel).toContain("is-clickable");
+
+    const htmlWithoutLabel = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} onClick={() => {}} />
+      </svg>,
+    );
+
+    expect(htmlWithoutLabel).toContain('role="button"');
+    expect(htmlWithoutLabel).toContain('tabindex="0"');
+    expect(htmlWithoutLabel).toContain('aria-label="Edge e-test"');
+  });
+
+  it("handles keyboard Enter and Space activation via onKeyDown and click propagation", async () => {
+    const { create, act } = await import("react-test-renderer");
+    let clickedEdgeId: string | null = null;
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <svg>
+          <GraphEdge
+            edge={baseEdge}
+            onClick={(id) => {
+              clickedEdgeId = id;
+            }}
+          />
+        </svg>,
+      );
+    });
+
+    const root = renderer!.root;
+    const group = root.findByProps({ className: "graph-edge-group kind-sequence is-clickable" });
+
+    // Test Enter key
+    clickedEdgeId = null;
+    act(() => {
+      group.props.onKeyDown({
+        key: "Enter",
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      });
+    });
+    expect(clickedEdgeId).toBe("e-test");
+
+    // Test Space key
+    clickedEdgeId = null;
+    act(() => {
+      group.props.onKeyDown({
+        key: " ",
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      });
+    });
+    expect(clickedEdgeId).toBe("e-test");
+
+    // Test non-activation key (e.g. Tab)
+    clickedEdgeId = null;
+    act(() => {
+      group.props.onKeyDown({
+        key: "Tab",
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      });
+    });
+    expect(clickedEdgeId).toBeNull();
+
+    // Test click event
+    clickedEdgeId = null;
+    act(() => {
+      group.props.onClick({
+        stopPropagation: () => {},
+      });
+    });
+    expect(clickedEdgeId).toBe("e-test");
+  });
+
+  it("includes focus-visible outline indicator styling in GraphEdge.css", () => {
+    const css = readFileSync(new URL("./GraphEdge.css", import.meta.url).pathname, "utf-8");
+    expect(css).toContain(".graph-edge-group:focus-visible");
+    expect(css).toContain("outline: 2px solid var(--accent-color, #818cf8)");
+    expect(css).toContain("outline-offset: 2px");
   });
 });

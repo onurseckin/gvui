@@ -86,6 +86,9 @@ const TOOL_ICON_MARKUP: Readonly<Record<ToolIconKind, string>> = Object.freeze({
 const FILE_ICON_MARKUP: Readonly<Record<FileMode, string>> = Object.freeze({
   read: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" />',
   write: '<path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />',
+  create: '<path d="M12 5v14M5 12h14" />',
+  delete:
+    '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" />',
   attach:
     '<path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />',
 });

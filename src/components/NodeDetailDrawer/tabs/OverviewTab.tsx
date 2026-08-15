@@ -1,12 +1,16 @@
-import type { FC } from "react";
 import {
-  formatCost,
-  formatDuration,
-  formatTokens,
-} from "../../../primitives/nodes/NodeCard/nodeCardModel";
+  IconAlertTriangle,
+  IconBrain,
+  IconClock,
+  IconCoins,
+  IconRobot,
+  IconSparkles,
+} from "@tabler/icons-react";
+import type { FC } from "react";
 import type { GraphNodeData, IoPort } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { IoStreamItem } from "../IoStreamItem";
+import { formatCost, formatDuration, formatTokens } from "../streamUtils";
 
 interface OverviewTabProps {
   node: GraphNodeData;
@@ -17,10 +21,50 @@ interface OverviewTabProps {
 
 /**
  * Merged "Overview & I/O" tab component presenting high-level metadata,
- * execution telemetry metrics, and expandable input/output stream accordions.
+ * structured execution telemetry metrics (Tokens In/Out, Reasoning Tokens, Duration breakdown,
+ * Cost USD, Repair Rounds), Host Agent card with tier & effort pills, and expandable stream accordions.
  */
 export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeNamesById }) => {
   const metrics = node.metrics;
+  const timing =
+    metrics?.timingBreakdown ??
+    metrics?.timing ??
+    node.metadata?.timingBreakdown ??
+    node.metadata?.timing;
+  const tokensDetail = metrics?.tokens ?? node.metadata?.tokens;
+
+  const tokensIn = metrics?.tokensIn ?? tokensDetail?.promptTokens;
+  const tokensOut = metrics?.tokensOut ?? tokensDetail?.completionTokens;
+  const reasoningTokens = tokensDetail?.reasoningTokens;
+
+  const wallDuration = metrics?.durationMs ?? timing?.wallDurationMs ?? node.metadata?.durationMs;
+  const toolDuration = timing?.toolDurationMs ?? timing?.activeCommandDurationMs;
+  const thinkDuration = timing?.thinkDurationMs ?? timing?.cognitiveLatencyMs;
+
+  const costUsd = metrics?.costUsd;
+  const repairRounds =
+    node.metadata?.repairRounds ??
+    metrics?.repairRounds ??
+    (metrics?.retries && metrics.retries > 0 ? metrics.retries : 0);
+
+  const hasMetrics =
+    typeof tokensIn === "number" ||
+    typeof tokensOut === "number" ||
+    typeof reasoningTokens === "number" ||
+    typeof wallDuration === "number" ||
+    typeof toolDuration === "number" ||
+    typeof thinkDuration === "number" ||
+    typeof costUsd === "number" ||
+    repairRounds > 0;
+
+  // Host agent attribution
+  const hostAgent = node.hostAgent ?? node.metadata?.hostAgent;
+  const hostTool = hostAgent?.tool ?? hostAgent?.name ?? node.metadata?.leaseAgent;
+  const hostModel = hostAgent?.model ?? node.model ?? node.harnessModel;
+  const hostTier = hostAgent?.tier ?? node.tier;
+  const reasoningEffort = hostAgent?.reasoningEffort ?? hostAgent?.thinkingLevel;
+  const hasHostCard = Boolean(hostTool || hostModel || hostTier || reasoningEffort);
+
   const contextRows: Array<{ key: string; value: string }> = [];
   if (node.context?.repoPath) {
     contextRows.push({ key: "repoPath", value: String(node.context.repoPath) });
@@ -40,42 +84,121 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
         </DrawerSection>
       ) : null}
 
-      {metrics ? (
-        <DrawerSection title="Metrics">
+      {hasMetrics && (
+        <DrawerSection title="Execution Metrics">
           <div className="drawer-metric-grid">
-            {typeof metrics.tokensIn === "number" ? (
+            {typeof tokensIn === "number" && (
               <div className="drawer-metric">
-                <span className="drawer-metric-label">Tokens in</span>
-                <span className="drawer-metric-value">{formatTokens(metrics.tokensIn)}</span>
+                <span className="drawer-metric-label">Tokens In</span>
+                <span className="drawer-metric-value">{formatTokens(tokensIn)}</span>
               </div>
-            ) : null}
-            {typeof metrics.tokensOut === "number" ? (
+            )}
+            {typeof tokensOut === "number" && (
               <div className="drawer-metric">
-                <span className="drawer-metric-label">Tokens out</span>
-                <span className="drawer-metric-value">{formatTokens(metrics.tokensOut)}</span>
+                <span className="drawer-metric-label">Tokens Out</span>
+                <span className="drawer-metric-value">{formatTokens(tokensOut)}</span>
               </div>
-            ) : null}
-            {typeof metrics.durationMs === "number" ? (
+            )}
+            {typeof reasoningTokens === "number" && (
+              <div className="drawer-metric drawer-metric--thinking">
+                <span className="drawer-metric-label">
+                  <IconBrain
+                    size={11}
+                    style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
+                  />
+                  Reasoning
+                </span>
+                <span className="drawer-metric-value">{formatTokens(reasoningTokens)}</span>
+              </div>
+            )}
+            {typeof wallDuration === "number" && (
               <div className="drawer-metric">
-                <span className="drawer-metric-label">Duration</span>
-                <span className="drawer-metric-value">{formatDuration(metrics.durationMs)}</span>
+                <span className="drawer-metric-label">
+                  <IconClock
+                    size={11}
+                    style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
+                  />
+                  Duration
+                </span>
+                <span className="drawer-metric-value">{formatDuration(wallDuration)}</span>
               </div>
-            ) : null}
-            {typeof metrics.costUsd === "number" ? (
+            )}
+            {typeof toolDuration === "number" && (
               <div className="drawer-metric">
-                <span className="drawer-metric-label">Cost</span>
-                <span className="drawer-metric-value">{formatCost(metrics.costUsd)}</span>
+                <span className="drawer-metric-label">Active Cmds</span>
+                <span className="drawer-metric-value">{formatDuration(toolDuration)}</span>
               </div>
-            ) : null}
-            {typeof metrics.retries === "number" && metrics.retries > 0 ? (
+            )}
+            {typeof thinkDuration === "number" && (
+              <div className="drawer-metric">
+                <span className="drawer-metric-label">Think Time</span>
+                <span className="drawer-metric-value">{formatDuration(thinkDuration)}</span>
+              </div>
+            )}
+            {typeof costUsd === "number" && (
+              <div className="drawer-metric">
+                <span className="drawer-metric-label">
+                  <IconCoins
+                    size={11}
+                    style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
+                  />
+                  Cost
+                </span>
+                <span className="drawer-metric-value">{formatCost(costUsd)}</span>
+              </div>
+            )}
+            {repairRounds > 0 && (
               <div className="drawer-metric drawer-metric--warn">
-                <span className="drawer-metric-label">Retries</span>
-                <span className="drawer-metric-value">{metrics.retries}</span>
+                <span className="drawer-metric-label">
+                  <IconAlertTriangle
+                    size={11}
+                    style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
+                  />
+                  Repair Rounds
+                </span>
+                <span className="drawer-metric-value">{repairRounds}</span>
               </div>
-            ) : null}
+            )}
           </div>
         </DrawerSection>
-      ) : null}
+      )}
+
+      {hasHostCard && (
+        <DrawerSection title="Host Agent Attribution">
+          <div className="drawer-host-card">
+            <div className="drawer-host-header">
+              <span className="drawer-host-icon">
+                <IconRobot size={18} />
+              </span>
+              <div className="drawer-host-info">
+                <div className="drawer-host-name-row">
+                  <span className="drawer-host-name">{hostTool || "Host Agent"}</span>
+                  {hostTier && (
+                    <span className={`drawer-tier-pill tier-${String(hostTier).toLowerCase()}`}>
+                      {`Tier ${String(hostTier).toUpperCase()}`}
+                    </span>
+                  )}
+                  {reasoningEffort && (
+                    <span className="drawer-effort-pill">
+                      <IconSparkles
+                        size={11}
+                        style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}
+                      />
+                      {`Effort: ${reasoningEffort}`}
+                    </span>
+                  )}
+                </div>
+                {hostModel && (
+                  <div className="drawer-host-model-row">
+                    <span className="drawer-host-label">Model:</span>
+                    <code className="drawer-host-model">{hostModel}</code>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DrawerSection>
+      )}
 
       {inputs.length > 0 ? (
         <DrawerSection title="Input Streams" count={inputs.length}>

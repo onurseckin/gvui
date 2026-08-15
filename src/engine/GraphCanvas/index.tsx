@@ -95,6 +95,23 @@ export const GraphCanvas: FC = () => {
     return hidden;
   }, [collapsedNodeIds, positionedEdges]);
 
+  const nodeAccentMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const node of positionedNodes) {
+      map.set(node.id, describeNodeKind(node).accent);
+    }
+    return map;
+  }, [positionedNodes]);
+
+  const handleSelectEdge = useCallback(
+    (_edgeId: string, sourceNodeId?: string) => {
+      if (sourceNodeId) {
+        setSelectedNodeId(sourceNodeId);
+      }
+    },
+    [setSelectedNodeId],
+  );
+
   const { connectedNodeIds, selectedNodeAccent } = useMemo(() => {
     if (!selectedNodeId) return { connectedNodeIds: undefined, selectedNodeAccent: undefined };
     const connected = new Set<string>();
@@ -129,6 +146,9 @@ export const GraphCanvas: FC = () => {
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
           selectedNodeAccent={selectedNodeAccent}
+          positionedNodes={positionedNodes}
+          nodeAccentMap={nodeAccentMap}
+          onSelectEdge={handleSelectEdge}
         />
         <GraphHtmlLayer
           positionedNodes={positionedNodes}
@@ -147,6 +167,9 @@ export const GraphCanvas: FC = () => {
           positionedEdges={positionedEdges}
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
+          positionedNodes={positionedNodes}
+          nodeAccentMap={nodeAccentMap}
+          onSelectEdge={handleSelectEdge}
         />
       </div>
     </div>

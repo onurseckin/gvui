@@ -3,6 +3,22 @@
 .graph-edge-group {
   cursor: pointer;
   shape-rendering: geometricPrecision;
+  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+}
+
+.graph-edge-group:focus-visible {
+  outline: 2px solid var(--accent-color, #818cf8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.graph-edge-group:focus-visible .graph-edge-path {
+  stroke: var(--accent-color, #818cf8);
+  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
+}
+
+marker path {
+  fill: context-stroke;
 }
 
 .edge-backdrop {
@@ -16,7 +32,7 @@
 /* Base Edge Path - Neutral dark-mode zinc by default (Static, Solid, Clean) */
 .graph-edge-path {
   fill: none;
-  stroke: #3f3f46;
+  stroke: var(--current-edge-stroke, #3f3f46);
   stroke-width: 1.5px;
   stroke-dasharray: none;
   vector-effect: non-scaling-stroke;
@@ -28,63 +44,99 @@
 }
 
 /* 1. Spawn / Dispatch - Cyan/Blue solid by default */
+.graph-edge-group.kind-spawn,
+.graph-edge-group.kind-dispatch {
+  --edge-kind-stroke: #06b6d4;
+}
+
 .graph-edge-path.kind-spawn,
 .graph-edge-path.kind-dispatch {
-  stroke: #06b6d4;
+  stroke: var(--current-edge-stroke, #06b6d4);
   stroke-width: 2px;
   stroke-dasharray: none;
 }
 
 /* 2. Sequence - Neutral slate/zinc (#3f3f46), understated solid */
+.graph-edge-group.kind-sequence {
+  --edge-kind-stroke: #3f3f46;
+}
+
 .graph-edge-path.kind-sequence {
-  stroke: #3f3f46;
+  stroke: var(--current-edge-stroke, #3f3f46);
   stroke-width: 1.5px;
   stroke-dasharray: none;
 }
 
 /* 3. Data Handoff - Indigo solid */
+.graph-edge-group.kind-data,
+.graph-edge-group.kind-handoff {
+  --edge-kind-stroke: #6366f1;
+}
+
 .graph-edge-path.kind-data,
 .graph-edge-path.kind-handoff {
-  stroke: #6366f1;
+  stroke: var(--current-edge-stroke, #6366f1);
   stroke-width: 2px;
   stroke-dasharray: none;
 }
 
 /* 4. Dependency - Slate solid */
+.graph-edge-group.kind-dependency {
+  --edge-kind-stroke: #64748b;
+}
+
 .graph-edge-path.kind-dependency {
-  stroke: #64748b;
+  stroke: var(--current-edge-stroke, #64748b);
   stroke-width: 1.5px;
   stroke-dasharray: none;
 }
 
 /* 5. Loop / Pushback - Crimson solid */
+.graph-edge-group.kind-loop,
+.graph-edge-group.kind-pushback,
+.graph-edge-group.cycle {
+  --edge-kind-stroke: #f43f5e;
+}
+
 .graph-edge-path.kind-loop,
 .graph-edge-path.kind-pushback,
 .graph-edge-path.cycle {
-  stroke: #f43f5e;
+  stroke: var(--current-edge-stroke, #f43f5e);
   stroke-width: 2px;
   stroke-dasharray: none;
 }
 
 /* 6. Gate / Validation - Emerald Green solid */
+.graph-edge-group.kind-gate,
+.graph-edge-group.kind-validation {
+  --edge-kind-stroke: #10b981;
+}
+
 .graph-edge-path.kind-gate,
 .graph-edge-path.kind-validation {
-  stroke: #10b981;
+  stroke: var(--current-edge-stroke, #10b981);
   stroke-width: 2px;
   stroke-dasharray: none;
 }
 
 /* 7. Critic / Signoff - Metallic Gold solid */
+.graph-edge-group.kind-critic,
+.graph-edge-group.kind-signoff {
+  --edge-kind-stroke: #eab308;
+}
+
 .graph-edge-path.kind-critic,
 .graph-edge-path.kind-signoff {
-  stroke: #eab308;
+  stroke: var(--current-edge-stroke, #eab308);
   stroke-width: 2px;
   stroke-dasharray: none;
 }
 
 /* Hover Interaction (Static stroke-width enlargement without animation) */
-.graph-edge-group:hover .graph-edge-path:not(.selected):not(.is-highlighted) {
-  stroke: var(--accent-color, #818cf8);
+.graph-edge-group:hover .graph-edge-path:not(.selected):not(.is-highlighted),
+.graph-edge-group.is-hovered .graph-edge-path:not(.selected):not(.is-highlighted),
+.graph-edge-path.is-hovered:not(.selected):not(.is-highlighted) {
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8));
   stroke-width: 2.5px;
 }
 
@@ -93,11 +145,11 @@
 .graph-edge-path.is-highlighted,
 .graph-edge-group.selected .graph-edge-path,
 .graph-edge-group.is-highlighted .graph-edge-path {
-  stroke: var(--accent-color, #818cf8) !important;
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8)) !important;
   stroke-width: 2.5px;
   stroke-dasharray: 6 4 !important;
   animation: edge-flow 1.2s linear infinite !important;
-  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
+  filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.6)));
 }
 
 /* Highlight / Selection for Loop & Cycles: Reverse Animated Dashes */
@@ -113,7 +165,7 @@
 .graph-edge-group.is-highlighted .graph-edge-path.kind-loop,
 .graph-edge-group.selected .graph-edge-path.kind-pushback,
 .graph-edge-group.is-highlighted .graph-edge-path.kind-pushback {
-  stroke: var(--accent-color, #f43f5e) !important;
+  stroke: var(--accent-color, var(--current-edge-stroke, #f43f5e)) !important;
   stroke-dasharray: 6 4 !important;
   animation: edge-flow-reverse 1.2s linear infinite !important;
 }
@@ -123,11 +175,12 @@
   cursor: pointer;
   user-select: none;
   outline: none;
+  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
 }
 
 .edge-badge-rect {
-  fill: #0d0d10;
-  stroke: #3f3f46;
+  fill: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
+  stroke: var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
   stroke-width: 1.5px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
   transition:
@@ -137,66 +190,92 @@
 }
 
 /* Badge Semantic Variants */
+.edge-badge-group.kind-spawn,
 .edge-badge-rect.variant-spawn,
 .edge-badge-rect.variant-cyan,
 .edge-badge-rect.kind-spawn {
-  stroke: rgba(6, 182, 212, 0.6);
-  fill: #081a20;
+  --edge-kind-stroke: #06b6d4;
+  stroke: var(--current-edge-stroke, rgba(6, 182, 212, 0.6));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #06b6d4) 12%, #081a20 88%);
 }
 
+.edge-badge-group.kind-sequence,
 .edge-badge-rect.variant-sequence,
 .edge-badge-rect.variant-neutral,
 .edge-badge-rect.kind-sequence {
-  stroke: #3f3f46;
-  fill: #111114;
+  --edge-kind-stroke: #3f3f46;
+  stroke: var(--current-edge-stroke, #3f3f46);
+  fill: color-mix(in srgb, var(--current-edge-stroke, #3f3f46) 12%, #111114 88%);
 }
 
+.edge-badge-group.kind-data,
 .edge-badge-rect.variant-data,
 .edge-badge-rect.variant-indigo,
 .edge-badge-rect.kind-data {
-  stroke: rgba(99, 102, 241, 0.6);
-  fill: #111024;
+  --edge-kind-stroke: #6366f1;
+  stroke: var(--current-edge-stroke, rgba(99, 102, 241, 0.6));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #6366f1) 12%, #111024 88%);
 }
 
+.edge-badge-group.kind-dependency,
 .edge-badge-rect.variant-dependency,
 .edge-badge-rect.variant-slate,
 .edge-badge-rect.kind-dependency {
-  stroke: rgba(100, 116, 139, 0.6);
-  fill: #0f172a;
+  --edge-kind-stroke: #64748b;
+  stroke: var(--current-edge-stroke, rgba(100, 116, 139, 0.6));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #64748b) 12%, #0f172a 88%);
 }
 
+.edge-badge-group.kind-loop,
+.edge-badge-group.cycle,
 .edge-badge-rect.variant-loop,
 .edge-badge-rect.variant-pushback,
 .edge-badge-rect.variant-warning,
 .edge-badge-rect.cycle,
 .edge-badge-rect.kind-loop {
-  stroke: rgba(244, 63, 94, 0.7);
-  fill: #1c0b10;
+  --edge-kind-stroke: #f43f5e;
+  stroke: var(--current-edge-stroke, rgba(244, 63, 94, 0.7));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #f43f5e) 12%, #1c0b10 88%);
 }
 
+.edge-badge-group.kind-gate,
 .edge-badge-rect.variant-gate,
 .edge-badge-rect.variant-validation,
 .edge-badge-rect.variant-success,
 .edge-badge-rect.kind-gate {
-  stroke: rgba(16, 185, 129, 0.6);
-  fill: #061d14;
+  --edge-kind-stroke: #10b981;
+  stroke: var(--current-edge-stroke, rgba(16, 185, 129, 0.6));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #10b981) 12%, #061d14 88%);
 }
 
+.edge-badge-group.kind-critic,
 .edge-badge-rect.variant-critic,
 .edge-badge-rect.variant-signoff,
 .edge-badge-rect.kind-critic {
-  stroke: rgba(234, 179, 8, 0.7);
-  fill: #1c1606;
+  --edge-kind-stroke: #eab308;
+  stroke: var(--current-edge-stroke, rgba(234, 179, 8, 0.7));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #eab308) 12%, #1c1606 88%);
 }
 
-/* Badge Typography & Colors */
+/* Badge Typography & Centered Alignment */
 .edge-badge-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: center;
+  line-height: 1.2;
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: #e4e4e7;
+  color: var(--edge-text-color, #f4f4f5);
   user-select: none;
-  white-space: nowrap;
+  letter-spacing: 0.02em;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .edge-badge-inner.variant-spawn,
@@ -245,20 +324,28 @@
 }
 
 .edge-badge-label {
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
-.edge-badge-group:hover .edge-badge-rect {
-  stroke: var(--accent-color, #818cf8);
-  fill: #18181f;
+.edge-badge-group:hover .edge-badge-rect,
+.edge-badge-group.is-hovered .edge-badge-rect {
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #18181f) 18%, #18181f 82%);
+  filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.5)));
 }
 
 .edge-badge-group.selected .edge-badge-rect,
 .edge-badge-group.is-highlighted .edge-badge-rect {
-  stroke: var(--accent-color, #818cf8);
-  fill: #18181f;
-  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.5));
+  stroke: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  fill: color-mix(in srgb, var(--current-edge-stroke, #18181f) 22%, #18181f 78%);
+  filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.5)));
 }
 
 @keyframes edge-flow {

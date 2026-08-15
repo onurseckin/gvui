@@ -19,9 +19,7 @@ export const IoTab: FC<IoTabProps> = ({ inputs, outputs, nodeNamesById }) => {
   if (!hasStreams) {
     return (
       <div className="drawer-tab-content">
-        <p className="drawer-prose" style={{ color: "#71717a", padding: "16px" }}>
-          No input or output streams recorded for this node.
-        </p>
+        <div className="drawer-empty-state">No input or output streams recorded for this node.</div>
       </div>
     );
   }

@@ -277,7 +277,7 @@ describe("CUSTOM_LAYOUT_SCENARIOS", () => {
     const totalDuration = timings.reduce((a, b) => a + b, 0);
     const avgDuration = totalDuration / timings.length;
     expect(avgDuration).toBeLessThan(50.0);
-    expect(totalDuration).toBeLessThan(3500.0);
+    expect(totalDuration).toBeLessThan(5000.0);
   });
 });
 

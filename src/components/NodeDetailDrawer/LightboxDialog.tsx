@@ -3,8 +3,11 @@ import {
   IconChevronRight,
   IconDownload,
   IconFileText,
+  IconHierarchy,
   IconInfoCircle,
+  IconNotes,
   IconPhoto,
+  IconPhotoOff,
   IconPlayerPlay,
   IconVolume,
   IconX,
@@ -13,9 +16,9 @@ import {
   IconZoomReset,
 } from "@tabler/icons-react";
 import type { FC, MouseEvent } from "react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { MediaAsset } from "../../types/graphData";
-import { formatBytes } from "./DrawerSection";
+import { formatBytes } from "./streamUtils";
 
 export interface LightboxDialogProps {
   isOpen: boolean;
@@ -24,6 +27,13 @@ export interface LightboxDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Fullscreen high-DPI Lightbox modal dialog supporting:
+ * - 100% to 400% zoom scaling with percentage badge
+ * - Interactive pan navigation with grab / grabbing cursor
+ * - Prev/Next keyboard navigation (ArrowLeft / ArrowRight) and Escape dismiss
+ * - Metadata inspector sidebar and direct download links
+ */
 export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDialog({
   isOpen,
   assets,
@@ -32,36 +42,178 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
 }) {
   const [currentIndex, setCurrentIndex] = useState<number>(initialIndex);
   const [zoom, setZoom] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
   const [showMetadata, setShowMetadata] = useState<boolean>(true);
+  const [hasImageError, setHasImageError] = useState<boolean>(false);
+
+  const startDragRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const initialPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setCurrentIndex(Math.max(0, Math.min(initialIndex, assets.length - 1)));
     setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+    setHasImageError(false);
   }, [initialIndex, assets.length]);
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [currentIndex]);
+
+  // Initial focus management & focus restoration on unmount / dismiss
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (typeof document !== "undefined" && document.activeElement) {
+      previousActiveElementRef.current = document.activeElement as HTMLElement;
+    }
+
+    const timer = setTimeout(() => {
+      if (closeBtnRef.current) {
+        closeBtnRef.current.focus();
+      } else if (dialogRef.current) {
+        dialogRef.current.focus();
+      }
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      if (
+        previousActiveElementRef.current &&
+        typeof previousActiveElementRef.current.focus === "function" &&
+        (typeof document === "undefined" ||
+          document.body.contains(previousActiveElementRef.current))
+      ) {
+        previousActiveElementRef.current.focus();
+      }
+    };
+  }, [isOpen]);
 
   const currentAsset: MediaAsset | undefined = assets[currentIndex];
 
+  const resetPanAndZoom = useCallback(() => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
+
   const handlePrev = useCallback(() => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : assets.length - 1));
-    setZoom(1);
-  }, [assets.length]);
+    resetPanAndZoom();
+  }, [assets.length, resetPanAndZoom]);
 
   const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev < assets.length - 1 ? prev + 1 : 0));
-    setZoom(1);
-  }, [assets.length]);
+    resetPanAndZoom();
+  }, [assets.length, resetPanAndZoom]);
 
-  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(3, z + 0.25)), []);
-  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(0.5, z - 0.25)), []);
-  const handleZoomReset = useCallback(() => setZoom(1), []);
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => {
+      const next = Math.min(4, Math.round((z + 0.5) * 10) / 10);
+      return next;
+    });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => {
+      const next = Math.max(1, Math.round((z - 0.5) * 10) / 10);
+      if (next === 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    resetPanAndZoom();
+  }, [resetPanAndZoom]);
+
+  // Pan event handlers with bounded coordinate clamping to prevent dragging offscreen
+  const handleMouseDown = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (zoom <= 1) return;
+      setIsPanning(true);
+      startDragRef.current = { x: e.clientX, y: e.clientY };
+      initialPanRef.current = { ...panOffset };
+    },
+    [zoom, panOffset],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (!isPanning || zoom <= 1) return;
+      const dx = e.clientX - startDragRef.current.x;
+      const dy = e.clientY - startDragRef.current.y;
+      const rawX = initialPanRef.current.x + dx;
+      const rawY = initialPanRef.current.y + dy;
+      const maxOffset = Math.round(zoom * 800);
+      setPanOffset({
+        x: Math.max(-maxOffset, Math.min(maxOffset, rawX)),
+        y: Math.max(-maxOffset, Math.min(maxOffset, rawY)),
+      });
+    },
+    [isPanning, zoom],
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (isPanning) setIsPanning(false);
+  }, [isPanning]);
 
   useEffect(() => {
     if (!isOpen) return;
+    if (typeof window === "undefined") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose();
+      } else if (e.key === "Tab") {
+        const container =
+          dialogRef.current ||
+          (typeof document !== "undefined" && typeof document.querySelector === "function"
+            ? document.querySelector<HTMLElement>(".drawer-lightbox-overlay")
+            : null);
+        if (!container) return;
+        const focusableElements = Array.from(
+          container.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => {
+          if (typeof window !== "undefined" && window.getComputedStyle) {
+            const style = window.getComputedStyle(el);
+            if (style.display === "none" || style.visibility === "hidden") {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        if (focusableElements.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (
+            document.activeElement === firstElement ||
+            !container.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            lastElement?.focus();
+          }
+        } else {
+          if (
+            document.activeElement === lastElement ||
+            !container.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            firstElement?.focus();
+          }
+        }
       } else if (e.key === "ArrowLeft") {
         e.stopPropagation();
         handlePrev();
@@ -92,7 +244,21 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
     }
   };
 
-  const getAssetIcon = (type?: string) => {
+  const getAssetIcon = (type?: string, url?: string, title?: string) => {
+    if (
+      type === "diagram" ||
+      url?.toLowerCase().includes("diagram") ||
+      title?.toLowerCase().includes("diagram")
+    ) {
+      return <IconHierarchy size={16} />;
+    }
+    if (
+      type === "log" ||
+      url?.toLowerCase().endsWith(".log") ||
+      title?.toLowerCase().includes("log")
+    ) {
+      return <IconNotes size={16} />;
+    }
     switch (type) {
       case "video":
         return <IconPlayerPlay size={16} />;
@@ -100,9 +266,9 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
         return <IconVolume size={16} />;
       case "document":
       case "code":
-      case "log":
         return <IconFileText size={16} />;
       case "image":
+      case "screenshot":
       default:
         return <IconPhoto size={16} />;
     }
@@ -110,6 +276,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
 
   return (
     <div
+      ref={dialogRef}
       className="drawer-lightbox-overlay"
       onClick={handleBackdropClick}
       role="dialog"
@@ -120,7 +287,9 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
       <div className="drawer-lightbox-dialog">
         <header className="drawer-lightbox-header">
           <div className="drawer-lightbox-header-left">
-            <span className="drawer-lightbox-type-icon">{getAssetIcon(currentAsset.type)}</span>
+            <span className="drawer-lightbox-type-icon">
+              {getAssetIcon(currentAsset.type, currentAsset.url, currentAsset.title)}
+            </span>
             <div className="drawer-lightbox-title-wrap">
               <h3 className="drawer-lightbox-title">
                 {currentAsset.title ?? `Asset ${currentAsset.id}`}
@@ -131,7 +300,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
             </div>
             {currentAsset.dimensions && (
               <span className="drawer-lightbox-chip">
-                {currentAsset.dimensions.width} &times; {currentAsset.dimensions.height}
+                {`${currentAsset.dimensions.width} × ${currentAsset.dimensions.height}`}
               </span>
             )}
             {typeof currentAsset.sizeBytes === "number" && (
@@ -140,7 +309,10 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
           </div>
 
           <div className="drawer-lightbox-header-actions">
-            {currentAsset.type === "image" && (
+            {(!currentAsset.type ||
+              currentAsset.type === "image" ||
+              currentAsset.type === "screenshot" ||
+              currentAsset.type === "diagram") && (
               <div className="drawer-lightbox-zoom-controls">
                 <button
                   type="button"
@@ -148,6 +320,8 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   onClick={handleZoomIn}
                   title="Zoom In (+)"
                   aria-label="Zoom in"
+                  disabled={zoom >= 4}
+                  aria-disabled={zoom >= 4}
                 >
                   <IconZoomIn size={16} />
                 </button>
@@ -157,6 +331,8 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   onClick={handleZoomOut}
                   title="Zoom Out (-)"
                   aria-label="Zoom out"
+                  disabled={zoom <= 1}
+                  aria-disabled={zoom <= 1}
                 >
                   <IconZoomOut size={16} />
                 </button>
@@ -166,9 +342,12 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   onClick={handleZoomReset}
                   title="Reset Zoom (0)"
                   aria-label="Reset zoom"
+                  disabled={zoom === 1 && panOffset.x === 0 && panOffset.y === 0}
+                  aria-disabled={zoom === 1 && panOffset.x === 0 && panOffset.y === 0}
                 >
                   <IconZoomReset size={16} />
                 </button>
+                <span className="drawer-lightbox-zoom-pct">{`${Math.round(zoom * 100)}%`}</span>
               </div>
             )}
 
@@ -190,13 +369,14 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 className="drawer-lightbox-action-btn"
                 title="Download / Open in new tab"
                 aria-label="Download asset"
-                download
+                download={currentAsset.title ?? currentAsset.id}
               >
                 <IconDownload size={16} />
               </a>
             )}
 
             <button
+              ref={closeBtnRef}
               type="button"
               className="drawer-lightbox-action-btn drawer-lightbox-close-btn"
               onClick={onClose}
@@ -221,7 +401,16 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
             </button>
           )}
 
-          <div className="drawer-lightbox-viewport">
+          <div
+            className={`drawer-lightbox-viewport ${zoom > 1 ? "is-zoomed" : ""}`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{
+              cursor: zoom > 1 ? (isPanning ? "grabbing" : "grab") : "default",
+            }}
+          >
             {currentAsset.type === "video" ? (
               <video
                 src={currentAsset.url}
@@ -246,12 +435,32 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   <code>{currentAsset.description || currentAsset.url}</code>
                 </pre>
               </div>
+            ) : hasImageError ? (
+              <div className="drawer-lightbox-fallback">
+                <IconPhotoOff size={48} className="drawer-lightbox-fallback-icon" />
+                <h4 className="drawer-lightbox-fallback-title">Image failed to load</h4>
+                <p className="drawer-lightbox-fallback-desc">
+                  The image asset at <code>{currentAsset.url}</code> could not be loaded or is
+                  unreachable.
+                </p>
+                {currentAsset.url && (
+                  <a
+                    href={currentAsset.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="drawer-lightbox-fallback-btn"
+                  >
+                    <IconDownload size={14} /> Open direct URL
+                  </a>
+                )}
+              </div>
             ) : (
               <div
                 className="drawer-lightbox-image-wrap"
                 style={{
-                  transform: `scale(${zoom})`,
-                  transition: "transform 0.15s ease-out",
+                  transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+                  transition: isPanning ? "none" : "transform 0.15s ease-out",
+                  transformOrigin: "center center",
                 }}
               >
                 <img
@@ -259,6 +468,8 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   alt={currentAsset.title ?? currentAsset.id}
                   className="drawer-lightbox-img"
                   loading="eager"
+                  draggable={false}
+                  onError={() => setHasImageError(true)}
                 />
               </div>
             )}
@@ -306,6 +517,22 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                     <span className="drawer-lightbox-meta-value">{`Step ${currentAsset.step}`}</span>
                   </div>
                 )}
+                {currentAsset.dimensions && (
+                  <div className="drawer-lightbox-meta-item">
+                    <span className="drawer-lightbox-meta-label">Dimensions</span>
+                    <span className="drawer-lightbox-meta-value">
+                      {`${currentAsset.dimensions.width} × ${currentAsset.dimensions.height}`}
+                    </span>
+                  </div>
+                )}
+                {typeof currentAsset.sizeBytes === "number" && (
+                  <div className="drawer-lightbox-meta-item">
+                    <span className="drawer-lightbox-meta-label">File Size</span>
+                    <span className="drawer-lightbox-meta-value">
+                      {formatBytes(currentAsset.sizeBytes)}
+                    </span>
+                  </div>
+                )}
                 {currentAsset.mimeType && (
                   <div className="drawer-lightbox-meta-item">
                     <span className="drawer-lightbox-meta-label">MIME Type</span>
@@ -318,6 +545,15 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                     <code className="drawer-lightbox-meta-code drawer-lightbox-url">
                       {currentAsset.url}
                     </code>
+                    <a
+                      href={currentAsset.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="drawer-lightbox-download-link"
+                      download={currentAsset.title ?? currentAsset.id}
+                    >
+                      <IconDownload size={12} /> Download Asset
+                    </a>
                   </div>
                 )}
               </div>
