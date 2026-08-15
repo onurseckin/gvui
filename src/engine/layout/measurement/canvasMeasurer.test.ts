@@ -146,6 +146,88 @@ describe("measureNodes", () => {
     expect(decoratedSize.width).toBeGreaterThanOrEqual(bareSize.width);
   });
 
+  it("grows vertically with badges alone and mini-chips", () => {
+    const measurer = createCanvasMeasurer();
+    const bare: GraphNodeData = { id: "a", name: "worker" };
+    const withBadges: GraphNodeData = {
+      id: "b",
+      name: "worker",
+      badges: [{ label: "running" }, { label: "retry-3" }],
+    };
+    const withMiniChips: GraphNodeData = {
+      id: "c",
+      name: "worker",
+      metrics: { durationMs: 45000 },
+      metadata: {
+        commands: [
+          {
+            id: "cmd1",
+            argv: ["cmd1"],
+            cwd: "/",
+            exitCode: 0,
+            durationMs: 100,
+            startedAt: "2026-08-14T00:00:00Z",
+            finishedAt: "2026-08-14T00:00:01Z",
+          },
+          {
+            id: "cmd2",
+            argv: ["cmd2"],
+            cwd: "/",
+            exitCode: 0,
+            durationMs: 100,
+            startedAt: "2026-08-14T00:00:01Z",
+            finishedAt: "2026-08-14T00:00:02Z",
+          },
+        ],
+      },
+    };
+
+    const [bareSize, badgeSize, miniSize] = measurer.measureNodes([
+      bare,
+      withBadges,
+      withMiniChips,
+    ]);
+    expect(badgeSize.height).toBeGreaterThan(bareSize.height);
+    expect(miniSize.height).toBeGreaterThan(bareSize.height);
+  });
+
+  it("calculates full vertical space without artificial height caps for long multi-line descriptions", () => {
+    const measurer = createCanvasMeasurer();
+    const twoLine: GraphNodeData = {
+      id: "a",
+      name: "worker",
+      description: "First line of text that wraps nicely. Second line of text that wraps nicely.",
+    };
+    const fiveLine: GraphNodeData = {
+      id: "b",
+      name: "worker",
+      description:
+        "First line of text that wraps. Second line of text that wraps. Third line of text that wraps. Fourth line of text that wraps. Fifth line of text that wraps. Sixth line of text that wraps.",
+    };
+
+    const [twoSize, fiveSize] = measurer.measureNodes([twoLine, fiveLine], {
+      minNodeWidth: 200,
+      maxNodeWidth: 200,
+    });
+
+    expect(fiveSize.height).toBeGreaterThan(twoSize.height);
+  });
+
+  it("accounts for header step badge and badge chips in width calculations", () => {
+    const measurer = createCanvasMeasurer();
+    const bare: GraphNodeData = { id: "a", name: "worker" };
+    const withHeaderDetails: GraphNodeData = {
+      id: "b",
+      name: "worker",
+      step: 42,
+      badge: { text: "CRITICAL_PATH", variant: "warning" },
+      model: "claude-3-5-sonnet",
+    };
+
+    const [bareSize, detailedSize] = measurer.measureNodes([bare, withHeaderDetails]);
+    expect(detailedSize.width).toBeGreaterThanOrEqual(bareSize.width);
+  });
+
   it("returns finite positive sizes with no canvas available", () => {
     const node: GraphNodeData = {
       id: "n1",

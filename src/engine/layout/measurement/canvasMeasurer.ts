@@ -350,6 +350,8 @@ export function createCanvasMeasurer(options?: CanvasMeasurerOptions): Measureme
     const items = rowItems(node, row);
     if (items.length === 0) return null;
 
+    const maxLines = row.maxLines ?? Number.POSITIVE_INFINITY;
+
     if (row.kind === "flow") {
       const widths = items.map((item) => measureRun(item.text, item.fontKey) + item.chrome);
       const natural =
@@ -373,7 +375,7 @@ export function createCanvasMeasurer(options?: CanvasMeasurerOptions): Measureme
           lineWidth = advance;
         }
       }
-      return { naturalWidth: natural, lineCount: Math.min(lineCount, row.maxLines) };
+      return { naturalWidth: natural, lineCount: Math.min(lineCount, maxLines) };
     }
 
     const natural =
@@ -390,8 +392,8 @@ export function createCanvasMeasurer(options?: CanvasMeasurerOptions): Measureme
     const usable = Math.max(1, availableWidth - row.fixedChrome);
     let lineCount = 0;
     for (const item of items) {
-      if (lineCount >= row.maxLines) break;
-      const remaining = row.maxLines - lineCount;
+      if (lineCount >= maxLines) break;
+      const remaining = maxLines - lineCount;
       const wrapped = wrapRun(
         item.text,
         item.fontKey,
@@ -400,7 +402,7 @@ export function createCanvasMeasurer(options?: CanvasMeasurerOptions): Measureme
       );
       lineCount += Math.max(1, wrapped.lines.length);
     }
-    return { naturalWidth: natural, lineCount: Math.min(lineCount, row.maxLines) };
+    return { naturalWidth: natural, lineCount: Math.min(lineCount, maxLines) };
   }
 
   function measureNode(

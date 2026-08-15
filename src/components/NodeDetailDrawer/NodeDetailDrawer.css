@@ -11,10 +11,12 @@
   z-index: 60;
   display: flex;
   flex-direction: column;
-  background-color: #101013;
+  background-color: #18181b;
   border-left: 1px solid #27272a;
   box-shadow: -24px 0 48px -24px rgba(0, 0, 0, 0.9);
   color: #e4e4e7;
+  font-family: var(--font-sans);
+  font-size: 12px;
   animation: node-drawer-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -32,8 +34,8 @@
 .drawer-header {
   flex: 0 0 auto;
   padding: 14px 18px;
-  border-bottom: 1px solid #232327;
-  background-color: #131316;
+  border-bottom: 1px solid #27272a;
+  background-color: #18181b;
   box-shadow: inset 3px 0 0 var(--node-kind-accent, transparent);
 }
 
@@ -51,7 +53,8 @@
   margin: 0;
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: #fafafa;
@@ -88,8 +91,8 @@
 }
 .drawer-kind-label {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #a1a1aa;
@@ -98,6 +101,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
 }
@@ -110,8 +114,8 @@
 }
 .drawer-step-chip {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   padding: 1px 6px;
   border-radius: 4px;
   background: rgba(59, 130, 246, 0.15);
@@ -120,7 +124,7 @@
 }
 .drawer-model {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: var(--radius-sm);
@@ -135,16 +139,16 @@
 }
 .drawer-id {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: #52525b;
+  font-size: 11px;
+  color: #71717a;
   margin-left: auto;
 }
 
 /* Tabs Navigation */
 .drawer-tabs {
   display: flex;
-  background-color: #131316;
-  border-bottom: 1px solid #232327;
+  background-color: #18181b;
+  border-bottom: 1px solid #27272a;
   padding: 0 12px;
   gap: 2px;
   overflow-x: auto;
@@ -154,6 +158,7 @@
   background: none;
   border: none;
   color: #71717a;
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
   padding: 9px 10px;
@@ -174,7 +179,8 @@
   font-weight: 600;
 }
 .drawer-tab-badge {
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   padding: 0 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
@@ -187,10 +193,12 @@
   min-height: 0;
   overflow-y: auto;
   padding: 6px 18px 24px;
+  font-family: var(--font-sans);
+  font-size: 12px;
 }
 .drawer-section {
   padding: 14px 0;
-  border-bottom: 1px solid #1c1c20;
+  border-bottom: 1px solid #27272a;
 }
 .drawer-section:last-child {
   border-bottom: none;
@@ -200,9 +208,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #71717a;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #e4e4e7;
+}
+.drawer-section-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
 }

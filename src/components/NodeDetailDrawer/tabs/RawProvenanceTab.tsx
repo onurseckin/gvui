@@ -31,7 +31,7 @@ export const RawProvenanceTab: FC<RawProvenanceTabProps> = ({ node }) => {
       </DrawerSection>
 
       <DrawerSection title="Raw Node Dataset Payload">
-        <pre className="drawer-pre" style={{ maxHeight: "360px", fontSize: "11px" }}>
+        <pre className="drawer-pre" style={{ maxHeight: "360px" }}>
           {JSON.stringify(node, null, 2)}
         </pre>
       </DrawerSection>

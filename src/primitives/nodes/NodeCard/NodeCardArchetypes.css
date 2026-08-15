@@ -3,78 +3,90 @@
 /* 1. Input Stadium Card (Rounded pill / Stadium) */
 .node-card.kind-input {
   border-radius: 14px;
-  background-color: #171026;
-  border-color: #5b21b6;
-  --node-kind-accent: #a78bfa;
+  background-color: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.45);
+  --node-kind-accent: #8b5cf6;
 }
 
 /* 2. Orchestrator Dispatch Manifest Board */
 .node-card.kind-orchestrator {
   border-radius: 8px;
-  background-color: #0b1528;
-  border-color: #1e40af;
-  --node-kind-accent: #60a5fa;
+  background-color: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.45);
+  --node-kind-accent: #3b82f6;
 }
 
 /* 3. Agent Worker Card */
 .node-card.kind-agent {
   border-radius: 6px;
-  background-color: #081a24;
-  border-color: #0891b2;
-  --node-kind-accent: #22d3ee;
+  background-color: rgba(6, 182, 212, 0.08);
+  border-color: rgba(6, 182, 212, 0.45);
+  --node-kind-accent: #06b6d4;
 }
 
 /* 4. Tool Monospace CLI Terminal Window */
 .node-card.kind-tool {
   border-radius: 4px;
-  background-color: #090d14;
-  border-color: #475569;
+  background-color: rgba(24, 24, 27, 0.9);
+  border-color: rgba(63, 63, 70, 0.6);
   font-family: var(--font-mono);
-  --node-kind-accent: #94a3b8;
+  --node-kind-accent: #71717a;
 }
 
 /* 5. Router Decision Diamond / Branching */
 .node-card.kind-router {
   border-radius: 6px;
-  background-color: #1f1406;
-  border-color: #d97706;
-  --node-kind-accent: #fcd34d;
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+  background-color: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.45);
+  --node-kind-accent: #f59e0b;
 }
 
-/* 6. Validator Gate Checkpoint */
+/* 6. Validator Gate Checkpoint (Chamfered Shield) */
 .node-card.kind-gate {
-  border-radius: 6px;
-  background-color: #081d14;
-  border-color: #059669;
-  --node-kind-accent: #34d399;
+  border-radius: 0 0 6px 6px;
+  clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, 0% 100%, 0% 12px);
+  background-color: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.45);
+  --node-kind-accent: #10b981;
 }
 .node-card.kind-gate.status-warning,
 .node-card.kind-gate.status-error {
-  border-color: #dc2626;
-  background-color: #240d12;
-  --node-kind-accent: #f87171;
+  border-color: rgba(239, 68, 68, 0.45);
+  background-color: rgba(239, 68, 68, 0.08);
+  --node-kind-accent: #ef4444;
 }
 
-/* 7. Critic Scorecard */
+/* 7. Critic Scorecard (Double-Border) */
 .node-card.kind-critic {
   border-radius: 6px;
-  border: 2px double #818cf8;
-  background-color: #14112e;
+  border: 2px double rgba(129, 140, 248, 0.5);
+  border-color: rgba(129, 140, 248, 0.5);
+  background-color: rgba(99, 102, 241, 0.08);
   --node-kind-accent: #818cf8;
 }
 
-/* 8. Sealed Terminal Capsule */
+/* 8. Sealed Terminal Capsule (9999px pill) */
 .node-card.kind-terminal {
   border-radius: 9999px;
-  background-color: #051e14;
-  border-color: #10b981;
+  background-color: rgba(5, 150, 105, 0.1);
+  border-color: rgba(16, 185, 129, 0.5);
   --node-kind-accent: #10b981;
 }
 
-/* Join Node */
+/* 9. Join Node */
 .node-card.kind-join {
   border-radius: 6px;
-  background-color: #081d1c;
-  border-color: #0f766e;
+  background-color: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.45);
   --node-kind-accent: #2dd4bf;
 }

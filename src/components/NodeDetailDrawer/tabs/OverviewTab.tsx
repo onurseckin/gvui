@@ -5,7 +5,8 @@ import {
   formatTokens,
 } from "../../../primitives/nodes/NodeCard/nodeCardModel";
 import type { GraphNodeData, IoPort } from "../../../types/graphData";
-import { DrawerSection, IoRow } from "../DrawerSection";
+import { DrawerSection } from "../DrawerSection";
+import { IoStreamItem } from "../IoStreamItem";
 
 interface OverviewTabProps {
   node: GraphNodeData;
@@ -14,6 +15,10 @@ interface OverviewTabProps {
   nodeNamesById: Map<string, string>;
 }
 
+/**
+ * Merged "Overview & I/O" tab component presenting high-level metadata,
+ * execution telemetry metrics, and expandable input/output stream accordions.
+ */
 export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeNamesById }) => {
   const metrics = node.metrics;
   const contextRows: Array<{ key: string; value: string }> = [];
@@ -73,32 +78,32 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
       ) : null}
 
       {inputs.length > 0 ? (
-        <DrawerSection title="Inputs" count={inputs.length}>
-          <ul className="drawer-io-list">
+        <DrawerSection title="Input Streams" count={inputs.length}>
+          <div className="drawer-stream-list">
             {inputs.map((port, index) => (
-              <IoRow
+              <IoStreamItem
                 key={`in-${port.node ?? "run"}-${index}`}
                 port={port}
                 peerName={port.node ? nodeNamesById.get(port.node) : undefined}
                 direction="in"
               />
             ))}
-          </ul>
+          </div>
         </DrawerSection>
       ) : null}
 
       {outputs.length > 0 ? (
-        <DrawerSection title="Outputs" count={outputs.length}>
-          <ul className="drawer-io-list">
+        <DrawerSection title="Output Streams" count={outputs.length}>
+          <div className="drawer-stream-list">
             {outputs.map((port, index) => (
-              <IoRow
+              <IoStreamItem
                 key={`out-${port.node ?? "run"}-${index}`}
                 port={port}
                 peerName={port.node ? nodeNamesById.get(port.node) : undefined}
                 direction="out"
               />
             ))}
-          </ul>
+          </div>
         </DrawerSection>
       ) : null}
 

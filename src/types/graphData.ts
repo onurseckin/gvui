@@ -44,7 +44,22 @@ export type NodeStatus =
   | "cached";
 export type ModelTier = "xs" | "s" | "m" | "l";
 export type FileMode = "read" | "write" | "attach";
-export type EdgeKind = "sequence" | "spawn" | "conditional" | "loop" | "fallback" | "join" | "data";
+export type EdgeKind =
+  | "sequence"
+  | "spawn"
+  | "dispatch"
+  | "data"
+  | "handoff"
+  | "dependency"
+  | "loop"
+  | "pushback"
+  | "gate"
+  | "validation"
+  | "critic"
+  | "signoff"
+  | "conditional"
+  | "fallback"
+  | "join";
 export type PayloadKind = "full-context" | "summary" | "artifact" | "decision" | "file" | "prompt";
 
 export interface FileRef {
@@ -150,10 +165,29 @@ export interface EdgeHandoff {
 }
 
 export interface EdgeContainerDetail {
-  stepBadge: string;
-  title: string;
+  stepBadge?: string;
+  title?: string;
   detail?: string;
-  variant: "info" | "warning" | "error" | "success" | "neutral" | "cyan";
+  variant?:
+    | "info"
+    | "warning"
+    | "error"
+    | "success"
+    | "neutral"
+    | "cyan"
+    | "indigo"
+    | "slate"
+    | "amber"
+    | "emerald"
+    | "critic"
+    | "spawn"
+    | "sequence"
+    | "data"
+    | "dependency"
+    | "loop"
+    | "gate"
+    | "signoff"
+    | string;
   icon?: string;
 }
 

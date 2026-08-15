@@ -1,9 +1,17 @@
 import type { FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useCallback } from "react";
-import { IconAlertCircle, IconFileText, IconRocket } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconCertificate,
+  IconFileText,
+  IconLink,
+  IconRocket,
+  IconShieldCheck,
+} from "@tabler/icons-react";
 import type { Point, Rect } from "../../../engine/layout/custom/types";
-import type { BadgeDetail, EdgeContainerDetail } from "../../../types/graphData";
+import type { BadgeDetail, EdgeContainerDetail, EdgeKind } from "../../../types/graphData";
 import { getTablerIconComponent } from "../../nodes/NodeCard/nodeKinds";
+import { describeEdgeKind, getEdgeIconComponent, resolveEdgeKind } from "./edgeKinds";
 
 export interface EdgeBadgeOverlayProps {
   x: number;
@@ -11,6 +19,7 @@ export interface EdgeBadgeOverlayProps {
   label?: string;
   badge?: BadgeDetail;
   container?: EdgeContainerDetail;
+  kind?: EdgeKind;
   stepNumber?: number | string;
   isCycle?: boolean;
   isSelected?: boolean;
@@ -26,6 +35,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   label,
   badge,
   container,
+  kind,
   stepNumber,
   isCycle = false,
   isSelected = false,
@@ -52,38 +62,58 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
     [onClick],
   );
 
+  const semanticKind = resolveEdgeKind({ kind, isCycle });
+  const descriptor = describeEdgeKind(semanticKind);
+
   const effectiveStep =
     container?.stepBadge ?? (stepNumber !== undefined ? String(stepNumber) : undefined);
   const titleText = container?.title ?? badge?.text ?? label;
   const detailText = container?.detail;
-  if (!titleText?.trim() && !effectiveStep && !isCycle) return null;
+
+  if (!titleText?.trim() && !effectiveStep && !isCycle && !kind) return null;
 
   const displayText = isCycle
     ? titleText?.trim()
       ? `CYCLE (${titleText})`
       : "CYCLE"
-    : (titleText ?? (effectiveStep ? `Step ${effectiveStep}` : ""));
+    : (titleText ?? (effectiveStep ? `Step ${effectiveStep}` : descriptor.label));
 
+  // Determine Icon
   const iconKey = container?.icon ?? badge?.icon;
-  let IconComp = getTablerIconComponent(iconKey);
+  let IconComp = getTablerIconComponent(iconKey) ?? getEdgeIconComponent(iconKey);
+
   if (!IconComp && iconKey) {
     const v = container?.variant ?? badge?.variant;
     IconComp =
-      isCycle || v === "warning"
-        ? IconAlertCircle
-        : v === "info"
+      isCycle || v === "warning" || v === "loop"
+        ? IconAlertTriangle
+        : v === "info" || v === "spawn"
           ? IconRocket
-          : v === "success"
-            ? IconFileText
-            : undefined;
-  } else if (isCycle && !IconComp) {
-    IconComp = IconAlertCircle;
+          : v === "success" || v === "gate"
+            ? IconShieldCheck
+            : v === "critic"
+              ? IconCertificate
+              : v === "dependency"
+                ? IconLink
+                : v === "data"
+                  ? IconFileText
+                  : undefined;
+  } else if (!IconComp && isCycle) {
+    IconComp = IconAlertTriangle;
+  } else if (!IconComp && descriptor.IconComponent) {
+    // Default semantic icon for edge kind (e.g. IconRocket for spawn, IconFileText for data, etc.)
+    IconComp = descriptor.IconComponent;
   }
+
+  // Variant determination
+  const variant = isCycle
+    ? "loop"
+    : (container?.variant ?? badge?.variant ?? descriptor.badgeVariant);
 
   const computedWidth = Math.max(
     68,
     (effectiveStep ? effectiveStep.length * 6.5 + 16 : 0) +
-      (IconComp ? 16 : 0) +
+      (IconComp ? 18 : 0) +
       displayText.length * 6.8 +
       (detailText ? detailText.length * 6.0 + 12 : 0) +
       24,
@@ -107,12 +137,11 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
     showLeaderPath && leaderPoints
       ? leaderPoints.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x} ${p.y}`, "").trim()
       : "";
-  const variant = isCycle ? "warning" : (container?.variant ?? badge?.variant ?? "neutral");
 
   return (
     <g
       transform={`translate(${renderX}, ${renderY})`}
-      className={`edge-badge-group ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""} ${badge?.clickable || onClick ? "is-clickable" : ""}`.trim()}
+      className={`edge-badge-group kind-${semanticKind} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""} ${badge?.clickable || onClick ? "is-clickable" : ""}`.trim()}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
@@ -121,7 +150,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       {showLeaderPath && (
         <path
           d={leaderSvgPath}
-          stroke="#38bdf8"
+          stroke={descriptor.accent || "#38bdf8"}
           strokeWidth="1"
           strokeDasharray="3,3"
           fill="none"
@@ -134,7 +163,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
           y1={anchorPoint.y - renderY}
           x2={0}
           y2={0}
-          stroke="#38bdf8"
+          stroke={descriptor.accent || "#38bdf8"}
           strokeWidth="1"
           strokeDasharray="3,3"
         />
@@ -146,8 +175,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
         height={height}
         rx={6}
         ry={6}
-        fill="#111114"
-        className={`edge-badge-rect variant-${variant} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
+        fill="#0d0d10"
+        className={`edge-badge-rect variant-${variant} kind-${semanticKind} ${isSelected ? "selected" : ""} ${isCycle ? "cycle" : ""}`.trim()}
       />
       <foreignObject
         x={-width / 2}
@@ -157,7 +186,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
         style={{ pointerEvents: "none" }}
       >
         <div
-          className={`edge-badge-inner variant-${variant}`}
+          className={`edge-badge-inner variant-${variant} kind-${semanticKind}`}
           style={{
             display: "flex",
             alignItems: "center",

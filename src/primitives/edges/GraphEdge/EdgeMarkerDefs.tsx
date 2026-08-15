@@ -10,6 +10,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
 
   return (
     <defs>
+      {/* Default Understated Neutral Marker */}
       <marker
         id={getMarkerId("edge-arrowhead")}
         viewBox="0 0 10 10"
@@ -23,13 +24,14 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="var(--border, #9ca3af)"
+          fill="var(--edge-marker, #71717a)"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
       </marker>
 
+      {/* Selected Edge Marker */}
       <marker
         id={getMarkerId("edge-arrowhead-selected")}
         viewBox="0 0 10 10"
@@ -43,13 +45,119 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="var(--accent, #aa3bff)"
+          fill="var(--accent, #818cf8)"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
       </marker>
 
+      {/* 1. Spawn / Dispatch Marker (Cyan) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-spawn")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6.5"
+        markerHeight="6.5"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#06b6d4"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* 2. Sequence Marker (Neutral Zinc) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-sequence")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#52525b"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* 3. Data Handoff Marker (Indigo) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-data")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6.5"
+        markerHeight="6.5"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#6366f1"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* 4. Dependency Marker (Slate) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-dependency")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#64748b"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* 5. Loop / Pushback Marker (Crimson) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-loop")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#f43f5e"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* Cycle Marker (Amber/Gold) */}
       <marker
         id={getMarkerId("edge-arrowhead-cycle")}
         viewBox="0 0 10 10"
@@ -70,6 +178,49 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
         />
       </marker>
 
+      {/* 6. Validation Gate Marker (Emerald Green) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-gate")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6.5"
+        markerHeight="6.5"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#10b981"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* 7. Critic Signoff Marker (Metallic Gold) */}
+      <marker
+        id={getMarkerId("edge-arrowhead-critic")}
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6.5"
+        markerHeight="6.5"
+        orient="auto-start-reverse"
+        shapeRendering="geometricPrecision"
+        textRendering="geometricPrecision"
+      >
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill="#eab308"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      </marker>
+
+      {/* Port and Flow Markers */}
       <marker
         id={getMarkerId("edge-circle")}
         viewBox="0 0 10 10"
@@ -85,8 +236,8 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
           cx="5"
           cy="5"
           r="3"
-          fill="var(--bg, #ffffff)"
-          stroke="var(--border, #9ca3af)"
+          fill="var(--bg, #18181b)"
+          stroke="var(--border, #52525b)"
           strokeWidth="1.5"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
@@ -108,16 +259,16 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
           cx="5"
           cy="5"
           r="3.5"
-          fill="var(--accent, #aa3bff)"
+          fill="var(--accent, #818cf8)"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
       </marker>
 
       <linearGradient id={getMarkerId("edge-flow-gradient")} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="var(--accent, #aa3bff)" stopOpacity="0.2" />
-        <stop offset="50%" stopColor="var(--accent, #aa3bff)" stopOpacity="1.0" />
-        <stop offset="100%" stopColor="var(--accent, #aa3bff)" stopOpacity="0.2" />
+        <stop offset="0%" stopColor="var(--accent, #818cf8)" stopOpacity="0.2" />
+        <stop offset="50%" stopColor="var(--accent, #818cf8)" stopOpacity="1.0" />
+        <stop offset="100%" stopColor="var(--accent, #818cf8)" stopOpacity="0.2" />
       </linearGradient>
     </defs>
   );

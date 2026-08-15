@@ -50,14 +50,14 @@ export const FilesTab: FC<FilesTabProps> = ({ node }) => {
                         {file.lines ? `:${file.lines}` : ""}
                       </code>
                       {hasChurn ? (
-                        <span style={{ fontSize: "10.5px", fontFamily: "var(--font-mono)" }}>
+                        <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)" }}>
                           <span style={{ color: "#34d399" }}>+{file.additions ?? 0}</span>{" "}
                           <span style={{ color: "#f87171" }}>-{file.deletions ?? 0}</span>
                         </span>
                       ) : null}
                     </div>
                     {file.diff ? (
-                      <pre className="drawer-pre" style={{ maxHeight: "200px" }}>
+                      <pre className="drawer-pre" style={{ maxHeight: "220px" }}>
                         {file.diff}
                       </pre>
                     ) : null}

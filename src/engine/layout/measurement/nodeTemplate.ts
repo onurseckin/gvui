@@ -14,7 +14,7 @@
  * Geometry constants are read off `src/primitives/nodes/NodeCard/NodeCard.css`.
  */
 import {
-  MAX_DESCRIPTION_LINES,
+  formatDuration,
   formatOverflowLabel,
   selectDescription,
   selectFileChips,
@@ -44,8 +44,8 @@ export interface NodeRowSpec {
   segments: NodeRowSegment[];
   /** Vertical advance of one line of this row, including its share of intra-row gap. */
   lineHeight: number;
-  /** Hard cap on lines. Bounds the tallest a single row can make a card. */
-  maxLines: number;
+  /** Hard cap on lines if any. Set to Infinity or omit for dynamic height without artificial caps. */
+  maxLines?: number;
   /** Horizontal gap between `flow` items. Unused by `wrap`. */
   itemGap: number;
   /** Chrome that never wraps and always reserves width (status dot, kind icon, collapse button). */
@@ -78,6 +78,52 @@ function selectFileOverflow(node: GraphNodeData): string[] {
   return overflow > 0 ? [formatOverflowLabel(overflow)] : [];
 }
 
+function selectBadges(node: GraphNodeData): string[] {
+  if (node.badges && Array.isArray(node.badges) && node.badges.length > 0) {
+    return node.badges.map((b) => b.label).filter(Boolean);
+  }
+  return [];
+}
+
+function selectMiniChips(node: GraphNodeData): string[] {
+  const chips: string[] = [];
+  const durationMs = node.metrics?.durationMs ?? (node.metadata?.durationMs as number | undefined);
+  if (typeof durationMs === "number" && durationMs > 0) {
+    chips.push(formatDuration(durationMs));
+  }
+  const commands = (node.metadata?.commands as unknown[]) ?? [];
+  const tools = node.tools ?? [];
+  if (commands.length > 0) {
+    chips.push(`${commands.length} cmds`);
+  } else if (tools.length > 0) {
+    chips.push(`${tools.length} tools`);
+  }
+  const findings = (node.metadata?.findings as unknown[]) ?? [];
+  if (findings.length > 0) {
+    chips.push(`${findings.length} issues`);
+  } else if (node.kind === "gate" && node.status === "success") {
+    chips.push("Passed");
+  }
+  return chips;
+}
+
+function selectFileSummary(node: GraphNodeData): string[] {
+  const filesCount = node.files?.length ?? 0;
+  const writeScope = (node.metadata?.writeScope as string[]) ?? [];
+  if (filesCount === 0 && writeScope.length === 0) {
+    return [];
+  }
+  const totalAdd = node.files?.reduce((acc, f) => acc + (f.additions ?? 0), 0) ?? 0;
+  const totalDel = node.files?.reduce((acc, f) => acc + (f.deletions ?? 0), 0) ?? 0;
+  if (totalAdd > 0 || totalDel > 0) {
+    return [`+${totalAdd}, -${totalDel} lines (${filesCount} file${filesCount > 1 ? "s" : ""})`];
+  }
+  if (filesCount > 0) {
+    return [`${filesCount} file${filesCount > 1 ? "s" : ""} modified`];
+  }
+  return [`${writeScope.length} write scope${writeScope.length > 1 ? "s" : ""}`];
+}
+
 /** `.node-chip`: 8px padding and a 1px border per side, plus a 12px icon and its 4px gap. */
 const CHIP_CHROME_WITH_ICON = 34;
 /** The `+N` pill carries no icon. */
@@ -106,7 +152,37 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
           itemChrome: 12,
           select: (n) => (n.type ? [n.type] : []),
         },
+        {
+          fontKey: FONT_KEYS.nodeTypeTag,
+          itemChrome: 12,
+          select: (n) => (n.step !== undefined ? [`Step ${n.step}`] : []),
+        },
+        {
+          fontKey: FONT_KEYS.nodeTypeTag,
+          itemChrome: 12,
+          select: (n) => (n.badge?.text ? [n.badge.text] : []),
+        },
         { fontKey: FONT_KEYS.nodeTypeTag, itemChrome: 14, select: selectModelChip },
+      ],
+    },
+    {
+      id: "badges",
+      kind: "flow",
+      fixedChrome: 0,
+      itemGap: 4,
+      lineHeight: 18,
+      maxLines: Number.POSITIVE_INFINITY,
+      segments: [
+        {
+          fontKey: FONT_KEYS.nodeTypeTag,
+          itemChrome: 12,
+          select: selectBadges,
+        },
+        {
+          fontKey: FONT_KEYS.nodeMetrics,
+          itemChrome: 20,
+          select: selectMiniChips,
+        },
       ],
     },
     {
@@ -115,7 +191,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 0,
       lineHeight: 15,
-      maxLines: MAX_DESCRIPTION_LINES,
+      maxLines: Number.POSITIVE_INFINITY,
       segments: [{ fontKey: FONT_KEYS.nodeBody, itemChrome: 0, select: selectDescription }],
     },
     {
@@ -125,7 +201,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       itemGap: 4,
       // An 18px chip plus the 4px gap to the row below it.
       lineHeight: 22,
-      maxLines: 2,
+      maxLines: Number.POSITIVE_INFINITY,
       segments: [
         {
           fontKey: FONT_KEYS.nodeChip,
@@ -145,7 +221,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 4,
       lineHeight: 22,
-      maxLines: 2,
+      maxLines: Number.POSITIVE_INFINITY,
       segments: [
         {
           fontKey: FONT_KEYS.nodeChip,
@@ -157,6 +233,11 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
           itemChrome: CHIP_CHROME_BARE,
           select: selectFileOverflow,
         },
+        {
+          fontKey: FONT_KEYS.nodeChip,
+          itemChrome: CHIP_CHROME_WITH_ICON,
+          select: selectFileSummary,
+        },
       ],
     },
     {
@@ -165,7 +246,7 @@ export const DEFAULT_NODE_TEMPLATE: Readonly<NodeTemplate> = Object.freeze({
       fixedChrome: 0,
       itemGap: 0,
       lineHeight: 14,
-      maxLines: 1,
+      maxLines: Number.POSITIVE_INFINITY,
       segments: [{ fontKey: FONT_KEYS.nodeMetrics, itemChrome: 0, select: selectMetricsLine }],
     },
   ] satisfies NodeRowSpec[]),

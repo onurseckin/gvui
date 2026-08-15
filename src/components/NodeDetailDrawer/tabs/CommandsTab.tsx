@@ -39,7 +39,13 @@ export const CommandsTab: FC<CommandsTabProps> = ({ node }) => {
                   {isSuccess ? <IconCheck size={12} /> : <IconX size={12} />}
                   Exit {cmd.exitCode}
                 </span>
-                <span style={{ color: "#a1a1aa", fontSize: "11px" }}>
+                <span
+                  style={{
+                    color: "#a1a1aa",
+                    fontSize: "11px",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
                   {formatDuration(cmd.durationMs)}
                 </span>
               </div>
@@ -50,15 +56,16 @@ export const CommandsTab: FC<CommandsTabProps> = ({ node }) => {
                 <div style={{ margin: "6px 0" }}>
                   <div
                     style={{
-                      fontSize: "10px",
+                      fontSize: "11px",
                       color: "#71717a",
                       textTransform: "uppercase",
                       marginBottom: "2px",
+                      fontFamily: "var(--font-sans)",
                     }}
                   >
                     stdout snippet:
                   </div>
-                  <pre className="drawer-pre" style={{ maxHeight: "140px", fontSize: "11px" }}>
+                  <pre className="drawer-pre" style={{ maxHeight: "160px" }}>
                     {stdout}
                   </pre>
                 </div>
@@ -67,18 +74,16 @@ export const CommandsTab: FC<CommandsTabProps> = ({ node }) => {
                 <div style={{ margin: "6px 0" }}>
                   <div
                     style={{
-                      fontSize: "10px",
+                      fontSize: "11px",
                       color: "#f87171",
                       textTransform: "uppercase",
                       marginBottom: "2px",
+                      fontFamily: "var(--font-sans)",
                     }}
                   >
                     stderr snippet:
                   </div>
-                  <pre
-                    className="drawer-pre"
-                    style={{ maxHeight: "140px", fontSize: "11px", color: "#fca5a5" }}
-                  >
+                  <pre className="drawer-pre" style={{ maxHeight: "160px", color: "#fca5a5" }}>
                     {stderr}
                   </pre>
                 </div>
@@ -88,7 +93,8 @@ export const CommandsTab: FC<CommandsTabProps> = ({ node }) => {
                   display: "flex",
                   justifyContent: "space-between",
                   color: "#71717a",
-                  fontSize: "10.5px",
+                  fontSize: "11px",
+                  fontFamily: "var(--font-mono)",
                 }}
               >
                 <span>CWD: {cmd.cwd}</span>

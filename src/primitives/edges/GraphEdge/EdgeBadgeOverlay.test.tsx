@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderToString } from "react-dom/server";
-import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 import type { Rect } from "../../../engine/layout/custom/types";
+import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -111,12 +111,87 @@ describe("EdgeBadgeOverlay connector", () => {
     expect(hasDashedConnector(html)).toBe(false);
   });
 
-  it("renders nothing without a label or a cycle flag", () => {
+  it("renders nothing without a label or a cycle flag or kind", () => {
     expect(renderToString(<EdgeBadgeOverlay x={0} y={0} label="   " />)).toBe("");
   });
 
   it("still renders the CYCLE badge with no label text", () => {
     const html = renderToString(<EdgeBadgeOverlay x={0} y={0} isCycle />);
     expect(html.includes("CYCLE")).toBe(true);
+  });
+});
+
+describe("EdgeBadgeOverlay Semantic Types", () => {
+  it("renders spawn badge with IconRocket and kind-spawn class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="spawn" label="dispatch agent" />,
+    );
+    expect(html).toContain("kind-spawn");
+    expect(html).toContain("dispatch agent");
+    expect(html).toContain("tabler-icon-rocket");
+  });
+
+  it("renders data badge with IconFileText and kind-data class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="data" label="output.json" />,
+    );
+    expect(html).toContain("kind-data");
+    expect(html).toContain("output.json");
+    expect(html).toContain("tabler-icon-file-text");
+  });
+
+  it("renders dependency badge with IconLink and kind-dependency class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="dependency" label="needs approval" />,
+    );
+    expect(html).toContain("kind-dependency");
+    expect(html).toContain("needs approval");
+    expect(html).toContain("tabler-icon-link");
+  });
+
+  it("renders loop badge with IconAlertTriangle and kind-loop class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="loop" label="rejection loop" />,
+    );
+    expect(html).toContain("kind-loop");
+    expect(html).toContain("rejection loop");
+    expect(html).toContain("tabler-icon-alert-triangle");
+  });
+
+  it("renders gate badge with IconShieldCheck and kind-gate class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="gate" label="security gate" />,
+    );
+    expect(html).toContain("kind-gate");
+    expect(html).toContain("security gate");
+    expect(html).toContain("tabler-icon-shield-check");
+  });
+
+  it("renders critic badge with IconCertificate and kind-critic class", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="critic" label="final signoff" />,
+    );
+    expect(html).toContain("kind-critic");
+    expect(html).toContain("final signoff");
+    expect(html).toContain("tabler-icon-certificate");
+  });
+
+  it("renders rich container details with stepBadge and detail text", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={100}
+        y={100}
+        kind="spawn"
+        container={{
+          stepBadge: "04",
+          title: "Dispatch Worker",
+          detail: "2.4k tokens",
+          variant: "cyan",
+        }}
+      />,
+    );
+    expect(html).toContain("04");
+    expect(html).toContain("Dispatch Worker");
+    expect(html).toContain("2.4k tokens");
   });
 });

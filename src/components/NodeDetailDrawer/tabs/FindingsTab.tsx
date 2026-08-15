@@ -50,6 +50,7 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "4px",
+                    fontFamily: "var(--font-sans)",
                     color: f.status === "resolved" ? "#34d399" : "#fb923c",
                   }}
                 >
@@ -72,7 +73,7 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
               {f.remediation ? (
                 <p
                   className="drawer-prose"
-                  style={{ margin: "4px 0", color: "#a1a1aa", fontSize: "11.5px" }}
+                  style={{ margin: "4px 0", color: "#a1a1aa", fontSize: "11px" }}
                 >
                   <strong>Remediation:</strong> {f.remediation}
                 </p>
@@ -82,7 +83,8 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
                   display: "flex",
                   justifyContent: "space-between",
                   color: "#71717a",
-                  fontSize: "10.5px",
+                  fontSize: "11px",
+                  fontFamily: "var(--font-mono)",
                   marginTop: "6px",
                 }}
               >
@@ -103,6 +105,7 @@ export const FindingsTab: FC<FindingsTabProps> = ({ node }) => {
               gap: "8px",
               color: "#34d399",
               fontSize: "12px",
+              fontFamily: "var(--font-sans)",
             }}
           >
             <IconShieldCheck size={16} />

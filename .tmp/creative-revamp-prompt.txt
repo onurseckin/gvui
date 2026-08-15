@@ -1,8 +1,0 @@
-Implement the Creative Visual Graph Revamp & Generalized Observability System across skills and gvui:
-- Distinct node archetypes with geometric shapes (Input stadium, Planner board, Agent worker with Model Tier and churn chips, Tool monospace terminal, Router diamond, Gate shield, Critic scorecard, Terminal capsule).
-- Prominent Step numbers on nodes and rich edge information containers.
-- Remove left-side border bars and colored status dots.
-- Top navbar Steps dropdown with multi-select checkboxes, Select/Clear All, and Playback controls (removing on-canvas scrubber).
-- Expanded 560px-680px detail drawer with adaptive tabs (Overview, I/O, Files & Diffs with syntax highlighting, CLI Executions, Quality Reviews accordion, Raw JSON).
-- Dynamic canvas path highlighting with dominant accent color on node click.
-- 100% test pass rate and visual verification with Chrome MCP.

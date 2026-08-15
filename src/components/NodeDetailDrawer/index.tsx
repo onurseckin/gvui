@@ -1,7 +1,6 @@
 import type { CSSProperties, FC } from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  IconArrowsExchange,
   IconBinary,
   IconFiles,
   IconInfoCircle,
@@ -16,13 +15,16 @@ import { edgeToPort } from "./DrawerSection";
 import { CommandsTab } from "./tabs/CommandsTab";
 import { FilesTab } from "./tabs/FilesTab";
 import { FindingsTab } from "./tabs/FindingsTab";
-import { IoTab } from "./tabs/IoTab";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RawProvenanceTab } from "./tabs/RawProvenanceTab";
 import "./NodeDetailDrawer.css";
 
-type TabId = "overview" | "io" | "files" | "commands" | "findings" | "provenance";
+type TabId = "overview" | "files" | "commands" | "findings" | "provenance";
 
+/**
+ * Node detail inspection drawer providing rich metadata, execution metrics,
+ * stream accordions, touched files, executions, reviews, and raw provenance.
+ */
 export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
   const dataset = useGraphStore((state) => state.dataset);
@@ -74,7 +76,6 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const status = describeNodeStatus(node);
   const IconComp = kind.IconComponent;
 
-  const ioCount = inputs.length + outputs.length;
   const filesCount =
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
   const commandsCount = (node.metadata?.commands as unknown[])?.length ?? 0;
@@ -83,13 +84,12 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
     ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
 
   const tabs = [
-    { id: "overview" as TabId, label: "Overview", icon: IconInfoCircle, count: 0, visible: true },
     {
-      id: "io" as TabId,
-      label: "I/O",
-      icon: IconArrowsExchange,
-      count: ioCount,
-      visible: ioCount > 0,
+      id: "overview" as TabId,
+      label: "Overview & I/O",
+      icon: IconInfoCircle,
+      count: 0,
+      visible: true,
     },
     {
       id: "files" as TabId,
@@ -187,9 +187,6 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             outputs={outputs}
             nodeNamesById={nodeNamesById}
           />
-        )}
-        {currentTabId === "io" && (
-          <IoTab node={node} inputs={inputs} outputs={outputs} nodeNamesById={nodeNamesById} />
         )}
         {currentTabId === "files" && <FilesTab node={node} />}
         {currentTabId === "commands" && <CommandsTab node={node} />}

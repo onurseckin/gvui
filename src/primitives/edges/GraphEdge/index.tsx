@@ -4,12 +4,29 @@ import { memo, useCallback } from "react";
 import type { PositionedEdge } from "../../../types/graphData";
 
 import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
+import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
 import "./GraphEdge.css";
 
 export { EdgeMarkerDefs } from "./EdgeMarkerDefs";
 export type { EdgeMarkerDefsProps } from "./EdgeMarkerDefs";
 export { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
+export {
+  EDGE_KIND_DESCRIPTORS,
+  DEFAULT_EDGE_KIND,
+  describeEdgeKind,
+  resolveEdgeKind,
+  getEdgeIconComponent,
+} from "./edgeKinds";
+export type { EdgeKindDescriptor, SemanticEdgeKind } from "./edgeKinds";
+export {
+  doesRectOverlap,
+  rectContainsPoint,
+  findCollidingNodes,
+  preventBadgeCollision,
+  computeSafeBadgePlacement,
+} from "./collision";
+export type { CollisionOptions, CollisionResolutionResult } from "./collision";
 
 export interface GraphEdgeProps {
   edge: PositionedEdge;
@@ -78,15 +95,21 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
       [onClick, edge.id],
     );
 
-    const markerId = edge.isCycle
-      ? "url(#edge-arrowhead-cycle)"
-      : isSelected
-        ? "url(#edge-arrowhead-selected)"
-        : "url(#edge-arrowhead)";
+    const semanticKind = resolveEdgeKind(edge);
+    const descriptor = describeEdgeKind(semanticKind);
+
+    const markerId = isSelected
+      ? "url(#edge-arrowhead-selected)"
+      : edge.isCycle
+        ? "url(#edge-arrowhead-cycle)"
+        : `url(#${descriptor.markerId})`;
+
+    const shouldAnimate =
+      isAnimated || descriptor.animated || Boolean(edge.isCycle || semanticKind === "loop");
 
     return (
       <g
-        className="graph-edge-group"
+        className={`graph-edge-group kind-${semanticKind}`}
         onClick={handleEdgeClick}
         shapeRendering="geometricPrecision"
         textRendering="geometricPrecision"
@@ -100,7 +123,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
         />
         <path
           d={dPath}
-          className={`graph-edge-path ${isSelected ? "selected" : ""} ${edge.isCycle ? "cycle" : ""} ${isAnimated ? "animated" : ""}`}
+          className={`graph-edge-path kind-${semanticKind} ${isSelected ? "selected" : ""} ${edge.isCycle || semanticKind === "loop" ? "cycle" : ""} ${shouldAnimate ? "animated" : ""}`}
           markerEnd={edge.directed !== false ? markerId : undefined}
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
@@ -131,6 +154,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             label={edge.label}
             badge={edge.badge}
             container={edge.container}
+            kind={edge.kind}
             stepNumber={edge.stepNumber}
             isCycle={edge.isCycle}
             isSelected={isSelected}
