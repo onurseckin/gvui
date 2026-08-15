@@ -1,0 +1,3064 @@
+{
+  "id": "2026-08-15-deep-audit-hardening-execution",
+  "title": "Execution Trajectory: 2026-08-15-deep-audit-hardening-execution",
+  "description": "Execution graph dataset and trajectory for run 2026-08-15-deep-audit-hardening-execution",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "0.2 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routing (PCDRA), and Radial Badge Sector Clearance (PSCA) across all 35 GVUI graph fixtures.\n",
+      "prompt": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routing (PCDRA), and Radial Badge Sector Clearance (PSCA) across all 35 GVUI graph fixtures.\n",
+      "io": {
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routing (PCDRA), and Radial Badge Sector Clearance (PSCA) across all 35 GVUI graph fixtures.\n",
+            "tokens": 47
+          }
+        ]
+      }
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "5 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 5 tasks and 5 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routin"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "5 discrete work scopes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "node-task-task-01-audit-runner-hardening-red",
+      "name": "Audit Runner Matrix Expansion & Zero-Tolerance Red Gate",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Wave 1 Tasks",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Worker: worker-01",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Remediated Round 3 pushback: documented comprehensive architectural foundations and zero-tolerance invariants across all 280 combinations, verified exact 8-case canonical labels, and added full test verification in scripts/runLayoutAudit.test.ts",
+      "files": [
+        {
+          "path": "scripts",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Remediated Round 3 pushback: documented comprehensive architectural foundations and zero-tolerance invariants across all 280 combinations, verified exact 8-case canonical labels, and added full test verification in scripts/runLayoutAudit.test.ts",
+            "preview": "Remediated Round 3 pushback: documented comprehensive architectural foundations and zero-tolerance invariants across all 280 combinations, verified exact 8-case canonical labels, and added full test verification in scripts/runLayoutAudit.test.ts"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["scripts"],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-044a15dc-1a16-4d3c-9ce8-9e91a356fc95",
+            "argv": ["bun", "test", "scripts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1275,
+            "startedAt": "2026-08-15T11:30:06.594Z",
+            "finishedAt": "2026-08-15T11:30:07.869Z",
+            "logPath": "commands/C-044a15dc-1a16-4d3c-9ce8-9e91a356fc95/record.json"
+          },
+          {
+            "id": "C-2fb8c3c8-cb8c-4666-be78-24f811b38853",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1713,
+            "startedAt": "2026-08-15T11:30:51.936Z",
+            "finishedAt": "2026-08-15T11:30:53.649Z",
+            "logPath": "commands/C-2fb8c3c8-cb8c-4666-be78-24f811b38853/record.json"
+          },
+          {
+            "id": "C-391899d9-2f0a-4f64-a956-4141c36e18b3",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1625,
+            "startedAt": "2026-08-15T11:37:02.063Z",
+            "finishedAt": "2026-08-15T11:37:03.688Z",
+            "logPath": "commands/C-391899d9-2f0a-4f64-a956-4141c36e18b3/record.json"
+          },
+          {
+            "id": "C-3f71e400-5e04-4d90-9222-32e0edc1efb3",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1821,
+            "startedAt": "2026-08-15T11:41:47.630Z",
+            "finishedAt": "2026-08-15T11:41:49.451Z",
+            "logPath": "commands/C-3f71e400-5e04-4d90-9222-32e0edc1efb3/record.json"
+          },
+          {
+            "id": "C-54e3ab9b-1dc6-477f-9006-7f8631093edf",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1423,
+            "startedAt": "2026-08-15T11:41:01.709Z",
+            "finishedAt": "2026-08-15T11:41:03.132Z",
+            "logPath": "commands/C-54e3ab9b-1dc6-477f-9006-7f8631093edf/record.json"
+          },
+          {
+            "id": "C-7693d25e-348d-4d31-a083-9fcd67308ce1",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1083,
+            "startedAt": "2026-08-15T11:31:46.148Z",
+            "finishedAt": "2026-08-15T11:31:47.231Z",
+            "logPath": "commands/C-7693d25e-348d-4d31-a083-9fcd67308ce1/record.json"
+          },
+          {
+            "id": "C-9143c485-1447-4878-87e3-da357944f5e9",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1113,
+            "startedAt": "2026-08-15T11:38:12.104Z",
+            "finishedAt": "2026-08-15T11:38:13.217Z",
+            "logPath": "commands/C-9143c485-1447-4878-87e3-da357944f5e9/record.json"
+          },
+          {
+            "id": "C-9d1ad7ce-9256-4358-a640-2c21d0f5cb13",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 3334,
+            "startedAt": "2026-08-15T11:43:09.930Z",
+            "finishedAt": "2026-08-15T11:43:13.264Z",
+            "logPath": "commands/C-9d1ad7ce-9256-4358-a640-2c21d0f5cb13/record.json"
+          },
+          {
+            "id": "C-b8d985a2-dff5-4ccd-8636-053861f9b738",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1052,
+            "startedAt": "2026-08-15T11:44:59.467Z",
+            "finishedAt": "2026-08-15T11:45:00.519Z",
+            "logPath": "commands/C-b8d985a2-dff5-4ccd-8636-053861f9b738/record.json"
+          },
+          {
+            "id": "C-bed328ef-5794-488d-b531-387ffd7e4526",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1829,
+            "startedAt": "2026-08-15T11:42:45.274Z",
+            "finishedAt": "2026-08-15T11:42:47.103Z",
+            "logPath": "commands/C-bed328ef-5794-488d-b531-387ffd7e4526/record.json"
+          },
+          {
+            "id": "C-f57f3256-4bb0-4558-967d-017b23fe44e8",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1353,
+            "startedAt": "2026-08-15T11:37:36.130Z",
+            "finishedAt": "2026-08-15T11:37:37.483Z",
+            "logPath": "commands/C-f57f3256-4bb0-4558-967d-017b23fe44e8/record.json"
+          },
+          {
+            "id": "C-56b4c9b0-aec3-49a4-8cac-2036da099e41",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1101,
+            "startedAt": "2026-08-15T11:36:16.859Z",
+            "finishedAt": "2026-08-15T11:36:17.960Z",
+            "logPath": "commands/C-56b4c9b0-aec3-49a4-8cac-2036da099e41/record.json"
+          },
+          {
+            "id": "C-b308b570-8ade-4979-be65-97f45adf2524",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1084,
+            "startedAt": "2026-08-15T11:42:41.418Z",
+            "finishedAt": "2026-08-15T11:42:42.502Z",
+            "logPath": "commands/C-b308b570-8ade-4979-be65-97f45adf2524/record.json"
+          },
+          {
+            "id": "C-8ffac8de-5483-4d3d-82e5-7443414ed4f1",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1585,
+            "startedAt": "2026-08-15T11:35:52.244Z",
+            "finishedAt": "2026-08-15T11:35:53.829Z",
+            "logPath": "commands/C-8ffac8de-5483-4d3d-82e5-7443414ed4f1/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Audit runner needs explicit error assertion handling and boundary verification",
+            "remediation": "Ensure runLayoutAudit handles missing wasm file or invalid fixture structure cleanly, verifies all 8 cases explicitly",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Strict typing and leader line metric thresholding",
+            "remediation": "Verify strict typing on AuditLayoutMetrics and ensure global leader line budget (<=2) is asserted",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Comprehensive architectural documentation and zero-tolerance invariants",
+            "remediation": "Document zero-tolerance invariants across all 280 combinations and verify exact 8-case labels",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1275,
+          "browser": "chromium",
+          "status": "passed"
+        },
+        "leaseAgent": "worker-01"
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-01-audit-runner-hardening-red",
+      "name": "Gate: Audit Runner Matrix Expansion & Zero-Tolerance Red Gate",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Step 3: Wave 1 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Audit Runner Matrix Expansion & Zero-Tolerance Red Gate.",
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Audit runner needs explicit error assertion handling and boundary verification",
+            "remediation": "Ensure runLayoutAudit handles missing wasm file or invalid fixture structure cleanly, verifies all 8 cases explicitly",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Strict typing and leader line metric thresholding",
+            "remediation": "Verify strict typing on AuditLayoutMetrics and ensure global leader line budget (<=2) is asserted",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-01-audit-runner-hardening-red-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Comprehensive architectural documentation and zero-tolerance invariants",
+            "remediation": "Document zero-tolerance invariants across all 280 combinations and verify exact 8-case labels",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1275,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-02-radial-pcdra-obstacle-router",
+      "name": "Radial Polar Corridor Detour Routing (PCDRA)",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Wave 1 Tasks",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Worker: worker-02",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Addressed Round 3 remediation: Added 4 dedicated Rust unit tests asserting 0 edge-node penetrations, 0 node overlaps, and 0 collinear edge overlaps across all 4 radial flow rotations (TopDown, LeftRight, BottomUp, RightLeft) on a multi-tier hierarchy with cross chords.",
+      "files": [
+        {
+          "path": "crates/gvui/src/7_engines",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Addressed Round 3 remediation: Added 4 dedicated Rust unit tests asserting 0 edge-node penetrations, 0 node overlaps, and 0 collinear edge overlaps across all 4 radial flow rotations (TopDown, LeftRight, BottomUp, RightLeft) on a multi-tier hierarchy with cross chords.",
+            "preview": "Addressed Round 3 remediation: Added 4 dedicated Rust unit tests asserting 0 edge-node penetrations, 0 node overlaps, and 0 collinear edge overlaps across all 4 radial flow rotations (TopDown, LeftRight, BottomUp, RightLeft) on a multi-tier hierarchy with cross chords."
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["crates/gvui/src/7_engines"],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-02908319-0019-4e1c-8727-57098d845a2a",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1132,
+            "startedAt": "2026-08-15T11:43:39.805Z",
+            "finishedAt": "2026-08-15T11:43:40.937Z",
+            "logPath": "commands/C-02908319-0019-4e1c-8727-57098d845a2a/record.json"
+          },
+          {
+            "id": "C-08eabee7-3b3c-4496-bc6a-a5bdf8b96d06",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1149,
+            "startedAt": "2026-08-15T11:38:42.268Z",
+            "finishedAt": "2026-08-15T11:38:43.417Z",
+            "logPath": "commands/C-08eabee7-3b3c-4496-bc6a-a5bdf8b96d06/record.json"
+          },
+          {
+            "id": "C-2a06cf46-4f0c-4571-8802-36c145757fe0",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1659,
+            "startedAt": "2026-08-15T11:39:51.047Z",
+            "finishedAt": "2026-08-15T11:39:52.706Z",
+            "logPath": "commands/C-2a06cf46-4f0c-4571-8802-36c145757fe0/record.json"
+          },
+          {
+            "id": "C-6a8897da-c60c-44c4-b91d-092bcfb915af",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1276,
+            "startedAt": "2026-08-15T11:34:34.955Z",
+            "finishedAt": "2026-08-15T11:34:36.231Z",
+            "logPath": "commands/C-6a8897da-c60c-44c4-b91d-092bcfb915af/record.json"
+          },
+          {
+            "id": "C-9aa35dd4-a564-4de4-afe1-0c136c06cb44",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1129,
+            "startedAt": "2026-08-15T11:40:10.075Z",
+            "finishedAt": "2026-08-15T11:40:11.204Z",
+            "logPath": "commands/C-9aa35dd4-a564-4de4-afe1-0c136c06cb44/record.json"
+          },
+          {
+            "id": "C-bf66f529-571b-460f-83d1-30435c45d728",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1147,
+            "startedAt": "2026-08-15T11:44:39.714Z",
+            "finishedAt": "2026-08-15T11:44:40.861Z",
+            "logPath": "commands/C-bf66f529-571b-460f-83d1-30435c45d728/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: PCDRA corridor waypoint geometry and collinear avoidance",
+            "remediation": "Verify corridor radius calculation handles single-ring chords and multi-ring cross chords without collinear overlap",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: High-degree hub node port distribution and detour waypoints",
+            "remediation": "Stress-test high-degree hub nodes and verify zero interior penetrations across dense neighbor fans",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: All 4 radial direction rotations and comprehensive test coverage",
+            "remediation": "Add dedicated Rust unit tests asserting 0 edge-node penetrations across all 4 radial flow rotations",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1132,
+          "browser": "chromium",
+          "status": "passed"
+        },
+        "leaseAgent": "worker-02"
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-02-radial-pcdra-obstacle-router",
+      "name": "Gate: Radial Polar Corridor Detour Routing (PCDRA)",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Step 3: Wave 1 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Radial Polar Corridor Detour Routing (PCDRA).",
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: PCDRA corridor waypoint geometry and collinear avoidance",
+            "remediation": "Verify corridor radius calculation handles single-ring chords and multi-ring cross chords without collinear overlap",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: High-degree hub node port distribution and detour waypoints",
+            "remediation": "Stress-test high-degree hub nodes and verify zero interior penetrations across dense neighbor fans",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-02-radial-pcdra-obstacle-router-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: All 4 radial direction rotations and comprehensive test coverage",
+            "remediation": "Add dedicated Rust unit tests asserting 0 edge-node penetrations across all 4 radial flow rotations",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1132,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-03-radial-psca-badge-clearance",
+      "name": "Radial Polar Sector Clearance Allocation (PSCA)",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Wave 1 Tasks",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Worker: worker-03",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Addressed Round 3 feedback: verified all 10 diagnostic codes have explicit descriptions and Rust unit tests covering positive and negative assertion paths, added metric invariants test in 6_2_metrics.rs",
+      "files": [
+        {
+          "path": "crates/gvui/src/6_validation",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Addressed Round 3 feedback: verified all 10 diagnostic codes have explicit descriptions and Rust unit tests covering positive and negative assertion paths, added metric invariants test in 6_2_metrics.rs",
+            "preview": "Addressed Round 3 feedback: verified all 10 diagnostic codes have explicit descriptions and Rust unit tests covering positive and negative assertion paths, added metric invariants test in 6_2_metrics.rs"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["crates/gvui/src/6_validation"],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-2802c131-c4cd-4058-8a90-dbcf01dbfd6d",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1206,
+            "startedAt": "2026-08-15T11:37:59.410Z",
+            "finishedAt": "2026-08-15T11:38:00.616Z",
+            "logPath": "commands/C-2802c131-c4cd-4058-8a90-dbcf01dbfd6d/record.json"
+          },
+          {
+            "id": "C-7164dd9e-3642-471a-91b1-686d7e3efdd6",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1117,
+            "startedAt": "2026-08-15T11:40:17.883Z",
+            "finishedAt": "2026-08-15T11:40:19.000Z",
+            "logPath": "commands/C-7164dd9e-3642-471a-91b1-686d7e3efdd6/record.json"
+          },
+          {
+            "id": "C-7b8ffd49-8a60-44e5-b440-fc08dde98b1e",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1120,
+            "startedAt": "2026-08-15T11:34:30.751Z",
+            "finishedAt": "2026-08-15T11:34:31.871Z",
+            "logPath": "commands/C-7b8ffd49-8a60-44e5-b440-fc08dde98b1e/record.json"
+          },
+          {
+            "id": "C-7c383fd8-f576-4055-8b75-5d79e28a41d9",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 3218,
+            "startedAt": "2026-08-15T11:42:59.129Z",
+            "finishedAt": "2026-08-15T11:43:02.347Z",
+            "logPath": "commands/C-7c383fd8-f576-4055-8b75-5d79e28a41d9/record.json"
+          },
+          {
+            "id": "C-92418210-95d0-4f9b-b6da-a66e07741e70",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 3296,
+            "startedAt": "2026-08-15T11:42:19.193Z",
+            "finishedAt": "2026-08-15T11:42:22.489Z",
+            "logPath": "commands/C-92418210-95d0-4f9b-b6da-a66e07741e70/record.json"
+          },
+          {
+            "id": "C-ccf24fab-203a-4c1f-ad57-a712d5dff7c7",
+            "argv": ["bun", "test", "crates/gvui/src/6_validation"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 1333,
+            "startedAt": "2026-08-15T11:42:33.656Z",
+            "finishedAt": "2026-08-15T11:42:34.989Z",
+            "logPath": "commands/C-ccf24fab-203a-4c1f-ad57-a712d5dff7c7/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Zero-sized nodes and boundary epsilon precision",
+            "remediation": "Ensure constraint scanner handles zero-width/zero-height nodes and exact boundary touch cases cleanly",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Multi-edge parallel bundles and badge collision indexing",
+            "remediation": "Stress-test spatial indexing on dense parallel bundles and verify zero false negatives in badge-edge penetration checks",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Diagnostic codes and validation metric invariants",
+            "remediation": "Verify all diagnostic codes have explicit descriptions and Rust unit tests covering negative assertion paths",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1206,
+          "browser": "chromium",
+          "status": "passed"
+        },
+        "leaseAgent": "worker-03"
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-03-radial-psca-badge-clearance",
+      "name": "Gate: Radial Polar Sector Clearance Allocation (PSCA)",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Step 3: Wave 1 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Radial Polar Sector Clearance Allocation (PSCA).",
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Zero-sized nodes and boundary epsilon precision",
+            "remediation": "Ensure constraint scanner handles zero-width/zero-height nodes and exact boundary touch cases cleanly",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Multi-edge parallel bundles and badge collision indexing",
+            "remediation": "Stress-test spatial indexing on dense parallel bundles and verify zero false negatives in badge-edge penetration checks",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-03-radial-psca-badge-clearance-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Diagnostic codes and validation metric invariants",
+            "remediation": "Verify all diagnostic codes have explicit descriptions and Rust unit tests covering negative assertion paths",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1206,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "name": "Layered Inverted Transforms & WASM Build",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Wave 2 Tasks",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Worker: worker-04",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Addressed Round 3 feedback: verified reciprocal aspect ratio invariance (AR_LR * AR_TD = 1.0, AR_RL * AR_TD = 1.0) and layout mirror/transposition symmetry across all 4 directions with comprehensive unit tests",
+      "files": [
+        {
+          "path": "src/engine/layout",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "kind": "artifact",
+            "label": "Dependency Output: task-02-radial-pcdra-obstacle-router"
+          },
+          {
+            "node": "node-gate-task-03-radial-psca-badge-clearance",
+            "kind": "artifact",
+            "label": "Dependency Output: task-03-radial-psca-badge-clearance"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Addressed Round 3 feedback: verified reciprocal aspect ratio invariance (AR_LR * AR_TD = 1.0, AR_RL * AR_TD = 1.0) and layout mirror/transposition symmetry across all 4 directions with comprehensive unit tests",
+            "preview": "Addressed Round 3 feedback: verified reciprocal aspect ratio invariance (AR_LR * AR_TD = 1.0, AR_RL * AR_TD = 1.0) and layout mirror/transposition symmetry across all 4 directions with comprehensive unit tests"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/layout"],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-0422aba3-1731-40bb-a95c-db198e840f6e",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1163,
+            "startedAt": "2026-08-15T11:58:15.967Z",
+            "finishedAt": "2026-08-15T11:58:17.130Z",
+            "logPath": "commands/C-0422aba3-1731-40bb-a95c-db198e840f6e/record.json"
+          },
+          {
+            "id": "C-0912dd74-3266-45d8-950c-6cd03ebd15f6",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1284,
+            "startedAt": "2026-08-15T11:52:26.352Z",
+            "finishedAt": "2026-08-15T11:52:27.636Z",
+            "logPath": "commands/C-0912dd74-3266-45d8-950c-6cd03ebd15f6/record.json"
+          },
+          {
+            "id": "C-21a3e54f-519c-4336-9ce0-fbe25567f83d",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1123,
+            "startedAt": "2026-08-15T11:54:42.223Z",
+            "finishedAt": "2026-08-15T11:54:43.346Z",
+            "logPath": "commands/C-21a3e54f-519c-4336-9ce0-fbe25567f83d/record.json"
+          },
+          {
+            "id": "C-91e62fb3-faa1-4f24-b8f8-f6ec47e495f2",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1130,
+            "startedAt": "2026-08-15T11:50:16.594Z",
+            "finishedAt": "2026-08-15T11:50:17.724Z",
+            "logPath": "commands/C-91e62fb3-faa1-4f24-b8f8-f6ec47e495f2/record.json"
+          },
+          {
+            "id": "C-c2fbb33c-9c35-49b6-819c-dc362fe364a0",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1202,
+            "startedAt": "2026-08-15T11:57:31.048Z",
+            "finishedAt": "2026-08-15T11:57:32.250Z",
+            "logPath": "commands/C-c2fbb33c-9c35-49b6-819c-dc362fe364a0/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Affine coordinate inversion invariants and port stub normals",
+            "remediation": "Verify port stub normal orientation and coordinate symmetry across all 4 directions with explicit unit tests",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Type safety and WASM boundary schema validation",
+            "remediation": "Audit all type casts at the WASM boundary to guarantee strict zero-any compliance",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Aspect ratio reciprocal invariance and layout symmetry",
+            "remediation": "Verify reciprocal aspect ratio invariance and add comprehensive tests for all 4 directions",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1163,
+          "browser": "chromium",
+          "status": "passed"
+        },
+        "leaseAgent": "worker-04"
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "name": "Gate: Layered Inverted Transforms & WASM Build",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Wave 2 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Layered Inverted Transforms & WASM Build.",
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Affine coordinate inversion invariants and port stub normals",
+            "remediation": "Verify port stub normal orientation and coordinate symmetry across all 4 directions with explicit unit tests",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Type safety and WASM boundary schema validation",
+            "remediation": "Audit all type casts at the WASM boundary to guarantee strict zero-any compliance",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-04-layered-inverted-transforms-and-wasm-build-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Aspect ratio reciprocal invariance and layout symmetry",
+            "remediation": "Verify reciprocal aspect ratio invariance and add comprehensive tests for all 4 directions",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1163,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "name": "Full 280-Run Matrix Audit Verification Gate",
+      "kind": "agent",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Step 6: Wave 3 Tasks",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Worker: worker-05",
+        "variant": "info",
+        "icon": "IconRobot"
+      },
+      "description": "Confirmed total audit duration within cumulative performance budget (<3500ms, avg <50ms) and global leader line count <= 2 across 8-direction matrix verification suite",
+      "files": [
+        {
+          "path": "src/features/GraphTesting",
+          "mode": "write"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-task-01-audit-runner-hardening-red",
+            "kind": "artifact",
+            "label": "Dependency Output: task-01-audit-runner-hardening-red"
+          },
+          {
+            "node": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "artifact",
+            "label": "Dependency Output: task-04-layered-inverted-transforms-and-wasm-build"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Confirmed total audit duration within cumulative performance budget (<3500ms, avg <50ms) and global leader line count <= 2 across 8-direction matrix verification suite",
+            "preview": "Confirmed total audit duration within cumulative performance budget (<3500ms, avg <50ms) and global leader line count <= 2 across 8-direction matrix verification suite"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/features/GraphTesting"],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-478f2e8c-8ec5-48c7-ad22-e6cc77bfaffb",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1102,
+            "startedAt": "2026-08-15T12:02:31.566Z",
+            "finishedAt": "2026-08-15T12:02:32.668Z",
+            "logPath": "commands/C-478f2e8c-8ec5-48c7-ad22-e6cc77bfaffb/record.json"
+          },
+          {
+            "id": "C-561a927f-7f1f-4a0e-9136-2dc084daab2e",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1328,
+            "startedAt": "2026-08-15T12:05:41.263Z",
+            "finishedAt": "2026-08-15T12:05:42.591Z",
+            "logPath": "commands/C-561a927f-7f1f-4a0e-9136-2dc084daab2e/record.json"
+          },
+          {
+            "id": "C-5d21e10d-f149-4c9b-8857-f827a5a7f4ab",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 523,
+            "startedAt": "2026-08-15T12:01:34.440Z",
+            "finishedAt": "2026-08-15T12:01:34.963Z",
+            "logPath": "commands/C-5d21e10d-f149-4c9b-8857-f827a5a7f4ab/record.json"
+          },
+          {
+            "id": "C-76a649a3-fd35-4afa-b704-a482206f5bc4",
+            "argv": ["bun", "test", "src/features/GraphTesting"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1434,
+            "startedAt": "2026-08-15T12:01:47.460Z",
+            "finishedAt": "2026-08-15T12:01:48.894Z",
+            "logPath": "commands/C-76a649a3-fd35-4afa-b704-a482206f5bc4/record.json"
+          },
+          {
+            "id": "C-7b05c4b3-d367-4ef7-ab80-76fee2c3b4fa",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1217,
+            "startedAt": "2026-08-15T12:04:39.018Z",
+            "finishedAt": "2026-08-15T12:04:40.235Z",
+            "logPath": "commands/C-7b05c4b3-d367-4ef7-ab80-76fee2c3b4fa/record.json"
+          },
+          {
+            "id": "C-9b41c8b2-42bb-483c-873f-4a0fb9f79d67",
+            "argv": ["bun", "test", "src/features/GraphTesting"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1636,
+            "startedAt": "2026-08-15T12:01:25.876Z",
+            "finishedAt": "2026-08-15T12:01:27.512Z",
+            "logPath": "commands/C-9b41c8b2-42bb-483c-873f-4a0fb9f79d67/record.json"
+          },
+          {
+            "id": "C-ea4b7ebf-44a9-4d5d-bceb-54413c66f29b",
+            "argv": ["bun", "test", "src/engine/layout"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1144,
+            "startedAt": "2026-08-15T12:06:47.545Z",
+            "finishedAt": "2026-08-15T12:06:48.689Z",
+            "logPath": "commands/C-ea4b7ebf-44a9-4d5d-bceb-54413c66f29b/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Audit matrix telemetry and 280-run verification proof",
+            "remediation": "Verify all 280 runs report individual timings and zero constraint violations",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Full suite execution and typecheck verification",
+            "remediation": "Execute full test suite and confirm 0 type errors across all packages",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Cumulative performance and leader line budget invariants",
+            "remediation": "Confirm total audit duration is within budget and global leader line count <= 2",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1102,
+          "browser": "chromium",
+          "status": "passed"
+        },
+        "leaseAgent": "worker-05"
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+      "name": "Gate: Full 280-Run Matrix Audit Verification Gate",
+      "kind": "gate",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Step 7: Wave 3 Validation",
+      "badge": {
+        "text": "Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "description": "Independent verification gate for Full 280-Run Matrix Audit Verification Gate.",
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 1 Adversarial Stress Test: Audit matrix telemetry and 280-run verification proof",
+            "remediation": "Verify all 280 runs report individual timings and zero constraint violations",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject-2",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 2 Adversarial Stress Test: Full suite execution and typecheck verification",
+            "remediation": "Execute full test suite and confirm 0 type errors across all packages",
+            "status": "resolved"
+          },
+          {
+            "id": "finding-task-05-full-matrix-audit-gate-and-verification-reject-3",
+            "requirementId": "req-01-audit-runner-hardening-red",
+            "severity": "critical",
+            "observation": "Round 3 Adversarial Stress Test: Cumulative performance and leader line budget invariants",
+            "remediation": "Confirm total audit duration is within budget and global leader line count <= 2",
+            "status": "resolved"
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1102,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 8,
+      "stepLabel": "Step 8: Completeness Critic",
+      "badge": {
+        "text": "Audit Scorecard",
+        "variant": "warning",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off."
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 9,
+      "stepLabel": "Step 9: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis."
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "stepNumber": 1,
+      "badge": {
+        "text": "Plan Initialization",
+        "variant": "info",
+        "icon": "IconArrowRight"
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "Plan Initialization",
+        "detail": "0.2 KB Prompt",
+        "variant": "info",
+        "icon": "IconArrowRight"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 47,
+        "bytes": 187,
+        "ratePerSec": 1,
+        "status": "active",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.6,
+        "exchanges": [
+          {
+            "id": "exch-prompt-plan",
+            "timestamp": "2026-08-15T12:23:43.093Z",
+            "source": "node-input-prompt",
+            "target": "node-orchestrator-plan",
+            "kind": "prompt",
+            "summary": "Ingested user prompt instructions and context",
+            "tokens": 47,
+            "bytes": 187,
+            "durationMs": 20,
+            "status": "success",
+            "payloadSnippet": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routing (PCDRA), and Radial Badge Sector Clearance (PSCA"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "timestamp": "2026-08-15T12:23:43.093Z",
+          "source": "node-input-prompt",
+          "target": "node-orchestrator-plan",
+          "kind": "prompt",
+          "summary": "Ingested user prompt instructions and context",
+          "tokens": 47,
+          "bytes": 187,
+          "durationMs": 20,
+          "status": "success",
+          "payloadSnippet": "Comprehensive Layout Audit Hardening, 8-Direction Matrix Verification, Radial Obstacle Detour Routing (PCDRA), and Radial Badge Sector Clearance (PSCA"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    },
+    {
+      "id": "edge-plan-task-01-audit-runner-hardening-red",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-01-audit-runner-hardening-red",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-01-audit-runner-hardening-red",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-01-audit-runner-hardening-red",
+            "kind": "prompt",
+            "summary": "Dispatched task task-01-audit-runner-hardening-red to worker worker-01",
+            "tokens": 350,
+            "bytes": 1400,
+            "durationMs": 30,
+            "status": "success",
+            "payloadSnippet": "Goal: Audit Runner Matrix Expansion & Zero-Tolerance Red Gate"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-01-audit-runner-hardening-red",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-01-audit-runner-hardening-red",
+          "kind": "prompt",
+          "summary": "Dispatched task task-01-audit-runner-hardening-red to worker worker-01",
+          "tokens": 350,
+          "bytes": 1400,
+          "durationMs": 30,
+          "status": "success",
+          "payloadSnippet": "Goal: Audit Runner Matrix Expansion & Zero-Tolerance Red Gate"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-01-audit-runner-hardening-red",
+      "source": "node-task-task-01-audit-runner-hardening-red",
+      "target": "node-gate-task-01-audit-runner-hardening-red",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-01-audit-runner-hardening-red",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-task-task-01-audit-runner-hardening-red",
+            "target": "node-gate-task-01-audit-runner-hardening-red",
+            "kind": "file",
+            "summary": "Submitted diffs for task-01-audit-runner-hardening-red (1 files)",
+            "tokens": 650,
+            "bytes": 1024,
+            "durationMs": 80,
+            "status": "success",
+            "payloadSnippet": "scripts"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-01-audit-runner-hardening-red",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-task-task-01-audit-runner-hardening-red",
+          "target": "node-gate-task-01-audit-runner-hardening-red",
+          "kind": "file",
+          "summary": "Submitted diffs for task-01-audit-runner-hardening-red (1 files)",
+          "tokens": 650,
+          "bytes": 1024,
+          "durationMs": 80,
+          "status": "success",
+          "payloadSnippet": "scripts"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-01-audit-runner-hardening-red",
+      "source": "node-gate-task-01-audit-runner-hardening-red",
+      "target": "node-task-task-01-audit-runner-hardening-red",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f59e0b",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-01-audit-runner-hardening-red-1",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-01-audit-runner-hardening-red",
+            "target": "node-task-task-01-audit-runner-hardening-red",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Audit runner needs explicit error assertion handling and boundary verification",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Ensure runLayoutAudit handles missing wasm file or invalid fixture structure cleanly, verifies all 8 cases explicitly"
+          },
+          {
+            "id": "exch-repair-task-01-audit-runner-hardening-red-2",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-01-audit-runner-hardening-red",
+            "target": "node-task-task-01-audit-runner-hardening-red",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Strict typing and leader line metric thresholding",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify strict typing on AuditLayoutMetrics and ensure global leader line budget (<=2) is asserted"
+          },
+          {
+            "id": "exch-repair-task-01-audit-runner-hardening-red-3",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-01-audit-runner-hardening-red",
+            "target": "node-task-task-01-audit-runner-hardening-red",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Comprehensive architectural documentation and zero-tolerance invariants",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Document zero-tolerance invariants across all 280 combinations and verify exact 8-case labels"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-01-audit-runner-hardening-red-1",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-01-audit-runner-hardening-red",
+          "target": "node-task-task-01-audit-runner-hardening-red",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Audit runner needs explicit error assertion handling and boundary verification",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Ensure runLayoutAudit handles missing wasm file or invalid fixture structure cleanly, verifies all 8 cases explicitly"
+        },
+        {
+          "id": "exch-repair-task-01-audit-runner-hardening-red-2",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-01-audit-runner-hardening-red",
+          "target": "node-task-task-01-audit-runner-hardening-red",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Strict typing and leader line metric thresholding",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify strict typing on AuditLayoutMetrics and ensure global leader line budget (<=2) is asserted"
+        },
+        {
+          "id": "exch-repair-task-01-audit-runner-hardening-red-3",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-01-audit-runner-hardening-red",
+          "target": "node-task-task-01-audit-runner-hardening-red",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Comprehensive architectural documentation and zero-tolerance invariants",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Document zero-tolerance invariants across all 280 combinations and verify exact 8-case labels"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-01-audit-runner-hardening-red",
+      "source": "node-gate-task-01-audit-runner-hardening-red",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-join-task-01-audit-runner-hardening-red",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-01-audit-runner-hardening-red",
+            "target": "node-critic-authority",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-01-audit-runner-hardening-red",
+            "tokens": 300,
+            "bytes": 950,
+            "durationMs": 35,
+            "status": "success",
+            "payloadSnippet": "Gate check passed with status DONE"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-01-audit-runner-hardening-red",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-01-audit-runner-hardening-red",
+          "target": "node-critic-authority",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-01-audit-runner-hardening-red",
+          "tokens": 300,
+          "bytes": 950,
+          "durationMs": 35,
+          "status": "success",
+          "payloadSnippet": "Gate check passed with status DONE"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-02-radial-pcdra-obstacle-router",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-02-radial-pcdra-obstacle-router",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-02"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-02-radial-pcdra-obstacle-router",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-02-radial-pcdra-obstacle-router",
+            "kind": "prompt",
+            "summary": "Dispatched task task-02-radial-pcdra-obstacle-router to worker worker-02",
+            "tokens": 350,
+            "bytes": 1400,
+            "durationMs": 30,
+            "status": "success",
+            "payloadSnippet": "Goal: Radial Polar Corridor Detour Routing (PCDRA)"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-02-radial-pcdra-obstacle-router",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-02-radial-pcdra-obstacle-router",
+          "kind": "prompt",
+          "summary": "Dispatched task task-02-radial-pcdra-obstacle-router to worker worker-02",
+          "tokens": 350,
+          "bytes": 1400,
+          "durationMs": 30,
+          "status": "success",
+          "payloadSnippet": "Goal: Radial Polar Corridor Detour Routing (PCDRA)"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-02-radial-pcdra-obstacle-router",
+      "source": "node-task-task-02-radial-pcdra-obstacle-router",
+      "target": "node-gate-task-02-radial-pcdra-obstacle-router",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-02-radial-pcdra-obstacle-router",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-task-task-02-radial-pcdra-obstacle-router",
+            "target": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "kind": "file",
+            "summary": "Submitted diffs for task-02-radial-pcdra-obstacle-router (1 files)",
+            "tokens": 650,
+            "bytes": 1024,
+            "durationMs": 80,
+            "status": "success",
+            "payloadSnippet": "crates/gvui/src/7_engines"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-02-radial-pcdra-obstacle-router",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-task-task-02-radial-pcdra-obstacle-router",
+          "target": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "kind": "file",
+          "summary": "Submitted diffs for task-02-radial-pcdra-obstacle-router (1 files)",
+          "tokens": 650,
+          "bytes": 1024,
+          "durationMs": 80,
+          "status": "success",
+          "payloadSnippet": "crates/gvui/src/7_engines"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-02-radial-pcdra-obstacle-router",
+      "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+      "target": "node-task-task-02-radial-pcdra-obstacle-router",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f59e0b",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-02-radial-pcdra-obstacle-router-1",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "target": "node-task-task-02-radial-pcdra-obstacle-router",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 1 Adversarial Stress Test: PCDRA corridor waypoint geometry and collinear avoidance",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify corridor radius calculation handles single-ring chords and multi-ring cross chords without collinear overlap"
+          },
+          {
+            "id": "exch-repair-task-02-radial-pcdra-obstacle-router-2",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "target": "node-task-task-02-radial-pcdra-obstacle-router",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 2 Adversarial Stress Test: High-degree hub node port distribution and detour waypoints",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress-test high-degree hub nodes and verify zero interior penetrations across dense neighbor fans"
+          },
+          {
+            "id": "exch-repair-task-02-radial-pcdra-obstacle-router-3",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "target": "node-task-task-02-radial-pcdra-obstacle-router",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 3 Adversarial Stress Test: All 4 radial direction rotations and comprehensive test coverage",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Add dedicated Rust unit tests asserting 0 edge-node penetrations across all 4 radial flow rotations"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-02-radial-pcdra-obstacle-router-1",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "target": "node-task-task-02-radial-pcdra-obstacle-router",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 1 Adversarial Stress Test: PCDRA corridor waypoint geometry and collinear avoidance",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify corridor radius calculation handles single-ring chords and multi-ring cross chords without collinear overlap"
+        },
+        {
+          "id": "exch-repair-task-02-radial-pcdra-obstacle-router-2",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "target": "node-task-task-02-radial-pcdra-obstacle-router",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 2 Adversarial Stress Test: High-degree hub node port distribution and detour waypoints",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress-test high-degree hub nodes and verify zero interior penetrations across dense neighbor fans"
+        },
+        {
+          "id": "exch-repair-task-02-radial-pcdra-obstacle-router-3",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "target": "node-task-task-02-radial-pcdra-obstacle-router",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 3 Adversarial Stress Test: All 4 radial direction rotations and comprehensive test coverage",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Add dedicated Rust unit tests asserting 0 edge-node penetrations across all 4 radial flow rotations"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-02-radial-pcdra-obstacle-router",
+      "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-join-task-02-radial-pcdra-obstacle-router",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "target": "node-critic-authority",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-02-radial-pcdra-obstacle-router",
+            "tokens": 300,
+            "bytes": 950,
+            "durationMs": 35,
+            "status": "success",
+            "payloadSnippet": "Gate check passed with status DONE"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-02-radial-pcdra-obstacle-router",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "target": "node-critic-authority",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-02-radial-pcdra-obstacle-router",
+          "tokens": 300,
+          "bytes": 950,
+          "durationMs": 35,
+          "status": "success",
+          "payloadSnippet": "Gate check passed with status DONE"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-03-radial-psca-badge-clearance",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-03-radial-psca-badge-clearance",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-03"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-03-radial-psca-badge-clearance",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-03-radial-psca-badge-clearance",
+            "kind": "prompt",
+            "summary": "Dispatched task task-03-radial-psca-badge-clearance to worker worker-03",
+            "tokens": 350,
+            "bytes": 1400,
+            "durationMs": 30,
+            "status": "success",
+            "payloadSnippet": "Goal: Radial Polar Sector Clearance Allocation (PSCA)"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-03-radial-psca-badge-clearance",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-03-radial-psca-badge-clearance",
+          "kind": "prompt",
+          "summary": "Dispatched task task-03-radial-psca-badge-clearance to worker worker-03",
+          "tokens": 350,
+          "bytes": 1400,
+          "durationMs": 30,
+          "status": "success",
+          "payloadSnippet": "Goal: Radial Polar Sector Clearance Allocation (PSCA)"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-03-radial-psca-badge-clearance",
+      "source": "node-task-task-03-radial-psca-badge-clearance",
+      "target": "node-gate-task-03-radial-psca-badge-clearance",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-03-radial-psca-badge-clearance",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-task-task-03-radial-psca-badge-clearance",
+            "target": "node-gate-task-03-radial-psca-badge-clearance",
+            "kind": "file",
+            "summary": "Submitted diffs for task-03-radial-psca-badge-clearance (1 files)",
+            "tokens": 650,
+            "bytes": 1024,
+            "durationMs": 80,
+            "status": "success",
+            "payloadSnippet": "crates/gvui/src/6_validation"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-03-radial-psca-badge-clearance",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-task-task-03-radial-psca-badge-clearance",
+          "target": "node-gate-task-03-radial-psca-badge-clearance",
+          "kind": "file",
+          "summary": "Submitted diffs for task-03-radial-psca-badge-clearance (1 files)",
+          "tokens": 650,
+          "bytes": 1024,
+          "durationMs": 80,
+          "status": "success",
+          "payloadSnippet": "crates/gvui/src/6_validation"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-03-radial-psca-badge-clearance",
+      "source": "node-gate-task-03-radial-psca-badge-clearance",
+      "target": "node-task-task-03-radial-psca-badge-clearance",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f59e0b",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-03-radial-psca-badge-clearance-1",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-03-radial-psca-badge-clearance",
+            "target": "node-task-task-03-radial-psca-badge-clearance",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Zero-sized nodes and boundary epsilon precision",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Ensure constraint scanner handles zero-width/zero-height nodes and exact boundary touch cases cleanly"
+          },
+          {
+            "id": "exch-repair-task-03-radial-psca-badge-clearance-2",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-03-radial-psca-badge-clearance",
+            "target": "node-task-task-03-radial-psca-badge-clearance",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Multi-edge parallel bundles and badge collision indexing",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress-test spatial indexing on dense parallel bundles and verify zero false negatives in badge-edge penetration checks"
+          },
+          {
+            "id": "exch-repair-task-03-radial-psca-badge-clearance-3",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-03-radial-psca-badge-clearance",
+            "target": "node-task-task-03-radial-psca-badge-clearance",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Diagnostic codes and validation metric invariants",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify all diagnostic codes have explicit descriptions and Rust unit tests covering negative assertion paths"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-03-radial-psca-badge-clearance-1",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-03-radial-psca-badge-clearance",
+          "target": "node-task-task-03-radial-psca-badge-clearance",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Zero-sized nodes and boundary epsilon precision",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Ensure constraint scanner handles zero-width/zero-height nodes and exact boundary touch cases cleanly"
+        },
+        {
+          "id": "exch-repair-task-03-radial-psca-badge-clearance-2",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-03-radial-psca-badge-clearance",
+          "target": "node-task-task-03-radial-psca-badge-clearance",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Multi-edge parallel bundles and badge collision indexing",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress-test spatial indexing on dense parallel bundles and verify zero false negatives in badge-edge penetration checks"
+        },
+        {
+          "id": "exch-repair-task-03-radial-psca-badge-clearance-3",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-03-radial-psca-badge-clearance",
+          "target": "node-task-task-03-radial-psca-badge-clearance",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Diagnostic codes and validation metric invariants",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify all diagnostic codes have explicit descriptions and Rust unit tests covering negative assertion paths"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-03-radial-psca-badge-clearance",
+      "source": "node-gate-task-03-radial-psca-badge-clearance",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-join-task-03-radial-psca-badge-clearance",
+            "timestamp": "2026-08-15T12:23:43.094Z",
+            "source": "node-gate-task-03-radial-psca-badge-clearance",
+            "target": "node-critic-authority",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-03-radial-psca-badge-clearance",
+            "tokens": 300,
+            "bytes": 950,
+            "durationMs": 35,
+            "status": "success",
+            "payloadSnippet": "Gate check passed with status DONE"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-03-radial-psca-badge-clearance",
+          "timestamp": "2026-08-15T12:23:43.094Z",
+          "source": "node-gate-task-03-radial-psca-badge-clearance",
+          "target": "node-critic-authority",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-03-radial-psca-badge-clearance",
+          "tokens": 300,
+          "bytes": 950,
+          "durationMs": 35,
+          "status": "success",
+          "payloadSnippet": "Gate check passed with status DONE"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-04"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-04-layered-inverted-transforms-and-wasm-build",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "prompt",
+            "summary": "Dispatched task task-04-layered-inverted-transforms-and-wasm-build to worker worker-04",
+            "tokens": 350,
+            "bytes": 1400,
+            "durationMs": 30,
+            "status": "success",
+            "payloadSnippet": "Goal: Layered Inverted Transforms & WASM Build"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-04-layered-inverted-transforms-and-wasm-build",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "prompt",
+          "summary": "Dispatched task task-04-layered-inverted-transforms-and-wasm-build to worker worker-04",
+          "tokens": 350,
+          "bytes": 1400,
+          "durationMs": 30,
+          "status": "success",
+          "payloadSnippet": "Goal: Layered Inverted Transforms & WASM Build"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "target": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "stepNumber": "4 -> 5",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4 -> 5",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-04-layered-inverted-transforms-and-wasm-build",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "file",
+            "summary": "Submitted diffs for task-04-layered-inverted-transforms-and-wasm-build (1 files)",
+            "tokens": 650,
+            "bytes": 1024,
+            "durationMs": 80,
+            "status": "success",
+            "payloadSnippet": "src/engine/layout"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-04-layered-inverted-transforms-and-wasm-build",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "file",
+          "summary": "Submitted diffs for task-04-layered-inverted-transforms-and-wasm-build (1 files)",
+          "tokens": 650,
+          "bytes": 1024,
+          "durationMs": 80,
+          "status": "success",
+          "payloadSnippet": "src/engine/layout"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "stepNumber": "5 -> 4",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "5 -> 4",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f59e0b",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-1",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Affine coordinate inversion invariants and port stub normals",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify port stub normal orientation and coordinate symmetry across all 4 directions with explicit unit tests"
+          },
+          {
+            "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-2",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Type safety and WASM boundary schema validation",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Audit all type casts at the WASM boundary to guarantee strict zero-any compliance"
+          },
+          {
+            "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-3",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Aspect ratio reciprocal invariance and layout symmetry",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify reciprocal aspect ratio invariance and add comprehensive tests for all 4 directions"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-1",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Affine coordinate inversion invariants and port stub normals",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify port stub normal orientation and coordinate symmetry across all 4 directions with explicit unit tests"
+        },
+        {
+          "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-2",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Type safety and WASM boundary schema validation",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Audit all type casts at the WASM boundary to guarantee strict zero-any compliance"
+        },
+        {
+          "id": "exch-repair-task-04-layered-inverted-transforms-and-wasm-build-3",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Aspect ratio reciprocal invariance and layout symmetry",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify reciprocal aspect ratio invariance and add comprehensive tests for all 4 directions"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-dep-task-02-radial-pcdra-obstacle-router-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+      "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-02-radial-pcdra-obstacle-router"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "active",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-dep-task-02-radial-pcdra-obstacle-router-task-04-layered-inverted-transforms-and-wasm-build",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from task-02-radial-pcdra-obstacle-router to task-04-layered-inverted-transforms-and-wasm-build",
+            "tokens": 420,
+            "bytes": 1200,
+            "durationMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract task-02-radial-pcdra-obstacle-router fulfilled"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-task-02-radial-pcdra-obstacle-router-task-04-layered-inverted-transforms-and-wasm-build",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-02-radial-pcdra-obstacle-router",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from task-02-radial-pcdra-obstacle-router to task-04-layered-inverted-transforms-and-wasm-build",
+          "tokens": 420,
+          "bytes": 1200,
+          "durationMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract task-02-radial-pcdra-obstacle-router fulfilled"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-task-03-radial-psca-badge-clearance-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-gate-task-03-radial-psca-badge-clearance",
+      "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-03-radial-psca-badge-clearance"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "active",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-dep-task-03-radial-psca-badge-clearance-task-04-layered-inverted-transforms-and-wasm-build",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-03-radial-psca-badge-clearance",
+            "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from task-03-radial-psca-badge-clearance to task-04-layered-inverted-transforms-and-wasm-build",
+            "tokens": 420,
+            "bytes": 1200,
+            "durationMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract task-03-radial-psca-badge-clearance fulfilled"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-task-03-radial-psca-badge-clearance-task-04-layered-inverted-transforms-and-wasm-build",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-03-radial-psca-badge-clearance",
+          "target": "node-task-task-04-layered-inverted-transforms-and-wasm-build",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from task-03-radial-psca-badge-clearance to task-04-layered-inverted-transforms-and-wasm-build",
+          "tokens": 420,
+          "bytes": 1200,
+          "durationMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract task-03-radial-psca-badge-clearance fulfilled"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-task-04-layered-inverted-transforms-and-wasm-build",
+      "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "target": "node-critic-authority",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-join-task-04-layered-inverted-transforms-and-wasm-build",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-critic-authority",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-04-layered-inverted-transforms-and-wasm-build",
+            "tokens": 300,
+            "bytes": 950,
+            "durationMs": 35,
+            "status": "success",
+            "payloadSnippet": "Gate check passed with status DONE"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-04-layered-inverted-transforms-and-wasm-build",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-critic-authority",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-04-layered-inverted-transforms-and-wasm-build",
+          "tokens": 300,
+          "bytes": 950,
+          "durationMs": 35,
+          "status": "success",
+          "payloadSnippet": "Gate check passed with status DONE"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-05"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-05-full-matrix-audit-gate-and-verification",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "prompt",
+            "summary": "Dispatched task task-05-full-matrix-audit-gate-and-verification to worker worker-05",
+            "tokens": 350,
+            "bytes": 1400,
+            "durationMs": 30,
+            "status": "success",
+            "payloadSnippet": "Goal: Full 280-Run Matrix Audit Verification Gate"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-05-full-matrix-audit-gate-and-verification",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "prompt",
+          "summary": "Dispatched task task-05-full-matrix-audit-gate-and-verification to worker worker-05",
+          "tokens": 350,
+          "bytes": 1400,
+          "durationMs": 30,
+          "status": "success",
+          "payloadSnippet": "Goal: Full 280-Run Matrix Audit Verification Gate"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "target": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+      "stepNumber": "6 -> 7",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6 -> 7",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-05-full-matrix-audit-gate-and-verification",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "target": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "file",
+            "summary": "Submitted diffs for task-05-full-matrix-audit-gate-and-verification (1 files)",
+            "tokens": 650,
+            "bytes": 1024,
+            "durationMs": 80,
+            "status": "success",
+            "payloadSnippet": "src/features/GraphTesting"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-05-full-matrix-audit-gate-and-verification",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "target": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "file",
+          "summary": "Submitted diffs for task-05-full-matrix-audit-gate-and-verification (1 files)",
+          "tokens": 650,
+          "bytes": 1024,
+          "durationMs": 80,
+          "status": "success",
+          "payloadSnippet": "src/features/GraphTesting"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+      "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "stepNumber": "7 -> 6",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "7 -> 6",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f59e0b",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-1",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Audit matrix telemetry and 280-run verification proof",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify all 280 runs report individual timings and zero constraint violations"
+          },
+          {
+            "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-2",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Full suite execution and typecheck verification",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Execute full test suite and confirm 0 type errors across all packages"
+          },
+          {
+            "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-3",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "decision",
+            "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Cumulative performance and leader line budget invariants",
+            "tokens": 280,
+            "bytes": 890,
+            "durationMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Confirm total audit duration is within budget and global leader line count <= 2"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-1",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 1 Adversarial Stress Test: Audit matrix telemetry and 280-run verification proof",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify all 280 runs report individual timings and zero constraint violations"
+        },
+        {
+          "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-2",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 2 Adversarial Stress Test: Full suite execution and typecheck verification",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Execute full test suite and confirm 0 type errors across all packages"
+        },
+        {
+          "id": "exch-repair-task-05-full-matrix-audit-gate-and-verification-3",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "decision",
+          "summary": "Pushback Finding: Round 3 Adversarial Stress Test: Cumulative performance and leader line budget invariants",
+          "tokens": 280,
+          "bytes": 890,
+          "durationMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Confirm total audit duration is within budget and global leader line count <= 2"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-dep-task-01-audit-runner-hardening-red-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-gate-task-01-audit-runner-hardening-red",
+      "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-01-audit-runner-hardening-red"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "active",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-dep-task-01-audit-runner-hardening-red-task-05-full-matrix-audit-gate-and-verification",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-01-audit-runner-hardening-red",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from task-01-audit-runner-hardening-red to task-05-full-matrix-audit-gate-and-verification",
+            "tokens": 420,
+            "bytes": 1200,
+            "durationMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract task-01-audit-runner-hardening-red fulfilled"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-task-01-audit-runner-hardening-red-task-05-full-matrix-audit-gate-and-verification",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-01-audit-runner-hardening-red",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from task-01-audit-runner-hardening-red to task-05-full-matrix-audit-gate-and-verification",
+          "tokens": 420,
+          "bytes": 1200,
+          "durationMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract task-01-audit-runner-hardening-red fulfilled"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-task-04-layered-inverted-transforms-and-wasm-build-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+      "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: task-04-layered-inverted-transforms-and-wasm-build"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "active",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-dep-task-04-layered-inverted-transforms-and-wasm-build-task-05-full-matrix-audit-gate-and-verification",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+            "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from task-04-layered-inverted-transforms-and-wasm-build to task-05-full-matrix-audit-gate-and-verification",
+            "tokens": 420,
+            "bytes": 1200,
+            "durationMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract task-04-layered-inverted-transforms-and-wasm-build fulfilled"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-task-04-layered-inverted-transforms-and-wasm-build-task-05-full-matrix-audit-gate-and-verification",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-04-layered-inverted-transforms-and-wasm-build",
+          "target": "node-task-task-05-full-matrix-audit-gate-and-verification",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from task-04-layered-inverted-transforms-and-wasm-build to task-05-full-matrix-audit-gate-and-verification",
+          "tokens": 420,
+          "bytes": 1200,
+          "durationMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract task-04-layered-inverted-transforms-and-wasm-build fulfilled"
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-task-05-full-matrix-audit-gate-and-verification",
+      "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+      "target": "node-critic-authority",
+      "stepNumber": 8,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "8",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "idle",
+        "glowIntensity": 0.35,
+        "exchanges": [
+          {
+            "id": "exch-join-task-05-full-matrix-audit-gate-and-verification",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+            "target": "node-critic-authority",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-05-full-matrix-audit-gate-and-verification",
+            "tokens": 300,
+            "bytes": 950,
+            "durationMs": 35,
+            "status": "success",
+            "payloadSnippet": "Gate check passed with status DONE"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-05-full-matrix-audit-gate-and-verification",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-gate-task-05-full-matrix-audit-gate-and-verification",
+          "target": "node-critic-authority",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-05-full-matrix-audit-gate-and-verification",
+          "tokens": 300,
+          "bytes": 950,
+          "durationMs": 35,
+          "status": "success",
+          "payloadSnippet": "Gate check passed with status DONE"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "stepNumber": 9,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "container": {
+        "stepBadge": "9",
+        "title": "Authority Sign-off",
+        "detail": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 450,
+        "bytes": 1800,
+        "ratePerSec": 1,
+        "status": "active",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-critic-complete",
+            "timestamp": "2026-08-15T12:23:43.095Z",
+            "source": "node-critic-authority",
+            "target": "node-terminal-complete",
+            "kind": "decision",
+            "summary": "Full capsule signed-off and sealed by completeness critic",
+            "tokens": 450,
+            "bytes": 1800,
+            "durationMs": 50,
+            "status": "success",
+            "payloadSnippet": "Whole-run criteria satisfied"
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-15T12:23:43.095Z",
+          "source": "node-critic-authority",
+          "target": "node-terminal-complete",
+          "kind": "decision",
+          "summary": "Full capsule signed-off and sealed by completeness critic",
+          "tokens": 450,
+          "bytes": 1800,
+          "durationMs": 50,
+          "status": "success",
+          "payloadSnippet": "Whole-run criteria satisfied"
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    }
+  ]
+}
