@@ -145,7 +145,6 @@ export const GraphCanvas: FC = () => {
         />
         <GraphBadgeLayer
           positionedEdges={positionedEdges}
-          positionedNodes={positionedNodes}
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
         />

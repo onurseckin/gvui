@@ -3,6 +3,7 @@ import * as bunTest from "bun:test";
 import {
   computeCustomEngineGraphLayout,
   computeCustomEngineGraphLayoutAsync,
+  getEdgeCompositeBadgeText,
 } from "./customLayoutAdapter";
 import type { GraphDataset } from "../../types/graphData";
 import type { CustomLayoutConfig } from "./custom/config";
@@ -226,5 +227,65 @@ describe("computeCustomEngineGraphLayout label measurement forwarding", () => {
     expect(forwardedEdge).toBeDefined();
     expect(forwardedEdge?.labelWidth).toBe(undefined);
     expect(forwardedEdge?.labelHeight).toBe(undefined);
+  });
+});
+
+describe("getEdgeCompositeBadgeText", () => {
+  it("formats standard edge title without bundle when bundleCount <= 1", () => {
+    const text = getEdgeCompositeBadgeText({
+      id: "e1",
+      source: "A",
+      target: "B",
+      label: "Dispatches Task",
+      bundleCount: 1,
+    });
+    expect(text).toBe("Dispatches Task");
+  });
+
+  it("appends bundle multiplier when bundleCount > 1", () => {
+    const text = getEdgeCompositeBadgeText({
+      id: "e1",
+      source: "A",
+      target: "B",
+      label: "Dispatches Task",
+      bundleCount: 5,
+    });
+    expect(text).toBe("Dispatches Task x5");
+  });
+
+  it("composes sanitized step, title, bundle multiplier, and detail", () => {
+    const text = getEdgeCompositeBadgeText({
+      id: "e1",
+      source: "A",
+      target: "B",
+      stepNumber: "Step 03",
+      container: {
+        title: "Dispatch Worker",
+        detail: "2.4k tokens",
+      },
+      bundleCount: 3,
+    });
+    expect(text).toBe("03 Dispatch Worker x3 2.4k tokens");
+  });
+
+  it("prefixes CYCLE for cycle edges", () => {
+    const text = getEdgeCompositeBadgeText({
+      id: "e1",
+      source: "A",
+      target: "B",
+      label: "feedback loop",
+      isCycle: true,
+      bundleCount: 2,
+    });
+    expect(text).toBe("CYCLE (feedback loop) x2");
+  });
+
+  it("returns null when edge carries no label or details", () => {
+    const text = getEdgeCompositeBadgeText({
+      id: "e1",
+      source: "A",
+      target: "B",
+    });
+    expect(text).toBeNull();
   });
 });

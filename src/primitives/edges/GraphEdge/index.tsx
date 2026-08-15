@@ -36,7 +36,6 @@ export interface GraphEdgeProps {
   targetY?: number;
   isSelected?: boolean;
   isHovered?: boolean;
-  isAnimated?: boolean;
   isHighlighted?: boolean;
   renderBadge?: boolean;
   showPorts?: boolean;
@@ -52,7 +51,6 @@ const areGraphEdgePropsEqual = (prevProps: GraphEdgeProps, nextProps: GraphEdgeP
     prevProps.targetY === nextProps.targetY &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isHovered === nextProps.isHovered &&
-    prevProps.isAnimated === nextProps.isAnimated &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.renderBadge === nextProps.renderBadge &&
     prevProps.showPorts === nextProps.showPorts &&
@@ -197,7 +195,6 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             traffic={edge.traffic}
             isHighTraffic={isHighTraffic}
             bundleCount={edge.bundleCount}
-            bundleIndex={edge.bundleIndex}
             onClick={handleEdgeClick}
           />
         )}

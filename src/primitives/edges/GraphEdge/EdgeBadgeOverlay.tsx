@@ -25,7 +25,6 @@ export interface EdgeBadgeOverlayProps {
   traffic?: EdgeTrafficDetail;
   isHighTraffic?: boolean;
   bundleCount?: number;
-  bundleIndex?: number;
   onClick?: (e: MouseEvent<SVGGElement>) => void;
 }
 
@@ -102,7 +101,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
     ? "loop"
     : (container?.variant ?? badge?.variant ?? descriptor.badgeVariant);
 
-  const bundleSnippet = bundleCount && bundleCount > 1 ? `x${bundleCount}` : null;
+  const bundleSnippet =
+    typeof bundleCount === "number" && bundleCount > 1 ? `x${bundleCount}` : null;
 
   // Measure composite single-line text width without icon chrome or traffic chips
   const computedWidth = Math.max(

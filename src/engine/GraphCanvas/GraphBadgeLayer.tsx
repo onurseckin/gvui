@@ -1,13 +1,12 @@
 import type { FC } from "react";
 import { memo } from "react";
 import { EdgeBadgeOverlay } from "../../primitives/edges/GraphEdge";
-import type { PositionedEdge, PositionedNode } from "../../types/graphData";
+import type { PositionedEdge } from "../../types/graphData";
 
 export interface GraphBadgeLayerProps {
   positionedEdges: PositionedEdge[];
   hiddenNodeIds: Set<string>;
   selectedNodeId: string | null;
-  positionedNodes?: PositionedNode[];
 }
 
 export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadgeLayer({
@@ -58,7 +57,6 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
               traffic={edge.traffic}
               isHighTraffic={edge.isHighTraffic}
               bundleCount={edge.bundleCount}
-              bundleIndex={edge.bundleIndex}
             />
           </g>
         );

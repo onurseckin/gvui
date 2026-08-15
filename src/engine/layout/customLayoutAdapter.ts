@@ -26,7 +26,10 @@ export function getEdgeCompositeBadgeText(edge: GraphDataset["edges"][number]): 
   const descriptor = describeEdgeKind(semanticKind);
   const step = sanitizeStepBadge(edge.container?.stepBadge ?? edge.stepNumber);
   const detail = edge.container?.detail;
-  const bundle = edge.bundleCount && edge.bundleCount > 1 ? `x${edge.bundleCount}` : undefined;
+  const bundle =
+    typeof edge.bundleCount === "number" && edge.bundleCount > 1
+      ? `x${edge.bundleCount}`
+      : undefined;
 
   let title: string | undefined = rawTitle;
   if (edge.isCycle) {
