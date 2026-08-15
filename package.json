@@ -20,6 +20,7 @@
     "typecheck": "bun run build:wasm && tsc -b",
     "build:wasm": "rm -rf src/engine/layout/custom/wasm_pkg && wasm-pack build crates/gvui --target web --out-dir ../../src/engine/layout/custom/wasm_pkg --no-pack",
     "lint": "oxlint",
+    "gvui:import": "bun scripts/import-capsule.ts",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check",
     "audit": "bun run build:wasm && bun scripts/runLayoutAudit.ts",

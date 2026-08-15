@@ -17,6 +17,7 @@ const NODE_KINDS: ReadonlySet<string> = new Set<NodeKind>([
   "router",
   "join",
   "gate",
+  "critic",
   "terminal",
   "input",
 ]);

@@ -466,3 +466,142 @@
   color: #a1a1aa;
   font-size: 11px;
 }
+
+/* ---------------------------------------------------------------------------------------------
+ * Drawer Tabs & Panels
+ * ------------------------------------------------------------------------------------------- */
+
+.drawer-tabs {
+  display: flex;
+  background-color: #131316;
+  border-bottom: 1px solid #232327;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.drawer-tab {
+  background: none;
+  border: none;
+  color: #71717a;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-tab:hover {
+  color: #e4e4e7;
+}
+
+.drawer-tab.is-active {
+  color: #fafafa;
+  border-bottom-color: #818cf8;
+  font-weight: 600;
+}
+
+.drawer-tab-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+}
+
+.drawer-command-card {
+  background-color: #0c0c0e;
+  border: 1px solid #27272a;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.drawer-command-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.drawer-command-exit {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.drawer-command-exit.is-success {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.drawer-command-exit.is-error {
+  background-color: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.drawer-command-argv {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #f4f4f5;
+  background-color: #08080a;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  overflow-x: auto;
+}
+
+.drawer-finding-card {
+  background-color: #0c0c0e;
+  border: 1px solid #27272a;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.drawer-finding-card.severity-critical {
+  border-left: 3px solid #f87171;
+}
+
+.drawer-finding-card.severity-important {
+  border-left: 3px solid #fb923c;
+}
+
+.drawer-finding-card.severity-suggestion {
+  border-left: 3px solid #38bdf8;
+}
+
+.drawer-finding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.drawer-finding-severity {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.drawer-finding-severity.critical {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.drawer-finding-severity.important {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.drawer-finding-severity.suggestion {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}

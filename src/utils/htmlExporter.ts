@@ -71,6 +71,8 @@ const KIND_ICON_MARKUP: Readonly<Record<NodeKind, string>> = Object.freeze({
   terminal: '<path d="M4 21V4M4 4h13l-2.5 4L17 12H4" />',
   input:
     '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5M15 12H3" />',
+  critic:
+    '<circle cx="12" cy="12" r="9" /><path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0" />',
 });
 
 const TOOL_ICON_MARKUP: Readonly<Record<ToolIconKind, string>> = Object.freeze({

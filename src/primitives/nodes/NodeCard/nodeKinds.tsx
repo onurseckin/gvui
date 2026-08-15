@@ -61,6 +61,13 @@ const ICON_INPUT: ReactNode = (
   </>
 );
 
+const ICON_CRITIC: ReactNode = (
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0" />
+  </>
+);
+
 export const NODE_KIND_DESCRIPTORS: Readonly<Record<NodeKind, NodeKindDescriptor>> = Object.freeze({
   orchestrator: { label: "Orchestrator", accent: "#818cf8", icon: ICON_ORCHESTRATOR },
   agent: { label: "Agent", accent: "#a78bfa", icon: ICON_AGENT },
@@ -70,6 +77,7 @@ export const NODE_KIND_DESCRIPTORS: Readonly<Record<NodeKind, NodeKindDescriptor
   gate: { label: "Gate", accent: "#fb923c", icon: ICON_GATE },
   terminal: { label: "Terminal", accent: "#34d399", icon: ICON_TERMINAL },
   input: { label: "Input", accent: "#38bdf8", icon: ICON_INPUT },
+  critic: { label: "Critic", accent: "#ec4899", icon: ICON_CRITIC },
 });
 
 /** Nodes predating `kind` fall back to `agent`, the least surprising default for a harness graph. */

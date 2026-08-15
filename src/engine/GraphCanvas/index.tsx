@@ -12,6 +12,7 @@ import { computeCustomEngineGraphLayoutAsync } from "../layout/customLayoutAdapt
 import type { CustomLayoutConfig } from "../layout/custom/config";
 import { buildEdgePath } from "../layout/custom/edgePath";
 import "./GraphCanvas.css";
+import { GraphSectionsLayer } from "./GraphSectionsLayer";
 import { usePanZoom } from "./usePanZoom";
 
 const inFlightLayoutRequests = new Map<
@@ -293,6 +294,11 @@ export const GraphCanvas: FC = () => {
     >
       {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
+        <GraphSectionsLayer
+          sections={dataset?.sections}
+          positionedNodes={positionedNodes}
+          hiddenNodeIds={hiddenNodeIds}
+        />
         <svg className="graph-svg-layer">
           <EdgeMarkerDefs />
           {styledEdges.map((edge) => {
