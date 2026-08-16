@@ -1,0 +1,511 @@
+{
+  "id": "autonomous-loop",
+  "title": "Autonomous Self-Healing Loop — Anomaly Detection, Code Synthesis & Gate Verification",
+  "description": "Continuous autonomous feedback loop detecting regression anomalies, isolating root causes, synthesizing repair patches, and enforcing multi-round validator gates with visual proofs.",
+  "directed": true,
+  "entry": "node-anomaly-detector",
+  "exits": ["node-terminal-complete"],
+  "nodes": [
+    {
+      "id": "node-anomaly-detector",
+      "name": "Anomaly Detector",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Telemetry Stream",
+      "description": "Real-time telemetry stream captures 300ms p99 frame delay and visual smear during rapid pan/zoom canvas operations.",
+      "badge": {
+        "text": "P99 300ms Spike",
+        "variant": "error",
+        "icon": "IconActivity"
+      },
+      "metrics": {
+        "durationMs": 50,
+        "commandCount": 1
+      },
+      "io": {
+        "inputs": [
+          {
+            "kind": "prompt",
+            "label": "Live Telemetry Feed",
+            "preview": "Grafana latency telemetry feed"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Anomaly Alert Packet",
+            "preview": "Canvas dirty-rect repaint smear detected"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [
+          {
+            "id": "shot-telemetry-spike",
+            "type": "image",
+            "url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+            "title": "Telemetry Alert: Frame Time Regression",
+            "description": "Grafana dashboard showing frame drops during canvas panning.",
+            "mimeType": "image/png",
+            "dimensions": {
+              "width": 1920,
+              "height": 1080
+            }
+          }
+        ],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Autonomous Coordinator",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Task Planning",
+      "description": "Decomposes healing task into profile analysis, double-buffer synthesis, and strict visual verification gate.",
+      "badge": {
+        "text": "3 Wave Plan",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "metrics": {
+        "tokensIn": 8400,
+        "tokensOut": 1950,
+        "costUsd": 0.18,
+        "durationMs": 14200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-anomaly-detector",
+            "kind": "decision",
+            "label": "Anomaly Alert",
+            "preview": "Canvas dirty-rect repaint smear"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Work Breakdown",
+            "preview": "Wave 1 Diagnose -> Wave 2 Patch -> Gate 1 Audit"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-diagnose",
+      "name": "Profiler & Root Cause Agent",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 3,
+      "stepLabel": "Wave 1: Diagnosis",
+      "description": "Inspects canvas rendering loop: discovers dirty-rect bounding box misses transformed origin during panning, resulting in partial clearRect smears.",
+      "badge": {
+        "text": "Root Cause Isolated",
+        "variant": "success",
+        "icon": "IconSearch"
+      },
+      "files": [
+        {
+          "path": "src/engine/GraphCanvas/CanvasRenderer.ts",
+          "mode": "read"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 11200,
+        "tokensOut": 2400,
+        "costUsd": 0.082,
+        "durationMs": 28400
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "decision",
+            "label": "Task Goal",
+            "preview": "Profile dirty-rect calculation"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Diagnostic Report",
+            "preview": "Origin matrix mismatch causing uncleared rect buffers"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-patch",
+      "name": "Synthesis & Repair Agent",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 4,
+      "stepLabel": "Wave 2: Synthesis",
+      "description": "Implements full offscreen double-buffering and viewport transform compensation for clean frame clearing.",
+      "badge": {
+        "text": "Patch Applied (Round 2)",
+        "variant": "success",
+        "icon": "IconWrench"
+      },
+      "files": [
+        {
+          "path": "src/engine/GraphCanvas/CanvasRenderer.ts",
+          "mode": "write"
+        },
+        {
+          "path": "src/engine/GraphCanvas/ViewportTransform.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 16800,
+        "tokensOut": 3200,
+        "costUsd": 0.125,
+        "durationMs": 42100,
+        "retries": 1
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-agent-diagnose",
+            "kind": "summary",
+            "label": "Diagnostic Report",
+            "preview": "Origin matrix mismatch"
+          },
+          {
+            "node": "node-gate-validator",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Round 1 patch introduced 4px edge ghosting"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "2 files updated"
+          },
+          {
+            "kind": "summary",
+            "label": "Synthesis Summary",
+            "preview": "Double-buffered transform matrix deployed"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-validator",
+      "name": "Gate: Visual & Performance Audit",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 1: Verification",
+      "description": "Runs automated Playwright screenshot visual diff test and 60fps frame rate benchmarks under 1000-node load.",
+      "badge": {
+        "text": "Gate Passed (Round 2)",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 4500,
+        "tokensOut": 1100,
+        "costUsd": 0.035,
+        "durationMs": 18200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-agent-patch",
+            "kind": "file",
+            "label": "Patch Code",
+            "preview": "CanvasRenderer.ts + ViewportTransform.ts"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verdict",
+            "preview": "PASSED: 0 pixel diff, 60.1 fps steady"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-ghost-edge-round-1",
+            "requirementId": "REQ-CANVAS-CLEAN",
+            "severity": "critical",
+            "status": "resolved",
+            "observation": "Round 1 patch left a 4px ghost artifact on right-side node borders during high-DPI scaling.",
+            "pushbackReason": "Round 1 failed sub-pixel clipping: 4px border artifacts detected on Retina 2x displays.",
+            "opposedChanges": "Direct pixel rounding without devicePixelRatio scaling multiplier.",
+            "remediation": "Scale dirty rect clear bounds by window.devicePixelRatio before invoking ctx.clearRect.",
+            "targetFiles": ["src/engine/GraphCanvas/CanvasRenderer.ts"],
+            "fileRefs": [
+              {
+                "path": "src/engine/GraphCanvas/CanvasRenderer.ts",
+                "mode": "write"
+              }
+            ],
+            "revalidationProof": {
+              "method": "Playwright pixelmatch screenshot diff",
+              "evidence": ["Diff pixel count: 0", "Frame budget: 16.4ms avg under 1000 nodes"]
+            },
+            "screenshots": [
+              {
+                "id": "shot-gate-round1-diff",
+                "type": "image",
+                "url": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80",
+                "title": "Visual Audit: Sub-pixel Ghosting Diff",
+                "description": "Pixelmatch comparison showing 4px artifact on canvas border.",
+                "mimeType": "image/png",
+                "dimensions": {
+                  "width": 1920,
+                  "height": 1080
+                }
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-review",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Step 6: Whole-Run Audit",
+      "description": "Whole-run certification audit validating that self-healing loop satisfied all criteria without residual performance leaks.",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "metrics": {
+        "tokensIn": 5600,
+        "tokensOut": 1400,
+        "costUsd": 0.045,
+        "durationMs": 8200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-validator",
+            "kind": "decision",
+            "label": "Gate Verdict",
+            "preview": "PASSED: All criteria verified"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Critic Certification",
+            "preview": "Whole-run certified clean with 0 open findings"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Self-Healing Cycle Complete",
+      "kind": "terminal",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Step 7: Production Deployed",
+      "description": "Autonomous healing cycle sealed. Master branch hotfix verified and deployed.",
+      "badge": {
+        "text": "Deployment Sealed",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "metrics": {
+        "durationMs": 1200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-review",
+            "kind": "decision",
+            "label": "Critic Packet",
+            "preview": "Whole-run certified"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Run Summary",
+            "preview": "Autonomous self-healing completed in 112s"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-detect-plan",
+      "source": "node-anomaly-detector",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "badge": {
+        "text": "Alert Packet",
+        "variant": "error",
+        "icon": "IconActivity"
+      },
+      "traffic": {
+        "volume": 1,
+        "tokens": 350,
+        "latencyMs": 15,
+        "status": "nominal",
+        "exchanges": [
+          {
+            "id": "exch-1",
+            "source": "node-anomaly-detector",
+            "target": "node-orchestrator-plan",
+            "kind": "decision",
+            "summary": "P99 frame drop alert ingested",
+            "tokens": 350,
+            "durationMs": 15,
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "id": "edge-plan-diagnose",
+      "source": "node-orchestrator-plan",
+      "target": "node-agent-diagnose",
+      "kind": "spawn",
+      "badge": {
+        "text": "Diagnose Task",
+        "variant": "info",
+        "icon": "IconSearch"
+      }
+    },
+    {
+      "id": "edge-diagnose-patch",
+      "source": "node-agent-diagnose",
+      "target": "node-agent-patch",
+      "kind": "data",
+      "badge": {
+        "text": "Root Cause Report",
+        "variant": "info",
+        "icon": "IconFileText"
+      }
+    },
+    {
+      "id": "edge-patch-gate",
+      "source": "node-agent-patch",
+      "target": "node-gate-validator",
+      "kind": "sequence",
+      "badge": {
+        "text": "Patch Submission",
+        "variant": "info",
+        "icon": "IconCode"
+      }
+    },
+    {
+      "id": "edge-gate-loop",
+      "source": "node-gate-validator",
+      "target": "node-agent-patch",
+      "kind": "loop",
+      "isCycle": true,
+      "condition": "ghost artifact detected",
+      "badge": {
+        "text": "Pushback Round 1",
+        "variant": "warning",
+        "icon": "IconRefresh"
+      },
+      "traffic": {
+        "volume": 1,
+        "tokens": 650,
+        "latencyMs": 30,
+        "status": "nominal",
+        "exchanges": [
+          {
+            "id": "exch-loop-1",
+            "source": "node-gate-validator",
+            "target": "node-agent-patch",
+            "kind": "decision",
+            "summary": "Round 1 pushback: 4px ghost border on high-DPI scaling",
+            "tokens": 650,
+            "durationMs": 30,
+            "status": "warning",
+            "rejectionObservation": "Sub-pixel rounding mismatch during dirty-rect clear"
+          }
+        ]
+      }
+    },
+    {
+      "id": "edge-gate-critic",
+      "source": "node-gate-validator",
+      "target": "node-critic-review",
+      "kind": "sequence",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      }
+    },
+    {
+      "id": "edge-critic-terminal",
+      "source": "node-critic-review",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      }
+    }
+  ]
+}

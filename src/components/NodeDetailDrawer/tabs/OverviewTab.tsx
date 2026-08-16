@@ -378,6 +378,7 @@ export const OverviewTab: FC<OverviewTabProps> = ({
                 port={port}
                 peerName={port.node ? nodeNamesById.get(port.node) : undefined}
                 direction="in"
+                onSelectNode={onSelectNode}
               />
             ))}
           </div>
@@ -393,6 +394,7 @@ export const OverviewTab: FC<OverviewTabProps> = ({
                 port={port}
                 peerName={port.node ? nodeNamesById.get(port.node) : undefined}
                 direction="out"
+                onSelectNode={onSelectNode}
               />
             ))}
           </div>

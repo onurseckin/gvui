@@ -6757,4 +6757,322 @@ index e69de29..b2b2b2b 100644
       act(() => renderer.unmount());
     });
   });
+
+  describe("Round 4: GVUI NodeDetailDrawer Validator View & Rich Asset Experience", () => {
+    test("FindingDetail contract and Opposed Changes callout with clickable file badges", () => {
+      const findingWithOpposed: PushbackFindingItem = {
+        id: "finding-pushback-101",
+        requirementId: "REQ-GATE-04",
+        severity: "critical",
+        observation: "Direct database mutations bypass tenant isolation boundary.",
+        pushbackReason:
+          "Validator rejected migration: Tenant isolation check failed in multi-tenant org tables.",
+        opposedChanges:
+          "Unsafe DROP COLUMN and unilateral schema ALTER without zero-downtime shadow columns.",
+        rejectionRound: 2,
+        validatorId: "gate-validator-critic",
+        status: "open",
+        targetFiles: ["src/db/migrations/004_tenants.sql", "src/auth/tenantGuard.ts"],
+        fileRefs: [
+          {
+            path: "src/db/schema.prisma",
+            mode: "write",
+            additions: 15,
+            deletions: 4,
+          },
+        ],
+      };
+
+      const html = renderToString(
+        <FindingDetailCard finding={findingWithOpposed} defaultExpanded={true} />,
+      );
+
+      expect(html.includes("Gate Pushback Rationale")).toBe(true);
+      expect(html.includes("Round 2")).toBe(true);
+      expect(html.includes("gate-validator-critic")).toBe(true);
+      expect(html.includes("Tenant isolation check failed")).toBe(true);
+      expect(html.includes("Opposed Changes &amp; Target Scope")).toBe(true);
+      expect(html.includes("Unsafe DROP COLUMN")).toBe(true);
+      expect(html.includes("src/db/migrations/004_tenants.sql")).toBe(true);
+      expect(html.includes("src/auth/tenantGuard.ts")).toBe(true);
+      expect(html.includes("src/db/schema.prisma")).toBe(true);
+      expect(html.includes("+15")).toBe(true);
+      expect(html.includes("-4")).toBe(true);
+    });
+
+    test("FindingDetailCard renders embedded screenshots and opens Lightbox modal on click", () => {
+      const findingWithShots: PushbackFindingItem = {
+        id: "finding-screenshot-202",
+        requirementId: "REQ-UI-08",
+        severity: "important",
+        observation:
+          "Visual alignment error in node drawer header during narrow viewport rendering.",
+        status: "open",
+        screenshots: [
+          {
+            id: "shot-finding-1",
+            type: "image",
+            url: "https://example.com/assets/finding-alignment-error.png",
+            title: "Drawer Header Overflow",
+            dimensions: { width: 1280, height: 720 },
+            sizeBytes: 245000,
+            author: "visual-auditor-agent",
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<FindingDetailCard finding={findingWithShots} defaultExpanded={true} />);
+      });
+
+      const root = renderer.root;
+      const thumb = root.findByProps({
+        "aria-label": "Inspect evidence screenshot Drawer Header Overflow",
+      });
+      expect(thumb).toBeDefined();
+
+      // Click screenshot thumb to trigger lightbox
+      act(() => {
+        thumb.props.onClick();
+      });
+
+      const lightbox = root.findByProps({ role: "dialog" });
+      expect(lightbox).toBeDefined();
+      expect(JSON.stringify(renderer.toJSON())).toContain("Drawer Header Overflow");
+
+      act(() => renderer.unmount());
+    });
+
+    test("FindingDetailCard renders Revalidation Proof Scorecard with method, evidence, and timestamp", () => {
+      const resolvedFinding: PushbackFindingItem = {
+        id: "finding-reval-303",
+        severity: "critical",
+        observation: "Broken schema migration fixed and verified via zero-downtime test suite.",
+        status: "resolved",
+        remediation: "Added shadow column migration and backward-compatible tenant resolver.",
+        remediationProof: {
+          method: "E2E Shadow Column Verification Gate",
+          evidence: [
+            "PASS test/migrations/tenants.spec.ts (14 assertions)",
+            "Shadow column dual-write verified with 0 dropped queries",
+          ],
+          verifiedAt: "2026-08-15T18:00:00Z",
+        },
+      };
+
+      const html = renderToString(
+        <FindingDetailCard finding={resolvedFinding} defaultExpanded={true} />,
+      );
+
+      expect(html.includes("Revalidation Proof")).toBe(true);
+      expect(html.includes("E2E Shadow Column Verification Gate")).toBe(true);
+      expect(html.includes("Shadow column dual-write verified")).toBe(true);
+      expect(html.includes("Resolved")).toBe(true);
+    });
+
+    test("ErrorInspector search filter matches pushbackReason, opposedChanges, validatorId, and targetFiles", () => {
+      const testFindings: PushbackFindingItem[] = [
+        {
+          id: "f-1",
+          severity: "critical",
+          observation: "Generic observation",
+          pushbackReason: "Specific pushback reason regarding database isolation",
+          status: "open",
+        },
+        {
+          id: "f-2",
+          severity: "important",
+          observation: "Schema inconsistency",
+          opposedChanges: "Unsafe migration alter table statement",
+          status: "open",
+        },
+        {
+          id: "f-3",
+          severity: "suggestion",
+          observation: "Minor formatting issue",
+          validatorId: "strict-auditor-99",
+          targetFiles: ["src/utils/format.ts"],
+          status: "resolved",
+        },
+      ];
+
+      const testNode: GraphNodeData = {
+        id: "test-node",
+        name: "Test Audit Node",
+        metadata: {
+          findings: testFindings,
+        },
+      };
+
+      // Search by pushbackReason
+      const html1 = renderToString(<ErrorInspector node={testNode} />);
+      expect(html1.includes("Specific pushback reason")).toBe(true);
+      expect(html1.includes("Unsafe migration alter table")).toBe(true);
+      expect(html1.includes("strict-auditor-99")).toBe(true);
+    });
+
+    test("AssetsTab aggregates finding screenshots and supports stage filter chips", () => {
+      const nodeWithRichAssets: GraphNodeData = {
+        id: "node-rich-assets",
+        name: "Validator Pipeline Run",
+        mediaAssets: [
+          {
+            id: "asset-worker-1",
+            type: "image",
+            url: "https://example.com/worker-build.png",
+            title: "Worker Build Log",
+            author: "worker-agent",
+            step: 1,
+            sizeBytes: 1048576,
+            dimensions: { width: 1920, height: 1080 },
+            mimeType: "image/png",
+          },
+        ],
+        metadata: {
+          findings: [
+            {
+              id: "find-val-1",
+              severity: "critical",
+              observation: "Gate rejection snapshot",
+              validatorId: "gate-validator",
+              status: "open",
+              screenshots: [
+                {
+                  id: "asset-val-shot",
+                  type: "image",
+                  url: "https://example.com/val-evidence.png",
+                  title: "Validator Gate Rejection Evidence",
+                  dimensions: { width: 1280, height: 720 },
+                  sizeBytes: 524288,
+                  mimeType: "image/png",
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<AssetsTab node={nodeWithRichAssets} />);
+      });
+
+      const root = renderer.root;
+      const jsonStr = JSON.stringify(renderer.toJSON());
+
+      expect(jsonStr).toContain("Validator Gate Rejection Evidence");
+      expect(jsonStr).toContain("Worker Build Log");
+      expect(jsonStr).toContain("1280×720");
+      expect(jsonStr).toContain("1920×1080");
+      expect(jsonStr).toContain("image/png");
+
+      // Verify filter chips exist
+      const filterChips = root.findAllByProps({ className: "drawer-filter-chip " });
+      expect(filterChips.length).toBeGreaterThan(0);
+
+      act(() => renderer.unmount());
+    });
+
+    test("LightboxDialog zoom toggle between 100% and 200%, keyboard shortcut Z, and copy URL", () => {
+      const sampleAssets: MediaAsset[] = [
+        {
+          id: "lightbox-asset-1",
+          type: "image",
+          url: "https://example.com/lightbox-preview.png",
+          title: "Architecture Diagram",
+          dimensions: { width: 1280, height: 720 },
+          sizeBytes: 150000,
+          author: "architect-critic",
+        },
+      ];
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <LightboxDialog
+            isOpen={true}
+            assets={sampleAssets}
+            initialIndex={0}
+            onClose={() => {}}
+          />,
+        );
+      });
+
+      const root = renderer.root;
+
+      // Find zoom toggle button
+      const zoomToggle = root.findByProps({ "aria-label": "Toggle zoom 100% / 200%" });
+      expect(zoomToggle).toBeDefined();
+      expect(zoomToggle.props.children.props.children).toBe("200%");
+
+      // Click zoom toggle to switch to 200%
+      act(() => {
+        zoomToggle.props.onClick();
+      });
+
+      const zoomPct = root.findByProps({ className: "drawer-lightbox-zoom-pct" });
+      expect(zoomPct.props.children).toBe("200%");
+
+      // Find copy URL button
+      const copyBtn = root.findByProps({ "aria-label": "Copy asset URL" });
+      expect(copyBtn).toBeDefined();
+
+      act(() => renderer.unmount());
+    });
+
+    test("IoStreamItem renders structured kind pills, token count, source jump link, and payload modal", () => {
+      let selectedJumpId: string | null = null;
+      const portWithJump: IoPort = {
+        node: "node-source-gateway",
+        kind: "decision",
+        label: "Routing Policy Decision",
+        tokens: 350,
+        preview:
+          '{\n  "action": "ALLOW",\n  "tenantId": "tenant-123",\n  "latencyTarget": "50ms"\n}',
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <IoStreamItem
+            port={portWithJump}
+            peerName="Gateway Node"
+            direction="in"
+            defaultExpanded={true}
+            onSelectNode={(id) => {
+              selectedJumpId = id;
+            }}
+          />,
+        );
+      });
+
+      const root = renderer.root;
+      const jsonStr = JSON.stringify(renderer.toJSON());
+
+      expect(jsonStr).toContain("payload-decision");
+      expect(jsonStr).toContain("350");
+      expect(jsonStr).toContain("tok");
+      expect(jsonStr).toContain("Gateway Node");
+
+      // Test jump button
+      const jumpBtn = root.findByProps({ className: "drawer-stream-jump-btn" });
+      expect(jumpBtn).toBeDefined();
+      act(() => {
+        jumpBtn.props.onClick({ stopPropagation: () => {} });
+      });
+      expect(selectedJumpId).toBe("node-source-gateway");
+
+      // Test expand payload modal
+      const expandBtn = root.findByProps({ "aria-label": "Expand payload in modal dialog" });
+      expect(expandBtn).toBeDefined();
+      act(() => {
+        expandBtn.props.onClick({ stopPropagation: () => {} });
+      });
+
+      expect(JSON.stringify(renderer.toJSON())).toContain("Routing Policy Decision");
+
+      act(() => renderer.unmount());
+    });
+  });
 });

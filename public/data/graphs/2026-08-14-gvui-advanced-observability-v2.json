@@ -1,0 +1,4680 @@
+{
+  "id": "2026-08-14-gvui-advanced-observability-v2",
+  "title": "Execution Trajectory: 2026-08-14-gvui-advanced-observability-v2",
+  "description": "Execution graph dataset and trajectory for run 2026-08-14-gvui-advanced-observability-v2",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "3.4 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orc...",
+      "prompt": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+            "tokens": 859
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "6 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 6 tasks and 6 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observabili"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "6 discrete work scopes (T-01, T-02, T-03, T-04, T-05, T-06)"
+          }
+        ]
+      },
+      "metadata": {
+        "taskCount": 6,
+        "waveCount": 6,
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-01",
+      "name": "Types & Pure JSON Data Contracts",
+      "description": "Validated pure JSON data contracts, TypeScript interfaces for GraphDataset, GraphNodeData, and GraphEdgeData, and verified type definitions against manifest datasets.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/types",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 873,
+        "tokensOut": 290,
+        "durationMs": 2493,
+        "commandCount": 2,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 873,
+          "outputTokens": 290,
+          "totalTokens": 1163,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 2493,
+          "activeCommandMs": 2356,
+          "cognitiveLatencyMs": 137,
+          "validationDurationMs": 2356
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "Types & Pure JSON Data Contracts"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Validated pure JSON data contracts, TypeScript interfaces for GraphDataset, GraphNodeData, and GraphEdgeData, and verified type definitions against manifest datasets."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "2 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/types"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-408c1ab6-d41d-4db2-9c0b-1ce8ce51a9fb",
+            "argv": ["bun", "test", "src/types"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1084,
+            "startedAt": "2026-08-15T06:54:28.973Z",
+            "finishedAt": "2026-08-15T06:54:30.057Z",
+            "logPath": "commands/C-408c1ab6-d41d-4db2-9c0b-1ce8ce51a9fb/record.json"
+          },
+          {
+            "id": "C-d59c219e-b36f-471b-b28a-e41608ea9881",
+            "argv": ["bun", "test", "src/types"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1272,
+            "startedAt": "2026-08-15T06:56:15.159Z",
+            "finishedAt": "2026-08-15T06:56:16.431Z",
+            "logPath": "commands/C-d59c219e-b36f-471b-b28a-e41608ea9881/record.json"
+          }
+        ],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t01-contracts",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1084,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-01",
+      "name": "Gate: Types & Pure JSON Data Contracts",
+      "description": "Verification gate enforcing quality, assertions, and criteria for Types & Pure JSON Data Contracts.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 64,
+        "tokensOut": 38,
+        "durationMs": 107458,
+        "commandCount": 2,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 64,
+          "outputTokens": 38,
+          "totalTokens": 102,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 107458,
+          "activeCommandMs": 2356,
+          "cognitiveLatencyMs": 105102,
+          "validationDurationMs": 107458
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-01",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "0 findings recorded (0 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/types"],
+        "repairRounds": 0,
+        "validationHistory": [],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 0,
+        "pushbackCount": 0,
+        "validator_id": "validator-t01-contracts",
+        "validatorId": "validator-t01-contracts",
+        "leaseAgent": "validator-t01-contracts",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1084,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-02",
+      "name": "GVUI Dynamic Canvas Measurer & Height Sizing",
+      "description": "Remediated finding-T-02-reject: Verified and hardened canvas measurer defensive width/height clamping, badge chip vertical wrapping bounds, and multi-line dynamic card height calculation.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/engine/layout/measurement",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 880,
+        "tokensOut": 327,
+        "durationMs": 5963,
+        "commandCount": 3,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 880,
+          "outputTokens": 327,
+          "totalTokens": 1207,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 5963,
+          "activeCommandMs": 3104,
+          "cognitiveLatencyMs": 2859,
+          "validationDurationMs": 3104
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Dynamic Canvas Measurer & Height Sizing"
+          },
+          {
+            "node": "node-gate-T-02",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Remediated finding-T-02-reject: Verified and hardened canvas measurer defensive width/height clamping, badge chip vertical wrapping bounds, and multi-line dynamic card height calculation."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "3 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/layout/measurement"],
+        "repairRounds": 1,
+        "commands": [
+          {
+            "id": "C-104cb37c-e279-43bf-9040-e67fd951c6a9",
+            "argv": ["bun", "test", "src/engine/layout/measurement"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1014,
+            "startedAt": "2026-08-15T06:54:44.575Z",
+            "finishedAt": "2026-08-15T06:54:45.589Z",
+            "logPath": "commands/C-104cb37c-e279-43bf-9040-e67fd951c6a9/record.json"
+          },
+          {
+            "id": "C-2c3409d2-912a-40e2-a666-7622c48d882b",
+            "argv": ["bun", "test", "src/engine/layout/measurement"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1046,
+            "startedAt": "2026-08-15T06:55:27.751Z",
+            "finishedAt": "2026-08-15T06:55:28.797Z",
+            "logPath": "commands/C-2c3409d2-912a-40e2-a666-7622c48d882b/record.json"
+          },
+          {
+            "id": "C-a749f3c1-f677-4c85-b528-8772241d5a62",
+            "argv": ["bun", "test", "src/engine/layout/measurement"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1044,
+            "startedAt": "2026-08-15T06:56:23.520Z",
+            "finishedAt": "2026-08-15T06:56:24.564Z",
+            "logPath": "commands/C-a749f3c1-f677-4c85-b528-8772241d5a62/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-02-reject",
+            "requirementId": "req-T-02",
+            "severity": "critical",
+            "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "pushbackReason": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "opposedChanges": "src/engine/layout/measurement",
+            "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-t02-measurer-r2",
+            "validatorId": "validator-t02-measurer-r2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "failure"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t02-measurer",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1014,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-02",
+      "name": "Gate: GVUI Dynamic Canvas Measurer & Height Sizing",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Dynamic Canvas Measurer & Height Sizing.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 288,
+        "tokensOut": 254,
+        "durationMs": 99989,
+        "commandCount": 3,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 288,
+          "outputTokens": 254,
+          "totalTokens": 542,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 99989,
+          "activeCommandMs": 3104,
+          "cognitiveLatencyMs": 96885,
+          "validationDurationMs": 99989
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-02",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-02"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/layout/measurement"],
+        "repairRounds": 1,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-104cb37c-e279-43bf-9040-e67fd951c6a9"
+              }
+            ],
+            "deadline_at": "2026-08-15T07:14:43.112Z",
+            "reviewed_requirement_ids": ["req-T-02"],
+            "started_at": "2026-08-15T06:54:43.112Z",
+            "token_digest": "1cb775b72b11f424aff2040140bd029082345bcabbcb3f0a3804b1a3f6411be0",
+            "validator_id": "validator-t02-measurer",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-02-reject",
+            "requirementId": "req-T-02",
+            "severity": "critical",
+            "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "pushbackReason": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "opposedChanges": "src/engine/layout/measurement",
+            "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-t02-measurer-r2",
+            "validatorId": "validator-t02-measurer-r2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "failure"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 1,
+        "validator_id": "validator-t02-measurer-r2",
+        "validatorId": "validator-t02-measurer-r2",
+        "leaseAgent": "validator-t02-measurer-r2",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1014,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-03",
+      "name": "GVUI Node Archetypes & Color Harmony",
+      "description": "Implemented and verified 9 distinct node archetypes, visual color harmony, badges, tools, mini-chips, and model tier badges without CSS cliches.",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Wave 2",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/primitives/nodes/NodeCard",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 866,
+        "tokensOut": 262,
+        "durationMs": 5352,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 866,
+          "outputTokens": 262,
+          "totalTokens": 1128,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 5352,
+          "activeCommandMs": 1600,
+          "cognitiveLatencyMs": 3752,
+          "validationDurationMs": 1600
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Dependency Output: T-01",
+            "preview": "Verified dependency contract from task T-01"
+          },
+          {
+            "node": "node-gate-T-02",
+            "kind": "artifact",
+            "label": "Dependency Output: T-02",
+            "preview": "Verified dependency contract from task T-02"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Node Archetypes & Color Harmony"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Implemented and verified 9 distinct node archetypes, visual color harmony, badges, tools, mini-chips, and model tier badges without CSS cliches."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "1 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/primitives/nodes/NodeCard"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-01c04aba-285f-4a7f-97cb-cd00890ac1b5",
+            "argv": ["bun", "test", "src/primitives/nodes/NodeCard"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1600,
+            "startedAt": "2026-08-15T06:57:00.240Z",
+            "finishedAt": "2026-08-15T06:57:01.840Z",
+            "logPath": "commands/C-01c04aba-285f-4a7f-97cb-cd00890ac1b5/record.json"
+          }
+        ],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t03-archetypes",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1600,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-03",
+      "name": "Gate: GVUI Node Archetypes & Color Harmony",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Node Archetypes & Color Harmony.",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 2",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 57,
+        "tokensOut": 38,
+        "durationMs": 1600,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 57,
+          "outputTokens": 38,
+          "totalTokens": 95,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 1600,
+          "activeCommandMs": 1600,
+          "cognitiveLatencyMs": 0,
+          "validationDurationMs": 1600
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-03",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-03"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "0 findings recorded (0 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/primitives/nodes/NodeCard"],
+        "repairRounds": 0,
+        "validationHistory": [],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 0,
+        "pushbackCount": 0,
+        "validator_id": "validator-t03-archetypes",
+        "validatorId": "validator-t03-archetypes",
+        "leaseAgent": "validator-t03-archetypes",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1600,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-04",
+      "name": "GVUI Rich Edge Containers & Semantic Styles",
+      "description": "Implemented and verified 7 distinct semantic edge kinds, rich container styling, collision prevention, leader lines, and SVG marker definitions.",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Wave 2",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/primitives/edges",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 866,
+        "tokensOut": 260,
+        "durationMs": 4471,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 866,
+          "outputTokens": 260,
+          "totalTokens": 1126,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 4471,
+          "activeCommandMs": 1298,
+          "cognitiveLatencyMs": 3173,
+          "validationDurationMs": 1298
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Dependency Output: T-01",
+            "preview": "Verified dependency contract from task T-01"
+          },
+          {
+            "node": "node-gate-T-02",
+            "kind": "artifact",
+            "label": "Dependency Output: T-02",
+            "preview": "Verified dependency contract from task T-02"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Rich Edge Containers & Semantic Styles"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Implemented and verified 7 distinct semantic edge kinds, rich container styling, collision prevention, leader lines, and SVG marker definitions."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "1 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/primitives/edges"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-425ec73f-5e62-468b-a482-050cbe928754",
+            "argv": ["bun", "test", "src/primitives/edges"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1298,
+            "startedAt": "2026-08-15T06:57:32.125Z",
+            "finishedAt": "2026-08-15T06:57:33.423Z",
+            "logPath": "commands/C-425ec73f-5e62-468b-a482-050cbe928754/record.json"
+          }
+        ],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t04-edges",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1298,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-04",
+      "name": "Gate: GVUI Rich Edge Containers & Semantic Styles",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Rich Edge Containers & Semantic Styles.",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 2",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 57,
+        "tokensOut": 38,
+        "durationMs": 1298,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 57,
+          "outputTokens": 38,
+          "totalTokens": 95,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 1298,
+          "activeCommandMs": 1298,
+          "cognitiveLatencyMs": 0,
+          "validationDurationMs": 1298
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-04",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-04"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "0 findings recorded (0 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/primitives/edges"],
+        "repairRounds": 0,
+        "validationHistory": [],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 0,
+        "pushbackCount": 0,
+        "validator_id": "validator-t04-edges",
+        "validatorId": "validator-t04-edges",
+        "leaseAgent": "validator-t04-edges",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1298,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-05",
+      "name": "GVUI Merged Overview & I/O Tab with Expandable Streams",
+      "description": "Implemented merged Overview & I/O tab, eliminated boilerplate summary pills, implemented unclipped expandable stream accordions with byte/token metrics.",
+      "kind": "agent",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Wave 2",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/components/NodeDetailDrawer",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 866,
+        "tokensOut": 275,
+        "durationMs": 4056,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 866,
+          "outputTokens": 275,
+          "totalTokens": 1141,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 4056,
+          "activeCommandMs": 1344,
+          "cognitiveLatencyMs": 2712,
+          "validationDurationMs": 1344
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Dependency Output: T-01",
+            "preview": "Verified dependency contract from task T-01"
+          },
+          {
+            "node": "node-gate-T-02",
+            "kind": "artifact",
+            "label": "Dependency Output: T-02",
+            "preview": "Verified dependency contract from task T-02"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Merged Overview & I/O Tab with Expandable Streams"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Implemented merged Overview & I/O tab, eliminated boilerplate summary pills, implemented unclipped expandable stream accordions with byte/token metrics."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "1 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/components/NodeDetailDrawer"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-a537da3c-650c-4575-9e0b-b09a3e55d08b",
+            "argv": ["bun", "test", "src/components/NodeDetailDrawer"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1344,
+            "startedAt": "2026-08-15T06:57:58.150Z",
+            "finishedAt": "2026-08-15T06:57:59.494Z",
+            "logPath": "commands/C-a537da3c-650c-4575-9e0b-b09a3e55d08b/record.json"
+          }
+        ],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t05-drawer",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1344,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-05",
+      "name": "Gate: GVUI Merged Overview & I/O Tab with Expandable Streams",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Merged Overview & I/O Tab with Expandable Streams.",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 2",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 57,
+        "tokensOut": 38,
+        "durationMs": 1344,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 57,
+          "outputTokens": 38,
+          "totalTokens": 95,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 1344,
+          "activeCommandMs": 1344,
+          "cognitiveLatencyMs": 0,
+          "validationDurationMs": 1344
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-05",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-05"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "0 findings recorded (0 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/components/NodeDetailDrawer"],
+        "repairRounds": 0,
+        "validationHistory": [],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 0,
+        "pushbackCount": 0,
+        "validator_id": "validator-t05-drawer",
+        "validatorId": "validator-t05-drawer",
+        "leaseAgent": "validator-t05-drawer",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1344,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-06",
+      "name": "E2E Integration, Full WASM Layout Validation & Manifest Registration",
+      "description": "Exported summary suite, copied graph dataset to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, updated manifest.json, and verified full WASM layout engine test suite.",
+      "kind": "agent",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Wave 3",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "public/data/graphs",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 866,
+        "tokensOut": 322,
+        "durationMs": 30546,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 866,
+          "outputTokens": 322,
+          "totalTokens": 1188,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 30546,
+          "activeCommandMs": 1906,
+          "cognitiveLatencyMs": 28640,
+          "validationDurationMs": 1906
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-03",
+            "kind": "artifact",
+            "label": "Dependency Output: T-03",
+            "preview": "Verified dependency contract from task T-03"
+          },
+          {
+            "node": "node-gate-T-04",
+            "kind": "artifact",
+            "label": "Dependency Output: T-04",
+            "preview": "Verified dependency contract from task T-04"
+          },
+          {
+            "node": "node-gate-T-05",
+            "kind": "artifact",
+            "label": "Dependency Output: T-05",
+            "preview": "Verified dependency contract from task T-05"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "E2E Integration, Full WASM Layout Validation & Manifest Registration"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Exported summary suite, copied graph dataset to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, updated manifest.json, and verified full WASM layout engine test suite."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "1 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["public/data/graphs"],
+        "repairRounds": 0,
+        "commands": [
+          {
+            "id": "C-6b1fc5b9-ead3-45bd-ba27-212f3583a48d",
+            "argv": ["bun", "test", "src"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1906,
+            "startedAt": "2026-08-15T06:58:47.507Z",
+            "finishedAt": "2026-08-15T06:58:49.413Z",
+            "logPath": "commands/C-6b1fc5b9-ead3-45bd-ba27-212f3583a48d/record.json"
+          }
+        ],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t06-integration",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1906,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-06",
+      "name": "Gate: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+      "description": "Verification gate enforcing quality, assertions, and criteria for E2E Integration, Full WASM Layout Validation & Manifest Registration.",
+      "kind": "gate",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Gate 3",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 57,
+        "tokensOut": 38,
+        "durationMs": 1906,
+        "commandCount": 1,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 57,
+          "outputTokens": 38,
+          "totalTokens": 95,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 1906,
+          "activeCommandMs": 1906,
+          "cognitiveLatencyMs": 0,
+          "validationDurationMs": 1906
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-06",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-06"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "0 findings recorded (0 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["public/data/graphs"],
+        "repairRounds": 0,
+        "validationHistory": [],
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 0,
+        "pushbackCount": 0,
+        "validator_id": "validator-t06-integration",
+        "validatorId": "validator-t06-integration",
+        "leaseAgent": "validator-t06-integration",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1906,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 8,
+      "stepLabel": "Step 8: Completeness Critic",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-01",
+            "preview": "Verification evidence and test report for task T-01"
+          },
+          {
+            "node": "node-gate-T-02",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-02",
+            "preview": "Verification evidence and test report for task T-02"
+          },
+          {
+            "node": "node-gate-T-03",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-03",
+            "preview": "Verification evidence and test report for task T-03"
+          },
+          {
+            "node": "node-gate-T-04",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-04",
+            "preview": "Verification evidence and test report for task T-04"
+          },
+          {
+            "node": "node-gate-T-05",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-05",
+            "preview": "Verification evidence and test report for task T-05"
+          },
+          {
+            "node": "node-gate-T-06",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-06",
+            "preview": "Verification evidence and test report for task T-06"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Completeness Critic Certification",
+            "preview": "Critic certified whole-run completion (clean) with 0 findings"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "commands": [],
+        "critic_id": "critic-final-audit",
+        "criticId": "critic-final-audit",
+        "status": "clean",
+        "unresolved_finding_ids": [],
+        "unresolvedFindingIds": [],
+        "residual_risks": [],
+        "requirement_proofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-01 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-01",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-02 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-02",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-03 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-03",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-04 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-04",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-05 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-05",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-06 satisfied.",
+                "reference": "C-9267cd63-fa2c-46a5-8e96-98486c89156d"
+              }
+            ],
+            "requirement_id": "req-T-06",
+            "status": "satisfied"
+          }
+        ]
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 9,
+      "stepLabel": "Step 9: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-authority",
+            "kind": "decision",
+            "label": "Critic Authority Packet",
+            "preview": "Whole-run certification packet sealed"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Execution Trajectory Summary",
+            "preview": "Run 2026-08-14-gvui-advanced-observability-v2 execution completed with 6 tasks"
+          }
+        ]
+      },
+      "metadata": {
+        "status": "complete",
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "stepNumber": 1,
+      "badge": {
+        "text": "Prompt Input",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "User Prompt Ingested",
+        "detail": "3.4 KB",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 859,
+        "tokensIn": 0,
+        "tokensOut": 859,
+        "latencyMs": 20,
+        "bytes": 3437,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-prompt-plan",
+            "timestamp": "2026-08-16T01:34:02.937Z",
+            "source": "node-input-prompt",
+            "target": "node-orchestrator-plan",
+            "stepNumber": 1,
+            "step": 1,
+            "direction": "forward",
+            "type": "prompt",
+            "kind": "prompt",
+            "summary": "Ingested user prompt instructions and context",
+            "tokens": 859,
+            "tokensIn": 0,
+            "tokensOut": 859,
+            "bytes": 3437,
+            "durationMs": 20,
+            "latencyMs": 20,
+            "status": "success",
+            "inputGoal": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+            "payloadSnippet": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/re",
+            "payloadPreview": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/re",
+            "fullPayload": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+            "metadata": {
+              "promptSizeKb": "3.4"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "timestamp": "2026-08-16T01:34:02.937Z",
+          "source": "node-input-prompt",
+          "target": "node-orchestrator-plan",
+          "stepNumber": 1,
+          "step": 1,
+          "direction": "forward",
+          "type": "prompt",
+          "kind": "prompt",
+          "summary": "Ingested user prompt instructions and context",
+          "tokens": 859,
+          "tokensIn": 0,
+          "tokensOut": 859,
+          "bytes": 3437,
+          "durationMs": 20,
+          "latencyMs": 20,
+          "status": "success",
+          "inputGoal": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+          "payloadSnippet": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/re",
+          "payloadPreview": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/re",
+          "fullPayload": "You are the Autonomous Background Run Coordinator for the Advanced Visual Graph Revamp & Observability System.\nRepository: /Users/onurseckinsenoglu/repos/gvui.\nHarness CLI: bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts.\nCapsule Directory: /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2.\n\n### Core Requirements & Directives:\n1. Initialize capsule:\n   printf \"%s\" \"$PROMPT\" | bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/gvui --run 2026-08-14-gvui-advanced-observability-v2 --prompt-stdin --capture-mode stdin --source-verified\n2. Register tasks:\n   - T-01: \"Types & Pure JSON Data Contracts\", scope src/types, gate bun test src/types\n   - T-02: \"GVUI Dynamic Canvas Measurer & Height Sizing\", scope src/engine/layout/measurement, gate bun test src/engine/layout/measurement\n   - T-03: \"GVUI Node Archetypes & Color Harmony\", scope src/primitives/nodes/NodeCard, deps T-01,T-02, gate bun test src/primitives/nodes/NodeCard\n   - T-04: \"GVUI Rich Edge Containers & Semantic Styles\", scope src/primitives/edges, deps T-01,T-02, gate bun test src/primitives/edges\n   - T-05: \"GVUI Merged Overview & I/O Tab with Expandable Streams\", scope src/components/NodeDetailDrawer, deps T-01,T-02, gate bun test src/components/NodeDetailDrawer\n   - T-06: \"E2E Integration, Full WASM Layout Validation & Manifest Registration\", scope public/data/graphs, deps T-03,T-04,T-05, gate bun test src\n3. Compile plan:\n   bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts plan:compile --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --actor coordinator\n4. Execute Wave 0, Wave 1, and Wave 2 tasks:\n   - Dispatch Tier 3 implementers and independent Tier 3 validators.\n   - Validators MUST perform Adversarial Invariant Audits:\n     - Monitored gate command execution (run:exec).\n     - Invariant checking (data contracts, visual color matching, dynamic height calculations, collision avoidance, merged Overview & I/O tab, unclipped stream accordions with byte/token metrics).\n     - Exercise formal pushbacks where appropriate (task:reject --run ... --task ... --validator ... --token ... --reason \"...\" --finding \"...\") and verify remediation in Round 2 before issuing task:review --status pass.\n   - In T-06: Export summary suite, copy graph.json to public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json, update manifest.json, and run the full WASM layout engine test suite (bun test src/types/exampleGraphs.test.ts and bun test src) verifying that the generated capsule graph computes valid finite coordinates, zero overlapping bounds, and valid edge splines!\n5. Whole-run completion:\n   - bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts run:exec --run /Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-14-gvui-advanced-observability-v2 --gate gate-run-completion --actor coordinator -- bun test src\n   - critic:start and critic:review with complete requirement audit.\n   - run:complete to seal the capsule.\n   - Re-export the final capsule summary so public/data/graphs/2026-08-14-gvui-advanced-observability-v2.json contains the completed run state.\n6. When 100% complete, send one final comprehensive summary to the parent thread with the complete execution ledger, exact validator pushback counts, and proof of WASM layout validation.\n",
+          "metadata": {
+            "promptSizeKb": "3.4"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    },
+    {
+      "id": "edge-plan-T-01",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-01",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t01-contracts"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-01",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-01",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-01 to worker worker-t01-contracts",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: Types & Pure JSON Data Contracts",
+            "payloadSnippet": "Goal: Types & Pure JSON Data Contracts",
+            "payloadPreview": "Goal: Types & Pure JSON Data Contracts",
+            "fullPayload": "Goal: Types & Pure JSON Data Contracts\nWrite Scope: src/types",
+            "metadata": {
+              "taskId": "T-01",
+              "agent": "worker-t01-contracts"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-01",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-01",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-01 to worker worker-t01-contracts",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: Types & Pure JSON Data Contracts",
+          "payloadSnippet": "Goal: Types & Pure JSON Data Contracts",
+          "payloadPreview": "Goal: Types & Pure JSON Data Contracts",
+          "fullPayload": "Goal: Types & Pure JSON Data Contracts\nWrite Scope: src/types",
+          "metadata": {
+            "taskId": "T-01",
+            "agent": "worker-t01-contracts"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-01",
+      "source": "node-task-T-01",
+      "target": "node-gate-T-01",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-01",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-01",
+            "target": "node-gate-T-01",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-01 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/types",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/types",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/types",
+            "payloadPreview": "src/types",
+            "fullPayload": "Files modified:\n- src/types",
+            "metadata": {
+              "taskId": "T-01",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-01",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-01",
+          "target": "node-gate-T-01",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-01 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/types",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/types",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/types",
+          "payloadPreview": "src/types",
+          "fullPayload": "Files modified:\n- src/types",
+          "metadata": {
+            "taskId": "T-01",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-join-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-01",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-01",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-01",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=0",
+            "metadata": {
+              "taskId": "T-01",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-01",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-01",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-01",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=0",
+          "metadata": {
+            "taskId": "T-01",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-T-02",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-02",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t02-measurer"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-02",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-02",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-02 to worker worker-t02-measurer",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+            "payloadSnippet": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+            "payloadPreview": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+            "fullPayload": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing\nWrite Scope: src/engine/layout/measurement",
+            "metadata": {
+              "taskId": "T-02",
+              "agent": "worker-t02-measurer"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-02",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-02",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-02 to worker worker-t02-measurer",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+          "payloadSnippet": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+          "payloadPreview": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing",
+          "fullPayload": "Goal: GVUI Dynamic Canvas Measurer & Height Sizing\nWrite Scope: src/engine/layout/measurement",
+          "metadata": {
+            "taskId": "T-02",
+            "agent": "worker-t02-measurer"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-02",
+      "source": "node-task-T-02",
+      "target": "node-gate-T-02",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-02",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-02",
+            "target": "node-gate-T-02",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-02 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/engine/layout/measurement",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/engine/layout/measurement",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/engine/layout/measurement",
+            "payloadPreview": "src/engine/layout/measurement",
+            "fullPayload": "Files modified:\n- src/engine/layout/measurement",
+            "metadata": {
+              "taskId": "T-02",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-02",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-02",
+          "target": "node-gate-T-02",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-02 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/engine/layout/measurement",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/engine/layout/measurement",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/engine/layout/measurement",
+          "payloadPreview": "src/engine/layout/measurement",
+          "fullPayload": "Files modified:\n- src/engine/layout/measurement",
+          "metadata": {
+            "taskId": "T-02",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-T-02",
+      "source": "node-gate-T-02",
+      "target": "node-task-T-02",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-T-02-1",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-02",
+            "target": "node-task-T-02",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "payloadPreview": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "fullPayload": "Finding: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow\nRemediation: Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.\nPushback Reason: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "auditFinding": {
+              "id": "finding-T-02-reject",
+              "requirementId": "req-T-02",
+              "severity": "critical",
+              "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+              "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "Monitored gate execution and code invariant verification",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-02-reject",
+              "requirementId": "req-T-02",
+              "severity": "critical",
+              "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+              "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "Monitored gate execution and code invariant verification",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "opposedChanges": "src/engine/layout/measurement",
+            "requiredRemediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [],
+            "metadata": {
+              "findingId": "finding-T-02-reject",
+              "round": 1,
+              "validatorId": "validator-t02-measurer-r2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-T-02-1",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-02",
+          "target": "node-task-T-02",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+          "payloadPreview": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+          "fullPayload": "Finding: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow\nRemediation: Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.\nPushback Reason: Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+          "auditFinding": {
+            "id": "finding-T-02-reject",
+            "requirementId": "req-T-02",
+            "severity": "critical",
+            "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-02-reject",
+            "requirementId": "req-T-02",
+            "severity": "critical",
+            "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+            "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "Monitored gate execution and code invariant verification",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+          "observation": "Adversarial stress audit identified need for explicit regression verification on zero-width bounds and multi-line badge chip overflow",
+          "opposedChanges": "src/engine/layout/measurement",
+          "requiredRemediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+          "remediation": "Ensure canvas measurer defensively clamps non-positive widths and explicitly tests badge chip vertical bounds under multi-row wrap scenarios.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "Monitored gate execution and code invariant verification",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "Monitored gate execution and code invariant verification",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": [],
+          "metadata": {
+            "findingId": "finding-T-02-reject",
+            "round": 1,
+            "validatorId": "validator-t02-measurer-r2"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-T-02",
+      "source": "node-gate-T-02",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-02",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-02",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-02",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-02 for task T-02: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "T-02",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-02",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-02",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-02",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-02 for task T-02: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "T-02",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-T-03",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-03",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t03-archetypes"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-03",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-03",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-03 to worker worker-t03-archetypes",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Node Archetypes & Color Harmony",
+            "payloadSnippet": "Goal: GVUI Node Archetypes & Color Harmony",
+            "payloadPreview": "Goal: GVUI Node Archetypes & Color Harmony",
+            "fullPayload": "Goal: GVUI Node Archetypes & Color Harmony\nWrite Scope: src/primitives/nodes/NodeCard",
+            "metadata": {
+              "taskId": "T-03",
+              "agent": "worker-t03-archetypes"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-03",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-03",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-03 to worker worker-t03-archetypes",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Node Archetypes & Color Harmony",
+          "payloadSnippet": "Goal: GVUI Node Archetypes & Color Harmony",
+          "payloadPreview": "Goal: GVUI Node Archetypes & Color Harmony",
+          "fullPayload": "Goal: GVUI Node Archetypes & Color Harmony\nWrite Scope: src/primitives/nodes/NodeCard",
+          "metadata": {
+            "taskId": "T-03",
+            "agent": "worker-t03-archetypes"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-03",
+      "source": "node-task-T-03",
+      "target": "node-gate-T-03",
+      "stepNumber": "4 -> 5",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4 -> 5",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-03",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-03",
+            "target": "node-gate-T-03",
+            "stepNumber": "4 -> 5",
+            "step": 4,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-03 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/primitives/nodes/NodeCard",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/primitives/nodes/NodeCard",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/primitives/nodes/NodeCard",
+            "payloadPreview": "src/primitives/nodes/NodeCard",
+            "fullPayload": "Files modified:\n- src/primitives/nodes/NodeCard",
+            "metadata": {
+              "taskId": "T-03",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-03",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-03",
+          "target": "node-gate-T-03",
+          "stepNumber": "4 -> 5",
+          "step": 4,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-03 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/primitives/nodes/NodeCard",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/primitives/nodes/NodeCard",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/primitives/nodes/NodeCard",
+          "payloadPreview": "src/primitives/nodes/NodeCard",
+          "fullPayload": "Files modified:\n- src/primitives/nodes/NodeCard",
+          "metadata": {
+            "taskId": "T-03",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-01-T-03",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-03",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-01-T-03",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-03",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-01 to T-03",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-01 fulfilled",
+            "payloadPreview": "Dependency contract T-01 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-03",
+            "metadata": {
+              "dependencyId": "T-01",
+              "targetTaskId": "T-03"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-01-T-03",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-03",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-01 to T-03",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-01 fulfilled",
+          "payloadPreview": "Dependency contract T-01 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-03",
+          "metadata": {
+            "dependencyId": "T-01",
+            "targetTaskId": "T-03"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-T-02-T-03",
+      "source": "node-gate-T-02",
+      "target": "node-task-T-03",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-02"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-02-T-03",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-02",
+            "target": "node-task-T-03",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-02 to T-03",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-02 fulfilled",
+            "payloadPreview": "Dependency contract T-02 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-03",
+            "metadata": {
+              "dependencyId": "T-02",
+              "targetTaskId": "T-03"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-02-T-03",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-02",
+          "target": "node-task-T-03",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-02 to T-03",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-02 fulfilled",
+          "payloadPreview": "Dependency contract T-02 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-03",
+          "metadata": {
+            "dependencyId": "T-02",
+            "targetTaskId": "T-03"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-T-03",
+      "source": "node-gate-T-03",
+      "target": "node-critic-authority",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-03",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-03",
+            "target": "node-critic-authority",
+            "stepNumber": 6,
+            "step": 5,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-03",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-03 for task T-03: status=DONE, findings=0",
+            "metadata": {
+              "taskId": "T-03",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-03",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-03",
+          "target": "node-critic-authority",
+          "stepNumber": 6,
+          "step": 5,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-03",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-03 for task T-03: status=DONE, findings=0",
+          "metadata": {
+            "taskId": "T-03",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-T-04",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-04",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t04-edges"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-04",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-04",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-04 to worker worker-t04-edges",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+            "payloadSnippet": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+            "payloadPreview": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+            "fullPayload": "Goal: GVUI Rich Edge Containers & Semantic Styles\nWrite Scope: src/primitives/edges",
+            "metadata": {
+              "taskId": "T-04",
+              "agent": "worker-t04-edges"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-04",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-04",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-04 to worker worker-t04-edges",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+          "payloadSnippet": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+          "payloadPreview": "Goal: GVUI Rich Edge Containers & Semantic Styles",
+          "fullPayload": "Goal: GVUI Rich Edge Containers & Semantic Styles\nWrite Scope: src/primitives/edges",
+          "metadata": {
+            "taskId": "T-04",
+            "agent": "worker-t04-edges"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-04",
+      "source": "node-task-T-04",
+      "target": "node-gate-T-04",
+      "stepNumber": "4 -> 5",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4 -> 5",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-04",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-04",
+            "target": "node-gate-T-04",
+            "stepNumber": "4 -> 5",
+            "step": 4,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-04 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/primitives/edges",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/primitives/edges",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/primitives/edges",
+            "payloadPreview": "src/primitives/edges",
+            "fullPayload": "Files modified:\n- src/primitives/edges",
+            "metadata": {
+              "taskId": "T-04",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-04",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-04",
+          "target": "node-gate-T-04",
+          "stepNumber": "4 -> 5",
+          "step": 4,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-04 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/primitives/edges",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/primitives/edges",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/primitives/edges",
+          "payloadPreview": "src/primitives/edges",
+          "fullPayload": "Files modified:\n- src/primitives/edges",
+          "metadata": {
+            "taskId": "T-04",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-01-T-04",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-04",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-01-T-04",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-04",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-01 to T-04",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-01 fulfilled",
+            "payloadPreview": "Dependency contract T-01 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-04",
+            "metadata": {
+              "dependencyId": "T-01",
+              "targetTaskId": "T-04"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-01-T-04",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-04",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-01 to T-04",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-01 fulfilled",
+          "payloadPreview": "Dependency contract T-01 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-04",
+          "metadata": {
+            "dependencyId": "T-01",
+            "targetTaskId": "T-04"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-T-02-T-04",
+      "source": "node-gate-T-02",
+      "target": "node-task-T-04",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-02"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-02-T-04",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-02",
+            "target": "node-task-T-04",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-02 to T-04",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-02 fulfilled",
+            "payloadPreview": "Dependency contract T-02 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-04",
+            "metadata": {
+              "dependencyId": "T-02",
+              "targetTaskId": "T-04"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-02-T-04",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-02",
+          "target": "node-task-T-04",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-02 to T-04",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-02 fulfilled",
+          "payloadPreview": "Dependency contract T-02 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-04",
+          "metadata": {
+            "dependencyId": "T-02",
+            "targetTaskId": "T-04"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-T-04",
+      "source": "node-gate-T-04",
+      "target": "node-critic-authority",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-04",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-04",
+            "target": "node-critic-authority",
+            "stepNumber": 6,
+            "step": 5,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-04",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-04 for task T-04: status=DONE, findings=0",
+            "metadata": {
+              "taskId": "T-04",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-04",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-04",
+          "target": "node-critic-authority",
+          "stepNumber": 6,
+          "step": 5,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-04",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-04 for task T-04: status=DONE, findings=0",
+          "metadata": {
+            "taskId": "T-04",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-T-05",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-05",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t05-drawer"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-05",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-05",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-05 to worker worker-t05-drawer",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+            "payloadSnippet": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+            "payloadPreview": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+            "fullPayload": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams\nWrite Scope: src/components/NodeDetailDrawer",
+            "metadata": {
+              "taskId": "T-05",
+              "agent": "worker-t05-drawer"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-05",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-05",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-05 to worker worker-t05-drawer",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+          "payloadSnippet": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+          "payloadPreview": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams",
+          "fullPayload": "Goal: GVUI Merged Overview & I/O Tab with Expandable Streams\nWrite Scope: src/components/NodeDetailDrawer",
+          "metadata": {
+            "taskId": "T-05",
+            "agent": "worker-t05-drawer"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-05",
+      "source": "node-task-T-05",
+      "target": "node-gate-T-05",
+      "stepNumber": "4 -> 5",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4 -> 5",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-05",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-05",
+            "target": "node-gate-T-05",
+            "stepNumber": "4 -> 5",
+            "step": 4,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-05 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/components/NodeDetailDrawer",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/components/NodeDetailDrawer",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/components/NodeDetailDrawer",
+            "payloadPreview": "src/components/NodeDetailDrawer",
+            "fullPayload": "Files modified:\n- src/components/NodeDetailDrawer",
+            "metadata": {
+              "taskId": "T-05",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-05",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-05",
+          "target": "node-gate-T-05",
+          "stepNumber": "4 -> 5",
+          "step": 4,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-05 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/components/NodeDetailDrawer",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/components/NodeDetailDrawer",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/components/NodeDetailDrawer",
+          "payloadPreview": "src/components/NodeDetailDrawer",
+          "fullPayload": "Files modified:\n- src/components/NodeDetailDrawer",
+          "metadata": {
+            "taskId": "T-05",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-01-T-05",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-05",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-01-T-05",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-05",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-01 to T-05",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-01 fulfilled",
+            "payloadPreview": "Dependency contract T-01 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-05",
+            "metadata": {
+              "dependencyId": "T-01",
+              "targetTaskId": "T-05"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-01-T-05",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-05",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-01 to T-05",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-01 fulfilled",
+          "payloadPreview": "Dependency contract T-01 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-01 handed off to T-05",
+          "metadata": {
+            "dependencyId": "T-01",
+            "targetTaskId": "T-05"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-T-02-T-05",
+      "source": "node-gate-T-02",
+      "target": "node-task-T-05",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-02"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-02-T-05",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-02",
+            "target": "node-task-T-05",
+            "stepNumber": 4,
+            "step": 4,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-02 to T-05",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-02 fulfilled",
+            "payloadPreview": "Dependency contract T-02 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-05",
+            "metadata": {
+              "dependencyId": "T-02",
+              "targetTaskId": "T-05"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-02-T-05",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-02",
+          "target": "node-task-T-05",
+          "stepNumber": 4,
+          "step": 4,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-02 to T-05",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-02 fulfilled",
+          "payloadPreview": "Dependency contract T-02 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-02 handed off to T-05",
+          "metadata": {
+            "dependencyId": "T-02",
+            "targetTaskId": "T-05"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-T-05",
+      "source": "node-gate-T-05",
+      "target": "node-critic-authority",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-05",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-05",
+            "target": "node-critic-authority",
+            "stepNumber": 6,
+            "step": 5,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-05",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-05 for task T-05: status=DONE, findings=0",
+            "metadata": {
+              "taskId": "T-05",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-05",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-05",
+          "target": "node-critic-authority",
+          "stepNumber": 6,
+          "step": 5,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-05",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-05 for task T-05: status=DONE, findings=0",
+          "metadata": {
+            "taskId": "T-05",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-T-06",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-06",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t06-integration"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-06",
+            "stepNumber": 6,
+            "step": 6,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-06 to worker worker-t06-integration",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+            "payloadSnippet": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+            "payloadPreview": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+            "fullPayload": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration\nWrite Scope: public/data/graphs",
+            "metadata": {
+              "taskId": "T-06",
+              "agent": "worker-t06-integration"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-06",
+          "stepNumber": 6,
+          "step": 6,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-06 to worker worker-t06-integration",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+          "payloadSnippet": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+          "payloadPreview": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration",
+          "fullPayload": "Goal: E2E Integration, Full WASM Layout Validation & Manifest Registration\nWrite Scope: public/data/graphs",
+          "metadata": {
+            "taskId": "T-06",
+            "agent": "worker-t06-integration"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-06",
+      "source": "node-task-T-06",
+      "target": "node-gate-T-06",
+      "stepNumber": "6 -> 7",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6 -> 7",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-task-T-06",
+            "target": "node-gate-T-06",
+            "stepNumber": "6 -> 7",
+            "step": 6,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-06 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "public/data/graphs",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "public/data/graphs",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "public/data/graphs",
+            "payloadPreview": "public/data/graphs",
+            "fullPayload": "Files modified:\n- public/data/graphs",
+            "metadata": {
+              "taskId": "T-06",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-task-T-06",
+          "target": "node-gate-T-06",
+          "stepNumber": "6 -> 7",
+          "step": 6,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-06 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "public/data/graphs",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "public/data/graphs",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "public/data/graphs",
+          "payloadPreview": "public/data/graphs",
+          "fullPayload": "Files modified:\n- public/data/graphs",
+          "metadata": {
+            "taskId": "T-06",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-dep-T-03-T-06",
+      "source": "node-gate-T-03",
+      "target": "node-task-T-06",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-03"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-03-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-03",
+            "target": "node-task-T-06",
+            "stepNumber": 6,
+            "step": 6,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-03 to T-06",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-03 fulfilled",
+            "payloadPreview": "Dependency contract T-03 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-03 handed off to T-06",
+            "metadata": {
+              "dependencyId": "T-03",
+              "targetTaskId": "T-06"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-03-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-03",
+          "target": "node-task-T-06",
+          "stepNumber": 6,
+          "step": 6,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-03 to T-06",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-03 fulfilled",
+          "payloadPreview": "Dependency contract T-03 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-03 handed off to T-06",
+          "metadata": {
+            "dependencyId": "T-03",
+            "targetTaskId": "T-06"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-T-04-T-06",
+      "source": "node-gate-T-04",
+      "target": "node-task-T-06",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-04"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-04-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-04",
+            "target": "node-task-T-06",
+            "stepNumber": 6,
+            "step": 6,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-04 to T-06",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-04 fulfilled",
+            "payloadPreview": "Dependency contract T-04 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-04 handed off to T-06",
+            "metadata": {
+              "dependencyId": "T-04",
+              "targetTaskId": "T-06"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-04-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-04",
+          "target": "node-task-T-06",
+          "stepNumber": 6,
+          "step": 6,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-04 to T-06",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-04 fulfilled",
+          "payloadPreview": "Dependency contract T-04 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-04 handed off to T-06",
+          "metadata": {
+            "dependencyId": "T-04",
+            "targetTaskId": "T-06"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-dep-T-05-T-06",
+      "source": "node-gate-T-05",
+      "target": "node-task-T-06",
+      "stepNumber": 6,
+      "badge": {
+        "text": "Dependency Unlocked",
+        "variant": "info",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "6",
+        "title": "Dependency Unlocked",
+        "variant": "cyan",
+        "icon": "IconArrowRight",
+        "detail": "Dep: T-05"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 420,
+        "tokensIn": 120,
+        "tokensOut": 300,
+        "latencyMs": 40,
+        "bytes": 1200,
+        "ratePerSec": 8.5,
+        "status": "nominal",
+        "glowColor": "#06b6d4",
+        "glowIntensity": 0.85,
+        "exchanges": [
+          {
+            "id": "exch-dep-T-05-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-05",
+            "target": "node-task-T-06",
+            "stepNumber": 6,
+            "step": 6,
+            "direction": "forward",
+            "type": "handoff",
+            "kind": "artifact",
+            "summary": "Handoff verified artifact from T-05 to T-06",
+            "tokens": 420,
+            "tokensIn": 120,
+            "tokensOut": 300,
+            "bytes": 1200,
+            "durationMs": 40,
+            "latencyMs": 40,
+            "status": "success",
+            "payloadSnippet": "Dependency contract T-05 fulfilled",
+            "payloadPreview": "Dependency contract T-05 fulfilled",
+            "fullPayload": "Verified upstream dependency artifact from gate T-05 handed off to T-06",
+            "metadata": {
+              "dependencyId": "T-05",
+              "targetTaskId": "T-06"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-dep-T-05-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-05",
+          "target": "node-task-T-06",
+          "stepNumber": 6,
+          "step": 6,
+          "direction": "forward",
+          "type": "handoff",
+          "kind": "artifact",
+          "summary": "Handoff verified artifact from T-05 to T-06",
+          "tokens": 420,
+          "tokensIn": 120,
+          "tokensOut": 300,
+          "bytes": 1200,
+          "durationMs": 40,
+          "latencyMs": 40,
+          "status": "success",
+          "payloadSnippet": "Dependency contract T-05 fulfilled",
+          "payloadPreview": "Dependency contract T-05 fulfilled",
+          "fullPayload": "Verified upstream dependency artifact from gate T-05 handed off to T-06",
+          "metadata": {
+            "dependencyId": "T-05",
+            "targetTaskId": "T-06"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "dependency"
+    },
+    {
+      "id": "edge-join-T-06",
+      "source": "node-gate-T-06",
+      "target": "node-critic-authority",
+      "stepNumber": 8,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "8",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-06",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-gate-T-06",
+            "target": "node-critic-authority",
+            "stepNumber": 8,
+            "step": 7,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-06",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-06 for task T-06: status=DONE, findings=0",
+            "metadata": {
+              "taskId": "T-06",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-06",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-gate-T-06",
+          "target": "node-critic-authority",
+          "stepNumber": 8,
+          "step": 7,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-06",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-06 for task T-06: status=DONE, findings=0",
+          "metadata": {
+            "taskId": "T-06",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "stepNumber": 9,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "container": {
+        "stepBadge": "9",
+        "title": "Authority Sign-off",
+        "detail": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 450,
+        "tokensIn": 150,
+        "tokensOut": 300,
+        "latencyMs": 50,
+        "bytes": 1800,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-critic-complete",
+            "timestamp": "2026-08-16T01:34:02.938Z",
+            "source": "node-critic-authority",
+            "target": "node-terminal-complete",
+            "stepNumber": 9,
+            "step": 8,
+            "direction": "forward",
+            "type": "decision",
+            "kind": "decision",
+            "summary": "Full capsule signed-off and sealed by completeness critic",
+            "tokens": 450,
+            "tokensIn": 150,
+            "tokensOut": 300,
+            "bytes": 1800,
+            "durationMs": 50,
+            "latencyMs": 50,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "Whole-run criteria satisfied",
+            "payloadSnippet": "Whole-run criteria satisfied",
+            "payloadPreview": "Whole-run criteria satisfied",
+            "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+            "metadata": {
+              "criticStatus": "clean"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-16T01:34:02.938Z",
+          "source": "node-critic-authority",
+          "target": "node-terminal-complete",
+          "stepNumber": 9,
+          "step": 8,
+          "direction": "forward",
+          "type": "decision",
+          "kind": "decision",
+          "summary": "Full capsule signed-off and sealed by completeness critic",
+          "tokens": 450,
+          "tokensIn": 150,
+          "tokensOut": 300,
+          "bytes": 1800,
+          "durationMs": 50,
+          "latencyMs": 50,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "Whole-run criteria satisfied",
+          "payloadSnippet": "Whole-run criteria satisfied",
+          "payloadPreview": "Whole-run criteria satisfied",
+          "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+          "metadata": {
+            "criticStatus": "clean"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    }
+  ]
+}

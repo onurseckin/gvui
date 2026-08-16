@@ -1,0 +1,2311 @@
+{
+  "id": "2026-08-15-finding-1-model-attribution",
+  "title": "Execution Trajectory: 2026-08-15-finding-1-model-attribution",
+  "description": "Execution graph dataset and trajectory for run 2026-08-15-finding-1-model-attribution",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "1.8 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/o...",
+      "prompt": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+            "tokens": 466
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "2 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 2 tasks and 2 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "2 discrete work scopes (T-01, repair-R4-tests-unit-summary)"
+          }
+        ]
+      },
+      "metadata": {
+        "taskCount": 2,
+        "waveCount": 2,
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-01",
+      "name": "Authentic host model detection",
+      "description": "Addressed Finding 1.3: Comprehensive audit confirmed zero synthetic fallbacks across all exports and 100% strict typing with 0 lint/type suppressions",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 501,
+        "tokensOut": 278,
+        "durationMs": 120294,
+        "commandCount": 5,
+        "retries": 3,
+        "tokens": {
+          "inputTokens": 501,
+          "outputTokens": 278,
+          "totalTokens": 779,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 120294,
+          "activeCommandMs": 4884,
+          "cognitiveLatencyMs": 115410,
+          "validationDurationMs": 4884
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "Authentic host model detection"
+          },
+          {
+            "node": "node-gate-T-01",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 3)",
+            "preview": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Addressed Finding 1.3: Comprehensive audit confirmed zero synthetic fallbacks across all exports and 100% strict typing with 0 lint/type suppressions"
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "5 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "tests/unit/summary/host-telemetry.test.ts"
+        ],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-4d0c35e3-4034-4205-bf63-369b50cdfa6d",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 1045,
+            "startedAt": "2026-08-15T08:43:47.180Z",
+            "finishedAt": "2026-08-15T08:43:48.225Z",
+            "logPath": "commands/C-4d0c35e3-4034-4205-bf63-369b50cdfa6d/record.json"
+          },
+          {
+            "id": "C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 936,
+            "startedAt": "2026-08-15T08:41:11.935Z",
+            "finishedAt": "2026-08-15T08:41:12.871Z",
+            "logPath": "commands/C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f/record.json"
+          },
+          {
+            "id": "C-807b9509-6125-4fe8-88eb-78e191ef92fc",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 1010,
+            "startedAt": "2026-08-15T08:42:24.707Z",
+            "finishedAt": "2026-08-15T08:42:25.717Z",
+            "logPath": "commands/C-807b9509-6125-4fe8-88eb-78e191ef92fc/record.json"
+          },
+          {
+            "id": "C-df04af5f-028d-440c-9be9-c654dfd671ce",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 930,
+            "startedAt": "2026-08-15T08:44:28.993Z",
+            "finishedAt": "2026-08-15T08:44:29.923Z",
+            "logPath": "commands/C-df04af5f-028d-440c-9be9-c654dfd671ce/record.json"
+          },
+          {
+            "id": "C-e9e3f819-1b26-4ade-a3fa-79d1115cefa4",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 963,
+            "startedAt": "2026-08-15T08:52:49.187Z",
+            "finishedAt": "2026-08-15T08:52:50.150Z",
+            "logPath": "commands/C-e9e3f819-1b26-4ade-a3fa-79d1115cefa4/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "pushbackReason": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "pushbackReason": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-807b9509-6125-4fe8-88eb-78e191ef92fc"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "pushbackReason": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-4d0c35e3-4034-4205-bf63-369b50cdfa6d"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "implementer-t01",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "testFile": "tests/unit/summary/host-telemetry.test.ts",
+          "durationMs": 1045,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-01",
+      "name": "Gate: Authentic host model detection",
+      "description": "Verification gate enforcing quality, assertions, and criteria for Authentic host model detection.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 615,
+        "tokensOut": 567,
+        "durationMs": 698215,
+        "commandCount": 5,
+        "retries": 3,
+        "tokens": {
+          "inputTokens": 615,
+          "outputTokens": 567,
+          "totalTokens": 1182,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 698215,
+          "activeCommandMs": 4884,
+          "cognitiveLatencyMs": 693331,
+          "validationDurationMs": 698215
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-01",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "3 findings recorded (3 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "tests/unit/summary/host-telemetry.test.ts"
+        ],
+        "repairRounds": 3,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f"
+              }
+            ],
+            "deadline_at": "2026-08-15T09:01:09.736Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T08:41:09.736Z",
+            "token_digest": "77ab6eb99210cd9e3c99a15e97631b5419eb87c162fc6827e982be498b8c3248",
+            "validator_id": "validator-t01",
+            "verdict": "reject"
+          },
+          {
+            "attempt": 2,
+            "checks": [
+              {
+                "command_id": "C-807b9509-6125-4fe8-88eb-78e191ef92fc"
+              }
+            ],
+            "deadline_at": "2026-08-15T09:02:21.918Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T08:42:21.918Z",
+            "token_digest": "a629f383ade76f74c9949560e04c9a103000b1c63012104a9f7b36ddab4d5eb6",
+            "validator_id": "validator-t01-r2",
+            "verdict": "reject"
+          },
+          {
+            "attempt": 3,
+            "checks": [
+              {
+                "command_id": "C-4d0c35e3-4034-4205-bf63-369b50cdfa6d"
+              }
+            ],
+            "deadline_at": "2026-08-15T09:03:44.742Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T08:43:44.742Z",
+            "token_digest": "ca7c5138459d576330144b8378f58e572d193490283bdbb356aeef9a801fe9da",
+            "validator_id": "validator-t01-r3",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "pushbackReason": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "pushbackReason": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-807b9509-6125-4fe8-88eb-78e191ef92fc"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "pushbackReason": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-4d0c35e3-4034-4205-bf63-369b50cdfa6d"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 3,
+        "pushbackCount": 3,
+        "validator_id": "validator-t01-r4",
+        "validatorId": "validator-t01-r4",
+        "leaseAgent": "validator-t01-r4",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "testFile": "tests/unit/summary/host-telemetry.test.ts",
+          "durationMs": 1045,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-repair-R4-tests-unit-summary",
+      "name": "repair-R4-tests-unit-summary",
+      "description": "Verified compacted test suite in tests/unit/summary meeting all architecture limits",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "tests/unit/summary",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 480,
+        "tokensOut": 174,
+        "durationMs": 2585,
+        "commandCount": 2,
+        "retries": 4,
+        "tokens": {
+          "inputTokens": 480,
+          "outputTokens": 174,
+          "totalTokens": 654,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 2585,
+          "activeCommandMs": 2585,
+          "cognitiveLatencyMs": 0,
+          "validationDurationMs": 2585
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "repair-R4-tests-unit-summary"
+          },
+          {
+            "node": "node-gate-repair-R4-tests-unit-summary",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 4)",
+            "preview": "Compacted test suite to meet 350-line architecture limit"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Verified compacted test suite in tests/unit/summary meeting all architecture limits"
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "2 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["tests/unit/summary"],
+        "repairRounds": 4,
+        "commands": [
+          {
+            "id": "C-3c99bdc6-dead-42b6-ac65-7fa51992b287",
+            "argv": ["bun", "test", "tests/unit/summary/host-telemetry.test.ts"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 846,
+            "startedAt": "2026-08-15T08:50:27.142Z",
+            "finishedAt": "2026-08-15T08:50:27.988Z",
+            "logPath": "commands/C-3c99bdc6-dead-42b6-ac65-7fa51992b287/record.json"
+          },
+          {
+            "id": "C-84fb146e-f794-4ae1-adfd-d3d588ae9fdc",
+            "argv": ["bun", "test", "tests/unit/summary"],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "exitCode": 0,
+            "durationMs": 1739,
+            "startedAt": "2026-08-15T08:49:51.891Z",
+            "finishedAt": "2026-08-15T08:49:53.630Z",
+            "logPath": "commands/C-84fb146e-f794-4ae1-adfd-d3d588ae9fdc/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-compact-01",
+            "requirementId": "req-T-01",
+            "severity": "important",
+            "observation": "Compacted test suite to meet 350-line architecture limit",
+            "pushbackReason": "Compacted test suite to meet 350-line architecture limit",
+            "opposedChanges": "tests/unit/summary",
+            "remediation": "Validate compacted test suite against authentic model attribution",
+            "rejectionRound": 4,
+            "round": 4,
+            "author": "validator-t01",
+            "validatorId": "validator-t01",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": []
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "implementer-t01",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "testFile": "tests/unit/summary/host-telemetry.test.ts",
+          "durationMs": 846,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-repair-R4-tests-unit-summary",
+      "name": "Gate: repair-R4-tests-unit-summary",
+      "description": "Verification gate enforcing quality, assertions, and criteria for repair-R4-tests-unit-summary.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 196,
+        "tokensOut": 170,
+        "durationMs": 36097,
+        "commandCount": 2,
+        "retries": 4,
+        "tokens": {
+          "inputTokens": 196,
+          "outputTokens": 170,
+          "totalTokens": 366,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 36097,
+          "activeCommandMs": 2585,
+          "cognitiveLatencyMs": 33512,
+          "validationDurationMs": 36097
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-repair-R4-tests-unit-summary",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for repair-R4-tests-unit-summary"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["tests/unit/summary"],
+        "repairRounds": 4,
+        "validationHistory": [],
+        "findings": [
+          {
+            "id": "finding-compact-01",
+            "requirementId": "req-T-01",
+            "severity": "important",
+            "observation": "Compacted test suite to meet 350-line architecture limit",
+            "pushbackReason": "Compacted test suite to meet 350-line architecture limit",
+            "opposedChanges": "tests/unit/summary",
+            "remediation": "Validate compacted test suite against authentic model attribution",
+            "rejectionRound": 4,
+            "round": 4,
+            "author": "validator-t01",
+            "validatorId": "validator-t01",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": []
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 4,
+        "validator_id": "validator-t01",
+        "validatorId": "validator-t01",
+        "leaseAgent": "validator-t01",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "testFile": "tests/unit/summary/host-telemetry.test.ts",
+          "durationMs": 846,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Completeness Critic",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-01",
+            "preview": "Verification evidence and test report for task T-01"
+          },
+          {
+            "node": "node-gate-repair-R4-tests-unit-summary",
+            "kind": "artifact",
+            "label": "Gate Verification Report: repair-R4-tests-unit-summary",
+            "preview": "Verification evidence and test report for task repair-R4-tests-unit-summary"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Completeness Critic Certification",
+            "preview": "Critic certified whole-run completion (clean) with 0 findings"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "commands": [],
+        "critic_id": "critic-agent-v2",
+        "criticId": "critic-agent-v2",
+        "status": "clean",
+        "unresolved_finding_ids": [],
+        "unresolvedFindingIds": [],
+        "residual_risks": [],
+        "requirement_proofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-01 satisfied.",
+                "reference": "C-7b0aa909-e1c6-4f58-9e95-91b5e846ddcc"
+              }
+            ],
+            "requirement_id": "req-T-01",
+            "status": "satisfied"
+          }
+        ]
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-authority",
+            "kind": "decision",
+            "label": "Critic Authority Packet",
+            "preview": "Whole-run certification packet sealed"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Execution Trajectory Summary",
+            "preview": "Run 2026-08-15-finding-1-model-attribution execution completed with 2 tasks"
+          }
+        ]
+      },
+      "metadata": {
+        "status": "complete",
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "stepNumber": 1,
+      "badge": {
+        "text": "Prompt Input",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "User Prompt Ingested",
+        "detail": "1.8 KB",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 466,
+        "tokensIn": 0,
+        "tokensOut": 466,
+        "latencyMs": 20,
+        "bytes": 1865,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-prompt-plan",
+            "timestamp": "2026-08-16T01:33:48.661Z",
+            "source": "node-input-prompt",
+            "target": "node-orchestrator-plan",
+            "stepNumber": 1,
+            "step": 1,
+            "direction": "forward",
+            "type": "prompt",
+            "kind": "prompt",
+            "summary": "Ingested user prompt instructions and context",
+            "tokens": 466,
+            "tokensIn": 0,
+            "tokensOut": 466,
+            "bytes": 1865,
+            "durationMs": 20,
+            "latencyMs": 20,
+            "status": "success",
+            "inputGoal": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+            "payloadSnippet": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onur",
+            "payloadPreview": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onur",
+            "fullPayload": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+            "metadata": {
+              "promptSizeKb": "1.8"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "timestamp": "2026-08-16T01:33:48.661Z",
+          "source": "node-input-prompt",
+          "target": "node-orchestrator-plan",
+          "stepNumber": 1,
+          "step": 1,
+          "direction": "forward",
+          "type": "prompt",
+          "kind": "prompt",
+          "summary": "Ingested user prompt instructions and context",
+          "tokens": 466,
+          "tokensIn": 0,
+          "tokensOut": 466,
+          "bytes": 1865,
+          "durationMs": 20,
+          "latencyMs": 20,
+          "status": "success",
+          "inputGoal": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+          "payloadSnippet": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onur",
+          "payloadPreview": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onur",
+          "fullPayload": "You are the Tier 2 Background Run Coordinator for Finding 1: Authentic Model Attribution & Telemetry Pipeline.\n\nRepositories:\n- `skills`: `/Users/onurseckinsenoglu/repos/skills`\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/skills/.capsules/2026-08-15-finding-1-model-attribution`\n\n### Authoritative Reference:\n`skills/docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md` (Finding 1)\n\n### Non-Negotiable Invariants:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously.\n3. **3-Round Adversarial Rejection Gauntlet**: Validators must reject Rounds 1, 2, and 3 with structured findings before approving in Round 4+.\n4. **Harness-Only CLI**: Manage all tasks and gates via `bun harness.ts`.\n5. **Persistent Lifecycle**: Remain active until whole-run gates pass, completeness critic approves, and capsule is sealed.\n\n### Workflow:\n1. Initialize capsule: `bun harness.ts plan:init --repo /Users/onurseckinsenoglu/repos/skills --run 2026-08-15-finding-1-model-attribution` with verbatim prompt.\n2. Stage Task T-01: Authentic host model detection (`host-telemetry.ts`), parsing `settings.json` (`model` + `thinkingLevel`), zero synthetic defaults, strict types. Gate: `bun test tests/unit/summary/host-telemetry.test.ts`.\n3. Compile DAG via `bun harness.ts plan:compile`.\n4. Dispatch Implementer-Validator pair via batch `invoke_subagent`.\n5. Run the 3-round validation gauntlet.\n6. Execute completion gate, run Completeness Critic (`critic:start`/`critic:review`), seal capsule (`run:complete`), and report milestone completion.\n",
+          "metadata": {
+            "promptSizeKb": "1.8"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    },
+    {
+      "id": "edge-plan-T-01",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-01",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: implementer-t01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-01",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-01",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-01 to worker implementer-t01",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: Authentic host model detection",
+            "payloadSnippet": "Goal: Authentic host model detection",
+            "payloadPreview": "Goal: Authentic host model detection",
+            "fullPayload": "Goal: Authentic host model detection\nWrite Scope: orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "metadata": {
+              "taskId": "T-01",
+              "agent": "implementer-t01"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-01",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-01",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-01 to worker implementer-t01",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: Authentic host model detection",
+          "payloadSnippet": "Goal: Authentic host model detection",
+          "payloadPreview": "Goal: Authentic host model detection",
+          "fullPayload": "Goal: Authentic host model detection\nWrite Scope: orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+          "metadata": {
+            "taskId": "T-01",
+            "agent": "implementer-t01"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-01",
+      "source": "node-task-T-01",
+      "target": "node-gate-T-01",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-01",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-task-T-01",
+            "target": "node-gate-T-01",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-01 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+            "payloadPreview": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+            "fullPayload": "Files modified:\n- orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+            "metadata": {
+              "taskId": "T-01",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-01",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-task-T-01",
+          "target": "node-gate-T-01",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-01 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "payloadPreview": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "fullPayload": "Files modified:\n- orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts",
+          "metadata": {
+            "taskId": "T-01",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-01",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "tokensIn": 540,
+        "tokensOut": 300,
+        "latencyMs": 60,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-T-01-1",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "payloadPreview": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "fullPayload": "Finding: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars\nRemediation: Add unit tests verifying behavior when settings.json is malformed JSON or empty string\nPushback Reason: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "auditFinding": {
+              "id": "finding-T-01-reject",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+              "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+              "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "requiredRemediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f"],
+            "metadata": {
+              "findingId": "finding-T-01-reject",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          },
+          {
+            "id": "exch-repair-T-01-2",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "payloadPreview": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "fullPayload": "Finding: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects\nRemediation: Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels\nPushback Reason: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "auditFinding": {
+              "id": "finding-T-01-reject-2",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+              "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject-2",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+              "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "requiredRemediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-807b9509-6125-4fe8-88eb-78e191ef92fc"],
+            "metadata": {
+              "findingId": "finding-T-01-reject-2",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          },
+          {
+            "id": "exch-repair-T-01-3",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "payloadPreview": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "fullPayload": "Finding: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments\nRemediation: Audit all exports and confirm zero synthetic default models are returned when no config or env var is present\nPushback Reason: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "auditFinding": {
+              "id": "finding-T-01-reject-3",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+              "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject-3",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+              "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+            "requiredRemediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-4d0c35e3-4034-4205-bf63-369b50cdfa6d"],
+            "metadata": {
+              "findingId": "finding-T-01-reject-3",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-T-01-1",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+          "payloadPreview": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+          "fullPayload": "Finding: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars\nRemediation: Add unit tests verifying behavior when settings.json is malformed JSON or empty string\nPushback Reason: Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+          "auditFinding": {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+            "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+          "observation": "Finding 1.1: Missing edge case tests for corrupted/empty settings.json and missing home directory env vars",
+          "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+          "requiredRemediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+          "remediation": "Add unit tests verifying behavior when settings.json is malformed JSON or empty string",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-6adc00cc-6e06-4b9b-b3d4-17947e61ca1f"],
+          "metadata": {
+            "findingId": "finding-T-01-reject",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        },
+        {
+          "id": "exch-repair-T-01-2",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+          "payloadPreview": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+          "fullPayload": "Finding: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects\nRemediation: Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels\nPushback Reason: Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+          "auditFinding": {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+            "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+          "observation": "Finding 1.2: Ensure model tier resolution handles thinking level suffix in model string without duplicating format, and strictly types all returned objects",
+          "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+          "requiredRemediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+          "remediation": "Verify resolveModelTier and format formatting with unit tests for edge cases such as already parenthesized thinking levels",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-807b9509-6125-4fe8-88eb-78e191ef92fc"],
+          "metadata": {
+            "findingId": "finding-T-01-reject-2",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        },
+        {
+          "id": "exch-repair-T-01-3",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+          "payloadPreview": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+          "fullPayload": "Finding: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments\nRemediation: Audit all exports and confirm zero synthetic default models are returned when no config or env var is present\nPushback Reason: Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+          "auditFinding": {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+            "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+          "observation": "Finding 1.3: Ensure no synthetic fallbacks exist anywhere in host-telemetry.ts or graph-generator-helpers.ts and verify complete absence of any types or ts-ignore comments",
+          "opposedChanges": "orchestrating-long-tasks/scripts/src/summary/host-telemetry.ts, tests/unit/summary/host-telemetry.test.ts",
+          "requiredRemediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+          "remediation": "Audit all exports and confirm zero synthetic default models are returned when no config or env var is present",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-4d0c35e3-4034-4205-bf63-369b50cdfa6d"],
+          "metadata": {
+            "findingId": "finding-T-01-reject-3",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-01",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-T-01",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-01",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=3",
+            "metadata": {
+              "taskId": "T-01",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-01",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-T-01",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-01",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=3",
+          "metadata": {
+            "taskId": "T-01",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-repair-R4-tests-unit-summary",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-repair-R4-tests-unit-summary",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: implementer-t01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-repair-R4-tests-unit-summary",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-repair-R4-tests-unit-summary",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task repair-R4-tests-unit-summary to worker implementer-t01",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: repair-R4-tests-unit-summary",
+            "payloadSnippet": "Goal: repair-R4-tests-unit-summary",
+            "payloadPreview": "Goal: repair-R4-tests-unit-summary",
+            "fullPayload": "Goal: repair-R4-tests-unit-summary\nWrite Scope: tests/unit/summary",
+            "metadata": {
+              "taskId": "repair-R4-tests-unit-summary",
+              "agent": "implementer-t01"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-repair-R4-tests-unit-summary",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-repair-R4-tests-unit-summary",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task repair-R4-tests-unit-summary to worker implementer-t01",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: repair-R4-tests-unit-summary",
+          "payloadSnippet": "Goal: repair-R4-tests-unit-summary",
+          "payloadPreview": "Goal: repair-R4-tests-unit-summary",
+          "fullPayload": "Goal: repair-R4-tests-unit-summary\nWrite Scope: tests/unit/summary",
+          "metadata": {
+            "taskId": "repair-R4-tests-unit-summary",
+            "agent": "implementer-t01"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-repair-R4-tests-unit-summary",
+      "source": "node-task-repair-R4-tests-unit-summary",
+      "target": "node-gate-repair-R4-tests-unit-summary",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-repair-R4-tests-unit-summary",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-task-repair-R4-tests-unit-summary",
+            "target": "node-gate-repair-R4-tests-unit-summary",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for repair-R4-tests-unit-summary (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "tests/unit/summary",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "tests/unit/summary",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "tests/unit/summary",
+            "payloadPreview": "tests/unit/summary",
+            "fullPayload": "Files modified:\n- tests/unit/summary",
+            "metadata": {
+              "taskId": "repair-R4-tests-unit-summary",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-repair-R4-tests-unit-summary",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-task-repair-R4-tests-unit-summary",
+          "target": "node-gate-repair-R4-tests-unit-summary",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for repair-R4-tests-unit-summary (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "tests/unit/summary",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "tests/unit/summary",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "tests/unit/summary",
+          "payloadPreview": "tests/unit/summary",
+          "fullPayload": "Files modified:\n- tests/unit/summary",
+          "metadata": {
+            "taskId": "repair-R4-tests-unit-summary",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-repair-R4-tests-unit-summary",
+      "source": "node-gate-repair-R4-tests-unit-summary",
+      "target": "node-task-repair-R4-tests-unit-summary",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 4)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 4)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-repair-R4-tests-unit-summary-1",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-repair-R4-tests-unit-summary",
+            "target": "node-task-repair-R4-tests-unit-summary",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Compacted test suite to meet 350-line architecture limit",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Validate compacted test suite against authentic model attribution",
+            "payloadPreview": "Validate compacted test suite against authentic model attribution",
+            "fullPayload": "Finding: Compacted test suite to meet 350-line architecture limit\nRemediation: Validate compacted test suite against authentic model attribution\nPushback Reason: Compacted test suite to meet 350-line architecture limit",
+            "auditFinding": {
+              "id": "finding-compact-01",
+              "requirementId": "req-T-01",
+              "severity": "important",
+              "observation": "Compacted test suite to meet 350-line architecture limit",
+              "remediation": "Validate compacted test suite against authentic model attribution",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-compact-01",
+              "requirementId": "req-T-01",
+              "severity": "important",
+              "observation": "Compacted test suite to meet 350-line architecture limit",
+              "remediation": "Validate compacted test suite against authentic model attribution",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Compacted test suite to meet 350-line architecture limit",
+            "observation": "Compacted test suite to meet 350-line architecture limit",
+            "opposedChanges": "tests/unit/summary",
+            "requiredRemediation": "Validate compacted test suite against authentic model attribution",
+            "remediation": "Validate compacted test suite against authentic model attribution",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [],
+            "metadata": {
+              "findingId": "finding-compact-01",
+              "round": 4,
+              "validatorId": "validator-t01"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-repair-R4-tests-unit-summary-1",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-repair-R4-tests-unit-summary",
+          "target": "node-task-repair-R4-tests-unit-summary",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Compacted test suite to meet 350-line architecture limit",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Validate compacted test suite against authentic model attribution",
+          "payloadPreview": "Validate compacted test suite against authentic model attribution",
+          "fullPayload": "Finding: Compacted test suite to meet 350-line architecture limit\nRemediation: Validate compacted test suite against authentic model attribution\nPushback Reason: Compacted test suite to meet 350-line architecture limit",
+          "auditFinding": {
+            "id": "finding-compact-01",
+            "requirementId": "req-T-01",
+            "severity": "important",
+            "observation": "Compacted test suite to meet 350-line architecture limit",
+            "remediation": "Validate compacted test suite against authentic model attribution",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-compact-01",
+            "requirementId": "req-T-01",
+            "severity": "important",
+            "observation": "Compacted test suite to meet 350-line architecture limit",
+            "remediation": "Validate compacted test suite against authentic model attribution",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Compacted test suite to meet 350-line architecture limit",
+          "observation": "Compacted test suite to meet 350-line architecture limit",
+          "opposedChanges": "tests/unit/summary",
+          "requiredRemediation": "Validate compacted test suite against authentic model attribution",
+          "remediation": "Validate compacted test suite against authentic model attribution",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": [],
+          "metadata": {
+            "findingId": "finding-compact-01",
+            "round": 4,
+            "validatorId": "validator-t01"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-repair-R4-tests-unit-summary",
+      "source": "node-gate-repair-R4-tests-unit-summary",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-repair-R4-tests-unit-summary",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-gate-repair-R4-tests-unit-summary",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for repair-R4-tests-unit-summary",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-repair-R4-tests-unit-summary for task repair-R4-tests-unit-summary: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "repair-R4-tests-unit-summary",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-repair-R4-tests-unit-summary",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-gate-repair-R4-tests-unit-summary",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for repair-R4-tests-unit-summary",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-repair-R4-tests-unit-summary for task repair-R4-tests-unit-summary: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "repair-R4-tests-unit-summary",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "stepNumber": 5,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "container": {
+        "stepBadge": "5",
+        "title": "Authority Sign-off",
+        "detail": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 450,
+        "tokensIn": 150,
+        "tokensOut": 300,
+        "latencyMs": 50,
+        "bytes": 1800,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-critic-complete",
+            "timestamp": "2026-08-16T01:33:48.662Z",
+            "source": "node-critic-authority",
+            "target": "node-terminal-complete",
+            "stepNumber": 5,
+            "step": 4,
+            "direction": "forward",
+            "type": "decision",
+            "kind": "decision",
+            "summary": "Full capsule signed-off and sealed by completeness critic",
+            "tokens": 450,
+            "tokensIn": 150,
+            "tokensOut": 300,
+            "bytes": 1800,
+            "durationMs": 50,
+            "latencyMs": 50,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "Whole-run criteria satisfied",
+            "payloadSnippet": "Whole-run criteria satisfied",
+            "payloadPreview": "Whole-run criteria satisfied",
+            "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+            "metadata": {
+              "criticStatus": "clean"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-16T01:33:48.662Z",
+          "source": "node-critic-authority",
+          "target": "node-terminal-complete",
+          "stepNumber": 5,
+          "step": 4,
+          "direction": "forward",
+          "type": "decision",
+          "kind": "decision",
+          "summary": "Full capsule signed-off and sealed by completeness critic",
+          "tokens": 450,
+          "tokensIn": 150,
+          "tokensOut": 300,
+          "bytes": 1800,
+          "durationMs": 50,
+          "latencyMs": 50,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "Whole-run criteria satisfied",
+          "payloadSnippet": "Whole-run criteria satisfied",
+          "payloadPreview": "Whole-run criteria satisfied",
+          "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+          "metadata": {
+            "criticStatus": "clean"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    }
+  ]
+}

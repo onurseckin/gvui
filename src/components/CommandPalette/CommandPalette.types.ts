@@ -1,24 +1,10 @@
-import type { ReactNode } from "react";
 import type { GraphNodeData } from "../../types/graphData";
 
-export type CommandCategory = "all" | "actions" | "nodes" | "navigation" | "layout" | "export";
+export type SearchScope = "current" | "all";
 
-export type ActionCategory = "actions" | "nodes" | "navigation" | "layout" | "export";
+export type CommandCategory = "current" | "all";
 
-export type ActionHandler = () => Promise<void> | void;
-
-export interface CommandAction {
-  id: string;
-  title: string;
-  description?: string;
-  category: ActionCategory | CommandCategory;
-  shortcut?: string | string[];
-  icon?: ReactNode | string;
-  handler: ActionHandler;
-  keywords?: string[];
-  disabled?: boolean;
-  isFavorite?: boolean;
-}
+export type CommandPaletteScope = SearchScope;
 
 export interface ShortcutBadgeProps {
   shortcut: string | string[];
@@ -31,18 +17,13 @@ export interface SearchResultItem {
   id: string;
   title: string;
   description?: string;
-  category: ActionCategory | CommandCategory;
-  type: "action" | "node" | "navigation" | "layout" | "export";
+  category: CommandCategory;
   score: number;
   matches: number[];
   descriptionMatches?: number[];
-  shortcut?: string | string[];
-  icon?: ReactNode | string;
-  nodeId?: string;
-  fileId?: string;
-  action?: CommandAction;
-  handler?: ActionHandler;
-  isFavorite?: boolean;
+  nodeId: string;
+  fileId: string;
+  sourceFileName?: string;
   nodeStatus?: string;
   nodeKind?: string;
 }
@@ -52,16 +33,14 @@ export interface SearchResultNode extends GraphNodeData {
   sourceFileName: string;
 }
 
-export type CommandPaletteScope = "current" | "all";
-
 export interface CommandPaletteProps {
   isOpen?: boolean;
   onClose?: () => void;
   currentFile?: string;
   onNavigateNode?: (fileId: string, nodeId: string) => void;
-  actions?: CommandAction[];
   placeholder?: string;
   className?: string;
   maxResults?: number;
   defaultCategory?: CommandCategory;
+  defaultScope?: SearchScope;
 }

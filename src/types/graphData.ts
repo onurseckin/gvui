@@ -142,9 +142,24 @@ export interface FindingDetail {
   requirementId?: string;
   severity: "critical" | "important" | "suggestion";
   observation: string;
+  pushbackReason?: string;
+  opposedChanges?: string;
   remediation?: string;
+  rejectionRound?: number;
+  round?: number;
+  author?: string;
+  validatorId?: string;
+  timestamp?: string;
   status: "open" | "resolved";
+  targetFiles?: string[];
+  fileRefs?: FileRef[];
   revalidationProof?: { method: string; evidence: string[] };
+  remediationProof?: { method?: string; evidence?: string[]; verifiedAt?: string };
+  evidence?:
+    | string[]
+    | Array<{ kind?: string; reference?: string; observation?: string; url?: string }>;
+  screenshots?: MediaAsset[];
+  [key: string]: unknown;
 }
 
 export interface MediaAsset {

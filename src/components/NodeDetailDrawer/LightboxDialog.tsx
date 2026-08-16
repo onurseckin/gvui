@@ -637,6 +637,26 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
     resetPanAndZoom();
   }, [resetPanAndZoom]);
 
+  const handleZoomToggle = useCallback(() => {
+    setZoom((z) => {
+      if (z === 1) {
+        return 2;
+      }
+      setPanOffset({ x: 0, y: 0 });
+      return 1;
+    });
+  }, []);
+
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const handleCopyUrl = useCallback(async () => {
+    if (!currentAsset?.url) return;
+    const success = await copyToClipboard(currentAsset.url);
+    if (success) {
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }
+  }, [currentAsset?.url]);
+
   // Pan event handlers with bounded coordinate clamping to prevent dragging offscreen
   const handleMouseDown = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
@@ -741,6 +761,9 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
       } else if (e.key === "0") {
         e.preventDefault();
         handleZoomReset();
+      } else if (e.key === "z" || e.key === "Z") {
+        e.preventDefault();
+        handleZoomToggle();
       }
     };
 
@@ -754,6 +777,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
     handleZoomIn,
     handleZoomOut,
     handleZoomReset,
+    handleZoomToggle,
     assets.length,
   ]);
 
@@ -818,11 +842,27 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
             {typeof currentAsset.sizeBytes === "number" && (
               <span className="drawer-lightbox-chip">{formatBytes(currentAsset.sizeBytes)}</span>
             )}
+            {currentAsset.author && (
+              <span className="drawer-lightbox-chip" title="Author attribution">
+                {currentAsset.author}
+              </span>
+            )}
           </div>
 
           <div className="drawer-lightbox-header-actions">
             {isImageOrDiagram && (
               <div className="drawer-lightbox-zoom-controls">
+                <button
+                  type="button"
+                  className={`drawer-lightbox-action-btn ${zoom > 1 ? "is-active" : ""}`}
+                  onClick={handleZoomToggle}
+                  title="Toggle Zoom 100% / 200% (Z)"
+                  aria-label="Toggle zoom 100% / 200%"
+                >
+                  <span style={{ fontSize: "11px", fontWeight: 700 }}>
+                    {zoom > 1 ? "100%" : "200%"}
+                  </span>
+                </button>
                 <button
                   type="button"
                   className="drawer-lightbox-action-btn"
@@ -858,6 +898,22 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 </button>
                 <span className="drawer-lightbox-zoom-pct">{`${Math.round(zoom * 100)}%`}</span>
               </div>
+            )}
+
+            {currentAsset.url && (
+              <button
+                type="button"
+                className="drawer-lightbox-action-btn"
+                onClick={handleCopyUrl}
+                title="Copy Asset URL / Path"
+                aria-label="Copy asset URL"
+              >
+                {copiedUrl ? (
+                  <IconCheck size={16} style={{ color: "#34d399" }} />
+                ) : (
+                  <IconCopy size={16} />
+                )}
+              </button>
             )}
 
             <button

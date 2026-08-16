@@ -1,0 +1,3539 @@
+{
+  "id": "2026-08-15-meta-orchestrator-round-8-live-telemetry-streaming-and-anomaly-detection",
+  "title": "Execution Trajectory: 2026-08-15-meta-orchestrator-round-8-live-telemetry-streaming-and-anomaly-detection",
+  "description": "Execution graph dataset and trajectory for run 2026-08-15-meta-orchestrator-round-8-live-telemetry-streaming-and-anomaly-detection",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "1.0 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugg...",
+      "prompt": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+            "tokens": 245
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "4 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 4 tasks and 4 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay "
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "4 discrete work scopes (task-01-gvui-live-websocket-sse-telemetry-sink, task-02-gvui-anomaly-defect-detector, task-03-gvui-canvas-lens-overlays, task-04-gvui-command-replay-debugger)"
+          }
+        ]
+      },
+      "metadata": {
+        "taskCount": 4,
+        "waveCount": 4,
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "name": "GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+      "description": "Remediated Round 1 adversarial stress testing findings: Implemented comprehensive adversarial stress test suite covering backoff jitter boundaries (negative/extreme attempts, zero/extreme delays, statistical distribution bounds), buffer queue under heavy 10,000 packet overload across all drop policies, priority queue survival guarantees for critical packets, deduplication under 50,000 rapid burst keys with LRU eviction and fast TTL pruning, 5 consecutive flapping network aborts with auto-reconnect backoff, corrupted frame / non-JSON handling, SSE Last-Event-ID stream resumption under aborts, high-frequency pause/resume queue retention, and rapid transport switching concurrency. 100% Zero-any TypeScript with 63 passing tests across 10 test suites.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/api/streaming",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 280,
+        "tokensOut": 1197,
+        "durationMs": 428501,
+        "commandCount": 6,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 280,
+          "outputTokens": 1197,
+          "totalTokens": 1477,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 428501,
+          "activeCommandMs": 13899,
+          "cognitiveLatencyMs": 414602,
+          "validationDurationMs": 13899
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine"
+          },
+          {
+            "node": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Mandatory Round 1 adversarial stress testing"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Remediated Round 1 adversarial stress testing findings: Implemented comprehensive adversarial stress test suite covering backoff jitter boundaries (negative/extreme attempts, zero/extreme delays, statistical distribution bounds), buffer queue under heavy 10,000 packet overload across all drop policies, priority queue survival guarantees for critical packets, deduplication under 50,000 rapid burst keys with LRU eviction and fast TTL pruning, 5 consecutive flapping network aborts with auto-reconnect backoff, corrupted frame / non-JSON handling, SSE Last-Event-ID stream resumption under aborts, high-frequency pause/resume queue retention, and rapid transport switching concurrency. 100% Zero-any TypeScript with 63 passing tests across 10 test suites."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "6 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/api/streaming", "src/store/useStreamingStore.ts"],
+        "repairRounds": 1,
+        "commands": [
+          {
+            "id": "C-7c515b39-0402-4536-a880-5cd1d3b64ff3",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 3097,
+            "startedAt": "2026-08-15T18:33:49.044Z",
+            "finishedAt": "2026-08-15T18:33:52.141Z",
+            "logPath": "commands/C-7c515b39-0402-4536-a880-5cd1d3b64ff3/record.json"
+          },
+          {
+            "id": "C-d42891df-a712-453c-8bc1-26d5dcaa8dcc",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2803,
+            "startedAt": "2026-08-15T18:31:45.253Z",
+            "finishedAt": "2026-08-15T18:31:48.056Z",
+            "logPath": "commands/C-d42891df-a712-453c-8bc1-26d5dcaa8dcc/record.json"
+          },
+          {
+            "id": "C-fc9999fa-ab73-43ee-873a-d0288cdfdb92",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 921,
+            "startedAt": "2026-08-15T18:31:11.048Z",
+            "finishedAt": "2026-08-15T18:31:11.969Z",
+            "logPath": "commands/C-fc9999fa-ab73-43ee-873a-d0288cdfdb92/record.json"
+          },
+          {
+            "id": "C-bf2d2348-0647-4f78-b3c6-9a0161b8bab5",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2258,
+            "startedAt": "2026-08-15T18:31:13.445Z",
+            "finishedAt": "2026-08-15T18:31:15.703Z",
+            "logPath": "commands/C-bf2d2348-0647-4f78-b3c6-9a0161b8bab5/record.json"
+          },
+          {
+            "id": "C-a2b1ba2a-7d2c-4670-8d53-1f56e7e235c1",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2464,
+            "startedAt": "2026-08-15T18:30:52.943Z",
+            "finishedAt": "2026-08-15T18:30:55.407Z",
+            "logPath": "commands/C-a2b1ba2a-7d2c-4670-8d53-1f56e7e235c1/record.json"
+          },
+          {
+            "id": "C-6818c5e7-ae3b-4133-8e5a-b2b0407afedf",
+            "argv": ["bun", "test", "src/api/streaming"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2356,
+            "startedAt": "2026-08-15T18:30:42.565Z",
+            "finishedAt": "2026-08-15T18:30:44.921Z",
+            "logPath": "commands/C-6818c5e7-ae3b-4133-8e5a-b2b0407afedf/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+            "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/api/streaming, src/store/useStreamingStore.ts",
+            "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-01-round2",
+            "validatorId": "validator-01-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-d42891df-a712-453c-8bc1-26d5dcaa8dcc"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-01",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 3097,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "name": "Gate: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 275,
+        "tokensOut": 228,
+        "durationMs": 189576,
+        "commandCount": 6,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 275,
+          "outputTokens": 228,
+          "totalTokens": 503,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 189576,
+          "activeCommandMs": 13899,
+          "cognitiveLatencyMs": 175677,
+          "validationDurationMs": 189576
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for task-01-gvui-live-websocket-sse-telemetry-sink"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/api/streaming", "src/store/useStreamingStore.ts"],
+        "repairRounds": 1,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-d42891df-a712-453c-8bc1-26d5dcaa8dcc"
+              }
+            ],
+            "deadline_at": "2026-08-15T18:50:41.011Z",
+            "reviewed_requirement_ids": ["req-01-gvui-live-websocket-sse-telemetry-sink"],
+            "started_at": "2026-08-15T18:30:41.011Z",
+            "token_digest": "eeafc2ccede27a3a8c43c041510c7c0dbe8cd67fe8862b60be7b64a3d4363cde",
+            "validator_id": "validator-01",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+            "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/api/streaming, src/store/useStreamingStore.ts",
+            "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-01-round2",
+            "validatorId": "validator-01-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-d42891df-a712-453c-8bc1-26d5dcaa8dcc"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 1,
+        "validator_id": "validator-01-round2",
+        "validatorId": "validator-01-round2",
+        "leaseAgent": "validator-01-round2",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 3097,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-02-gvui-anomaly-defect-detector",
+      "name": "GVUI Graph Topology Anomaly & Execution Defect Detector",
+      "description": "Addressed Round 1 adversarial stress testing findings: Added comprehensive adversarial test suite covering 50-node circular ring deadlocks, self-loops, reciprocal edge deadlocks, zero/negative/NaN/malformed token handling, ISO-8601 string lease expirations, exact timeout boundary evaluations, and 1,000-node linear DAG scaling with sub-50ms performance. Optimized error cascade and blast radius graph traversal with pre-computed adjacency for O(V+E) linear complexity. All 45 tests pass with 100% success rate and zero TypeScript any.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/engine/anomaly",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 259,
+        "tokensOut": 861,
+        "durationMs": 309759,
+        "commandCount": 2,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 259,
+          "outputTokens": 861,
+          "totalTokens": 1120,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 309759,
+          "activeCommandMs": 4456,
+          "cognitiveLatencyMs": 305303,
+          "validationDurationMs": 4456
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Graph Topology Anomaly & Execution Defect Detector"
+          },
+          {
+            "node": "node-gate-task-02-gvui-anomaly-defect-detector",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Mandatory Round 1 adversarial stress testing"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Addressed Round 1 adversarial stress testing findings: Added comprehensive adversarial test suite covering 50-node circular ring deadlocks, self-loops, reciprocal edge deadlocks, zero/negative/NaN/malformed token handling, ISO-8601 string lease expirations, exact timeout boundary evaluations, and 1,000-node linear DAG scaling with sub-50ms performance. Optimized error cascade and blast radius graph traversal with pre-computed adjacency for O(V+E) linear complexity. All 45 tests pass with 100% success rate and zero TypeScript any."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "2 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/anomaly", "src/components/AnomalyInspector"],
+        "repairRounds": 1,
+        "commands": [
+          {
+            "id": "C-4d1ae686-5dcb-4d58-9371-004b49a13829",
+            "argv": ["bun", "test", "src/engine/anomaly"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2153,
+            "startedAt": "2026-08-15T18:28:26.758Z",
+            "finishedAt": "2026-08-15T18:28:28.911Z",
+            "logPath": "commands/C-4d1ae686-5dcb-4d58-9371-004b49a13829/record.json"
+          },
+          {
+            "id": "C-af00a9c4-d3da-44bc-9e25-8087721ff229",
+            "argv": ["bun", "test", "src/engine/anomaly"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2303,
+            "startedAt": "2026-08-15T18:30:47.813Z",
+            "finishedAt": "2026-08-15T18:30:50.116Z",
+            "logPath": "commands/C-af00a9c4-d3da-44bc-9e25-8087721ff229/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+            "requirementId": "req-02-gvui-anomaly-defect-detector",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/anomaly, src/components/AnomalyInspector",
+            "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-02-round2",
+            "validatorId": "validator-02-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-4d1ae686-5dcb-4d58-9371-004b49a13829"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-02",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 2153,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-02-gvui-anomaly-defect-detector",
+      "name": "Gate: GVUI Graph Topology Anomaly & Execution Defect Detector",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Graph Topology Anomaly & Execution Defect Detector.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 250,
+        "tokensOut": 223,
+        "durationMs": 143358,
+        "commandCount": 2,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 250,
+          "outputTokens": 223,
+          "totalTokens": 473,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 143358,
+          "activeCommandMs": 4456,
+          "cognitiveLatencyMs": 138902,
+          "validationDurationMs": 143358
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-task-02-gvui-anomaly-defect-detector",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for task-02-gvui-anomaly-defect-detector"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/anomaly", "src/components/AnomalyInspector"],
+        "repairRounds": 1,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-4d1ae686-5dcb-4d58-9371-004b49a13829"
+              }
+            ],
+            "deadline_at": "2026-08-15T18:48:24.825Z",
+            "reviewed_requirement_ids": ["req-02-gvui-anomaly-defect-detector"],
+            "started_at": "2026-08-15T18:28:24.825Z",
+            "token_digest": "2aef6c9cbf7b77b85b9ae9fd425d7f5406625d69f81ad7c536ab5958736d6f8f",
+            "validator_id": "validator-02",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+            "requirementId": "req-02-gvui-anomaly-defect-detector",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/anomaly, src/components/AnomalyInspector",
+            "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-02-round2",
+            "validatorId": "validator-02-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-4d1ae686-5dcb-4d58-9371-004b49a13829"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 1,
+        "validator_id": "validator-02-round2",
+        "validatorId": "validator-02-round2",
+        "leaseAgent": "validator-02-round2",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 2153,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-03-gvui-canvas-lens-overlays",
+      "name": "GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+      "description": "Remediated Round 1 adversarial stress testing findings: Added extensive adversarial stress test suite covering 0/0 and identical min/max division bounds, negative domain ranges, malformed/negative RGB and HSL color inputs, degenerate and single-stop ramps, disjoint multi-component and orphan node critical path calculation, broken/ghost edge filtering, multi-cycle reciprocal loops, 100-node lattice scaling under 50ms, zero-weight risk configurations, extreme finding/command failure counts, zero-token instant duration nodes, unknown model tier fallback pricing, and store mode cycling. 100% Zero-any TypeScript with 81 passing tests.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/engine/GraphCanvas/lenses",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 266,
+        "tokensOut": 1015,
+        "durationMs": 390397,
+        "commandCount": 3,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 266,
+          "outputTokens": 1015,
+          "totalTokens": 1281,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 390397,
+          "activeCommandMs": 4403,
+          "cognitiveLatencyMs": 385994,
+          "validationDurationMs": 4403
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)"
+          },
+          {
+            "node": "node-gate-task-03-gvui-canvas-lens-overlays",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Mandatory Round 1 adversarial stress testing"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Remediated Round 1 adversarial stress testing findings: Added extensive adversarial stress test suite covering 0/0 and identical min/max division bounds, negative domain ranges, malformed/negative RGB and HSL color inputs, degenerate and single-stop ramps, disjoint multi-component and orphan node critical path calculation, broken/ghost edge filtering, multi-cycle reciprocal loops, 100-node lattice scaling under 50ms, zero-weight risk configurations, extreme finding/command failure counts, zero-token instant duration nodes, unknown model tier fallback pricing, and store mode cycling. 100% Zero-any TypeScript with 81 passing tests."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "3 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/GraphCanvas/lenses", "src/store/useCanvasLensStore.ts"],
+        "repairRounds": 1,
+        "commands": [
+          {
+            "id": "C-04f6f624-1716-4c89-9c4e-0357de9712a9",
+            "argv": ["bun", "test", "src/engine/GraphCanvas/lenses"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1319,
+            "startedAt": "2026-08-15T18:32:34.238Z",
+            "finishedAt": "2026-08-15T18:32:35.557Z",
+            "logPath": "commands/C-04f6f624-1716-4c89-9c4e-0357de9712a9/record.json"
+          },
+          {
+            "id": "C-d2a00b92-3948-4422-be8f-9aaacc034c11",
+            "argv": ["bun", "test", "src/engine/GraphCanvas/lenses"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1378,
+            "startedAt": "2026-08-15T18:30:05.944Z",
+            "finishedAt": "2026-08-15T18:30:07.322Z",
+            "logPath": "commands/C-d2a00b92-3948-4422-be8f-9aaacc034c11/record.json"
+          },
+          {
+            "id": "C-f38911e7-966c-4a75-aa96-933bcb1c161c",
+            "argv": ["bun", "test", "src/engine/GraphCanvas/lenses"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1706,
+            "startedAt": "2026-08-15T18:32:52.463Z",
+            "finishedAt": "2026-08-15T18:32:54.169Z",
+            "logPath": "commands/C-f38911e7-966c-4a75-aa96-933bcb1c161c/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+            "requirementId": "req-03-gvui-canvas-lens-overlays",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+            "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-03-round2",
+            "validatorId": "validator-03-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-d2a00b92-3948-4422-be8f-9aaacc034c11"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-03",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1319,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-03-gvui-canvas-lens-overlays",
+      "name": "Gate: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens).",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 257,
+        "tokensOut": 223,
+        "durationMs": 168225,
+        "commandCount": 3,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 257,
+          "outputTokens": 223,
+          "totalTokens": 480,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 168225,
+          "activeCommandMs": 4403,
+          "cognitiveLatencyMs": 163822,
+          "validationDurationMs": 168225
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-task-03-gvui-canvas-lens-overlays",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for task-03-gvui-canvas-lens-overlays"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/engine/GraphCanvas/lenses", "src/store/useCanvasLensStore.ts"],
+        "repairRounds": 1,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-d2a00b92-3948-4422-be8f-9aaacc034c11"
+              }
+            ],
+            "deadline_at": "2026-08-15T18:50:04.144Z",
+            "reviewed_requirement_ids": ["req-03-gvui-canvas-lens-overlays"],
+            "started_at": "2026-08-15T18:30:04.144Z",
+            "token_digest": "c5e350d8ac6c74d88650cb266cbe51dea95e20d148c0ad92ef20856db2561490",
+            "validator_id": "validator-03",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+            "requirementId": "req-03-gvui-canvas-lens-overlays",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+            "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-03-round2",
+            "validatorId": "validator-03-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-d2a00b92-3948-4422-be8f-9aaacc034c11"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 1,
+        "validator_id": "validator-03-round2",
+        "validatorId": "validator-03-round2",
+        "leaseAgent": "validator-03-round2",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1319,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-task-04-gvui-command-replay-debugger",
+      "name": "GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+      "description": "Completed Round 1 adversarial stress testing for task-04-gvui-command-replay-debugger. Implemented exhaustive adversarial test suites in src/components/CommandSandbox/adversarialStress.test.ts testing complex SGR ANSI escapes, TrueColor/256-color bounds, exit code propagation and short-circuiting in multi-stage pipelines, stdout/stderr diff edge cases, and timing metrics calculation. All 90 tests pass with zero TypeScript any and zero linter warnings.",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "src/components/CommandSandbox",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 259,
+        "tokensOut": 743,
+        "durationMs": 495341,
+        "commandCount": 2,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 259,
+          "outputTokens": 743,
+          "totalTokens": 1002,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 495341,
+          "activeCommandMs": 3678,
+          "cognitiveLatencyMs": 491663,
+          "validationDurationMs": 3678
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "GVUI Interactive Shell Command Execution Replay & Mock Sandbox"
+          },
+          {
+            "node": "node-gate-task-04-gvui-command-replay-debugger",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 1)",
+            "preview": "Mandatory Round 1 adversarial stress testing"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Completed Round 1 adversarial stress testing for task-04-gvui-command-replay-debugger. Implemented exhaustive adversarial test suites in src/components/CommandSandbox/adversarialStress.test.ts testing complex SGR ANSI escapes, TrueColor/256-color bounds, exit code propagation and short-circuiting in multi-stage pipelines, stdout/stderr diff edge cases, and timing metrics calculation. All 90 tests pass with zero TypeScript any and zero linter warnings."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "2 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/components/CommandSandbox", "src/engine/sandbox"],
+        "repairRounds": 1,
+        "commands": [
+          {
+            "id": "C-0af7402b-dc8e-4443-91e4-c09928bd80ca",
+            "argv": ["bun", "test", "src/components/CommandSandbox"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2299,
+            "startedAt": "2026-08-15T18:31:46.160Z",
+            "finishedAt": "2026-08-15T18:31:48.459Z",
+            "logPath": "commands/C-0af7402b-dc8e-4443-91e4-c09928bd80ca/record.json"
+          },
+          {
+            "id": "C-f0766964-4395-4519-887f-24ac9c728aec",
+            "argv": ["bun", "test", "src/components/CommandSandbox"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1379,
+            "startedAt": "2026-08-15T18:34:00.497Z",
+            "finishedAt": "2026-08-15T18:34:01.876Z",
+            "logPath": "commands/C-f0766964-4395-4519-887f-24ac9c728aec/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-04-gvui-command-replay-debugger-reject",
+            "requirementId": "req-04-gvui-command-replay-debugger",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/components/CommandSandbox, src/engine/sandbox",
+            "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-04-round2",
+            "validatorId": "validator-04-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-0af7402b-dc8e-4443-91e4-c09928bd80ca"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-04",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 2299,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-task-04-gvui-command-replay-debugger",
+      "name": "Gate: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+      "description": "Verification gate enforcing quality, assertions, and criteria for GVUI Interactive Shell Command Execution Replay & Mock Sandbox.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 258,
+        "tokensOut": 231,
+        "durationMs": 135716,
+        "commandCount": 2,
+        "retries": 1,
+        "tokens": {
+          "inputTokens": 258,
+          "outputTokens": 231,
+          "totalTokens": 489,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 135716,
+          "activeCommandMs": 3678,
+          "cognitiveLatencyMs": 132038,
+          "validationDurationMs": 135716
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-task-04-gvui-command-replay-debugger",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for task-04-gvui-command-replay-debugger"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "1 findings recorded (1 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["src/components/CommandSandbox", "src/engine/sandbox"],
+        "repairRounds": 1,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-0af7402b-dc8e-4443-91e4-c09928bd80ca"
+              }
+            ],
+            "deadline_at": "2026-08-15T18:51:44.217Z",
+            "reviewed_requirement_ids": ["req-04-gvui-command-replay-debugger"],
+            "started_at": "2026-08-15T18:31:44.217Z",
+            "token_digest": "778d0acdf8b2e6d9698df60532eb8d438119418191a0e54e810de117c05ca8b5",
+            "validator_id": "validator-04",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-task-04-gvui-command-replay-debugger-reject",
+            "requirementId": "req-04-gvui-command-replay-debugger",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "pushbackReason": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/components/CommandSandbox, src/engine/sandbox",
+            "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "rejectionRound": 1,
+            "round": 1,
+            "author": "validator-04-round2",
+            "validatorId": "validator-04-round2",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-0af7402b-dc8e-4443-91e4-c09928bd80ca"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 1,
+        "pushbackCount": 1,
+        "validator_id": "validator-04-round2",
+        "validatorId": "validator-04-round2",
+        "leaseAgent": "validator-04-round2",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 2299,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Completeness Critic",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-01-gvui-live-websocket-sse-telemetry-sink",
+            "preview": "Verification evidence and test report for task task-01-gvui-live-websocket-sse-telemetry-sink"
+          },
+          {
+            "node": "node-gate-task-02-gvui-anomaly-defect-detector",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-02-gvui-anomaly-defect-detector",
+            "preview": "Verification evidence and test report for task task-02-gvui-anomaly-defect-detector"
+          },
+          {
+            "node": "node-gate-task-03-gvui-canvas-lens-overlays",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-03-gvui-canvas-lens-overlays",
+            "preview": "Verification evidence and test report for task task-03-gvui-canvas-lens-overlays"
+          },
+          {
+            "node": "node-gate-task-04-gvui-command-replay-debugger",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-04-gvui-command-replay-debugger",
+            "preview": "Verification evidence and test report for task task-04-gvui-command-replay-debugger"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Completeness Critic Certification",
+            "preview": "Critic certified whole-run completion (clean) with 0 findings"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "commands": [],
+        "critic_id": "critic-01",
+        "criticId": "critic-01",
+        "status": "clean",
+        "unresolved_finding_ids": [],
+        "unresolvedFindingIds": [],
+        "residual_risks": [],
+        "requirement_proofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-01-gvui-live-websocket-sse-telemetry-sink satisfied.",
+                "reference": "C-5e83876c-40b0-4ce5-8c1a-49a9423f8735"
+              }
+            ],
+            "requirement_id": "req-01-gvui-live-websocket-sse-telemetry-sink",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-02-gvui-anomaly-defect-detector satisfied.",
+                "reference": "C-5e83876c-40b0-4ce5-8c1a-49a9423f8735"
+              }
+            ],
+            "requirement_id": "req-02-gvui-anomaly-defect-detector",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-03-gvui-canvas-lens-overlays satisfied.",
+                "reference": "C-5e83876c-40b0-4ce5-8c1a-49a9423f8735"
+              }
+            ],
+            "requirement_id": "req-03-gvui-canvas-lens-overlays",
+            "status": "satisfied"
+          },
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-04-gvui-command-replay-debugger satisfied.",
+                "reference": "C-5e83876c-40b0-4ce5-8c1a-49a9423f8735"
+              }
+            ],
+            "requirement_id": "req-04-gvui-command-replay-debugger",
+            "status": "satisfied"
+          }
+        ]
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-authority",
+            "kind": "decision",
+            "label": "Critic Authority Packet",
+            "preview": "Whole-run certification packet sealed"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Execution Trajectory Summary",
+            "preview": "Run 2026-08-15-meta-orchestrator-round-8-live-telemetry-streaming-and-anomaly-detection execution completed with 4 tasks"
+          }
+        ]
+      },
+      "metadata": {
+        "status": "complete",
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "stepNumber": 1,
+      "badge": {
+        "text": "Prompt Input",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "User Prompt Ingested",
+        "detail": "1.0 KB",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 245,
+        "tokensIn": 0,
+        "tokensOut": 245,
+        "latencyMs": 20,
+        "bytes": 981,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-prompt-plan",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-input-prompt",
+            "target": "node-orchestrator-plan",
+            "stepNumber": 1,
+            "step": 1,
+            "direction": "forward",
+            "type": "prompt",
+            "kind": "prompt",
+            "summary": "Ingested user prompt instructions and context",
+            "tokens": 245,
+            "tokensIn": 0,
+            "tokensOut": 245,
+            "bytes": 981,
+            "durationMs": 20,
+            "latencyMs": 20,
+            "status": "success",
+            "inputGoal": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+            "payloadSnippet": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced re",
+            "payloadPreview": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced re",
+            "fullPayload": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+            "metadata": {
+              "promptSizeKb": "1.0"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-input-prompt",
+          "target": "node-orchestrator-plan",
+          "stepNumber": 1,
+          "step": 1,
+          "direction": "forward",
+          "type": "prompt",
+          "kind": "prompt",
+          "summary": "Ingested user prompt instructions and context",
+          "tokens": 245,
+          "tokensIn": 0,
+          "tokensOut": 245,
+          "bytes": 981,
+          "durationMs": 20,
+          "latencyMs": 20,
+          "status": "success",
+          "inputGoal": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+          "payloadSnippet": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced re",
+          "payloadPreview": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced re",
+          "fullPayload": "Round 8 of 10: Live Telemetry Streaming, Anomaly Detection, Multi-Lens Visualizers & Command Replay Sandbox\n\n### Objective:\nImplement four advanced real-time infrastructure, diagnostics, and debugging capabilities in GVUI:\n1. Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine (`src/api/streaming/`, `src/store/useStreamingStore.ts`)\n2. Graph Topology Anomaly & Execution Defect Detector (`src/engine/anomaly/`, `src/components/AnomalyInspector/`)\n3. Multi-Lens Dynamic Canvas Visualizers (`src/engine/GraphCanvas/lenses/`, `src/store/useCanvasLensStore.ts`)\n4. Interactive Shell Command Execution Replay & Mock Sandbox (`src/components/CommandSandbox/`, `src/engine/sandbox/`)\n\n### Strict Invariants:\n- 100% test coverage with zero TypeScript `any` annotations or casts.\n- 1-round adversarial stress-test gauntlet before approval (`min_adversarial_rejections: 1`).\n- Pristine UI/UX with smooth micro-interactions, dark/light theme support, and zero layout shift.\n",
+          "metadata": {
+            "promptSizeKb": "1.0"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    },
+    {
+      "id": "edge-plan-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task task-01-gvui-live-websocket-sse-telemetry-sink to worker worker-01",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+            "payloadSnippet": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+            "payloadPreview": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+            "fullPayload": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine\nWrite Scope: src/api/streaming, src/store/useStreamingStore.ts",
+            "metadata": {
+              "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+              "agent": "worker-01"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task task-01-gvui-live-websocket-sse-telemetry-sink to worker worker-01",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+          "payloadSnippet": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+          "payloadPreview": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine",
+          "fullPayload": "Goal: GVUI Live WebSocket/SSE Streaming Telemetry Sink & Auto-Reconnect Engine\nWrite Scope: src/api/streaming, src/store/useStreamingStore.ts",
+          "metadata": {
+            "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+            "agent": "worker-01"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "source": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "target": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "target": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for task-01-gvui-live-websocket-sse-telemetry-sink (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/api/streaming",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/api/streaming",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/api/streaming",
+            "payloadPreview": "src/api/streaming",
+            "fullPayload": "Files modified:\n- src/api/streaming",
+            "metadata": {
+              "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "target": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for task-01-gvui-live-websocket-sse-telemetry-sink (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/api/streaming",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/api/streaming",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/api/streaming",
+          "payloadPreview": "src/api/streaming",
+          "fullPayload": "Files modified:\n- src/api/streaming",
+          "metadata": {
+            "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-01-gvui-live-websocket-sse-telemetry-sink-1",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "payloadPreview": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+            "auditFinding": {
+              "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+              "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+              "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/api/streaming, src/store/useStreamingStore.ts",
+            "requiredRemediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-d42891df-a712-453c-8bc1-26d5dcaa8dcc"],
+            "metadata": {
+              "findingId": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+              "round": 1,
+              "validatorId": "validator-01-round2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-01-gvui-live-websocket-sse-telemetry-sink-1",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "target": "node-task-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+          "payloadPreview": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+          "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+          "auditFinding": {
+            "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+            "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+            "requirementId": "req-01-gvui-live-websocket-sse-telemetry-sink",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+          "observation": "Mandatory Round 1 adversarial stress testing",
+          "opposedChanges": "src/api/streaming, src/store/useStreamingStore.ts",
+          "requiredRemediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+          "remediation": "Stress test backoff jitter boundaries, stream reconnection under network aborts, buffer overflow handling, and verify zero TypeScript any.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-d42891df-a712-453c-8bc1-26d5dcaa8dcc"],
+          "metadata": {
+            "findingId": "finding-task-01-gvui-live-websocket-sse-telemetry-sink-reject",
+            "round": 1,
+            "validatorId": "validator-01-round2"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-01-gvui-live-websocket-sse-telemetry-sink",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-task-01-gvui-live-websocket-sse-telemetry-sink for task task-01-gvui-live-websocket-sse-telemetry-sink: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-01-gvui-live-websocket-sse-telemetry-sink",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-01-gvui-live-websocket-sse-telemetry-sink",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-task-01-gvui-live-websocket-sse-telemetry-sink for task task-01-gvui-live-websocket-sse-telemetry-sink: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "task-01-gvui-live-websocket-sse-telemetry-sink",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-02-gvui-anomaly-defect-detector",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-02-gvui-anomaly-defect-detector",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-02"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-02-gvui-anomaly-defect-detector",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-02-gvui-anomaly-defect-detector",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task task-02-gvui-anomaly-defect-detector to worker worker-02",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+            "payloadSnippet": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+            "payloadPreview": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+            "fullPayload": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector\nWrite Scope: src/engine/anomaly, src/components/AnomalyInspector",
+            "metadata": {
+              "taskId": "task-02-gvui-anomaly-defect-detector",
+              "agent": "worker-02"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-02-gvui-anomaly-defect-detector",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-02-gvui-anomaly-defect-detector",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task task-02-gvui-anomaly-defect-detector to worker worker-02",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+          "payloadSnippet": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+          "payloadPreview": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector",
+          "fullPayload": "Goal: GVUI Graph Topology Anomaly & Execution Defect Detector\nWrite Scope: src/engine/anomaly, src/components/AnomalyInspector",
+          "metadata": {
+            "taskId": "task-02-gvui-anomaly-defect-detector",
+            "agent": "worker-02"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-02-gvui-anomaly-defect-detector",
+      "source": "node-task-task-02-gvui-anomaly-defect-detector",
+      "target": "node-gate-task-02-gvui-anomaly-defect-detector",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-02-gvui-anomaly-defect-detector",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-task-task-02-gvui-anomaly-defect-detector",
+            "target": "node-gate-task-02-gvui-anomaly-defect-detector",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for task-02-gvui-anomaly-defect-detector (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/engine/anomaly",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/engine/anomaly",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/engine/anomaly",
+            "payloadPreview": "src/engine/anomaly",
+            "fullPayload": "Files modified:\n- src/engine/anomaly",
+            "metadata": {
+              "taskId": "task-02-gvui-anomaly-defect-detector",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-02-gvui-anomaly-defect-detector",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-task-task-02-gvui-anomaly-defect-detector",
+          "target": "node-gate-task-02-gvui-anomaly-defect-detector",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for task-02-gvui-anomaly-defect-detector (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/engine/anomaly",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/engine/anomaly",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/engine/anomaly",
+          "payloadPreview": "src/engine/anomaly",
+          "fullPayload": "Files modified:\n- src/engine/anomaly",
+          "metadata": {
+            "taskId": "task-02-gvui-anomaly-defect-detector",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-02-gvui-anomaly-defect-detector",
+      "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+      "target": "node-task-task-02-gvui-anomaly-defect-detector",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-02-gvui-anomaly-defect-detector-1",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+            "target": "node-task-task-02-gvui-anomaly-defect-detector",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "payloadPreview": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+            "auditFinding": {
+              "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+              "requirementId": "req-02-gvui-anomaly-defect-detector",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+              "requirementId": "req-02-gvui-anomaly-defect-detector",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/anomaly, src/components/AnomalyInspector",
+            "requiredRemediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-4d1ae686-5dcb-4d58-9371-004b49a13829"],
+            "metadata": {
+              "findingId": "finding-task-02-gvui-anomaly-defect-detector-reject",
+              "round": 1,
+              "validatorId": "validator-02-round2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-02-gvui-anomaly-defect-detector-1",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+          "target": "node-task-task-02-gvui-anomaly-defect-detector",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+          "payloadPreview": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+          "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+          "auditFinding": {
+            "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+            "requirementId": "req-02-gvui-anomaly-defect-detector",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-task-02-gvui-anomaly-defect-detector-reject",
+            "requirementId": "req-02-gvui-anomaly-defect-detector",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+          "observation": "Mandatory Round 1 adversarial stress testing",
+          "opposedChanges": "src/engine/anomaly, src/components/AnomalyInspector",
+          "requiredRemediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+          "remediation": "Stress test graph edge cases (cyclic graphs, zero tokens, stranded lock timeouts), verify threshold boundary behavior, and ensure zero TypeScript any.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-4d1ae686-5dcb-4d58-9371-004b49a13829"],
+          "metadata": {
+            "findingId": "finding-task-02-gvui-anomaly-defect-detector-reject",
+            "round": 1,
+            "validatorId": "validator-02-round2"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-02-gvui-anomaly-defect-detector",
+      "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-task-02-gvui-anomaly-defect-detector",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-02-gvui-anomaly-defect-detector",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-task-02-gvui-anomaly-defect-detector for task task-02-gvui-anomaly-defect-detector: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "task-02-gvui-anomaly-defect-detector",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-02-gvui-anomaly-defect-detector",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-02-gvui-anomaly-defect-detector",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-02-gvui-anomaly-defect-detector",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-task-02-gvui-anomaly-defect-detector for task task-02-gvui-anomaly-defect-detector: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "task-02-gvui-anomaly-defect-detector",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-03-gvui-canvas-lens-overlays",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-03-gvui-canvas-lens-overlays",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-03"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-03-gvui-canvas-lens-overlays",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-03-gvui-canvas-lens-overlays",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task task-03-gvui-canvas-lens-overlays to worker worker-03",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+            "payloadSnippet": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+            "payloadPreview": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+            "fullPayload": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)\nWrite Scope: src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+            "metadata": {
+              "taskId": "task-03-gvui-canvas-lens-overlays",
+              "agent": "worker-03"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-03-gvui-canvas-lens-overlays",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-03-gvui-canvas-lens-overlays",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task task-03-gvui-canvas-lens-overlays to worker worker-03",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+          "payloadSnippet": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+          "payloadPreview": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)",
+          "fullPayload": "Goal: GVUI Multi-Lens Dynamic Canvas Visualizers (Heatmap, Critical Path, Risk, Tokens)\nWrite Scope: src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+          "metadata": {
+            "taskId": "task-03-gvui-canvas-lens-overlays",
+            "agent": "worker-03"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-03-gvui-canvas-lens-overlays",
+      "source": "node-task-task-03-gvui-canvas-lens-overlays",
+      "target": "node-gate-task-03-gvui-canvas-lens-overlays",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-03-gvui-canvas-lens-overlays",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-task-task-03-gvui-canvas-lens-overlays",
+            "target": "node-gate-task-03-gvui-canvas-lens-overlays",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for task-03-gvui-canvas-lens-overlays (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/engine/GraphCanvas/lenses",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/engine/GraphCanvas/lenses",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/engine/GraphCanvas/lenses",
+            "payloadPreview": "src/engine/GraphCanvas/lenses",
+            "fullPayload": "Files modified:\n- src/engine/GraphCanvas/lenses",
+            "metadata": {
+              "taskId": "task-03-gvui-canvas-lens-overlays",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-03-gvui-canvas-lens-overlays",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-task-task-03-gvui-canvas-lens-overlays",
+          "target": "node-gate-task-03-gvui-canvas-lens-overlays",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for task-03-gvui-canvas-lens-overlays (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/engine/GraphCanvas/lenses",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/engine/GraphCanvas/lenses",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/engine/GraphCanvas/lenses",
+          "payloadPreview": "src/engine/GraphCanvas/lenses",
+          "fullPayload": "Files modified:\n- src/engine/GraphCanvas/lenses",
+          "metadata": {
+            "taskId": "task-03-gvui-canvas-lens-overlays",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-03-gvui-canvas-lens-overlays",
+      "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+      "target": "node-task-task-03-gvui-canvas-lens-overlays",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-03-gvui-canvas-lens-overlays-1",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+            "target": "node-task-task-03-gvui-canvas-lens-overlays",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "payloadPreview": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+            "auditFinding": {
+              "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+              "requirementId": "req-03-gvui-canvas-lens-overlays",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+              "requirementId": "req-03-gvui-canvas-lens-overlays",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+            "requiredRemediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-d2a00b92-3948-4422-be8f-9aaacc034c11"],
+            "metadata": {
+              "findingId": "finding-task-03-gvui-canvas-lens-overlays-reject",
+              "round": 1,
+              "validatorId": "validator-03-round2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-03-gvui-canvas-lens-overlays-1",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+          "target": "node-task-task-03-gvui-canvas-lens-overlays",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+          "payloadPreview": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+          "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+          "auditFinding": {
+            "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+            "requirementId": "req-03-gvui-canvas-lens-overlays",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-task-03-gvui-canvas-lens-overlays-reject",
+            "requirementId": "req-03-gvui-canvas-lens-overlays",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+          "observation": "Mandatory Round 1 adversarial stress testing",
+          "opposedChanges": "src/engine/GraphCanvas/lenses, src/store/useCanvasLensStore.ts",
+          "requiredRemediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+          "remediation": "Stress test lens color interpolation bounds (0/0, negative values), critical path detection on disconnected graphs, lens transitions, and zero TypeScript any.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-d2a00b92-3948-4422-be8f-9aaacc034c11"],
+          "metadata": {
+            "findingId": "finding-task-03-gvui-canvas-lens-overlays-reject",
+            "round": 1,
+            "validatorId": "validator-03-round2"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-03-gvui-canvas-lens-overlays",
+      "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-task-03-gvui-canvas-lens-overlays",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-03-gvui-canvas-lens-overlays",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-task-03-gvui-canvas-lens-overlays for task task-03-gvui-canvas-lens-overlays: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "task-03-gvui-canvas-lens-overlays",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-03-gvui-canvas-lens-overlays",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-03-gvui-canvas-lens-overlays",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-03-gvui-canvas-lens-overlays",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-task-03-gvui-canvas-lens-overlays for task task-03-gvui-canvas-lens-overlays: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "task-03-gvui-canvas-lens-overlays",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-plan-task-04-gvui-command-replay-debugger",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-04-gvui-command-replay-debugger",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-04"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-task-04-gvui-command-replay-debugger",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-task-04-gvui-command-replay-debugger",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task task-04-gvui-command-replay-debugger to worker worker-04",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+            "payloadSnippet": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+            "payloadPreview": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+            "fullPayload": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox\nWrite Scope: src/components/CommandSandbox, src/engine/sandbox",
+            "metadata": {
+              "taskId": "task-04-gvui-command-replay-debugger",
+              "agent": "worker-04"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-task-04-gvui-command-replay-debugger",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-task-04-gvui-command-replay-debugger",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task task-04-gvui-command-replay-debugger to worker worker-04",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+          "payloadSnippet": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+          "payloadPreview": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox",
+          "fullPayload": "Goal: GVUI Interactive Shell Command Execution Replay & Mock Sandbox\nWrite Scope: src/components/CommandSandbox, src/engine/sandbox",
+          "metadata": {
+            "taskId": "task-04-gvui-command-replay-debugger",
+            "agent": "worker-04"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-task-04-gvui-command-replay-debugger",
+      "source": "node-task-task-04-gvui-command-replay-debugger",
+      "target": "node-gate-task-04-gvui-command-replay-debugger",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-task-04-gvui-command-replay-debugger",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-task-task-04-gvui-command-replay-debugger",
+            "target": "node-gate-task-04-gvui-command-replay-debugger",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for task-04-gvui-command-replay-debugger (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "src/components/CommandSandbox",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "src/components/CommandSandbox",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "src/components/CommandSandbox",
+            "payloadPreview": "src/components/CommandSandbox",
+            "fullPayload": "Files modified:\n- src/components/CommandSandbox",
+            "metadata": {
+              "taskId": "task-04-gvui-command-replay-debugger",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-04-gvui-command-replay-debugger",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-task-task-04-gvui-command-replay-debugger",
+          "target": "node-gate-task-04-gvui-command-replay-debugger",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for task-04-gvui-command-replay-debugger (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "src/components/CommandSandbox",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "src/components/CommandSandbox",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "src/components/CommandSandbox",
+          "payloadPreview": "src/components/CommandSandbox",
+          "fullPayload": "Files modified:\n- src/components/CommandSandbox",
+          "metadata": {
+            "taskId": "task-04-gvui-command-replay-debugger",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-task-04-gvui-command-replay-debugger",
+      "source": "node-gate-task-04-gvui-command-replay-debugger",
+      "target": "node-task-task-04-gvui-command-replay-debugger",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 1)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "1 Findings"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 280,
+        "tokensIn": 180,
+        "tokensOut": 100,
+        "latencyMs": 60,
+        "bytes": 890,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-task-04-gvui-command-replay-debugger-1",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-04-gvui-command-replay-debugger",
+            "target": "node-task-task-04-gvui-command-replay-debugger",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "payloadPreview": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+            "auditFinding": {
+              "id": "finding-task-04-gvui-command-replay-debugger-reject",
+              "requirementId": "req-04-gvui-command-replay-debugger",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-task-04-gvui-command-replay-debugger-reject",
+              "requirementId": "req-04-gvui-command-replay-debugger",
+              "severity": "critical",
+              "observation": "Mandatory Round 1 adversarial stress testing",
+              "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "opposedChanges": "src/components/CommandSandbox, src/engine/sandbox",
+            "requiredRemediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-0af7402b-dc8e-4443-91e4-c09928bd80ca"],
+            "metadata": {
+              "findingId": "finding-task-04-gvui-command-replay-debugger-reject",
+              "round": 1,
+              "validatorId": "validator-04-round2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-task-04-gvui-command-replay-debugger-1",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-04-gvui-command-replay-debugger",
+          "target": "node-task-task-04-gvui-command-replay-debugger",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Mandatory Round 1 adversarial stress testing",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+          "payloadPreview": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+          "fullPayload": "Finding: Mandatory Round 1 adversarial stress testing\nRemediation: Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.\nPushback Reason: Mandatory Round 1 adversarial stress testing",
+          "auditFinding": {
+            "id": "finding-task-04-gvui-command-replay-debugger-reject",
+            "requirementId": "req-04-gvui-command-replay-debugger",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-task-04-gvui-command-replay-debugger-reject",
+            "requirementId": "req-04-gvui-command-replay-debugger",
+            "severity": "critical",
+            "observation": "Mandatory Round 1 adversarial stress testing",
+            "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Mandatory Round 1 adversarial stress testing",
+          "observation": "Mandatory Round 1 adversarial stress testing",
+          "opposedChanges": "src/components/CommandSandbox, src/engine/sandbox",
+          "requiredRemediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+          "remediation": "Stress test ANSI parser with complex terminal escape sequences, verify exit code propagation in rerun simulations, test stdout/stderr diff edge cases, and verify zero TypeScript any.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-0af7402b-dc8e-4443-91e4-c09928bd80ca"],
+          "metadata": {
+            "findingId": "finding-task-04-gvui-command-replay-debugger-reject",
+            "round": 1,
+            "validatorId": "validator-04-round2"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 1,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-task-04-gvui-command-replay-debugger",
+      "source": "node-gate-task-04-gvui-command-replay-debugger",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-task-04-gvui-command-replay-debugger",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-gate-task-04-gvui-command-replay-debugger",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for task-04-gvui-command-replay-debugger",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-task-04-gvui-command-replay-debugger for task task-04-gvui-command-replay-debugger: status=DONE, findings=1",
+            "metadata": {
+              "taskId": "task-04-gvui-command-replay-debugger",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-task-04-gvui-command-replay-debugger",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-gate-task-04-gvui-command-replay-debugger",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for task-04-gvui-command-replay-debugger",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-task-04-gvui-command-replay-debugger for task task-04-gvui-command-replay-debugger: status=DONE, findings=1",
+          "metadata": {
+            "taskId": "task-04-gvui-command-replay-debugger",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "stepNumber": 5,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "container": {
+        "stepBadge": "5",
+        "title": "Authority Sign-off",
+        "detail": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 450,
+        "tokensIn": 150,
+        "tokensOut": 300,
+        "latencyMs": 50,
+        "bytes": 1800,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-critic-complete",
+            "timestamp": "2026-08-16T01:34:04.863Z",
+            "source": "node-critic-authority",
+            "target": "node-terminal-complete",
+            "stepNumber": 5,
+            "step": 4,
+            "direction": "forward",
+            "type": "decision",
+            "kind": "decision",
+            "summary": "Full capsule signed-off and sealed by completeness critic",
+            "tokens": 450,
+            "tokensIn": 150,
+            "tokensOut": 300,
+            "bytes": 1800,
+            "durationMs": 50,
+            "latencyMs": 50,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "Whole-run criteria satisfied",
+            "payloadSnippet": "Whole-run criteria satisfied",
+            "payloadPreview": "Whole-run criteria satisfied",
+            "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+            "metadata": {
+              "criticStatus": "clean"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-16T01:34:04.863Z",
+          "source": "node-critic-authority",
+          "target": "node-terminal-complete",
+          "stepNumber": 5,
+          "step": 4,
+          "direction": "forward",
+          "type": "decision",
+          "kind": "decision",
+          "summary": "Full capsule signed-off and sealed by completeness critic",
+          "tokens": 450,
+          "tokensIn": 150,
+          "tokensOut": 300,
+          "bytes": 1800,
+          "durationMs": 50,
+          "latencyMs": 50,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "Whole-run criteria satisfied",
+          "payloadSnippet": "Whole-run criteria satisfied",
+          "payloadPreview": "Whole-run criteria satisfied",
+          "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+          "metadata": {
+            "criticStatus": "clean"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    }
+  ]
+}

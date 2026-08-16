@@ -9,6 +9,7 @@ import {
 
 export interface SidebarTelemetryProps {
   dataset: GraphDataset | null;
+  defaultExpanded?: boolean;
 }
 
 function resolveNodeTokens(node: GraphNodeData): number {
@@ -64,7 +65,10 @@ function resolveNodeTokens(node: GraphNodeData): number {
 
 export const SidebarTelemetry: FC<SidebarTelemetryProps> = React.memo(function SidebarTelemetry({
   dataset,
+  defaultExpanded = true,
 }) {
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
   const telemetry = useMemo(() => {
     if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
       return null;
@@ -123,7 +127,9 @@ export const SidebarTelemetry: FC<SidebarTelemetryProps> = React.memo(function S
   if (!telemetry) {
     return (
       <div className="sidebar-section" data-testid="sidebar-telemetry">
-        <h4 className="sidebar-section-title">Graph Telemetry</h4>
+        <div className="sidebar-section-header">
+          <h4 className="sidebar-section-title">Graph Telemetry</h4>
+        </div>
         <p className="sidebar-empty-state">No graph telemetry available</p>
       </div>
     );
@@ -131,47 +137,84 @@ export const SidebarTelemetry: FC<SidebarTelemetryProps> = React.memo(function S
 
   return (
     <div className="sidebar-section" data-testid="sidebar-telemetry">
-      <h4 className="sidebar-section-title">Graph Telemetry</h4>
-      <div className="sidebar-telemetry-grid">
-        <div className="telemetry-card">
-          <span className="telemetry-label">Nodes</span>
-          <span className="telemetry-value" data-testid="telemetry-nodes-count">
-            {telemetry.nodesCount}
-          </span>
+      <div
+        className="sidebar-section-header sidebar-accordion-header"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        data-testid="sidebar-telemetry-header"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsExpanded((prev) => !prev);
+          }
+        }}
+      >
+        <div className="sidebar-section-header-left">
+          <svg
+            viewBox="0 0 24 24"
+            width="12"
+            height="12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <h4 className="sidebar-section-title">Graph Telemetry</h4>
         </div>
-        <div className="telemetry-card">
-          <span className="telemetry-label">Edges</span>
-          <span className="telemetry-value" data-testid="telemetry-edges-count">
-            {telemetry.edgesCount}
-          </span>
-        </div>
-        <div className="telemetry-card">
-          <span className="telemetry-label">Duration</span>
-          <span className="telemetry-value" data-testid="telemetry-duration">
-            {formatDuration(telemetry.totalDurationMs)}
-          </span>
-        </div>
-        <div className="telemetry-card">
-          <span className="telemetry-label">Tokens</span>
-          <span className="telemetry-value" data-testid="telemetry-tokens">
-            {formatTokens(telemetry.totalTokens)}
-          </span>
-        </div>
-        <div className="telemetry-card">
-          <span className="telemetry-label">Cost</span>
-          <span className="telemetry-value" data-testid="telemetry-cost">
-            {formatCost(telemetry.totalCost)}
-          </span>
-        </div>
-        {telemetry.totalRetries > 0 || telemetry.totalRepairRounds > 0 ? (
+        <span className="sidebar-section-badge">
+          {telemetry.nodesCount} nodes • {telemetry.edgesCount} edges
+        </span>
+      </div>
+
+      {isExpanded && (
+        <div className="sidebar-telemetry-grid">
           <div className="telemetry-card">
-            <span className="telemetry-label">Retries</span>
-            <span className="telemetry-value" data-testid="telemetry-retries">
-              {telemetry.totalRetries + telemetry.totalRepairRounds}
+            <span className="telemetry-label">Nodes</span>
+            <span className="telemetry-value" data-testid="telemetry-nodes-count">
+              {telemetry.nodesCount}
             </span>
           </div>
-        ) : null}
-      </div>
+          <div className="telemetry-card">
+            <span className="telemetry-label">Edges</span>
+            <span className="telemetry-value" data-testid="telemetry-edges-count">
+              {telemetry.edgesCount}
+            </span>
+          </div>
+          <div className="telemetry-card">
+            <span className="telemetry-label">Duration</span>
+            <span className="telemetry-value" data-testid="telemetry-duration">
+              {formatDuration(telemetry.totalDurationMs)}
+            </span>
+          </div>
+          <div className="telemetry-card">
+            <span className="telemetry-label">Tokens</span>
+            <span className="telemetry-value" data-testid="telemetry-tokens">
+              {formatTokens(telemetry.totalTokens)}
+            </span>
+          </div>
+          <div className="telemetry-card">
+            <span className="telemetry-label">Cost</span>
+            <span className="telemetry-value" data-testid="telemetry-cost">
+              {formatCost(telemetry.totalCost)}
+            </span>
+          </div>
+          {telemetry.totalRetries > 0 || telemetry.totalRepairRounds > 0 ? (
+            <div className="telemetry-card">
+              <span className="telemetry-label">Retries</span>
+              <span className="telemetry-value" data-testid="telemetry-retries">
+                {telemetry.totalRetries + telemetry.totalRepairRounds}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 });

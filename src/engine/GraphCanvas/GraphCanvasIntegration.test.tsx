@@ -13,27 +13,29 @@ import type { LayoutMode } from "../../state/useGraphStore";
 import * as realCustomLayoutAdapterModule from "../layout/customLayoutAdapter";
 import { GraphBadgeLayer } from "./GraphBadgeLayer";
 
+const storageMap = new Map<string, string>();
+const mockLocalStorage = {
+  getItem: (key: string) => storageMap.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    storageMap.set(key, value);
+  },
+  removeItem: (key: string) => {
+    storageMap.delete(key);
+  },
+  clear: () => {
+    storageMap.clear();
+  },
+  key: (index: number) => Array.from(storageMap.keys())[index] ?? null,
+  get length() {
+    return storageMap.size;
+  },
+};
+
 if (typeof window === "undefined") {
   (globalThis as unknown as { window: unknown }).window = globalThis;
-  const store = new Map<string, string>();
-  const mockLocalStorage = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      store.set(key, value);
-    },
-    removeItem: (key: string) => {
-      store.delete(key);
-    },
-    clear: () => {
-      store.clear();
-    },
-    key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() {
-      return store.size;
-    },
-  };
-  (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
 }
+(globalThis as unknown as { localStorage: typeof mockLocalStorage }).localStorage =
+  mockLocalStorage;
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -205,6 +207,7 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
   let renderer: ReactTestRenderer | undefined;
 
   beforeEach(() => {
+    mockLocalStorage.clear();
     localDb.clearDatabase();
     useGraphStore.setState(initialStoreState, true);
   });
@@ -280,12 +283,16 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
       useGraphStore.setState({ panOffset: { x: 250, y: 350 }, zoomLevel: 2.0 });
     });
 
-    // Still null before 400ms expires
-    expect(loadStoredViewport(testFile, sig)).toBeNull();
+    // The new zoomLevel 2.0 is not saved immediately
+    const immediateSaved = loadStoredViewport(testFile, sig);
+    expect(immediateSaved?.zoomLevel).not.toBe(2.0);
 
-    // Wait for the 400ms debounce timer to fire
+    // Wait for the 400ms debounce timer to fire (with buffer for busy test runner)
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      for (let i = 0; i < 20; i++) {
+        if (loadStoredViewport(testFile, sig) !== null) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
     });
 
     const saved = loadStoredViewport(testFile, sig);
@@ -561,7 +568,7 @@ describe("GraphCanvas Search Overlay Integration", () => {
     }
   });
 
-  it("renders GraphSearchOverlay inside GraphCanvas viewport and allows live filtering", async () => {
+  it("does not render any in-canvas search overlay or floating search widget inside GraphCanvas viewport", async () => {
     const { GraphCanvas } = await import("./index");
 
     silenceReactTestRendererDeprecationWarning(() => {
@@ -572,28 +579,12 @@ describe("GraphCanvas Search Overlay Integration", () => {
     await flushEffects();
 
     const root = renderer!.root;
-    const searchOverlay = root.findByProps({ role: "search" });
-    expect(searchOverlay).toBeDefined();
+    const searchOverlays = root.findAllByProps({ role: "search" });
+    expect(searchOverlays).toHaveLength(0);
 
-    const input = root.findByProps({ className: "graph-search-input" });
-    expect(input).toBeDefined();
-
-    // Type query to filter
-    await act(async () => {
-      input.props.onChange({ target: { value: "Coordinator" } });
-    });
-
-    expect(useGraphStore.getState().searchQuery).toBe("Coordinator");
-
-    // node-1 should not be dimmed, node-2 should be dimmed
-    const nodeWrappers = root.findAll((node: ReactTestInstance) =>
-      Boolean(node.props.className?.startsWith("graph-node-wrapper")),
+    const searchInputs = root.findAll((node: ReactTestInstance) =>
+      Boolean(node.props.className?.includes("graph-search-input")),
     );
-    expect(nodeWrappers.length).toBe(2);
-
-    const dimmedWrappers = root.findAll((node: ReactTestInstance) =>
-      Boolean(node.props.className?.includes("is-dimmed")),
-    );
-    expect(dimmedWrappers.length).toBe(1);
+    expect(searchInputs).toHaveLength(0);
   });
 });

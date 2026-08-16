@@ -233,6 +233,8 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             inputs={inputs}
             outputs={outputs}
             nodeNamesById={nodeNamesById}
+            onSelectNode={setSelectedNodeId}
+            dataset={dataset}
           />
         )}
         {currentTabId === "cost" && (

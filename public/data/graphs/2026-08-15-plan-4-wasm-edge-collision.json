@@ -1,0 +1,1660 @@
+{
+  "id": "2026-08-15-plan-4-wasm-edge-collision",
+  "title": "Execution Trajectory: 2026-08-15-plan-4-wasm-edge-collision",
+  "description": "Execution graph dataset and trajectory for run 2026-08-15-plan-4-wasm-edge-collision",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "2.2 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bu...",
+      "prompt": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+            "tokens": 565
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "1 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "description": "Structured execution plan across 1 tasks and 1 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WA"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "1 discrete work scopes (T-01)"
+          }
+        ]
+      },
+      "metadata": {
+        "taskCount": 1,
+        "waveCount": 1,
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-task-T-01",
+      "name": "Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+      "description": "Addressed Round 3 feedback: added in-depth architectural comments documenting the rationale behind continuous conflict area penalty calculations, edge segment clearance indexing, and graceful leader-line fallback under topological density. Added dedicated unit test place_badges_dense_mesh_leader_fallback testing full mesh obstruction. Verified 451 Rust tests pass, WASM build clean, bun run typecheck passes, bun run audit passes (105/105 runs with 0 failures), and bun test passes (437 tests).",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "model": "Gemini 3.7 Flash (High)",
+      "tier": "l",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "files": [
+        {
+          "path": "crates/gvui",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 55788,
+        "tokensOut": 786,
+        "durationMs": 918891,
+        "commandCount": 15,
+        "retries": 3,
+        "tokens": {
+          "inputTokens": 55788,
+          "outputTokens": 786,
+          "totalTokens": 56574,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 918891,
+          "activeCommandMs": 22436,
+          "cognitiveLatencyMs": 896455,
+          "validationDurationMs": 9104
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics"
+          },
+          {
+            "node": "node-gate-T-01",
+            "kind": "decision",
+            "label": "Pushback Decision (Round 3)",
+            "preview": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments)."
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Addressed Round 3 feedback: added in-depth architectural comments documenting the rationale behind continuous conflict area penalty calculations, edge segment clearance indexing, and graceful leader-line fallback under topological density. Added dedicated unit test place_badges_dense_mesh_leader_fallback testing full mesh obstruction. Verified 451 Rust tests pass, WASM build clean, bun run typecheck passes, bun run audit passes (105/105 runs with 0 failures), and bun test passes (437 tests)."
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "15 commands recorded, 0 assets"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "crates/gvui",
+          "scripts/runLayoutAudit.ts",
+          "src/engine/layout/custom/types.ts"
+        ],
+        "repairRounds": 3,
+        "commands": [
+          {
+            "id": "C-14aabfa9-df38-4a50-81d6-6322d0ee2f8b",
+            "argv": ["bun", "run", "typecheck"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1547,
+            "startedAt": "2026-08-15T09:34:44.328Z",
+            "finishedAt": "2026-08-15T09:34:45.875Z",
+            "logPath": "commands/C-14aabfa9-df38-4a50-81d6-6322d0ee2f8b/record.json"
+          },
+          {
+            "id": "C-2b2b3443-1a34-422b-920b-7292ed932f02",
+            "argv": ["bun", "test"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1899,
+            "startedAt": "2026-08-15T09:34:36.011Z",
+            "finishedAt": "2026-08-15T09:34:37.910Z",
+            "logPath": "commands/C-2b2b3443-1a34-422b-920b-7292ed932f02/record.json"
+          },
+          {
+            "id": "C-2bd455bc-a802-444c-87ae-3c15e2e908d2",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2219,
+            "startedAt": "2026-08-15T09:38:47.881Z",
+            "finishedAt": "2026-08-15T09:38:50.100Z",
+            "logPath": "commands/C-2bd455bc-a802-444c-87ae-3c15e2e908d2/record.json"
+          },
+          {
+            "id": "C-44638ca3-007b-43e8-b5a4-a01fb8852c57",
+            "argv": ["bun", "test"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2411,
+            "startedAt": "2026-08-15T09:45:11.300Z",
+            "finishedAt": "2026-08-15T09:45:13.711Z",
+            "logPath": "commands/C-44638ca3-007b-43e8-b5a4-a01fb8852c57/record.json"
+          },
+          {
+            "id": "C-4f375ac5-b7cc-4ab1-ab2f-dfab52874301",
+            "argv": ["cargo", "test", "--manifest-path", "crates/gvui/Cargo.toml"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 3198,
+            "startedAt": "2026-08-15T09:34:03.505Z",
+            "finishedAt": "2026-08-15T09:34:06.703Z",
+            "logPath": "commands/C-4f375ac5-b7cc-4ab1-ab2f-dfab52874301/record.json"
+          },
+          {
+            "id": "C-5c1391dd-7d41-47f4-a4a1-7b5e7d1048b9",
+            "argv": ["bun", "test", "crates/gvui"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 1,
+            "durationMs": 160,
+            "startedAt": "2026-08-15T09:34:27.481Z",
+            "finishedAt": "2026-08-15T09:34:27.641Z",
+            "logPath": "commands/C-5c1391dd-7d41-47f4-a4a1-7b5e7d1048b9/record.json"
+          },
+          {
+            "id": "C-6615b56f-30e5-4e4a-b115-1825adb17506",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1703,
+            "startedAt": "2026-08-15T09:42:08.246Z",
+            "finishedAt": "2026-08-15T09:42:09.949Z",
+            "logPath": "commands/C-6615b56f-30e5-4e4a-b115-1825adb17506/record.json"
+          },
+          {
+            "id": "C-794c2c23-432b-4f01-950a-ef2d55568a72",
+            "argv": ["bun", "run", "typecheck"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1521,
+            "startedAt": "2026-08-15T09:45:01.035Z",
+            "finishedAt": "2026-08-15T09:45:02.556Z",
+            "logPath": "commands/C-794c2c23-432b-4f01-950a-ef2d55568a72/record.json"
+          },
+          {
+            "id": "C-7c40a3b7-0a0a-4717-b56c-33b659c0678b",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 922,
+            "startedAt": "2026-08-15T09:34:52.102Z",
+            "finishedAt": "2026-08-15T09:34:53.024Z",
+            "logPath": "commands/C-7c40a3b7-0a0a-4717-b56c-33b659c0678b/record.json"
+          },
+          {
+            "id": "C-9b6aea24-7b2d-4b2b-a62a-b28e08faca16",
+            "argv": ["bun", "run", "build:wasm"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 556,
+            "startedAt": "2026-08-15T09:34:20.529Z",
+            "finishedAt": "2026-08-15T09:34:21.085Z",
+            "logPath": "commands/C-9b6aea24-7b2d-4b2b-a62a-b28e08faca16/record.json"
+          },
+          {
+            "id": "C-c9a54097-ac87-43d4-aa4b-1d03fc4e12e1",
+            "argv": ["bun", "run", "build:wasm"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 650,
+            "startedAt": "2026-08-15T09:44:21.346Z",
+            "finishedAt": "2026-08-15T09:44:21.996Z",
+            "logPath": "commands/C-c9a54097-ac87-43d4-aa4b-1d03fc4e12e1/record.json"
+          },
+          {
+            "id": "C-d1427c31-ed23-4a7d-bf6d-9d3863f14268",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 2005,
+            "startedAt": "2026-08-15T09:44:43.343Z",
+            "finishedAt": "2026-08-15T09:44:45.348Z",
+            "logPath": "commands/C-d1427c31-ed23-4a7d-bf6d-9d3863f14268/record.json"
+          },
+          {
+            "id": "C-d37dd981-6fa6-4881-9b8f-2b9bb06dfebc",
+            "argv": ["cargo", "test", "--manifest-path", "crates/gvui/Cargo.toml"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 468,
+            "startedAt": "2026-08-15T09:44:53.110Z",
+            "finishedAt": "2026-08-15T09:44:53.578Z",
+            "logPath": "commands/C-d37dd981-6fa6-4881-9b8f-2b9bb06dfebc/record.json"
+          },
+          {
+            "id": "C-f5becc15-652c-4916-8a0e-ac87c14431ab",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1614,
+            "startedAt": "2026-08-15T09:36:01.761Z",
+            "finishedAt": "2026-08-15T09:36:03.375Z",
+            "logPath": "commands/C-f5becc15-652c-4916-8a0e-ac87c14431ab/record.json"
+          },
+          {
+            "id": "C-532b6f25-9b25-4a7f-9411-57e17dde4f32",
+            "argv": ["bun", "run", "audit"],
+            "cwd": "/Users/onurseckinsenoglu/repos/gvui",
+            "exitCode": 0,
+            "durationMs": 1563,
+            "startedAt": "2026-08-15T09:44:11.203Z",
+            "finishedAt": "2026-08-15T09:44:12.766Z",
+            "logPath": "commands/C-532b6f25-9b25-4a7f-9411-57e17dde4f32/record.json"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "pushbackReason": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-f5becc15-652c-4916-8a0e-ac87c14431ab"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "pushbackReason": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-2bd455bc-a802-444c-87ae-3c15e2e908d2"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "pushbackReason": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-6615b56f-30e5-4e4a-b115-1825adb17506"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "leaseAgent": "worker-t01",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1899,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-T-01",
+      "name": "Gate: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+      "description": "Verification gate enforcing quality, assertions, and criteria for Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics.",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 28924,
+        "tokensOut": 1069,
+        "durationMs": 523587,
+        "commandCount": 5,
+        "retries": 3,
+        "tokens": {
+          "inputTokens": 28924,
+          "outputTokens": 1069,
+          "totalTokens": 29993,
+          "isEstimated": true
+        },
+        "hostAgent": {
+          "hostTool": "antigravity",
+          "modelName": "Gemini 3.7 Flash (High)",
+          "thinkingLevel": "high",
+          "modelTier": "l"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 523587,
+          "activeCommandMs": 9104,
+          "cognitiveLatencyMs": 514483,
+          "validationDurationMs": 523587
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-T-01",
+            "kind": "file",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted for verification"
+          },
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "artifact",
+            "label": "Acceptance Test Suite",
+            "preview": "Independent test requirements for T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Verification Verdict",
+            "preview": "PASSED: All criteria verified"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Findings",
+            "preview": "3 findings recorded (3 resolved)"
+          },
+          {
+            "kind": "artifact",
+            "label": "Validator Visual Evidence",
+            "preview": "0 media assets captured"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": [
+          "crates/gvui",
+          "scripts/runLayoutAudit.ts",
+          "src/engine/layout/custom/types.ts"
+        ],
+        "repairRounds": 3,
+        "validationHistory": [
+          {
+            "attempt": 1,
+            "checks": [
+              {
+                "command_id": "C-f5becc15-652c-4916-8a0e-ac87c14431ab"
+              }
+            ],
+            "deadline_at": "2026-08-15T09:53:59.812Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T09:33:59.812Z",
+            "token_digest": "9033a3b58f83cee7b859b8554ff89af14bce2890ba8cbc27762f36af13a454d4",
+            "validator_id": "validator-t01",
+            "verdict": "reject"
+          },
+          {
+            "attempt": 2,
+            "checks": [
+              {
+                "command_id": "C-2bd455bc-a802-444c-87ae-3c15e2e908d2"
+              }
+            ],
+            "deadline_at": "2026-08-15T09:58:45.652Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T09:38:45.652Z",
+            "token_digest": "1db1c08b602ceb13ec1d88758fbc89d5dd7b9ba5c077eac4df0e1664864d555f",
+            "validator_id": "validator-t01-r2",
+            "verdict": "reject"
+          },
+          {
+            "attempt": 3,
+            "checks": [
+              {
+                "command_id": "C-6615b56f-30e5-4e4a-b115-1825adb17506"
+              }
+            ],
+            "deadline_at": "2026-08-15T10:02:03.476Z",
+            "reviewed_requirement_ids": ["req-T-01"],
+            "started_at": "2026-08-15T09:42:03.476Z",
+            "token_digest": "848b5640604504dabd1213c4465f0331aa54e56e8f56136f350dc664750cd7be",
+            "validator_id": "validator-t01-r3",
+            "verdict": "reject"
+          }
+        ],
+        "findings": [
+          {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "pushbackReason": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-f5becc15-652c-4916-8a0e-ac87c14431ab"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "pushbackReason": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-2bd455bc-a802-444c-87ae-3c15e2e908d2"
+              }
+            ]
+          },
+          {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "pushbackReason": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "rejectionRound": 3,
+            "round": 3,
+            "author": "validator-t01-r4",
+            "validatorId": "validator-t01-r4",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": [
+              {
+                "kind": "command",
+                "reference": "C-6615b56f-30e5-4e4a-b115-1825adb17506"
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "opposedChangesCount": 3,
+        "pushbackCount": 3,
+        "validator_id": "validator-t01-r4",
+        "validatorId": "validator-t01-r4",
+        "leaseAgent": "validator-t01-r4",
+        "playwrightMetadata": {
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "traces": [],
+          "videos": [],
+          "screenshots": [],
+          "durationMs": 1899,
+          "browser": "chromium",
+          "status": "passed"
+        }
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Completeness Critic",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "description": "Final completeness critic inspection and whole-run sign-off.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-T-01",
+            "kind": "artifact",
+            "label": "Gate Verification Report: T-01",
+            "preview": "Verification evidence and test report for task T-01"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Completeness Critic Certification",
+            "preview": "Critic certified whole-run completion (clean) with 0 findings"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": [],
+        "commands": [],
+        "critic_id": "critic-06",
+        "criticId": "critic-06",
+        "status": "clean",
+        "unresolved_finding_ids": [],
+        "unresolvedFindingIds": [],
+        "residual_risks": [],
+        "requirement_proofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-T-01 satisfied.",
+                "reference": "C-28c4816a-501d-42e9-8e73-7aafac28be20"
+              }
+            ],
+            "requirement_id": "req-T-01",
+            "status": "satisfied"
+          }
+        ]
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "kind": "terminal",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Step 5: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "description": "Sealed capsule run completion and summary artifact synthesis.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-authority",
+            "kind": "decision",
+            "label": "Critic Authority Packet",
+            "preview": "Whole-run certification packet sealed"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Execution Trajectory Summary",
+            "preview": "Run 2026-08-15-plan-4-wasm-edge-collision execution completed with 1 tasks"
+          }
+        ]
+      },
+      "metadata": {
+        "status": "complete",
+        "mediaAssets": [],
+        "screenshots": [],
+        "assets": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "stepNumber": 1,
+      "badge": {
+        "text": "Prompt Input",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "User Prompt Ingested",
+        "detail": "2.2 KB",
+        "variant": "info",
+        "icon": "IconTerminal2"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 565,
+        "tokensIn": 0,
+        "tokensOut": 565,
+        "latencyMs": 20,
+        "bytes": 2259,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-prompt-plan",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-input-prompt",
+            "target": "node-orchestrator-plan",
+            "stepNumber": 1,
+            "step": 1,
+            "direction": "forward",
+            "type": "prompt",
+            "kind": "prompt",
+            "summary": "Ingested user prompt instructions and context",
+            "tokens": 565,
+            "tokensIn": 0,
+            "tokensOut": 565,
+            "bytes": 2259,
+            "durationMs": 20,
+            "latencyMs": 20,
+            "status": "success",
+            "inputGoal": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+            "payloadSnippet": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users",
+            "payloadPreview": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users",
+            "fullPayload": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+            "metadata": {
+              "promptSizeKb": "2.2"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-input-prompt",
+          "target": "node-orchestrator-plan",
+          "stepNumber": 1,
+          "step": 1,
+          "direction": "forward",
+          "type": "prompt",
+          "kind": "prompt",
+          "summary": "Ingested user prompt instructions and context",
+          "tokens": 565,
+          "tokensIn": 0,
+          "tokensOut": 565,
+          "bytes": 2259,
+          "durationMs": 20,
+          "latencyMs": 20,
+          "status": "success",
+          "inputGoal": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+          "payloadSnippet": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users",
+          "payloadPreview": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users",
+          "fullPayload": "You are the Tier 2 Background Run Coordinator for Plan 4: Badge-vs-Edge Penetration Prevention in WASM Layout Engine.\n\nRepositories:\n- `gvui`: `/Users/onurseckinsenoglu/repos/gvui`\nHarness CLI: `bun ~/.agents/skills/orchestrating-long-tasks/scripts/harness.ts`\nCapsule Directory: `/Users/onurseckinsenoglu/repos/gvui/.capsules/2026-08-15-plan-4-wasm-edge-collision`\n\n### Authoritative Directives & Plan 4 Scope:\n1. **Update `conflict_area` in Rust Engine (`crates/gvui/src/7_engines/7_2_geometric_common.rs`)**:\n   - In `conflict_area`, in addition to querying `node_index` and `badge_index`, detect collisions between candidate badge bounding box (`rect`) and polyline/spline edge segments of adjacent/crossing edges.\n   - Prevent badges from sitting directly on top of adjacent edge lines by penalizing or stepping candidate offsets until the stroke is cleared.\n2. **Add `badgeEdgePenetrations` Metric (`crates/gvui/src/0_common/0_1_types.rs` & `gvui/scripts/runLayoutAudit.ts`)**:\n   - Add `badgeEdgePenetrations: u32` to `LayoutMetrics` in Rust.\n   - Add `badgeEdgePenetrations: number` to `AuditLayoutMetrics` in TypeScript (`runLayoutAudit.ts`).\n   - Add `badgeEdgePenetrations` to `LAYERED_ONLY_CONSTRAINT_FIELDS` in `runLayoutAudit.ts` (assert must be 0 for layered layouts).\n3. **Quality Gates & Tests**:\n   - `cargo test --manifest-path crates/gvui/Cargo.toml`\n   - `bun run build:wasm`\n   - `bun run typecheck`\n   - `bun run audit` (assert 105/105 runs pass with 0 failures and 0 badgeEdgePenetrations)\n   - `bun test` in `gvui` (assert 100% pass rate).\n\n### Non-Negotiable Coordinator Laws:\n1. **Mandatory No-Code Edit Law**: You are a pure manager. Do NOT touch application or test code directly.\n2. **The Triad Floor & $2N+1$ Invariant**: Deploy atomic Implementer-Validator pairs via `invoke_subagent` simultaneously in a single batch call.\n3. **3-Round Adversarial Rejection Gauntlet**: Validator MUST reject Rounds 1, 2, and 3 (`MIN_ADVERSARIAL_REJECTIONS = 3`). Round 4+ may approve only with complete test proofs.\n4. **Capsule Lifecycle**: `plan:init` -> `plan:add` -> `plan:compile` -> dispatch pairs -> `gate-completion` -> `critic:start` -> `critic:review` -> `run:complete`.\n5. When complete and sealed, send a single milestone report.\n",
+          "metadata": {
+            "promptSizeKb": "2.2"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    },
+    {
+      "id": "edge-plan-T-01",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-T-01",
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Worker",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: worker-t01"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 350,
+        "tokensIn": 100,
+        "tokensOut": 250,
+        "latencyMs": 30,
+        "bytes": 1400,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#3b82f6",
+        "glowIntensity": 0.75,
+        "exchanges": [
+          {
+            "id": "exch-spawn-T-01",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-orchestrator-plan",
+            "target": "node-task-T-01",
+            "stepNumber": 2,
+            "step": 2,
+            "direction": "forward",
+            "type": "dispatch",
+            "kind": "prompt",
+            "summary": "Dispatched task T-01 to worker worker-t01",
+            "tokens": 350,
+            "tokensIn": 100,
+            "tokensOut": 250,
+            "bytes": 1400,
+            "durationMs": 30,
+            "latencyMs": 30,
+            "status": "success",
+            "inputGoal": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+            "payloadSnippet": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+            "payloadPreview": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+            "fullPayload": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics\nWrite Scope: crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "metadata": {
+              "taskId": "T-01",
+              "agent": "worker-t01"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-spawn-T-01",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-orchestrator-plan",
+          "target": "node-task-T-01",
+          "stepNumber": 2,
+          "step": 2,
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task T-01 to worker worker-t01",
+          "tokens": 350,
+          "tokensIn": 100,
+          "tokensOut": 250,
+          "bytes": 1400,
+          "durationMs": 30,
+          "latencyMs": 30,
+          "status": "success",
+          "inputGoal": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+          "payloadSnippet": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+          "payloadPreview": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics",
+          "fullPayload": "Goal: Badge-vs-Edge Penetration Prevention in Rust WASM Engine and Audit Metrics\nWrite Scope: crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+          "metadata": {
+            "taskId": "T-01",
+            "agent": "worker-t01"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "spawn"
+    },
+    {
+      "id": "edge-task-gate-T-01",
+      "source": "node-task-T-01",
+      "target": "node-gate-T-01",
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits Implementation",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 Files Modified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 650,
+        "tokensIn": 150,
+        "tokensOut": 500,
+        "latencyMs": 80,
+        "bytes": 1024,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#8b5cf6",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-submit-T-01",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-task-T-01",
+            "target": "node-gate-T-01",
+            "stepNumber": "2 -> 3",
+            "step": 2,
+            "direction": "forward",
+            "type": "submission",
+            "kind": "file",
+            "summary": "Submitted diffs for T-01 (1 files)",
+            "tokens": 650,
+            "tokensIn": 150,
+            "tokensOut": 500,
+            "bytes": 1024,
+            "durationMs": 80,
+            "latencyMs": 80,
+            "status": "success",
+            "outputPassed": "Diff submission with 1 files",
+            "filesTransferred": [
+              {
+                "path": "crates/gvui",
+                "mode": "write"
+              }
+            ],
+            "files": [
+              {
+                "path": "crates/gvui",
+                "mode": "write"
+              }
+            ],
+            "payloadSnippet": "crates/gvui",
+            "payloadPreview": "crates/gvui",
+            "fullPayload": "Files modified:\n- crates/gvui",
+            "metadata": {
+              "taskId": "T-01",
+              "filesCount": 1
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-T-01",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-task-T-01",
+          "target": "node-gate-T-01",
+          "stepNumber": "2 -> 3",
+          "step": 2,
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted diffs for T-01 (1 files)",
+          "tokens": 650,
+          "tokensIn": 150,
+          "tokensOut": 500,
+          "bytes": 1024,
+          "durationMs": 80,
+          "latencyMs": 80,
+          "status": "success",
+          "outputPassed": "Diff submission with 1 files",
+          "filesTransferred": [
+            {
+              "path": "crates/gvui",
+              "mode": "write"
+            }
+          ],
+          "files": [
+            {
+              "path": "crates/gvui",
+              "mode": "write"
+            }
+          ],
+          "payloadSnippet": "crates/gvui",
+          "payloadPreview": "crates/gvui",
+          "fullPayload": "Files modified:\n- crates/gvui",
+          "metadata": {
+            "taskId": "T-01",
+            "filesCount": 1
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "sequence"
+    },
+    {
+      "id": "edge-repair-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-task-T-01",
+      "stepNumber": "3 -> 2",
+      "badge": {
+        "text": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "clickable": true,
+        "targetTab": "feedback"
+      },
+      "container": {
+        "stepBadge": "3 -> 2",
+        "title": "Validator Pushback (Round 3)",
+        "variant": "warning",
+        "icon": "IconAlertCircle",
+        "detail": "3 Findings"
+      },
+      "traffic": {
+        "volume": 3,
+        "messagesCount": 3,
+        "tokens": 840,
+        "tokensIn": 540,
+        "tokensOut": 300,
+        "latencyMs": 60,
+        "bytes": 2670,
+        "ratePerSec": 8.5,
+        "status": "congested",
+        "glowColor": "#f43f5e",
+        "glowIntensity": 0.9,
+        "exchanges": [
+          {
+            "id": "exch-repair-T-01-1",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "payloadPreview": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "fullPayload": "Finding: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).\nRemediation: 1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.\nPushback Reason: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "auditFinding": {
+              "id": "finding-T-01-reject",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+              "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+              "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "requiredRemediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-f5becc15-652c-4916-8a0e-ac87c14431ab"],
+            "metadata": {
+              "findingId": "finding-T-01-reject",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          },
+          {
+            "id": "exch-repair-T-01-2",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "payloadPreview": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "fullPayload": "Finding: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.\nRemediation: 1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.\nPushback Reason: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "auditFinding": {
+              "id": "finding-T-01-reject-2",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+              "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject-2",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+              "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "requiredRemediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-2bd455bc-a802-444c-87ae-3c15e2e908d2"],
+            "metadata": {
+              "findingId": "finding-T-01-reject-2",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          },
+          {
+            "id": "exch-repair-T-01-3",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-gate-T-01",
+            "target": "node-task-T-01",
+            "stepNumber": "3 -> 2",
+            "step": 3,
+            "direction": "reverse",
+            "type": "rejection",
+            "kind": "decision",
+            "summary": "Pushback Finding: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "tokens": 280,
+            "tokensIn": 180,
+            "tokensOut": 100,
+            "bytes": 890,
+            "durationMs": 60,
+            "latencyMs": 60,
+            "status": "warning",
+            "payloadSnippet": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "payloadPreview": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "fullPayload": "Finding: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.\nRemediation: 1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.\nPushback Reason: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "auditFinding": {
+              "id": "finding-T-01-reject-3",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+              "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "finding": {
+              "id": "finding-T-01-reject-3",
+              "requirementId": "req-T-01",
+              "severity": "critical",
+              "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+              "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+              "status": "resolved",
+              "revalidationProof": {
+                "method": "verification_passed",
+                "evidence": ["[object Object]"]
+              }
+            },
+            "rejectionObservation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+            "requiredRemediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "verdict": "FAIL",
+            "resolutionProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "proof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            },
+            "evidence": ["C-6615b56f-30e5-4e4a-b115-1825adb17506"],
+            "metadata": {
+              "findingId": "finding-T-01-reject-3",
+              "round": 3,
+              "validatorId": "validator-t01-r4"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-repair-T-01-1",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+          "payloadPreview": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+          "fullPayload": "Finding: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).\nRemediation: 1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.\nPushback Reason: Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+          "auditFinding": {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+            "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+          "observation": "Boundary & Extreme Inputs Invariant Pushback: Edge collision detection lacks explicit test coverage for boundary/degenerate geometries (zero-length edge segments, collinear overlapping segments, negative badge clearances, non-orthogonal / diagonal spline segments).",
+          "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+          "requiredRemediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+          "remediation": "1. Edge collision geometry in crates/gvui/src/0_common/0_3_geometry.rs (segment_intersects_rect_interior and segment_clipped_length) and crates/gvui/src/5_edge_routing/5_4_badges.rs must be hardened against degenerate zero-length segments, collinear grazing boundaries, negative clearance values, and non-orthogonal / diagonal segments. 2. Add comprehensive Rust unit tests in crates/gvui/src/0_common/0_3_geometry.rs and crates/gvui/src/6_validation/6_1_constraints.rs verifying that zero-length segments, collinear overlapping segments, and negative clearance configurations do not produce false positives or panic/NaN. 3. Add TS unit tests in src/engine/layout/custom/__tests__/ testing edge-badge collision metrics.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-f5becc15-652c-4916-8a0e-ac87c14431ab"],
+          "metadata": {
+            "findingId": "finding-T-01-reject",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        },
+        {
+          "id": "exch-repair-T-01-2",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+          "payloadPreview": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+          "fullPayload": "Finding: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.\nRemediation: 1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.\nPushback Reason: Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+          "auditFinding": {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject-2",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+            "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+          "observation": "Type Strictness & Contract Subtleties Invariant Pushback: Serde camelCase contract parity for badgeEdgePenetrations, zero-any TS type strictness, defensive spatial indexing bounds in conflict_area, and LAYERED_ONLY_CONSTRAINT_FIELDS audit registration.",
+          "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+          "requiredRemediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+          "remediation": "1. Ensure serde rename / serialize contract on LayoutMetrics in Rust (crates/gvui/src/0_common/0_1_types.rs) guarantees exact badgeEdgePenetrations camelCase serialization across WASM boundaries. 2. Verify zero-any TS strictness and type safety across src/engine/layout/custom/types.ts and scripts/runLayoutAudit.ts. 3. Audit spatial hash bounds indexing and defensive guards in 7_2_geometric_common.rs and 5_4_badges.rs to prevent redundant allocations or unbounded queries during candidate evaluation. 4. Confirm explicit constraint field registration and audit checks for badgeEdgePenetrations.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-2bd455bc-a802-444c-87ae-3c15e2e908d2"],
+          "metadata": {
+            "findingId": "finding-T-01-reject-2",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        },
+        {
+          "id": "exch-repair-T-01-3",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-gate-T-01",
+          "target": "node-task-T-01",
+          "stepNumber": "3 -> 2",
+          "step": 3,
+          "direction": "reverse",
+          "type": "rejection",
+          "kind": "decision",
+          "summary": "Pushback Finding: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+          "tokens": 280,
+          "tokensIn": 180,
+          "tokensOut": 100,
+          "bytes": 890,
+          "durationMs": 60,
+          "latencyMs": 60,
+          "status": "warning",
+          "payloadSnippet": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+          "payloadPreview": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+          "fullPayload": "Finding: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.\nRemediation: 1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.\nPushback Reason: Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+          "auditFinding": {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "finding": {
+            "id": "finding-T-01-reject-3",
+            "requirementId": "req-T-01",
+            "severity": "critical",
+            "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+            "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+            "status": "resolved",
+            "revalidationProof": {
+              "method": "verification_passed",
+              "evidence": ["[object Object]"]
+            }
+          },
+          "rejectionObservation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+          "observation": "Substantive Coverage & Architectural Depth Invariant Pushback: Verify leader-line fallback mechanics when candidate offsets are completely boxed in by dense crossing edge meshes, document architectural rationale for edge conflict weightings in conflict_area, and verify graph-wide bounds expansion invariance.",
+          "opposedChanges": "crates/gvui, scripts/runLayoutAudit.ts, src/engine/layout/custom/types.ts",
+          "requiredRemediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+          "remediation": "1. In crates/gvui/src/5_edge_routing/5_4_badges.rs and 7_2_geometric_common.rs, expand architectural comments explaining the 'why' behind penalty weights (e.g. why clipped segment length and area multipliers are weighted relative to node boxes vs edge strokes). 2. Verify fallback and leader line generation when all badge offset candidates are blocked by unavoidable edge corridors. 3. Add explicit unit test asserting leader line generation / fallback behavior under completely constrained edge channel bottlenecks. 4. Verify that badge offsets never expand the graph bounding box beyond configured canvas limits.",
+          "verdict": "FAIL",
+          "resolutionProof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "proof": {
+            "method": "verification_passed",
+            "evidence": ["[object Object]"]
+          },
+          "evidence": ["C-6615b56f-30e5-4e4a-b115-1825adb17506"],
+          "metadata": {
+            "findingId": "finding-T-01-reject-3",
+            "round": 3,
+            "validatorId": "validator-t01-r4"
+          }
+        }
+      ],
+      "isHighTraffic": true,
+      "trafficVolume": 3,
+      "kind": "loop",
+      "isCycle": true
+    },
+    {
+      "id": "edge-join-T-01",
+      "source": "node-gate-T-01",
+      "target": "node-critic-authority",
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate Verified"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 300,
+        "tokensIn": 100,
+        "tokensOut": 200,
+        "latencyMs": 35,
+        "bytes": 950,
+        "ratePerSec": 2,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.7,
+        "exchanges": [
+          {
+            "id": "exch-join-T-01",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-gate-T-01",
+            "target": "node-critic-authority",
+            "stepNumber": 4,
+            "step": 3,
+            "direction": "forward",
+            "type": "approval",
+            "kind": "artifact",
+            "summary": "Evidence scorecard and verification proof for T-01",
+            "tokens": 300,
+            "tokensIn": 100,
+            "tokensOut": 200,
+            "bytes": 950,
+            "durationMs": 35,
+            "latencyMs": 35,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "PASSED",
+            "payloadSnippet": "Gate check passed with status DONE",
+            "payloadPreview": "Gate check passed with status DONE",
+            "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=3",
+            "metadata": {
+              "taskId": "T-01",
+              "gateDone": true
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-join-T-01",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-gate-T-01",
+          "target": "node-critic-authority",
+          "stepNumber": 4,
+          "step": 3,
+          "direction": "forward",
+          "type": "approval",
+          "kind": "artifact",
+          "summary": "Evidence scorecard and verification proof for T-01",
+          "tokens": 300,
+          "tokensIn": 100,
+          "tokensOut": 200,
+          "bytes": 950,
+          "durationMs": 35,
+          "latencyMs": 35,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "PASSED",
+          "payloadSnippet": "Gate check passed with status DONE",
+          "payloadPreview": "Gate check passed with status DONE",
+          "fullPayload": "Evidence report from gate node-gate-T-01 for task T-01: status=DONE, findings=3",
+          "metadata": {
+            "taskId": "T-01",
+            "gateDone": true
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1,
+      "kind": "join"
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "sequence",
+      "stepNumber": 5,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "container": {
+        "stepBadge": "5",
+        "title": "Authority Sign-off",
+        "detail": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "traffic": {
+        "volume": 1,
+        "messagesCount": 1,
+        "tokens": 450,
+        "tokensIn": 150,
+        "tokensOut": 300,
+        "latencyMs": 50,
+        "bytes": 1800,
+        "ratePerSec": 1,
+        "status": "nominal",
+        "glowColor": "#10b981",
+        "glowIntensity": 0.8,
+        "exchanges": [
+          {
+            "id": "exch-critic-complete",
+            "timestamp": "2026-08-16T01:34:02.754Z",
+            "source": "node-critic-authority",
+            "target": "node-terminal-complete",
+            "stepNumber": 5,
+            "step": 4,
+            "direction": "forward",
+            "type": "decision",
+            "kind": "decision",
+            "summary": "Full capsule signed-off and sealed by completeness critic",
+            "tokens": 450,
+            "tokensIn": 150,
+            "tokensOut": 300,
+            "bytes": 1800,
+            "durationMs": 50,
+            "latencyMs": 50,
+            "status": "success",
+            "verdict": "PASS",
+            "outputPassed": "Whole-run criteria satisfied",
+            "payloadSnippet": "Whole-run criteria satisfied",
+            "payloadPreview": "Whole-run criteria satisfied",
+            "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+            "metadata": {
+              "criticStatus": "clean"
+            }
+          }
+        ]
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-16T01:34:02.754Z",
+          "source": "node-critic-authority",
+          "target": "node-terminal-complete",
+          "stepNumber": 5,
+          "step": 4,
+          "direction": "forward",
+          "type": "decision",
+          "kind": "decision",
+          "summary": "Full capsule signed-off and sealed by completeness critic",
+          "tokens": 450,
+          "tokensIn": 150,
+          "tokensOut": 300,
+          "bytes": 1800,
+          "durationMs": 50,
+          "latencyMs": 50,
+          "status": "success",
+          "verdict": "PASS",
+          "outputPassed": "Whole-run criteria satisfied",
+          "payloadSnippet": "Whole-run criteria satisfied",
+          "payloadPreview": "Whole-run criteria satisfied",
+          "fullPayload": "Completeness critic certified whole-run execution and signed off final authority packet.",
+          "metadata": {
+            "criticStatus": "clean"
+          }
+        }
+      ],
+      "isHighTraffic": false,
+      "trafficVolume": 1
+    }
+  ]
+}

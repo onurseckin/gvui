@@ -1,14 +1,19 @@
 import {
   IconAlertTriangle,
+  IconBan,
   IconBug,
   IconCheck,
   IconChevronDown,
   IconChevronRight,
+  IconClock,
   IconCopy,
   IconEye,
   IconEyeOff,
+  IconFileCode,
   IconFileDiff,
+  IconMaximize,
   IconQuote,
+  IconScale,
   IconSearch,
   IconShieldCheck,
   IconTerminal,
@@ -19,6 +24,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import type { FindingDetail, GraphNodeData } from "../../../types/graphData";
 import { DiffViewer } from "../DiffViewer";
 import { DrawerSection } from "../DrawerSection";
+import { LightboxDialog } from "../LightboxDialog";
 import { copyToClipboard } from "../streamUtils";
 
 export interface StackFrame {
@@ -482,20 +488,21 @@ export function extractAuditQuotes(node: GraphNodeData): AdversarialAuditQuote[]
     }
   }
 
-  // 2. Findings with adversarial quotes
+  // 2. Findings with adversarial quotes or pushback reasons
   const findings = (meta?.findings ?? []) as PushbackFindingItem[];
   for (let i = 0; i < findings.length; i++) {
     const f = findings[i];
     if (!f) continue;
-    const quoteText = f.adversarialQuote ?? f.auditQuote ?? f.criticQuote ?? f.quote;
+    const quoteText =
+      f.pushbackReason ?? f.adversarialQuote ?? f.auditQuote ?? f.criticQuote ?? f.quote;
     if (quoteText && quoteText.trim()) {
       quotes.push({
         id: `finding-quote-${f.id || i + 1}`,
         quote: quoteText,
-        author: f.author ?? "Critic Agent",
-        role: "Adversarial Auditor",
+        author: f.validatorId ?? f.author ?? "Critic Agent",
+        role: f.validatorId ? "Gate Validator" : "Adversarial Auditor",
         requirementId: f.requirementId,
-        round: f.round,
+        round: f.rejectionRound ?? f.round,
         severity: f.severity,
       });
     }
@@ -1493,6 +1500,7 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
 }) {
   const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [findingLightboxIndex, setFindingLightboxIndex] = useState<number | null>(null);
 
   const handleCopyText = useCallback(async (text: string, key: string, e: MouseEvent) => {
     e.stopPropagation();
@@ -1525,13 +1533,13 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
   const auditQuote = useMemo<AdversarialAuditQuote | null>(() => {
     const q =
       finding.adversarialQuote ?? finding.auditQuote ?? finding.criticQuote ?? finding.quote;
-    if (q && q.trim()) {
+    if (q && q.trim() && q.trim() !== finding.pushbackReason?.trim()) {
       return {
         id: `quote-${finding.id}`,
         quote: q,
-        author: finding.author ?? "Critic Agent",
+        author: finding.validatorId ?? finding.author ?? "Critic Agent",
         requirementId: finding.requirementId,
-        round: finding.round,
+        round: finding.rejectionRound ?? finding.round,
         severity: finding.severity,
       };
     }
@@ -1556,6 +1564,14 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
     return null;
   }, [finding]);
 
+  const effectiveRound = finding.rejectionRound ?? finding.round;
+  const effectiveValidator = finding.validatorId ?? finding.author;
+  const proof = finding.revalidationProof ?? finding.remediationProof;
+  const targetFileList = finding.targetFiles ?? [];
+  const fileRefList = finding.fileRefs ?? [];
+  const hasOpposedScope =
+    Boolean(finding.opposedChanges) || targetFileList.length > 0 || fileRefList.length > 0;
+
   return (
     <div
       className={`drawer-finding-card severity-${finding.severity}`}
@@ -1575,14 +1591,15 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
           alignItems: "center",
           justifyContent: "space-between",
           gap: "8px",
+          flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <span className={`drawer-finding-severity ${finding.severity}`}>{finding.severity}</span>
           <code style={{ fontSize: "11px", color: "#a1a1aa", fontFamily: "var(--font-mono)" }}>
             {finding.id}
           </code>
-          {finding.round !== undefined && (
+          {effectiveRound !== undefined && (
             <span
               style={{
                 fontSize: "10.5px",
@@ -1593,7 +1610,42 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
                 fontFamily: "var(--font-mono)",
               }}
             >
-              {`Round ${finding.round}`}
+              {`Round ${effectiveRound}`}
+            </span>
+          )}
+          {effectiveValidator && (
+            <span
+              style={{
+                fontSize: "10.5px",
+                color: "#38bdf8",
+                background: "rgba(56, 189, 248, 0.12)",
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+                padding: "1px 6px",
+                borderRadius: "3px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontFamily: "var(--font-mono)",
+              }}
+              title="Auditing Validator Attribution"
+            >
+              <IconShieldCheck size={11} />
+              <span>{effectiveValidator}</span>
+            </span>
+          )}
+          {finding.timestamp && (
+            <span
+              style={{
+                fontSize: "10px",
+                color: "#71717a",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              <IconClock size={10} />
+              <span>{new Date(finding.timestamp).toLocaleTimeString()}</span>
             </span>
           )}
         </div>
@@ -1646,6 +1698,253 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
         </div>
       </div>
 
+      {/* Pushback Rationale Banner */}
+      {finding.pushbackReason && (
+        <div
+          className="drawer-pushback-banner"
+          style={{
+            backgroundColor: "rgba(239, 68, 68, 0.06)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderLeft: "4px solid #ef4444",
+            borderRadius: "6px",
+            padding: "10px 12px",
+            margin: "8px 0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "6px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+              <IconQuote size={14} style={{ color: "#ef4444" }} />
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#ef4444",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Gate Pushback Rationale
+              </span>
+              {effectiveRound !== undefined && (
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "#fca5a5",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    padding: "1px 5px",
+                    borderRadius: "3px",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {`Round ${effectiveRound}`}
+                </span>
+              )}
+              {effectiveValidator && (
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "#a1a1aa",
+                    background: "#27272a",
+                    padding: "1px 5px",
+                    borderRadius: "3px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                  }}
+                >
+                  <IconScale size={10} />
+                  <span>{effectiveValidator}</span>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => handleCopyText(finding.pushbackReason!, `pushback-${finding.id}`, e)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid #3f3f46",
+                color: copiedKey === `pushback-${finding.id}` ? "#34d399" : "#a1a1aa",
+                fontSize: "10.5px",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                cursor: "pointer",
+              }}
+              title="Copy Pushback Rationale"
+              aria-label={`Copy pushback rationale for ${finding.id}`}
+            >
+              {copiedKey === `pushback-${finding.id}` ? (
+                <IconCheck size={11} />
+              ) : (
+                <IconCopy size={11} />
+              )}
+              <span>{copiedKey === `pushback-${finding.id}` ? "Copied" : "Copy Rationale"}</span>
+            </button>
+          </div>
+          <blockquote
+            style={{
+              margin: 0,
+              color: "#fecaca",
+              fontSize: "12px",
+              fontStyle: "italic",
+              lineHeight: "1.5",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            &ldquo;{finding.pushbackReason}&rdquo;
+          </blockquote>
+        </div>
+      )}
+
+      {/* Opposed Changes Callout */}
+      {hasOpposedScope && (
+        <div
+          className="drawer-opposed-changes-callout"
+          style={{
+            backgroundColor: "rgba(245, 158, 11, 0.05)",
+            border: "1px solid rgba(245, 158, 11, 0.25)",
+            borderLeft: "4px solid #f59e0b",
+            borderRadius: "6px",
+            padding: "10px 12px",
+            margin: "8px 0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "6px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <IconBan size={14} style={{ color: "#f59e0b" }} />
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Opposed Changes & Target Scope
+              </span>
+            </div>
+          </div>
+
+          {finding.opposedChanges && (
+            <p
+              style={{
+                margin: "4px 0 8px 0",
+                color: "#fef3c7",
+                fontSize: "12px",
+                lineHeight: "1.4",
+              }}
+            >
+              {finding.opposedChanges}
+            </p>
+          )}
+
+          {/* Target Files Badges */}
+          {(targetFileList.length > 0 || fileRefList.length > 0) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+              {targetFileList.map((file, fIdx) => (
+                <button
+                  key={`tf-${fIdx}`}
+                  type="button"
+                  onClick={(e) => handleCopyText(file, `file-${finding.id}-${fIdx}`, e)}
+                  className="drawer-target-file-badge"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    background: "rgba(0, 0, 0, 0.35)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    color: copiedKey === `file-${finding.id}-${fIdx}` ? "#34d399" : "#e4e4e7",
+                    fontSize: "11px",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontFamily: "var(--font-mono)",
+                    cursor: "pointer",
+                  }}
+                  title="Click to copy file path"
+                  aria-label={`Copy target file ${file}`}
+                >
+                  <IconFileCode size={12} style={{ color: "#f59e0b" }} />
+                  <span>{file}</span>
+                  {copiedKey === `file-${finding.id}-${fIdx}` ? (
+                    <IconCheck size={11} style={{ color: "#34d399" }} />
+                  ) : null}
+                </button>
+              ))}
+              {fileRefList.map((fr, frIdx) => (
+                <button
+                  key={`fr-${frIdx}`}
+                  type="button"
+                  onClick={(e) => handleCopyText(fr.path, `fileref-${finding.id}-${frIdx}`, e)}
+                  className="drawer-target-file-badge"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    background: "rgba(0, 0, 0, 0.35)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    color: copiedKey === `fileref-${finding.id}-${frIdx}` ? "#34d399" : "#e4e4e7",
+                    fontSize: "11px",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontFamily: "var(--font-mono)",
+                    cursor: "pointer",
+                  }}
+                  title="Click to copy file path"
+                  aria-label={`Copy target file ref ${fr.path}`}
+                >
+                  <IconFileDiff size={12} style={{ color: "#f59e0b" }} />
+                  <span>{fr.path}</span>
+                  {fr.mode && (
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        textTransform: "uppercase",
+                        padding: "0 3px",
+                        borderRadius: "2px",
+                        background: "rgba(255, 255, 255, 0.1)",
+                        color: "#a1a1aa",
+                      }}
+                    >
+                      {fr.mode}
+                    </span>
+                  )}
+                  {(fr.additions !== undefined || fr.deletions !== undefined) && (
+                    <span style={{ fontSize: "10px" }}>
+                      {fr.additions !== undefined && (
+                        <span style={{ color: "#34d399" }}>{`+${fr.additions}`} </span>
+                      )}
+                      {fr.deletions !== undefined && (
+                        <span style={{ color: "#f87171" }}>{`-${fr.deletions}`}</span>
+                      )}
+                    </span>
+                  )}
+                  {copiedKey === `fileref-${finding.id}-${frIdx}` ? (
+                    <IconCheck size={11} style={{ color: "#34d399" }} />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Observation */}
       <div style={{ margin: "8px 0" }}>
         <p
@@ -1675,6 +1974,108 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
         </p>
       ) : null}
 
+      {/* Embedded Finding Screenshots Gallery */}
+      {finding.screenshots && finding.screenshots.length > 0 && (
+        <div className="drawer-finding-screenshots-section" style={{ margin: "10px 0" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "#38bdf8",
+              textTransform: "uppercase",
+              letterSpacing: "0.03em",
+              marginBottom: "6px",
+            }}
+          >
+            <IconMaximize size={13} />
+            <span>{`Validation Evidence Screenshots (${finding.screenshots.length})`}</span>
+          </div>
+          <div
+            className="drawer-finding-screenshots-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+              gap: "8px",
+            }}
+          >
+            {finding.screenshots.map((shot, sIdx) => (
+              <div
+                key={shot.id || `shot-${sIdx}`}
+                className="drawer-finding-thumb-card"
+                onClick={() => setFindingLightboxIndex(sIdx)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setFindingLightboxIndex(sIdx);
+                  }
+                }}
+                style={{
+                  position: "relative",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  border: "1px solid #27272a",
+                  backgroundColor: "#09090b",
+                  cursor: "pointer",
+                  aspectRatio: "16 / 9",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                }}
+                aria-label={`Inspect evidence screenshot ${shot.title ?? shot.id}`}
+              >
+                <img
+                  src={shot.thumbnailUrl ?? shot.url}
+                  alt={shot.title ?? `Evidence ${sIdx + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                  }}
+                  loading="lazy"
+                />
+                <div
+                  style={{
+                    position: "relative",
+                    background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
+                    padding: "4px 6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    color: "#fafafa",
+                    fontSize: "10px",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  <span
+                    style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  >
+                    {shot.title ?? `Screenshot ${sIdx + 1}`}
+                  </span>
+                  <IconMaximize size={12} style={{ flexShrink: 0, opacity: 0.8 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {findingLightboxIndex !== null && (
+            <LightboxDialog
+              isOpen={true}
+              assets={finding.screenshots}
+              initialIndex={findingLightboxIndex}
+              onClose={() => setFindingLightboxIndex(null)}
+            />
+          )}
+        </div>
+      )}
+
       {/* Adversarial Audit Quote */}
       {auditQuote && <AdversarialQuoteBox quote={auditQuote} />}
 
@@ -1684,15 +2085,16 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
       {/* Structured Stack Trace */}
       {structuredError && <StackTraceViewer error={structuredError} />}
 
-      {/* Revalidation Proof */}
-      {finding.revalidationProof && (
+      {/* Revalidation & Remediation Proof Scorecard */}
+      {proof && (
         <div
+          className="drawer-proof-scorecard"
           style={{
             marginTop: "8px",
-            padding: "6px 8px",
-            backgroundColor: "rgba(52, 211, 153, 0.04)",
-            border: "1px solid rgba(52, 211, 153, 0.2)",
-            borderRadius: "4px",
+            padding: "8px 10px",
+            backgroundColor: "rgba(52, 211, 153, 0.05)",
+            border: "1px solid rgba(52, 211, 153, 0.25)",
+            borderRadius: "5px",
             fontSize: "11px",
           }}
         >
@@ -1700,25 +2102,69 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "4px",
+              flexWrap: "wrap",
               gap: "4px",
-              color: "#34d399",
-              fontWeight: 600,
-              marginBottom: "2px",
             }}
           >
-            <IconShieldCheck size={13} />
-            <span>{`Revalidation Proof (${finding.revalidationProof.method})`}</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                color: "#34d399",
+                fontWeight: 600,
+              }}
+            >
+              <IconShieldCheck size={14} />
+              <span>{`Revalidation Proof (${proof.method ?? "Automated Gate Verification"})`}</span>
+            </div>
+            {"verifiedAt" in proof && typeof proof.verifiedAt === "string" && proof.verifiedAt ? (
+              <span style={{ fontSize: "10px", color: "#a1a1aa", fontFamily: "var(--font-mono)" }}>
+                {`Verified: ${new Date(proof.verifiedAt).toLocaleTimeString()}`}
+              </span>
+            ) : null}
           </div>
-          {Array.isArray(finding.revalidationProof.evidence) &&
-            finding.revalidationProof.evidence.length > 0 && (
-              <ul style={{ margin: "2px 0 0 16px", padding: 0, color: "#a1a1aa" }}>
-                {finding.revalidationProof.evidence.map((ev, i) => (
-                  <li key={i}>{ev}</li>
-                ))}
-              </ul>
-            )}
+          {Array.isArray(proof.evidence) && proof.evidence.length > 0 && (
+            <ul style={{ margin: "4px 0 0 16px", padding: 0, color: "#a1a1aa" }}>
+              {proof.evidence.map((ev, i) => (
+                <li key={i} style={{ margin: "2px 0" }}>
+                  {typeof ev === "string" ? ev : JSON.stringify(ev)}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
+
+      {/* Generic Evidence List */}
+      {finding.evidence &&
+        Array.isArray(finding.evidence) &&
+        finding.evidence.length > 0 &&
+        !proof && (
+          <div
+            style={{
+              marginTop: "8px",
+              padding: "6px 8px",
+              backgroundColor: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid #27272a",
+              borderRadius: "4px",
+              fontSize: "11px",
+            }}
+          >
+            <span style={{ color: "#a1a1aa", fontWeight: 600 }}>Supporting Evidence:</span>
+            <ul style={{ margin: "2px 0 0 16px", padding: 0, color: "#71717a" }}>
+              {finding.evidence.map((ev, i) => (
+                <li key={i}>
+                  {typeof ev === "string"
+                    ? ev
+                    : (ev.observation ?? ev.reference ?? ev.url ?? JSON.stringify(ev))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
       {/* Footer Meta & Quick Copy Actions */}
       <div
@@ -1904,11 +2350,32 @@ export const ErrorInspector: FC<ErrorInspectorProps> = memo(function ErrorInspec
         const matchesRem = Boolean(f.remediation?.toLowerCase().includes(query));
         const matchesId = f.id.toLowerCase().includes(query);
         const matchesReq = Boolean(f.requirementId?.toLowerCase().includes(query));
+        const matchesPushback = Boolean(f.pushbackReason?.toLowerCase().includes(query));
+        const matchesOpposed = Boolean(f.opposedChanges?.toLowerCase().includes(query));
+        const matchesValidator = Boolean(
+          f.validatorId?.toLowerCase().includes(query) || f.author?.toLowerCase().includes(query),
+        );
+        const matchesFiles = Boolean(
+          f.targetFiles?.some((file) => file.toLowerCase().includes(query)) ||
+          f.fileRefs?.some((fr) => fr.path.toLowerCase().includes(query)),
+        );
         const matchesQuote = Boolean(
           f.auditQuote?.toLowerCase().includes(query) ||
           f.adversarialQuote?.toLowerCase().includes(query),
         );
-        if (!matchesObs && !matchesRem && !matchesId && !matchesReq && !matchesQuote) return false;
+        if (
+          !matchesObs &&
+          !matchesRem &&
+          !matchesId &&
+          !matchesReq &&
+          !matchesQuote &&
+          !matchesPushback &&
+          !matchesOpposed &&
+          !matchesValidator &&
+          !matchesFiles
+        ) {
+          return false;
+        }
       }
       return true;
     });

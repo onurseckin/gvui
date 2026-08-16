@@ -50,16 +50,32 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
         return false;
       }
 
-      if (activeFilter === "success") {
-        const statusBadge = node.badges?.find((b) => b.variant);
-        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-        const isSuccess =
-          statusBadge?.variant === "success" ||
-          statusStr.includes("complete") ||
-          statusStr.includes("success") ||
-          node.status === "success";
-        if (!isSuccess) return false;
-      } else if (activeFilter === "error") {
+      if (activeFilter === "orchestrators") {
+        const isOrchestrator =
+          node.kind === "orchestrator" ||
+          node.type === "orchestrator" ||
+          node.metadata?.role === "orchestrator";
+        if (!isOrchestrator) return false;
+      } else if (activeFilter === "implementers") {
+        const isImplementer =
+          node.kind === "agent" ||
+          node.type === "agent" ||
+          node.type === "worker" ||
+          node.metadata?.role === "implementer" ||
+          node.metadata?.role === "worker";
+        if (!isImplementer) return false;
+      } else if (activeFilter === "validators") {
+        const isValidator =
+          node.kind === "gate" ||
+          node.type === "gate" ||
+          node.type === "validator" ||
+          node.metadata?.role === "validator";
+        if (!isValidator) return false;
+      } else if (activeFilter === "critics") {
+        const isCritic =
+          node.kind === "critic" || node.type === "critic" || node.metadata?.role === "critic";
+        if (!isCritic) return false;
+      } else if (activeFilter === "errors" || activeFilter === "error") {
         const statusBadge = node.badges?.find((b) => b.variant);
         const statusStr = String(node.metadata?.status ?? "").toLowerCase();
         const isError =
@@ -68,8 +84,18 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
           statusStr.includes("fail") ||
           node.status === "error";
         if (!isError) return false;
+      } else if (activeFilter === "success") {
+        const statusBadge = node.badges?.find((b) => b.variant);
+        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
+        const isSuccess =
+          statusBadge?.variant === "success" ||
+          statusStr.includes("complete") ||
+          statusStr.includes("success") ||
+          node.status === "success";
+        if (!isSuccess) return false;
       } else if (activeFilter === "tools") {
-        if (!node.tools || node.tools.length === 0) return false;
+        const isTool = node.kind === "tool" || (Boolean(node.tools) && node.tools!.length > 0);
+        if (!isTool) return false;
       }
 
       const q = searchQuery.trim();

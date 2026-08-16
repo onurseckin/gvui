@@ -70,12 +70,11 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
   return (
     <aside className="sidebar-container" data-testid="sidebar">
       <div className="sidebar-content">
-        <SidebarFileList files={files} currentFile={currentFile} onSelectFile={handleSelectFile} />
-
-        <SidebarFilterControls
+        <SidebarFileList
+          files={files}
+          currentFile={currentFile}
+          onSelectFile={handleSelectFile}
           dataset={dataset}
-          activeFilter={activeFilter}
-          onFilterChange={handleFilterChange}
         />
 
         <SidebarTelemetry dataset={dataset} />
@@ -85,6 +84,12 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
         <SidebarNodeStatus dataset={dataset} />
 
         <SidebarModelBreakdown dataset={dataset} />
+
+        <SidebarFilterControls
+          dataset={dataset}
+          activeFilter={activeFilter}
+          onFilterChange={handleFilterChange}
+        />
       </div>
 
       <div className="sidebar-footer">

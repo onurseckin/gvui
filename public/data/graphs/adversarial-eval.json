@@ -1,0 +1,453 @@
+{
+  "id": "adversarial-eval",
+  "title": "Adversarial Stress Evaluation — Red Team Ingestion & Safety Hardening",
+  "description": "Adversarial evaluation suite testing prompt injection boundaries, edge collision hazards, and boundary stress limits across multi-agent pipelines with automated critic review.",
+  "directed": true,
+  "entry": "node-red-team-prompt",
+  "exits": ["node-terminal-safe"],
+  "nodes": [
+    {
+      "id": "node-red-team-prompt",
+      "name": "Adversarial Attack Suite",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Red Team Corpus",
+      "description": "Generates 50 polymorphic attack vectors including jailbreak attempts, schema poisoning, and WASM memory exhaustion payloads.",
+      "badge": {
+        "text": "50 Attack Vectors",
+        "variant": "warning",
+        "icon": "IconBug"
+      },
+      "metrics": {
+        "durationMs": 120,
+        "commandCount": 1
+      },
+      "io": {
+        "inputs": [
+          {
+            "kind": "prompt",
+            "label": "Red Team Corpus Generator",
+            "preview": "Polymorphic payload generation suite"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Attack Suite Vector",
+            "preview": "50 categorized adversarial probes"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-security-router",
+      "name": "Security Threat Router",
+      "kind": "router",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Vector Routing",
+      "description": "Classifies incoming attack vectors into prompt injection, WASM memory bounds, and privilege escalation channels.",
+      "badge": {
+        "text": "3 Threat Channels",
+        "variant": "info",
+        "icon": "IconArrowsSplit"
+      },
+      "metrics": {
+        "durationMs": 180
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-red-team-prompt",
+            "kind": "decision",
+            "label": "Attack Suite",
+            "preview": "50 vectors"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Injection Channel",
+            "preview": "20 prompt escape attempts"
+          },
+          {
+            "kind": "decision",
+            "label": "Memory Bounds Channel",
+            "preview": "15 WASM buffer exhaustion attacks"
+          },
+          {
+            "kind": "decision",
+            "label": "Privilege Channel",
+            "preview": "15 capability leak probes"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-boundary-probe",
+      "name": "Boundary Stress Probe Agent",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 3,
+      "stepLabel": "Wave 1: Boundary Probe",
+      "description": "Executes memory-fuzzing against layout engine and WASM bindings, asserting memory safety and lack of heap corruptions.",
+      "badge": {
+        "text": "Fuzzing Complete",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 9800,
+        "tokensOut": 2100,
+        "costUsd": 0.076,
+        "durationMs": 34100
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-security-router",
+            "kind": "decision",
+            "label": "Memory Attack Vectors",
+            "preview": "15 WASM buffer probes"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Memory Audit Report",
+            "preview": "0 OOM errors, heap bounded strictly under 64MB"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-sanitizer",
+      "name": "Sanitization & Isolation Agent",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 4,
+      "stepLabel": "Wave 2: Sanitization",
+      "description": "Enforces zero-trust schema validation, HTML entity scrubbing, and prompt context boundary delimiters.",
+      "badge": {
+        "text": "Hardened Boundaries",
+        "variant": "success",
+        "icon": "IconLock"
+      },
+      "files": [
+        {
+          "path": "src/security/sanitizer.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 14500,
+        "tokensOut": 2800,
+        "costUsd": 0.108,
+        "durationMs": 38200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-security-router",
+            "kind": "decision",
+            "label": "Injection Vectors",
+            "preview": "20 prompt escape attempts"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "file",
+            "label": "Sanitizer Patch",
+            "preview": "src/security/sanitizer.ts updated"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-safety-audit",
+      "name": "Gate: Safety & Boundary Audit",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 1: Safety Gate",
+      "description": "Executes 100% automated penetration suite: verifies 0 prompt escapes, 0 WASM memory leaks, and 100% schema compliance.",
+      "badge": {
+        "text": "Safety Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 6200,
+        "tokensOut": 1400,
+        "costUsd": 0.048,
+        "durationMs": 21300
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-agent-boundary-probe",
+            "kind": "summary",
+            "label": "Memory Audit",
+            "preview": "0 OOM errors"
+          },
+          {
+            "node": "node-agent-sanitizer",
+            "kind": "file",
+            "label": "Sanitizer Patch",
+            "preview": "sanitizer.ts"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Safety Verdict",
+            "preview": "PASSED: 50/50 vectors neutralised"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-eval-prompt-escape",
+            "requirementId": "REQ-SEC-INJECTION",
+            "severity": "critical",
+            "status": "resolved",
+            "observation": "Markdown raw HTML rendering vector allowed arbitrary script tag execution in node description cards.",
+            "pushbackReason": "Penetration test triggered unsanitized DOM insertion in ErrorInspector card header.",
+            "opposedChanges": "Using dangerouslySetInnerHTML without DOMPurify scrubbing.",
+            "remediation": "Wrap all markdown rendering in strict DOMPurify sanitizer pipeline.",
+            "targetFiles": ["src/security/sanitizer.ts", "src/components/MarkdownViewer.tsx"],
+            "fileRefs": [
+              {
+                "path": "src/security/sanitizer.ts",
+                "mode": "write"
+              }
+            ],
+            "revalidationProof": {
+              "method": "Red team exploit test harness",
+              "evidence": [
+                "Script tag execution blocked: 0 escapes",
+                "DOMPurify verified on all input channels"
+              ]
+            },
+            "screenshots": [
+              {
+                "id": "shot-safety-audit",
+                "type": "image",
+                "url": "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80",
+                "title": "Safety Audit: DOM Sanitization Proof",
+                "description": "Security probe verification log showing blocked injection payload.",
+                "mimeType": "image/png",
+                "dimensions": {
+                  "width": 1920,
+                  "height": 1080
+                }
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-red-team",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Step 6: Security Sign-off",
+      "description": "Whole-run certification audit validating zero open vulnerabilities and safe threat envelope.",
+      "badge": {
+        "text": "Security Certified",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "metrics": {
+        "tokensIn": 4800,
+        "tokensOut": 1200,
+        "costUsd": 0.038,
+        "durationMs": 7600
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-safety-audit",
+            "kind": "decision",
+            "label": "Safety Verdict",
+            "preview": "PASSED: 50/50 vectors neutralised"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Security Certification",
+            "preview": "Certified safe against red team corpus"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-terminal-safe",
+      "name": "Hardened Release Sealed",
+      "kind": "terminal",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Step 7: Production Release",
+      "description": "Security hardening sealed and verified for global production rollout.",
+      "badge": {
+        "text": "Release Hardened",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "metrics": {
+        "durationMs": 800
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-red-team",
+            "kind": "decision",
+            "label": "Security Certification",
+            "preview": "Certified safe"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Final Report",
+            "preview": "Adversarial stress evaluation passed with 0 vulnerabilities"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-router",
+      "source": "node-red-team-prompt",
+      "target": "node-security-router",
+      "kind": "sequence",
+      "badge": {
+        "text": "Threat Vectors",
+        "variant": "warning",
+        "icon": "IconBug"
+      }
+    },
+    {
+      "id": "edge-router-probe",
+      "source": "node-security-router",
+      "target": "node-agent-boundary-probe",
+      "kind": "spawn",
+      "badge": {
+        "text": "Memory Fuzzing",
+        "variant": "info",
+        "icon": "IconCpu"
+      }
+    },
+    {
+      "id": "edge-router-sanitizer",
+      "source": "node-security-router",
+      "target": "node-agent-sanitizer",
+      "kind": "spawn",
+      "badge": {
+        "text": "Injection Scrub",
+        "variant": "info",
+        "icon": "IconLock"
+      }
+    },
+    {
+      "id": "edge-probe-gate",
+      "source": "node-agent-boundary-probe",
+      "target": "node-gate-safety-audit",
+      "kind": "sequence",
+      "badge": {
+        "text": "Memory Proof",
+        "variant": "success",
+        "icon": "IconCheck"
+      }
+    },
+    {
+      "id": "edge-sanitizer-gate",
+      "source": "node-agent-sanitizer",
+      "target": "node-gate-safety-audit",
+      "kind": "sequence",
+      "badge": {
+        "text": "Sanitizer Spec",
+        "variant": "success",
+        "icon": "IconCheck"
+      }
+    },
+    {
+      "id": "edge-gate-critic",
+      "source": "node-gate-safety-audit",
+      "target": "node-critic-red-team",
+      "kind": "sequence",
+      "badge": {
+        "text": "Safety Certified",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      }
+    },
+    {
+      "id": "edge-critic-terminal",
+      "source": "node-critic-red-team",
+      "target": "node-terminal-safe",
+      "kind": "sequence",
+      "badge": {
+        "text": "Release Hardened",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      }
+    }
+  ]
+}

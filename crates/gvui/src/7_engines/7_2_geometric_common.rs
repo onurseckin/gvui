@@ -1269,11 +1269,12 @@ fn badge_offsets(
     };
 
     let mut candidates: Vec<Point> = Vec::with_capacity(384);
+    let mut seen: std::collections::HashSet<(i32, i32)> =
+        std::collections::HashSet::with_capacity(512);
     let mut push_cand = |pt: Point| {
         if pt.x.is_finite() && pt.y.is_finite() {
-            if !candidates.iter().any(|existing: &Point| {
-                (existing.x - pt.x).abs() < 1.0 && (existing.y - pt.y).abs() < 1.0
-            }) {
+            let key = (pt.x.round() as i32, pt.y.round() as i32);
+            if seen.insert(key) {
                 candidates.push(pt);
             }
         }

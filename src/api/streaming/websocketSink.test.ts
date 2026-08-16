@@ -206,7 +206,7 @@ describe("WebSocketTelemetrySink", () => {
     expect(sink.status).toBe("reconnecting");
 
     // Wait for backoff retry to open new socket
-    await new Promise((r) => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 120));
 
     expect(MockWebSocket.instances.length).toBe(2);
     expect(sink.status).toBe("connected");

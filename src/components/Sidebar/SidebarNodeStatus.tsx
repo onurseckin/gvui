@@ -5,6 +5,7 @@ import { describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 
 export interface SidebarNodeStatusProps {
   dataset: GraphDataset | null;
+  defaultExpanded?: boolean;
 }
 
 interface StatusItem {
@@ -25,7 +26,10 @@ const ORDERED_STATUSES: readonly NodeStatus[] = [
 
 export const SidebarNodeStatus: FC<SidebarNodeStatusProps> = React.memo(function SidebarNodeStatus({
   dataset,
+  defaultExpanded = true,
 }) {
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
   const statusItems = useMemo(() => {
     if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
       return [];
@@ -56,30 +60,69 @@ export const SidebarNodeStatus: FC<SidebarNodeStatusProps> = React.memo(function
   if (statusItems.length === 0) {
     return (
       <div className="sidebar-section" data-testid="sidebar-node-status">
-        <h4 className="sidebar-section-title">Active Nodes</h4>
+        <div className="sidebar-section-header">
+          <h4 className="sidebar-section-title">Active Nodes</h4>
+        </div>
         <p className="sidebar-empty-state">No active nodes</p>
       </div>
     );
   }
 
+  const totalNodes = statusItems.reduce((acc, item) => acc + item.count, 0);
+
   return (
     <div className="sidebar-section" data-testid="sidebar-node-status">
-      <h4 className="sidebar-section-title">Node Status</h4>
-      <div className="sidebar-status-list">
-        {statusItems.map((item) => (
-          <div
-            key={item.status}
-            className={`sidebar-status-item status-${item.status}`}
-            data-testid={`status-item-${item.status}`}
+      <div
+        className="sidebar-section-header sidebar-accordion-header"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        data-testid="sidebar-node-status-header"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsExpanded((prev) => !prev);
+          }
+        }}
+      >
+        <div className="sidebar-section-header-left">
+          <svg
+            viewBox="0 0 24 24"
+            width="12"
+            height="12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
+            aria-hidden="true"
           >
-            <span className={`status-dot dot-${item.status}`} />
-            <span className="status-label">{item.label}</span>
-            <span className="status-count" data-testid={`status-count-${item.status}`}>
-              {item.count}
-            </span>
-          </div>
-        ))}
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <h4 className="sidebar-section-title">Node Status</h4>
+        </div>
+        <span className="sidebar-section-badge">{totalNodes} total</span>
       </div>
+
+      {isExpanded && (
+        <div className="sidebar-status-list">
+          {statusItems.map((item) => (
+            <div
+              key={item.status}
+              className={`sidebar-status-item status-${item.status}`}
+              data-testid={`status-item-${item.status}`}
+            >
+              <span className={`status-dot dot-${item.status}`} />
+              <span className="status-label">{item.label}</span>
+              <span className="status-count" data-testid={`status-count-${item.status}`}>
+                {item.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 });

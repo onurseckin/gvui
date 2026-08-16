@@ -492,10 +492,12 @@ export type BreakdownViewMode = "tokens" | "tiers" | "cache" | "simulation";
 export interface TokenFootprintBreakdownProps {
   dataset: GraphDataset | null;
   onFilterTier?: (tier: string) => void;
+  defaultExpanded?: boolean;
 }
 
 export const TokenFootprintBreakdown: FC<TokenFootprintBreakdownProps> = React.memo(
-  function TokenFootprintBreakdown({ dataset, onFilterTier }) {
+  function TokenFootprintBreakdown({ dataset, onFilterTier, defaultExpanded = true }) {
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
     const [viewMode, setViewMode] = useState<BreakdownViewMode>("tokens");
     const [copied, setCopied] = useState(false);
 
@@ -564,13 +566,46 @@ export const TokenFootprintBreakdown: FC<TokenFootprintBreakdownProps> = React.m
         className="sidebar-section token-footprint-section"
         data-testid="token-footprint-breakdown"
       >
-        <div className="sidebar-section-header">
-          <div className="token-footprint-title-row">
+        <div className="sidebar-section-header sidebar-accordion-header">
+          <div
+            className="sidebar-section-header-left"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isExpanded}
+            data-testid="token-footprint-header"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsExpanded((prev) => !prev);
+              }
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
             <h4 className="sidebar-section-title">Token Footprint & Cost</h4>
+          </div>
+          <div className="sidebar-section-header-right">
+            <span className="sidebar-section-badge">{formatCost(totalCostUsd)}</span>
             <button
               type="button"
               className="token-copy-btn"
-              onClick={handleCopySummary}
+              onClick={(e) => {
+                e?.stopPropagation?.();
+                void handleCopySummary();
+              }}
               title="Copy token summary to clipboard"
               aria-label="Copy token footprint summary"
               data-testid="copy-token-summary-btn"
@@ -581,309 +616,329 @@ export const TokenFootprintBreakdown: FC<TokenFootprintBreakdownProps> = React.m
           </div>
         </div>
 
-        {/* High-level Total Metrics Grid */}
-        <div className="token-summary-cards">
-          <div className="token-card token-card--cost">
-            <div className="token-card-header">
-              <IconCoins size={12} className="token-card-icon" />
-              <span className="token-card-label">Total Cost</span>
-            </div>
-            <span className="token-card-value" data-testid="token-footprint-total-cost">
-              {formatCost(totalCostUsd)}
-            </span>
-          </div>
-
-          <div className="token-card token-card--tokens">
-            <div className="token-card-header">
-              <IconLayersLinked size={12} className="token-card-icon" />
-              <span className="token-card-label">Total Tokens</span>
-            </div>
-            <span className="token-card-value" data-testid="token-footprint-total-tokens">
-              {formatTokens(totalTokens)}
-            </span>
-          </div>
-        </div>
-
-        {/* View Switcher Pills */}
-        <nav className="token-view-nav" aria-label="Token Breakdown Views">
-          <button
-            type="button"
-            className={`token-view-btn ${viewMode === "tokens" ? "active" : ""}`}
-            onClick={() => setViewMode("tokens")}
-            data-testid="token-view-tab-tokens"
-          >
-            Tokens
-          </button>
-          <button
-            type="button"
-            className={`token-view-btn ${viewMode === "tiers" ? "active" : ""}`}
-            onClick={() => setViewMode("tiers")}
-            data-testid="token-view-tab-tiers"
-          >
-            Tiers
-          </button>
-          <button
-            type="button"
-            className={`token-view-btn ${viewMode === "cache" ? "active" : ""}`}
-            onClick={() => setViewMode("cache")}
-            data-testid="token-view-tab-cache"
-          >
-            Cache
-          </button>
-          <button
-            type="button"
-            className={`token-view-btn ${viewMode === "simulation" ? "active" : ""}`}
-            onClick={() => setViewMode("simulation")}
-            data-testid="token-view-tab-simulation"
-          >
-            Compare
-          </button>
-        </nav>
-
-        {/* View 1: Detailed Token Composition */}
-        {viewMode === "tokens" && (
-          <div className="token-view-panel" data-testid="token-view-tokens">
-            {/* Visual multi-segment distribution bar */}
-            <div
-              className="token-distribution-bar"
-              title={`Input: ${promptPct.toFixed(1)}%, Output: ${completionPct.toFixed(1)}%, Reasoning: ${reasoningPct.toFixed(1)}%, Cache: ${cachePct.toFixed(1)}%`}
-            >
-              {promptPct > 0 && (
-                <div
-                  className="token-bar-segment segment-prompt"
-                  style={{ width: `${promptPct}%` }}
-                />
-              )}
-              {completionPct > 0 && (
-                <div
-                  className="token-bar-segment segment-completion"
-                  style={{ width: `${completionPct}%` }}
-                />
-              )}
-              {reasoningPct > 0 && (
-                <div
-                  className="token-bar-segment segment-reasoning"
-                  style={{ width: `${reasoningPct}%` }}
-                />
-              )}
-              {cachePct > 0 && (
-                <div
-                  className="token-bar-segment segment-cache"
-                  style={{ width: `${cachePct}%` }}
-                />
-              )}
-            </div>
-
-            <div className="token-detail-list">
-              <div className="token-detail-row">
-                <div className="token-detail-label-group">
-                  <span className="token-dot dot-prompt" />
-                  <span className="token-detail-name">Input / Prompt</span>
+        {isExpanded && (
+          <>
+            {/* High-level Total Metrics Grid */}
+            <div className="token-summary-cards">
+              <div className="token-card token-card--cost">
+                <div className="token-card-header">
+                  <IconCoins size={12} className="token-card-icon" />
+                  <span className="token-card-label">Total Cost</span>
                 </div>
-                <div className="token-detail-val-group">
-                  <span className="token-detail-val" data-testid="token-footprint-input-tokens">
-                    {formatTokens(totalPromptTokens)}
-                  </span>
-                  <span className="token-detail-pct">{promptPct.toFixed(1)}%</span>
-                </div>
-              </div>
-
-              <div className="token-detail-row">
-                <div className="token-detail-label-group">
-                  <span className="token-dot dot-completion" />
-                  <span className="token-detail-name">Output / Gen</span>
-                </div>
-                <div className="token-detail-val-group">
-                  <span className="token-detail-val" data-testid="token-footprint-output-tokens">
-                    {formatTokens(totalCompletionTokens)}
-                  </span>
-                  <span className="token-detail-pct">{completionPct.toFixed(1)}%</span>
-                </div>
-              </div>
-
-              {totalReasoningTokens > 0 && (
-                <div className="token-detail-row">
-                  <div className="token-detail-label-group">
-                    <span className="token-dot dot-reasoning" />
-                    <span className="token-detail-name">
-                      <IconBrain size={11} className="inline-icon" /> Reasoning
-                    </span>
-                  </div>
-                  <div className="token-detail-val-group">
-                    <span
-                      className="token-detail-val"
-                      data-testid="token-footprint-reasoning-tokens"
-                    >
-                      {formatTokens(totalReasoningTokens)}
-                    </span>
-                    <span className="token-detail-pct">{reasoningPct.toFixed(1)}%</span>
-                  </div>
-                </div>
-              )}
-
-              {(totalCacheReadTokens > 0 || totalCacheCreationTokens > 0) && (
-                <div className="token-detail-row">
-                  <div className="token-detail-label-group">
-                    <span className="token-dot dot-cache" />
-                    <span className="token-detail-name">
-                      <IconDatabase size={11} className="inline-icon" /> Cache Read/Write
-                    </span>
-                  </div>
-                  <div className="token-detail-val-group">
-                    <span className="token-detail-val" data-testid="token-footprint-cache-tokens">
-                      {formatTokens(totalCacheReadTokens + totalCacheCreationTokens)}
-                    </span>
-                    <span className="token-detail-pct">{cachePct.toFixed(1)}%</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* View 2: Model Tier Distribution */}
-        {viewMode === "tiers" && (
-          <div className="token-view-panel" data-testid="token-view-tiers">
-            <div className="tier-breakdown-list">
-              {tierBreakdown.map((item) => (
-                <div
-                  key={item.tier}
-                  className={`tier-breakdown-card tier-${item.tier}`}
-                  data-testid={`tier-row-${item.tier}`}
-                  onClick={() => onFilterTier?.(item.tier)}
-                  role={onFilterTier ? "button" : undefined}
-                  tabIndex={onFilterTier ? 0 : undefined}
-                >
-                  <div className="tier-card-top">
-                    <div className="tier-badge-group">
-                      <span className={`model-tier-chip tier-${item.tier}`}>{item.tierLabel}</span>
-                      <span className="tier-node-count">
-                        {item.nodeCount} {item.nodeCount === 1 ? "node" : "nodes"}
-                      </span>
-                    </div>
-                    <span className="tier-cost-badge">{formatCost(item.costUsd)}</span>
-                  </div>
-
-                  <div className="tier-metrics-row">
-                    <span className="tier-tokens-text">
-                      {formatTokens(item.totalTokens)} tokens
-                    </span>
-                    <span className="tier-share-text">
-                      {item.costSharePercent.toFixed(1)}% of cost
-                    </span>
-                  </div>
-
-                  {/* Relative bar */}
-                  <div className="tier-progress-track">
-                    <div
-                      className={`tier-progress-fill tier-fill-${item.tier}`}
-                      style={{ width: `${Math.min(100, item.costSharePercent)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* View 3: Cache Hit & Savings */}
-        {viewMode === "cache" && (
-          <div className="token-view-panel" data-testid="token-view-cache">
-            <div className="cache-stats-grid">
-              <div className="cache-metric-card">
-                <div className="cache-metric-header">
-                  <IconPercentage size={12} className="cache-icon" />
-                  <span className="cache-metric-label">Cache Hit Rate</span>
-                </div>
-                <span className="cache-metric-value" data-testid="token-footprint-cache-hit-rate">
-                  {cacheHitRatePercent.toFixed(1)}%
-                </span>
-              </div>
-
-              <div className="cache-metric-card cache-metric-card--savings">
-                <div className="cache-metric-header">
-                  <IconPigMoney size={12} className="cache-icon-savings" />
-                  <span className="cache-metric-label">Est. Cost Saved</span>
-                </div>
-                <span
-                  className="cache-metric-value text-emerald"
-                  data-testid="token-footprint-cache-savings"
-                >
-                  {formatCost(cacheCostSavingsUsd)}
-                </span>
-              </div>
-            </div>
-
-            <div className="cache-detail-rows">
-              <div className="cache-row">
-                <span className="cache-row-label">Cache Read (Hits)</span>
-                <span className="cache-row-val" data-testid="token-footprint-cache-read-tokens">
-                  {formatTokens(totalCacheReadTokens)} ({totalCacheReadTokens.toLocaleString()})
-                </span>
-              </div>
-              <div className="cache-row">
-                <span className="cache-row-label">Cache Creation (Writes)</span>
-                <span className="cache-row-val" data-testid="token-footprint-cache-write-tokens">
-                  {formatTokens(totalCacheCreationTokens)} (
-                  {totalCacheCreationTokens.toLocaleString()})
-                </span>
-              </div>
-              <div className="cache-row">
-                <span className="cache-row-label">Cost per 1k Tokens</span>
-                <span className="cache-row-val">${analytics.costPer1kTokens.toFixed(4)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View 4: Model Tier Comparison Simulation */}
-        {viewMode === "simulation" && (
-          <div className="token-view-panel" data-testid="token-view-simulation">
-            <p className="simulation-explainer">
-              Simulated total cost if entire graph was executed across different model tiers:
-            </p>
-            <div className="simulation-list">
-              <div className="simulation-row simulation-row--actual">
-                <div className="simulation-info">
-                  <span className="simulation-tier-tag">Observed</span>
-                  <span className="simulation-desc">Actual Execution Cost</span>
-                </div>
-                <span className="simulation-cost simulation-cost--actual">
+                <span className="token-card-value" data-testid="token-footprint-total-cost">
                   {formatCost(totalCostUsd)}
                 </span>
               </div>
 
-              {tierSimulations.map((sim) => {
-                const isCheaper = sim.deltaUsd < 0;
-                const isSame = Math.abs(sim.deltaUsd) < 0.0001;
-                return (
-                  <div
-                    key={sim.tier}
-                    className="simulation-row"
-                    data-testid={`sim-tier-${sim.tier}`}
-                  >
-                    <div className="simulation-info">
-                      <span className={`model-tier-chip tier-${sim.tier}`}>
-                        {sim.tier.toUpperCase()}
-                      </span>
-                      <span className="simulation-desc">{sim.label}</span>
+              <div className="token-card token-card--tokens">
+                <div className="token-card-header">
+                  <IconLayersLinked size={12} className="token-card-icon" />
+                  <span className="token-card-label">Total Tokens</span>
+                </div>
+                <span className="token-card-value" data-testid="token-footprint-total-tokens">
+                  {formatTokens(totalTokens)}
+                </span>
+              </div>
+            </div>
+
+            {/* View Switcher Pills */}
+            <nav className="token-view-nav" aria-label="Token Breakdown Views">
+              <button
+                type="button"
+                className={`token-view-btn ${viewMode === "tokens" ? "active" : ""}`}
+                onClick={() => setViewMode("tokens")}
+                data-testid="token-view-tab-tokens"
+              >
+                Tokens
+              </button>
+              <button
+                type="button"
+                className={`token-view-btn ${viewMode === "tiers" ? "active" : ""}`}
+                onClick={() => setViewMode("tiers")}
+                data-testid="token-view-tab-tiers"
+              >
+                Tiers
+              </button>
+              <button
+                type="button"
+                className={`token-view-btn ${viewMode === "cache" ? "active" : ""}`}
+                onClick={() => setViewMode("cache")}
+                data-testid="token-view-tab-cache"
+              >
+                Cache
+              </button>
+              <button
+                type="button"
+                className={`token-view-btn ${viewMode === "simulation" ? "active" : ""}`}
+                onClick={() => setViewMode("simulation")}
+                data-testid="token-view-tab-simulation"
+              >
+                Compare
+              </button>
+            </nav>
+
+            {/* View 1: Detailed Token Composition */}
+            {viewMode === "tokens" && (
+              <div className="token-view-panel" data-testid="token-view-tokens">
+                {/* Visual multi-segment distribution bar */}
+                <div
+                  className="token-distribution-bar"
+                  title={`Input: ${promptPct.toFixed(1)}%, Output: ${completionPct.toFixed(1)}%, Reasoning: ${reasoningPct.toFixed(1)}%, Cache: ${cachePct.toFixed(1)}%`}
+                >
+                  {promptPct > 0 && (
+                    <div
+                      className="token-bar-segment segment-prompt"
+                      style={{ width: `${promptPct}%` }}
+                    />
+                  )}
+                  {completionPct > 0 && (
+                    <div
+                      className="token-bar-segment segment-completion"
+                      style={{ width: `${completionPct}%` }}
+                    />
+                  )}
+                  {reasoningPct > 0 && (
+                    <div
+                      className="token-bar-segment segment-reasoning"
+                      style={{ width: `${reasoningPct}%` }}
+                    />
+                  )}
+                  {cachePct > 0 && (
+                    <div
+                      className="token-bar-segment segment-cache"
+                      style={{ width: `${cachePct}%` }}
+                    />
+                  )}
+                </div>
+
+                <div className="token-detail-list">
+                  <div className="token-detail-row">
+                    <div className="token-detail-label-group">
+                      <span className="token-dot dot-prompt" />
+                      <span className="token-detail-name">Input / Prompt</span>
                     </div>
-                    <div className="simulation-pricing">
-                      <span className="simulation-cost">{formatCost(sim.simulatedCostUsd)}</span>
-                      {!isSame && (
-                        <span
-                          className={`simulation-delta ${isCheaper ? "delta-savings" : "delta-increase"}`}
-                        >
-                          {isCheaper ? "" : "+"}
-                          {sim.deltaPercent.toFixed(0)}%
-                        </span>
-                      )}
+                    <div className="token-detail-val-group">
+                      <span className="token-detail-val" data-testid="token-footprint-input-tokens">
+                        {formatTokens(totalPromptTokens)}
+                      </span>
+                      <span className="token-detail-pct">{promptPct.toFixed(1)}%</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+
+                  <div className="token-detail-row">
+                    <div className="token-detail-label-group">
+                      <span className="token-dot dot-completion" />
+                      <span className="token-detail-name">Output / Gen</span>
+                    </div>
+                    <div className="token-detail-val-group">
+                      <span
+                        className="token-detail-val"
+                        data-testid="token-footprint-output-tokens"
+                      >
+                        {formatTokens(totalCompletionTokens)}
+                      </span>
+                      <span className="token-detail-pct">{completionPct.toFixed(1)}%</span>
+                    </div>
+                  </div>
+
+                  {totalReasoningTokens > 0 && (
+                    <div className="token-detail-row">
+                      <div className="token-detail-label-group">
+                        <span className="token-dot dot-reasoning" />
+                        <span className="token-detail-name">
+                          <IconBrain size={11} className="inline-icon" /> Reasoning
+                        </span>
+                      </div>
+                      <div className="token-detail-val-group">
+                        <span
+                          className="token-detail-val"
+                          data-testid="token-footprint-reasoning-tokens"
+                        >
+                          {formatTokens(totalReasoningTokens)}
+                        </span>
+                        <span className="token-detail-pct">{reasoningPct.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(totalCacheReadTokens > 0 || totalCacheCreationTokens > 0) && (
+                    <div className="token-detail-row">
+                      <div className="token-detail-label-group">
+                        <span className="token-dot dot-cache" />
+                        <span className="token-detail-name">
+                          <IconDatabase size={11} className="inline-icon" /> Cache Read/Write
+                        </span>
+                      </div>
+                      <div className="token-detail-val-group">
+                        <span
+                          className="token-detail-val"
+                          data-testid="token-footprint-cache-tokens"
+                        >
+                          {formatTokens(totalCacheReadTokens + totalCacheCreationTokens)}
+                        </span>
+                        <span className="token-detail-pct">{cachePct.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* View 2: Model Tier Distribution */}
+            {viewMode === "tiers" && (
+              <div className="token-view-panel" data-testid="token-view-tiers">
+                <div className="tier-breakdown-list">
+                  {tierBreakdown.map((item) => (
+                    <div
+                      key={item.tier}
+                      className={`tier-breakdown-card tier-${item.tier}`}
+                      data-testid={`tier-row-${item.tier}`}
+                      onClick={() => onFilterTier?.(item.tier)}
+                      role={onFilterTier ? "button" : undefined}
+                      tabIndex={onFilterTier ? 0 : undefined}
+                    >
+                      <div className="tier-card-top">
+                        <div className="tier-badge-group">
+                          <span className={`model-tier-chip tier-${item.tier}`}>
+                            {item.tierLabel}
+                          </span>
+                          <span className="tier-node-count">
+                            {item.nodeCount} {item.nodeCount === 1 ? "node" : "nodes"}
+                          </span>
+                        </div>
+                        <span className="tier-cost-badge">{formatCost(item.costUsd)}</span>
+                      </div>
+
+                      <div className="tier-metrics-row">
+                        <span className="tier-tokens-text">
+                          {formatTokens(item.totalTokens)} tokens
+                        </span>
+                        <span className="tier-share-text">
+                          {item.costSharePercent.toFixed(1)}% of cost
+                        </span>
+                      </div>
+
+                      {/* Relative bar */}
+                      <div className="tier-progress-track">
+                        <div
+                          className={`tier-progress-fill tier-fill-${item.tier}`}
+                          style={{ width: `${Math.min(100, item.costSharePercent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* View 3: Cache Hit & Savings */}
+            {viewMode === "cache" && (
+              <div className="token-view-panel" data-testid="token-view-cache">
+                <div className="cache-stats-grid">
+                  <div className="cache-metric-card">
+                    <div className="cache-metric-header">
+                      <IconPercentage size={12} className="cache-icon" />
+                      <span className="cache-metric-label">Cache Hit Rate</span>
+                    </div>
+                    <span
+                      className="cache-metric-value"
+                      data-testid="token-footprint-cache-hit-rate"
+                    >
+                      {cacheHitRatePercent.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <div className="cache-metric-card cache-metric-card--savings">
+                    <div className="cache-metric-header">
+                      <IconPigMoney size={12} className="cache-icon-savings" />
+                      <span className="cache-metric-label">Est. Cost Saved</span>
+                    </div>
+                    <span
+                      className="cache-metric-value text-emerald"
+                      data-testid="token-footprint-cache-savings"
+                    >
+                      {formatCost(cacheCostSavingsUsd)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="cache-detail-rows">
+                  <div className="cache-row">
+                    <span className="cache-row-label">Cache Read (Hits)</span>
+                    <span className="cache-row-val" data-testid="token-footprint-cache-read-tokens">
+                      {formatTokens(totalCacheReadTokens)} ({totalCacheReadTokens.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="cache-row">
+                    <span className="cache-row-label">Cache Creation (Writes)</span>
+                    <span
+                      className="cache-row-val"
+                      data-testid="token-footprint-cache-write-tokens"
+                    >
+                      {formatTokens(totalCacheCreationTokens)} (
+                      {totalCacheCreationTokens.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="cache-row">
+                    <span className="cache-row-label">Cost per 1k Tokens</span>
+                    <span className="cache-row-val">${analytics.costPer1kTokens.toFixed(4)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* View 4: Model Tier Comparison Simulation */}
+            {viewMode === "simulation" && (
+              <div className="token-view-panel" data-testid="token-view-simulation">
+                <p className="simulation-explainer">
+                  Simulated total cost if entire graph was executed across different model tiers:
+                </p>
+                <div className="simulation-list">
+                  <div className="simulation-row simulation-row--actual">
+                    <div className="simulation-info">
+                      <span className="simulation-tier-tag">Observed</span>
+                      <span className="simulation-desc">Actual Execution Cost</span>
+                    </div>
+                    <span className="simulation-cost simulation-cost--actual">
+                      {formatCost(totalCostUsd)}
+                    </span>
+                  </div>
+
+                  {tierSimulations.map((sim) => {
+                    const isCheaper = sim.deltaUsd < 0;
+                    const isSame = Math.abs(sim.deltaUsd) < 0.0001;
+                    return (
+                      <div
+                        key={sim.tier}
+                        className="simulation-row"
+                        data-testid={`sim-tier-${sim.tier}`}
+                      >
+                        <div className="simulation-info">
+                          <span className={`model-tier-chip tier-${sim.tier}`}>
+                            {sim.tier.toUpperCase()}
+                          </span>
+                          <span className="simulation-desc">{sim.label}</span>
+                        </div>
+                        <div className="simulation-pricing">
+                          <span className="simulation-cost">
+                            {formatCost(sim.simulatedCostUsd)}
+                          </span>
+                          {!isSame && (
+                            <span
+                              className={`simulation-delta ${isCheaper ? "delta-savings" : "delta-increase"}`}
+                            >
+                              {isCheaper ? "" : "+"}
+                              {sim.deltaPercent.toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );

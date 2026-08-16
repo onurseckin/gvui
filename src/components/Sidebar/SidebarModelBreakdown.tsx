@@ -5,6 +5,7 @@ import { resolveModelTier } from "../../primitives/nodes/NodeCard/nodeKinds";
 
 export interface SidebarModelBreakdownProps {
   dataset: GraphDataset | null;
+  defaultExpanded?: boolean;
 }
 
 interface ModelItem {
@@ -40,7 +41,9 @@ function resolveNodeModel(node: GraphNodeData): { name: string; tier?: string } 
 }
 
 export const SidebarModelBreakdown: FC<SidebarModelBreakdownProps> = React.memo(
-  function SidebarModelBreakdown({ dataset }) {
+  function SidebarModelBreakdown({ dataset, defaultExpanded = true }) {
+    const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
     const models = useMemo(() => {
       if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
         return [];
@@ -77,7 +80,9 @@ export const SidebarModelBreakdown: FC<SidebarModelBreakdownProps> = React.memo(
     if (models.length === 0) {
       return (
         <div className="sidebar-section" data-testid="sidebar-model-breakdown">
-          <h4 className="sidebar-section-title">Model Breakdown</h4>
+          <div className="sidebar-section-header">
+            <h4 className="sidebar-section-title">Model Breakdown</h4>
+          </div>
           <p className="sidebar-empty-state">No model telemetry available</p>
         </div>
       );
@@ -85,28 +90,65 @@ export const SidebarModelBreakdown: FC<SidebarModelBreakdownProps> = React.memo(
 
     return (
       <div className="sidebar-section" data-testid="sidebar-model-breakdown">
-        <h4 className="sidebar-section-title">Model Breakdown</h4>
-        <div className="sidebar-model-list">
-          {models.map((item) => (
-            <div
-              key={item.model}
-              className="sidebar-model-item"
-              data-testid={`model-item-${item.model}`}
+        <div
+          className="sidebar-section-header sidebar-accordion-header"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
+          data-testid="sidebar-model-breakdown-header"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsExpanded((prev) => !prev);
+            }
+          }}
+        >
+          <div className="sidebar-section-header-left">
+            <svg
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
+              aria-hidden="true"
             >
-              <div className="model-info">
-                <span className="model-name" title={item.model}>
-                  {item.model}
-                </span>
-                {item.tier ? (
-                  <span className={`model-tier-chip tier-${item.tier}`}>{item.tier}</span>
-                ) : null}
-              </div>
-              <span className="model-count-badge" data-testid={`model-count-${item.model}`}>
-                {item.count}
-              </span>
-            </div>
-          ))}
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            <h4 className="sidebar-section-title">Model Breakdown</h4>
+          </div>
+          <span className="sidebar-section-badge">
+            {models.length} {models.length === 1 ? "model" : "models"}
+          </span>
         </div>
+
+        {isExpanded && (
+          <div className="sidebar-model-list">
+            {models.map((item) => (
+              <div
+                key={item.model}
+                className="sidebar-model-item"
+                data-testid={`model-item-${item.model}`}
+              >
+                <div className="model-info">
+                  <span className="model-name" title={item.model}>
+                    {item.model}
+                  </span>
+                  {item.tier ? (
+                    <span className={`model-tier-chip tier-${item.tier}`}>{item.tier}</span>
+                  ) : null}
+                </div>
+                <span className="model-count-badge" data-testid={`model-count-${item.model}`}>
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   },

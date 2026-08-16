@@ -856,7 +856,7 @@ describe("Toolbar Component", () => {
     }
   });
 
-  it("renders Toolbar with CanvasToolbar, LayoutMenu, and GraphSearchOverlay by default", () => {
+  it("renders Toolbar with CanvasToolbar and LayoutMenu by default and without in-canvas search overlay", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         renderer = create(<Toolbar />);
@@ -870,8 +870,8 @@ describe("Toolbar Component", () => {
     const layoutMenu = root.findByProps({ "data-testid": "layout-menu-trigger" });
     expect(layoutMenu).toBeDefined();
 
-    const searchOverlay = root.findByProps({ role: "search" });
-    expect(searchOverlay).toBeDefined();
+    const searches = root.findAllByProps({ role: "search" });
+    expect(searches.length).toBe(0);
   });
 
   it("hides layout menu when showLayoutMenu={false}", () => {
@@ -886,10 +886,10 @@ describe("Toolbar Component", () => {
     expect(layoutMenus.length).toBe(0);
   });
 
-  it("hides search overlay when showSearchOverlay={false}", () => {
+  it("does not render any search overlay inside toolbar area", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
-        renderer = create(<Toolbar showSearchOverlay={false} />);
+        renderer = create(<Toolbar />);
       });
     });
 

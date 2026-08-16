@@ -398,7 +398,7 @@ describe("Sidebar Component & Subcomponents", () => {
   });
 
   describe("SidebarFilterControls", () => {
-    it("renders 4 filter buttons with accurate counts and triggers callback on click", () => {
+    it("renders compact filter chips with accurate counts and triggers callback on click", () => {
       let selectedFilter = "";
       let renderer: ReactTestRenderer;
       act(() => {
@@ -417,30 +417,48 @@ describe("Sidebar Component & Subcomponents", () => {
       const allCount = root.findByProps({ "data-testid": "filter-count-all" });
       expect(allCount.children).toEqual(["5"]);
 
+      const orchCount = root.findByProps({ "data-testid": "filter-count-orchestrators" });
+      expect(orchCount.children).toEqual(["1"]);
+
+      const implCount = root.findByProps({ "data-testid": "filter-count-implementers" });
+      expect(implCount.children).toEqual(["2"]);
+
+      const valCount = root.findByProps({ "data-testid": "filter-count-validators" });
+      expect(valCount.children).toEqual(["1"]);
+
+      const criticsCount = root.findByProps({ "data-testid": "filter-count-critics" });
+      expect(criticsCount.children).toEqual(["0"]);
+
+      const errorCount = root.findByProps({ "data-testid": "filter-count-errors" });
+      expect(errorCount.children).toEqual(["1"]);
+
       const successCount = root.findByProps({ "data-testid": "filter-count-success" });
       expect(successCount.children).toEqual(["2"]);
-
-      const errorCount = root.findByProps({ "data-testid": "filter-count-error" });
-      expect(errorCount.children).toEqual(["1"]);
 
       const toolsCount = root.findByProps({ "data-testid": "filter-count-tools" });
       expect(toolsCount.children).toEqual(["1"]);
 
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-error" });
+      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
       act(() => {
         errorBtn.props.onClick();
       });
-      expect(selectedFilter).toBe("error");
+      expect(selectedFilter).toBe("errors");
+
+      const orchBtn = root.findByProps({ "data-testid": "filter-btn-orchestrators" });
+      act(() => {
+        orchBtn.props.onClick();
+      });
+      expect(selectedFilter).toBe("orchestrators");
     });
 
     it("toggles active filter back to 'all' when clicking already-active filter button", () => {
-      let selectedFilter = "error";
+      let selectedFilter = "errors";
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(
           <SidebarFilterControls
             dataset={sampleDataset}
-            activeFilter="error"
+            activeFilter="errors"
             onFilterChange={(f) => {
               selectedFilter = f;
             }}
@@ -449,7 +467,7 @@ describe("Sidebar Component & Subcomponents", () => {
       });
 
       const root = renderer!.root;
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-error" });
+      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
       expect(errorBtn.props["aria-pressed"]).toBe(true);
 
       act(() => {
@@ -506,7 +524,7 @@ describe("Sidebar Component & Subcomponents", () => {
   });
 
   describe("SidebarFileList", () => {
-    it("renders file list with active highlight, aria-current='true', and handles selection", () => {
+    it("renders file list with active highlight, aria-current='true', node count badge, and handles selection", () => {
       let selectedFile = "";
       let renderer: ReactTestRenderer;
       act(() => {
@@ -514,6 +532,7 @@ describe("Sidebar Component & Subcomponents", () => {
           <SidebarFileList
             files={["pipeline.json", "crawler.json"]}
             currentFile="pipeline.json"
+            dataset={sampleDataset}
             onSelectFile={(f) => {
               selectedFile = f;
             }}
@@ -529,6 +548,9 @@ describe("Sidebar Component & Subcomponents", () => {
       expect(item1.props.className).toContain("active");
       expect(item1.props["aria-current"]).toBe("true");
 
+      const activeBadge = root.findByProps({ "data-testid": "active-file-node-count" });
+      expect(activeBadge.children).toEqual(["5", " ", "nodes"]);
+
       const item2 = root.findByProps({ "data-testid": "file-item-crawler.json" });
       expect(item2.props.className).not.toContain("active");
       expect(item2.props["aria-current"]).toBe(undefined);
@@ -537,6 +559,51 @@ describe("Sidebar Component & Subcomponents", () => {
         item2.props.onClick();
       });
       expect(selectedFile).toBe("crawler.json");
+    });
+
+    it("filters files dynamically with search input and supports clear button", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <SidebarFileList
+            files={["alpha-run.json", "beta-worker.json", "gamma-audit.json"]}
+            currentFile="alpha-run.json"
+            onSelectFile={() => {}}
+          />,
+        );
+      });
+
+      const root = renderer!.root;
+      const searchInput = root.findByProps({ "data-testid": "sidebar-file-search-input" });
+      expect(searchInput).toBeDefined();
+
+      // Search for beta
+      act(() => {
+        searchInput.props.onChange({ target: { value: "beta" } });
+      });
+
+      expect(root.findByProps({ "data-testid": "file-item-beta-worker.json" })).toBeDefined();
+      expect(root.findAllByProps({ "data-testid": "file-item-alpha-run.json" }).length).toBe(0);
+
+      const countBadge = root.findByProps({ "data-testid": "sidebar-files-count" });
+      expect(countBadge.children).toEqual(["1"]);
+
+      // Clear search
+      const clearBtn = root.findByProps({ "data-testid": "sidebar-file-search-clear" });
+      act(() => {
+        clearBtn.props.onClick();
+      });
+
+      expect(root.findByProps({ "data-testid": "file-item-alpha-run.json" })).toBeDefined();
+      expect(root.findByProps({ "data-testid": "file-item-beta-worker.json" })).toBeDefined();
+      expect(root.findByProps({ "data-testid": "file-item-gamma-audit.json" })).toBeDefined();
+
+      // No match search
+      act(() => {
+        searchInput.props.onChange({ target: { value: "non-existent" } });
+      });
+      const emptySearch = root.findByProps({ "data-testid": "sidebar-file-empty-search" });
+      expect(emptySearch).toBeDefined();
     });
 
     it("renders empty state message when files list is empty", () => {
@@ -548,6 +615,60 @@ describe("Sidebar Component & Subcomponents", () => {
       const root = renderer!.root;
       const emptyState = root.findByProps({ className: "sidebar-empty-state" });
       expect(emptyState.children[0]).toContain("No graph files yet");
+    });
+  });
+
+  describe("Sidebar Collapsible Accordions", () => {
+    it("supports collapsing and expanding telemetry, node status, model breakdown, and token footprint", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <div>
+            <SidebarTelemetry dataset={sampleDataset} />
+            <SidebarNodeStatus dataset={sampleDataset} />
+            <SidebarModelBreakdown dataset={sampleDataset} />
+            <TokenFootprintBreakdown dataset={sampleDataset} />
+          </div>,
+        );
+      });
+
+      const root = renderer!.root;
+
+      // Telemetry accordion
+      const telemetryHeader = root.findByProps({ "data-testid": "sidebar-telemetry-header" });
+      expect(root.findByProps({ "data-testid": "telemetry-nodes-count" })).toBeDefined();
+      act(() => {
+        telemetryHeader.props.onClick();
+      });
+      expect(root.findAllByProps({ "data-testid": "telemetry-nodes-count" }).length).toBe(0);
+      act(() => {
+        telemetryHeader.props.onClick();
+      });
+      expect(root.findByProps({ "data-testid": "telemetry-nodes-count" })).toBeDefined();
+
+      // Node status accordion
+      const nodeStatusHeader = root.findByProps({ "data-testid": "sidebar-node-status-header" });
+      expect(root.findByProps({ "data-testid": "status-item-running" })).toBeDefined();
+      act(() => {
+        nodeStatusHeader.props.onClick();
+      });
+      expect(root.findAllByProps({ "data-testid": "status-item-running" }).length).toBe(0);
+
+      // Model breakdown accordion
+      const modelHeader = root.findByProps({ "data-testid": "sidebar-model-breakdown-header" });
+      expect(root.findByProps({ "data-testid": "model-item-claude-3-5-sonnet" })).toBeDefined();
+      act(() => {
+        modelHeader.props.onClick();
+      });
+      expect(root.findAllByProps({ "data-testid": "model-item-claude-3-5-sonnet" }).length).toBe(0);
+
+      // Token footprint accordion
+      const tokenHeader = root.findByProps({ "data-testid": "token-footprint-header" });
+      expect(root.findByProps({ "data-testid": "token-footprint-total-cost" })).toBeDefined();
+      act(() => {
+        tokenHeader.props.onClick();
+      });
+      expect(root.findAllByProps({ "data-testid": "token-footprint-total-cost" }).length).toBe(0);
     });
   });
 
@@ -603,11 +724,11 @@ describe("Sidebar Component & Subcomponents", () => {
       expect(toolsBtn.props["aria-pressed"]).toBe(true);
 
       // Switching filter updates store
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-error" });
+      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
       act(() => {
         errorBtn.props.onClick();
       });
-      expect(useGraphStore.getState().activeFilter).toBe("error");
+      expect(useGraphStore.getState().activeFilter).toBe("errors");
 
       // Selecting file triggers callback and router navigate
       const file2Btn = root.findByProps({ "data-testid": "file-item-graph-2.json" });

@@ -2,15 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   CommandPalette,
-  createDefaultActions,
   fuzzyMatch,
   fuzzySearchItems,
   highlightMatches,
-  registerDefaultActions,
   ShortcutBadge,
 } from "./index";
 import { parseShortcut } from "./ShortcutBadge";
-import type { CommandAction } from "./CommandPalette.types";
 import { useCommandPaletteStore } from "../../store/useCommandPaletteStore";
 import { useGraphStore } from "../../state/useGraphStore";
 import { useGraphFilesStore } from "../../state/useGraphFilesStore";
@@ -226,61 +223,6 @@ describe("ShortcutBadge Component & Parser", () => {
   });
 });
 
-describe("ActionRegistry & Default Actions", () => {
-  it("creates default actions spanning all categories", () => {
-    const actions = createDefaultActions();
-    expect(actions.length).toBeGreaterThanOrEqual(15);
-
-    const categories = new Set(actions.map((a) => a.category));
-    expect(categories.has("navigation")).toBe(true);
-    expect(categories.has("layout")).toBe(true);
-    expect(categories.has("actions")).toBe(true);
-    expect(categories.has("export")).toBe(true);
-
-    const resetAction = actions.find((a) => a.id === "nav-reset-view");
-    expect(resetAction).toBeDefined();
-    expect(resetAction?.shortcut).toBe("⌘0");
-  });
-
-  it("invokes context handlers when actions execute", () => {
-    let exportedFormat = "";
-    let minimapToggled = false;
-    let selfHealingTriggered = false;
-
-    const actions = createDefaultActions({
-      onExport: (fmt) => {
-        exportedFormat = fmt;
-      },
-      onToggleMinimap: () => {
-        minimapToggled = true;
-      },
-      onTriggerSelfHealing: () => {
-        selfHealingTriggered = true;
-      },
-    });
-
-    const exportPng = actions.find((a) => a.id === "export-png");
-    exportPng?.handler();
-    expect(exportedFormat).toBe("png");
-
-    const minimap = actions.find((a) => a.id === "action-toggle-minimap");
-    minimap?.handler();
-    expect(minimapToggled).toBe(true);
-
-    const heal = actions.find((a) => a.id === "action-trigger-self-healing");
-    heal?.handler();
-    expect(selfHealingTriggered).toBe(true);
-  });
-
-  it("registers default actions into the store", () => {
-    useCommandPaletteStore.getState().resetPalette();
-    registerDefaultActions(useCommandPaletteStore.getState());
-
-    const all = useCommandPaletteStore.getState().getAllActions();
-    expect(all.length).toBeGreaterThanOrEqual(15);
-  });
-});
-
 describe("useCommandPaletteStore Zustand Store", () => {
   beforeEach(() => {
     useCommandPaletteStore.getState().resetPalette();
@@ -305,8 +247,8 @@ describe("useCommandPaletteStore Zustand Store", () => {
 
   it("updates query, selectedIndex, and activeCategory", () => {
     const store = useCommandPaletteStore.getState();
-    store.setQuery("layout");
-    expect(useCommandPaletteStore.getState().query).toBe("layout");
+    store.setQuery("coordinator");
+    expect(useCommandPaletteStore.getState().query).toBe("coordinator");
 
     store.setSelectedIndex(3);
     expect(useCommandPaletteStore.getState().selectedIndex).toBe(3);
@@ -314,73 +256,31 @@ describe("useCommandPaletteStore Zustand Store", () => {
     store.setSelectedIndex((prev) => prev + 1);
     expect(useCommandPaletteStore.getState().selectedIndex).toBe(4);
 
-    store.setActiveCategory("export");
-    expect(useCommandPaletteStore.getState().activeCategory).toBe("export");
+    store.setActiveCategory("all");
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("all");
     expect(useCommandPaletteStore.getState().selectedIndex).toBe(0);
+
+    store.setScope("current");
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("current");
   });
 
-  it("registers, unregisters, and executes actions", async () => {
-    let executed = false;
-    const testAction: CommandAction = {
-      id: "custom-test-action",
-      title: "Custom Action",
-      category: "actions",
-      handler: () => {
-        executed = true;
-      },
-    };
-
-    useCommandPaletteStore.getState().registerAction(testAction);
-    expect(useCommandPaletteStore.getState().getAction("custom-test-action")).toBeDefined();
-    expect(useCommandPaletteStore.getState().getAllActions().length).toBe(1);
-
-    useCommandPaletteStore.getState().setQuery("custom");
-    await useCommandPaletteStore.getState().executeAction("custom-test-action");
-
-    expect(executed).toBe(true);
-    expect(useCommandPaletteStore.getState().isOpen).toBe(false);
-    expect(useCommandPaletteStore.getState().recentSearches).toContain("custom");
-
-    useCommandPaletteStore.getState().unregisterAction("custom-test-action");
-    expect(useCommandPaletteStore.getState().getAction("custom-test-action")).toBeUndefined();
-  });
-
-  it("handles recent searches and favorite actions", () => {
+  it("handles recent searches", () => {
     const store = useCommandPaletteStore.getState();
-    store.addRecentSearch("query-1");
-    store.addRecentSearch("query-2");
-    store.addRecentSearch("query-1"); // duplicates bubble to top
+    store.addRecentSearch("node-1");
+    store.addRecentSearch("node-2");
+    store.addRecentSearch("node-1"); // duplicates bubble to top
 
-    expect(useCommandPaletteStore.getState().recentSearches).toEqual(["query-1", "query-2"]);
+    expect(useCommandPaletteStore.getState().recentSearches).toEqual(["node-1", "node-2"]);
 
-    store.removeRecentSearch("query-2");
-    expect(useCommandPaletteStore.getState().recentSearches).toEqual(["query-1"]);
+    store.removeRecentSearch("node-2");
+    expect(useCommandPaletteStore.getState().recentSearches).toEqual(["node-1"]);
 
     store.clearRecentSearches();
     expect(useCommandPaletteStore.getState().recentSearches).toEqual([]);
-
-    store.toggleFavoriteAction("nav-reset-view");
-    expect(useCommandPaletteStore.getState().favoriteActions).toContain("nav-reset-view");
-
-    store.toggleFavoriteAction("nav-reset-view");
-    expect(useCommandPaletteStore.getState().favoriteActions).not.toContain("nav-reset-view");
-  });
-
-  it("filters actions by category", () => {
-    const store = useCommandPaletteStore.getState();
-    store.registerActions([
-      { id: "a1", title: "A1", category: "layout", handler: () => {} },
-      { id: "a2", title: "A2", category: "export", handler: () => {} },
-      { id: "a3", title: "A3", category: "layout", handler: () => {} },
-    ]);
-
-    expect(store.getActionsByCategory("layout").length).toBe(2);
-    expect(store.getActionsByCategory("export").length).toBe(1);
-    expect(store.getActionsByCategory("all").length).toBe(3);
   });
 });
 
-describe("CommandPalette Component Integration & ARIA", () => {
+describe("CommandPalette Component Dual-Scope Node Search & ARIA", () => {
   let renderer: ReactTestRenderer | null = null;
 
   beforeEach(() => {
@@ -406,7 +306,7 @@ describe("CommandPalette Component Integration & ARIA", () => {
     }
   });
 
-  it("renders accessible combobox, listbox, category tabs, and search input", () => {
+  it("renders accessible combobox, listbox, and strictly 2 scope tabs", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         renderer = create(
@@ -429,7 +329,29 @@ describe("CommandPalette Component Integration & ARIA", () => {
     expect(tablist).toBeDefined();
 
     const tabs = tablist.findAllByProps({ role: "tab" });
-    expect(tabs.length).toBe(6); // all, actions, nodes, navigation, layout, export
+    expect(tabs.length).toBe(2); // strictly "Current Graph Nodes" and "All Nodes Across Graphs"
+    expect(tabs[0].props.id).toBe("tab-current");
+    expect(tabs[1].props.id).toBe("tab-all");
+  });
+
+  it("computes matching node counts for both scopes", () => {
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer = create(
+          <CommandPalette isOpen={true} onClose={() => {}} currentFile="test-graph" />,
+        );
+      });
+    });
+
+    const root = renderer!.root;
+    const tabCurrent = root.findByProps({ id: "tab-current" });
+    const tabAll = root.findByProps({ id: "tab-all" });
+
+    const currentCount = tabCurrent.findByProps({ className: "command-palette-tab-count" });
+    expect(currentCount.props.children).toBe(3);
+
+    const allCount = tabAll.findByProps({ className: "command-palette-tab-count" });
+    expect(allCount.props.children).toBe(3);
   });
 
   it("filters search results when typing query into combobox", () => {
@@ -446,14 +368,14 @@ describe("CommandPalette Component Integration & ARIA", () => {
 
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
-        input.props.onChange({ target: { value: "Force-Directed" } });
+        input.props.onChange({ target: { value: "Implementer" } });
       });
     });
 
-    expect(useCommandPaletteStore.getState().query).toBe("Force-Directed");
+    expect(useCommandPaletteStore.getState().query).toBe("Implementer");
 
     const options = root.findAllByProps({ role: "option" });
-    expect(options.length).toBeGreaterThanOrEqual(1);
+    expect(options.length).toBe(1);
 
     const titleText = options[0].findByProps({ className: "command-palette-item-title" });
     expect(titleText).toBeDefined();
@@ -482,17 +404,10 @@ describe("CommandPalette Component Integration & ARIA", () => {
     const root = renderer!.root;
     const dialog = root.findByProps({ className: "command-palette-dialog" });
 
-    // Switch to nodes category to test node jump
-    silenceReactTestRendererDeprecationWarning(() => {
-      act(() => {
-        useCommandPaletteStore.getState().setActiveCategory("nodes");
-      });
-    });
-
-    let options = root.findAllByProps({ role: "option" });
+    const options = root.findAllByProps({ role: "option" });
     expect(options.length).toBe(3);
 
-    // Arrow down to item 1
+    // Arrow down to item index 1
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         dialog.props.onKeyDown({
@@ -516,9 +431,10 @@ describe("CommandPalette Component Integration & ARIA", () => {
 
     expect(navigatedFile).toBe("test-graph");
     expect(navigatedNode).toBe("node-implementer-2");
+    expect(useGraphStore.getState().selectedNodeId).toBe("node-implementer-2");
   });
 
-  it("cycles category filters with Tab and Shift+Tab keys", () => {
+  it("toggles between Current and All scopes with Tab key", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         renderer = create(
@@ -530,9 +446,9 @@ describe("CommandPalette Component Integration & ARIA", () => {
     const root = renderer!.root;
     const dialog = root.findByProps({ className: "command-palette-dialog" });
 
-    expect(useCommandPaletteStore.getState().activeCategory).toBe("all");
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("current");
 
-    // Press Tab
+    // Press Tab to toggle to "all"
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         dialog.props.onKeyDown({
@@ -542,19 +458,19 @@ describe("CommandPalette Component Integration & ARIA", () => {
         });
       });
     });
-    expect(useCommandPaletteStore.getState().activeCategory).toBe("actions");
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("all");
 
-    // Press Shift+Tab
+    // Press Tab again to toggle back to "current"
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         dialog.props.onKeyDown({
           key: "Tab",
-          shiftKey: true,
+          shiftKey: false,
           preventDefault: () => {},
         });
       });
     });
-    expect(useCommandPaletteStore.getState().activeCategory).toBe("all");
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("current");
   });
 
   it("clears query on Escape if non-empty, and closes on Escape if empty", () => {
@@ -639,7 +555,7 @@ describe("CommandPalette Component Integration & ARIA", () => {
     expect(useCommandPaletteStore.getState().isOpen).toBe(false);
   });
 
-  it("renders empty state with recommendations when zero matches are found", () => {
+  it("renders empty state when zero matching nodes are found", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         renderer = create(
@@ -653,24 +569,14 @@ describe("CommandPalette Component Integration & ARIA", () => {
 
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
-        input.props.onChange({ target: { value: "nonexistent_term_404" } });
+        input.props.onChange({ target: { value: "nonexistent_node_404" } });
       });
     });
 
     const empty = root.findByProps({ role: "status" });
     expect(empty).toBeDefined();
-
-    const recChips = root.findAllByProps({ className: "command-palette-rec-chip" });
-    expect(recChips.length).toBe(3);
-
-    // Click recommendation chip
-    silenceReactTestRendererDeprecationWarning(() => {
-      act(() => {
-        recChips[0].props.onClick();
-      });
-    });
-
-    expect(useCommandPaletteStore.getState().query).toBe("Reset View");
+    const emptyTitle = empty.findByProps({ className: "command-palette-empty-title" });
+    expect(emptyTitle.props.children).toBe("No matching nodes found");
   });
 
   it("clears query when clicking the clear (X) button", () => {
@@ -687,7 +593,7 @@ describe("CommandPalette Component Integration & ARIA", () => {
 
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
-        input.props.onChange({ target: { value: "zoom" } });
+        input.props.onChange({ target: { value: "coordinator" } });
       });
     });
 
@@ -703,7 +609,7 @@ describe("CommandPalette Component Integration & ARIA", () => {
     expect(useCommandPaletteStore.getState().query).toBe("");
   });
 
-  it("allows switching categories via tab button clicks", () => {
+  it("allows switching scope via tab button clicks", () => {
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         renderer = create(
@@ -713,18 +619,15 @@ describe("CommandPalette Component Integration & ARIA", () => {
     });
 
     const root = renderer!.root;
-    const layoutTab = root.findByProps({ id: "tab-layout" });
+    const tabAll = root.findByProps({ id: "tab-all" });
 
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
-        layoutTab.props.onClick();
+        tabAll.props.onClick();
       });
     });
 
-    expect(useCommandPaletteStore.getState().activeCategory).toBe("layout");
-
-    const options = root.findAllByProps({ role: "option" });
-    expect(options.length).toBeGreaterThanOrEqual(4);
+    expect(useCommandPaletteStore.getState().activeCategory).toBe("all");
   });
 
   it("properly cleans up global Cmd+K window event listener on unmount", () => {
@@ -776,7 +679,7 @@ describe("CommandPalette Component Integration & ARIA", () => {
       });
     });
 
-    // Narrow down to a query that has only 1 match (e.g. "Adversarial Gate")
+    // Narrow down to a query that has only 1 match ("Adversarial Gate")
     silenceReactTestRendererDeprecationWarning(() => {
       act(() => {
         input.props.onChange({ target: { value: "Adversarial Gate" } });

@@ -1,0 +1,584 @@
+{
+  "id": "multi-agent-system",
+  "title": "Multi-Agent System Orchestration — Distributed Synthesis & Quality Gates",
+  "description": "Multi-wave parallel implementer topology with telemetry streaming, isolated write scopes, automated test execution, and comprehensive validator gate sign-offs.",
+  "directed": true,
+  "entry": "node-sys-prompt",
+  "exits": ["node-sys-complete"],
+  "nodes": [
+    {
+      "id": "node-sys-prompt",
+      "name": "Architecture Specification",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: System Spec",
+      "description": "System specification defining 3 microservices with RPC contracts, rate limiting, and distributed object caching.",
+      "badge": {
+        "text": "3 Microservices",
+        "variant": "info",
+        "icon": "IconServer"
+      },
+      "metrics": {
+        "durationMs": 40,
+        "commandCount": 1
+      },
+      "io": {
+        "inputs": [
+          {
+            "kind": "prompt",
+            "label": "Spec Document",
+            "preview": "Microservice mesh architecture spec"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "System Goals",
+            "preview": "Auth, Gateway, and Storage services"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-orchestrator-decompose",
+      "name": "Topology Orchestrator",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Step 2: Topology Plan",
+      "description": "Decomposes architecture into 3 parallel implementation streams with strictly isolated write scopes.",
+      "badge": {
+        "text": "3 Parallel Streams",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "metrics": {
+        "tokensIn": 12000,
+        "tokensOut": 2800,
+        "costUsd": 0.24,
+        "durationMs": 18500
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-sys-prompt",
+            "kind": "decision",
+            "label": "System Spec",
+            "preview": "Microservice mesh architecture"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Scope Allocation",
+            "preview": "Auth (Scope A), Gateway (Scope B), Storage (Scope C)"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-auth-service",
+      "name": "Auth Service Implementer",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 3,
+      "stepLabel": "Wave 1: Auth Service",
+      "description": "Implements OAuth2 authentication, JWT token signing, and session revocation handlers.",
+      "badge": {
+        "text": "Auth Complete",
+        "variant": "success",
+        "icon": "IconKey"
+      },
+      "files": [
+        {
+          "path": "services/auth/src/index.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 18200,
+        "tokensOut": 3400,
+        "costUsd": 0.135,
+        "durationMs": 48200
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-decompose",
+            "kind": "decision",
+            "label": "Scope A",
+            "preview": "Auth Service requirements"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "file",
+            "label": "Auth Code",
+            "preview": "services/auth/src/index.ts"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-gateway-service",
+      "name": "Gateway Service Implementer",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 3,
+      "stepLabel": "Wave 1: Gateway Service",
+      "description": "Implements high-throughput reverse proxy with dynamic token-bucket rate limiting and circuit breaking.",
+      "badge": {
+        "text": "Gateway Complete",
+        "variant": "success",
+        "icon": "IconRouter"
+      },
+      "files": [
+        {
+          "path": "services/gateway/src/index.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 16400,
+        "tokensOut": 3100,
+        "costUsd": 0.122,
+        "durationMs": 44100
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-decompose",
+            "kind": "decision",
+            "label": "Scope B",
+            "preview": "Gateway Service requirements"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "file",
+            "label": "Gateway Code",
+            "preview": "services/gateway/src/index.ts"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-agent-storage-service",
+      "name": "Storage Service Implementer",
+      "kind": "agent",
+      "status": "success",
+      "model": "Sonnet 5",
+      "tier": "m",
+      "step": 3,
+      "stepLabel": "Wave 1: Storage Service",
+      "description": "Implements distributed object cache with S3 replication, local disk fallbacks, and LRU eviction.",
+      "badge": {
+        "text": "Storage Complete",
+        "variant": "success",
+        "icon": "IconDatabase"
+      },
+      "files": [
+        {
+          "path": "services/storage/src/index.ts",
+          "mode": "write"
+        }
+      ],
+      "metrics": {
+        "tokensIn": 15100,
+        "tokensOut": 2900,
+        "costUsd": 0.114,
+        "durationMs": 41800
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-decompose",
+            "kind": "decision",
+            "label": "Scope C",
+            "preview": "Storage Service requirements"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "file",
+            "label": "Storage Code",
+            "preview": "services/storage/src/index.ts"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-join-services",
+      "name": "Integration Aggregator",
+      "kind": "join",
+      "status": "success",
+      "step": 4,
+      "stepLabel": "Step 4: Integration Join",
+      "description": "Combines code submissions from all 3 services into unified integration test bundle.",
+      "badge": {
+        "text": "Mesh Unified",
+        "variant": "info",
+        "icon": "IconLayersLinked"
+      },
+      "metrics": {
+        "durationMs": 350
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-agent-auth-service",
+            "kind": "file",
+            "label": "Auth Code",
+            "preview": "services/auth"
+          },
+          {
+            "node": "node-agent-gateway-service",
+            "kind": "file",
+            "label": "Gateway Code",
+            "preview": "services/gateway"
+          },
+          {
+            "node": "node-agent-storage-service",
+            "kind": "file",
+            "label": "Storage Code",
+            "preview": "services/storage"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "artifact",
+            "label": "Unified Mesh Bundle",
+            "preview": "3 services unified"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-gate-integration-verify",
+      "name": "Gate: Mesh Integration Suite",
+      "kind": "gate",
+      "status": "success",
+      "step": 5,
+      "stepLabel": "Gate 1: Integration Suite",
+      "description": "Executes end-to-end integration tests: authenticates via Auth, proxies through Gateway, reads/writes from Storage.",
+      "badge": {
+        "text": "All Tests Green",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "metrics": {
+        "tokensIn": 8400,
+        "tokensOut": 1800,
+        "costUsd": 0.068,
+        "durationMs": 26400
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-join-services",
+            "kind": "artifact",
+            "label": "Unified Mesh Bundle",
+            "preview": "3 services unified"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Integration Verdict",
+            "preview": "PASSED: 48/48 integration specs pass"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [
+          {
+            "id": "finding-jwt-clock-skew",
+            "requirementId": "REQ-AUTH-GATEWAY-SYNC",
+            "severity": "important",
+            "status": "resolved",
+            "observation": "Gateway rejected Auth service JWTs due to 1000ms clock-skew tolerance missing on token validation.",
+            "pushbackReason": "Integration test failed with 401 Unauthorized during token validation under concurrent load.",
+            "opposedChanges": "Strict zero-leeway token verification timestamp checks.",
+            "remediation": "Add 5-second clock skew leeway to JWT verification options in Gateway service.",
+            "targetFiles": ["services/gateway/src/jwt.ts"],
+            "fileRefs": [
+              {
+                "path": "services/gateway/src/jwt.ts",
+                "mode": "write"
+              }
+            ],
+            "revalidationProof": {
+              "method": "bun test tests/integration/mesh.spec.ts",
+              "evidence": [
+                "48/48 integration tests green",
+                "0 token rejection under concurrent simulated load"
+              ]
+            },
+            "screenshots": [
+              {
+                "id": "shot-mesh-integration",
+                "type": "image",
+                "url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80",
+                "title": "Integration Proof: 3-Service Mesh RPCs",
+                "description": "Telemetry trace showing successful end-to-end request passing through Gateway, Auth, and Storage.",
+                "mimeType": "image/png",
+                "dimensions": {
+                  "width": 1920,
+                  "height": 1080
+                }
+              }
+            ]
+          }
+        ],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-critic-system-authority",
+      "name": "Completeness Critic Review",
+      "kind": "critic",
+      "status": "success",
+      "step": 6,
+      "stepLabel": "Step 6: System Certification",
+      "description": "Whole-run certification audit validating end-to-end multi-agent mesh integrity and SLA requirements.",
+      "badge": {
+        "text": "Mesh Certified",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "metrics": {
+        "tokensIn": 6400,
+        "tokensOut": 1500,
+        "costUsd": 0.052,
+        "durationMs": 9100
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-integration-verify",
+            "kind": "decision",
+            "label": "Integration Verdict",
+            "preview": "PASSED: 48/48 specs pass"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "System Certification",
+            "preview": "System certified for production release"
+          }
+        ]
+      },
+      "metadata": {
+        "findings": [],
+        "mediaAssets": [],
+        "screenshots": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    },
+    {
+      "id": "node-sys-complete",
+      "name": "Production Release Sealed",
+      "kind": "terminal",
+      "status": "success",
+      "step": 7,
+      "stepLabel": "Step 7: Production Sealed",
+      "description": "Distributed multi-agent system verified, sealed, and packaged into production release image.",
+      "badge": {
+        "text": "Release Sealed",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "metrics": {
+        "durationMs": 1400
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-system-authority",
+            "kind": "decision",
+            "label": "System Certification",
+            "preview": "Certified"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Release Manifest",
+            "preview": "Release v3.0.0 built and pushed"
+          }
+        ]
+      },
+      "metadata": {
+        "mediaAssets": [],
+        "screenshots": [],
+        "findings": []
+      },
+      "mediaAssets": [],
+      "screenshots": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-orchestrator",
+      "source": "node-sys-prompt",
+      "target": "node-orchestrator-decompose",
+      "kind": "sequence",
+      "badge": {
+        "text": "Spec Ingested",
+        "variant": "info",
+        "icon": "IconServer"
+      }
+    },
+    {
+      "id": "edge-orch-auth",
+      "source": "node-orchestrator-decompose",
+      "target": "node-agent-auth-service",
+      "kind": "spawn",
+      "badge": {
+        "text": "Scope A: Auth",
+        "variant": "info",
+        "icon": "IconKey"
+      }
+    },
+    {
+      "id": "edge-orch-gateway",
+      "source": "node-orchestrator-decompose",
+      "target": "node-agent-gateway-service",
+      "kind": "spawn",
+      "badge": {
+        "text": "Scope B: Gateway",
+        "variant": "info",
+        "icon": "IconRouter"
+      }
+    },
+    {
+      "id": "edge-orch-storage",
+      "source": "node-orchestrator-decompose",
+      "target": "node-agent-storage-service",
+      "kind": "spawn",
+      "badge": {
+        "text": "Scope C: Storage",
+        "variant": "info",
+        "icon": "IconDatabase"
+      }
+    },
+    {
+      "id": "edge-auth-join",
+      "source": "node-agent-auth-service",
+      "target": "node-join-services",
+      "kind": "join",
+      "badge": {
+        "text": "Auth Ready",
+        "variant": "success",
+        "icon": "IconCheck"
+      }
+    },
+    {
+      "id": "edge-gateway-join",
+      "source": "node-agent-gateway-service",
+      "target": "node-join-services",
+      "kind": "join",
+      "badge": {
+        "text": "Gateway Ready",
+        "variant": "success",
+        "icon": "IconCheck"
+      }
+    },
+    {
+      "id": "edge-storage-join",
+      "source": "node-agent-storage-service",
+      "target": "node-join-services",
+      "kind": "join",
+      "badge": {
+        "text": "Storage Ready",
+        "variant": "success",
+        "icon": "IconCheck"
+      }
+    },
+    {
+      "id": "edge-join-gate",
+      "source": "node-join-services",
+      "target": "node-gate-integration-verify",
+      "kind": "sequence",
+      "badge": {
+        "text": "Integration Test",
+        "variant": "info",
+        "icon": "IconPlay"
+      }
+    },
+    {
+      "id": "edge-gate-critic",
+      "source": "node-gate-integration-verify",
+      "target": "node-critic-system-authority",
+      "kind": "sequence",
+      "badge": {
+        "text": "Integration Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      }
+    },
+    {
+      "id": "edge-critic-terminal",
+      "source": "node-critic-system-authority",
+      "target": "node-sys-complete",
+      "kind": "sequence",
+      "badge": {
+        "text": "Release Sealed",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      }
+    }
+  ]
+}

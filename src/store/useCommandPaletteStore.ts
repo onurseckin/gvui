@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import type {
-  ActionCategory,
-  CommandAction,
   CommandCategory,
+  SearchScope,
 } from "../components/CommandPalette/CommandPalette.types";
 
 export interface CommandPaletteState {
@@ -10,9 +9,7 @@ export interface CommandPaletteState {
   query: string;
   selectedIndex: number;
   activeCategory: CommandCategory;
-  actionRegistry: Map<string, CommandAction>;
   recentSearches: string[];
-  favoriteActions: string[];
 }
 
 export interface CommandPaletteActions {
@@ -22,17 +19,10 @@ export interface CommandPaletteActions {
   setQuery: (query: string) => void;
   setSelectedIndex: (index: number | ((prev: number) => number)) => void;
   setActiveCategory: (category: CommandCategory) => void;
-  registerAction: (action: CommandAction) => void;
-  registerActions: (actions: CommandAction[]) => void;
-  unregisterAction: (id: string) => void;
-  executeAction: (id: string) => Promise<void> | void;
-  getAllActions: () => CommandAction[];
-  getAction: (id: string) => CommandAction | undefined;
-  getActionsByCategory: (category: ActionCategory | CommandCategory) => CommandAction[];
+  setScope: (scope: SearchScope) => void;
   addRecentSearch: (query: string) => void;
   removeRecentSearch: (query: string) => void;
   clearRecentSearches: () => void;
-  toggleFavoriteAction: (id: string) => void;
   resetPalette: () => void;
 }
 
@@ -42,10 +32,8 @@ export const INITIAL_COMMAND_PALETTE_STATE: CommandPaletteState = {
   isOpen: false,
   query: "",
   selectedIndex: 0,
-  activeCategory: "all",
-  actionRegistry: new Map<string, CommandAction>(),
+  activeCategory: "current",
   recentSearches: [],
-  favoriteActions: [],
 };
 
 const MAX_RECENT_SEARCHES = 10;
@@ -98,62 +86,11 @@ export const useCommandPaletteStore = create<CommandPaletteStore>((set, get) => 
     });
   },
 
-  registerAction: (action: CommandAction) => {
-    set((state) => {
-      const nextRegistry = new Map(state.actionRegistry);
-      nextRegistry.set(action.id, action);
-      return { actionRegistry: nextRegistry };
+  setScope: (scope: SearchScope) => {
+    set({
+      activeCategory: scope,
+      selectedIndex: 0,
     });
-  },
-
-  registerActions: (actions: CommandAction[]) => {
-    set((state) => {
-      const nextRegistry = new Map(state.actionRegistry);
-      for (const action of actions) {
-        nextRegistry.set(action.id, action);
-      }
-      return { actionRegistry: nextRegistry };
-    });
-  },
-
-  unregisterAction: (id: string) => {
-    set((state) => {
-      if (!state.actionRegistry.has(id)) {
-        return state;
-      }
-      const nextRegistry = new Map(state.actionRegistry);
-      nextRegistry.delete(id);
-      return { actionRegistry: nextRegistry };
-    });
-  },
-
-  executeAction: async (id: string) => {
-    const action = get().actionRegistry.get(id);
-    if (!action || action.disabled) {
-      return;
-    }
-    const currentQuery = get().query.trim();
-    if (currentQuery) {
-      get().addRecentSearch(currentQuery);
-    }
-    get().closePalette();
-    await action.handler();
-  },
-
-  getAllActions: () => {
-    return Array.from(get().actionRegistry.values());
-  },
-
-  getAction: (id: string) => {
-    return get().actionRegistry.get(id);
-  },
-
-  getActionsByCategory: (category: ActionCategory | CommandCategory) => {
-    const all = Array.from(get().actionRegistry.values());
-    if (category === "all") {
-      return all;
-    }
-    return all.filter((action) => action.category === category);
   },
 
   addRecentSearch: (query: string) => {
@@ -181,20 +118,9 @@ export const useCommandPaletteStore = create<CommandPaletteStore>((set, get) => 
     set({ recentSearches: [] });
   },
 
-  toggleFavoriteAction: (id: string) => {
-    set((state) => {
-      const exists = state.favoriteActions.includes(id);
-      const favoriteActions = exists
-        ? state.favoriteActions.filter((favId) => favId !== id)
-        : [...state.favoriteActions, id];
-      return { favoriteActions };
-    });
-  },
-
   resetPalette: () => {
     set({
       ...INITIAL_COMMAND_PALETTE_STATE,
-      actionRegistry: new Map<string, CommandAction>(),
     });
   },
 }));

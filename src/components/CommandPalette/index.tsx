@@ -1,49 +1,30 @@
-import type { FC, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { FC, KeyboardEvent, ReactNode } from "react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  IconCompass,
-  IconCpu,
-  IconDownload,
-  IconLayout,
-  IconSearch,
-  IconSparkles,
-  IconStar,
-  IconStarFilled,
-  IconX,
-} from "@tabler/icons-react";
+import { IconCube, IconSearch, IconSparkles, IconX } from "@tabler/icons-react";
 import { useGraphStore } from "../../state/useGraphStore";
 import { useGraphFilesStore } from "../../state/useGraphFilesStore";
 import { useCommandPaletteStore } from "../../store/useCommandPaletteStore";
 import type { GraphDataset } from "../../types/graphData";
-import { createDefaultActions } from "./ActionRegistry";
 import { fuzzySearchItems, highlightMatches } from "./fuzzySearch";
-import { ShortcutBadge } from "./ShortcutBadge";
-import type {
-  CommandCategory,
-  CommandPaletteProps,
-  SearchResultItem,
-} from "./CommandPalette.types";
+import type { CommandPaletteProps, SearchResultItem, SearchScope } from "./CommandPalette.types";
 import "./CommandPalette.css";
 
-const CATEGORIES: CommandCategory[] = ["all", "actions", "nodes", "navigation", "layout", "export"];
+const SCOPES: Array<{ key: SearchScope; label: string }> = [
+  { key: "current", label: "Current Graph Nodes" },
+  { key: "all", label: "All Nodes Across Graphs" },
+];
 
 export function getOptionId(itemId: string): string {
   return `command-item-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
-function getCategoryIcon(category: CommandCategory | string): ReactNode {
-  switch (category) {
-    case "navigation":
-      return <IconCompass size={16} />;
-    case "layout":
-      return <IconLayout size={16} />;
-    case "actions":
-      return <IconCpu size={16} />;
-    case "export":
-      return <IconDownload size={16} />;
-    case "nodes":
+function getNodeKindIcon(kind?: string): ReactNode {
+  switch (kind) {
+    case "orchestrator":
       return <IconSparkles size={16} />;
+    case "agent":
+      return <IconCube size={16} />;
     default:
       return <IconSearch size={16} />;
   }
@@ -83,11 +64,10 @@ interface CommandPaletteItemProps {
   isSelected: boolean;
   onSelect: (item: SearchResultItem) => void;
   onHover: (index: number) => void;
-  onToggleFavorite?: (id: string, e: MouseEvent) => void;
 }
 
 const CommandPaletteItemRow: FC<CommandPaletteItemProps> = React.memo(
-  function CommandPaletteItemRow({ item, index, isSelected, onSelect, onHover, onToggleFavorite }) {
+  function CommandPaletteItemRow({ item, index, isSelected, onSelect, onHover }) {
     const itemRef = useRef<HTMLDivElement>(null);
     const optionId = getOptionId(item.id);
 
@@ -107,14 +87,6 @@ const CommandPaletteItemRow: FC<CommandPaletteItemProps> = React.memo(
       onHover(index);
     }, [onHover, index]);
 
-    const handleFavoriteClick = useCallback(
-      (e: MouseEvent) => {
-        e.stopPropagation();
-        onToggleFavorite?.(item.id, e);
-      },
-      [onToggleFavorite, item.id],
-    );
-
     return (
       <div
         ref={itemRef}
@@ -126,15 +98,7 @@ const CommandPaletteItemRow: FC<CommandPaletteItemProps> = React.memo(
         onMouseEnter={handleMouseEnter}
       >
         <div className="command-palette-item-left">
-          <div className="command-palette-item-icon">
-            {typeof item.icon === "string" ? (
-              <span>{item.icon}</span>
-            ) : item.icon ? (
-              item.icon
-            ) : (
-              getCategoryIcon(item.category)
-            )}
-          </div>
+          <div className="command-palette-item-icon">{getNodeKindIcon(item.nodeKind)}</div>
           <div className="command-palette-item-main">
             <div className="command-palette-item-title">
               <HighlightedText text={item.title} indices={item.matches} />
@@ -160,30 +124,7 @@ const CommandPaletteItemRow: FC<CommandPaletteItemProps> = React.memo(
               {item.nodeStatus}
             </span>
           )}
-          {item.fileId && !item.nodeKind && (
-            <span className="command-palette-source-badge">{item.fileId}</span>
-          )}
-          {item.category && item.type === "action" && (
-            <span className="command-palette-badge command-palette-badge--category">
-              {item.category}
-            </span>
-          )}
-          {item.shortcut && <ShortcutBadge shortcut={item.shortcut} size="sm" />}
-          {item.type === "action" && onToggleFavorite && (
-            <button
-              type="button"
-              className="command-palette-search-clear"
-              title={item.isFavorite ? "Remove favorite" : "Add to favorites"}
-              onClick={handleFavoriteClick}
-              aria-label={item.isFavorite ? "Remove favorite" : "Add to favorites"}
-            >
-              {item.isFavorite ? (
-                <IconStarFilled size={14} style={{ color: "#facc15" }} />
-              ) : (
-                <IconStar size={14} style={{ opacity: 0.4 }} />
-              )}
-            </button>
-          )}
+          {item.fileId && <span className="command-palette-source-badge">{item.fileId}</span>}
         </div>
       </div>
     );
@@ -195,11 +136,11 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
   onClose: propsOnClose,
   currentFile = "",
   onNavigateNode,
-  actions: customActions,
   placeholder,
   className = "",
   maxResults = 50,
-  defaultCategory = "all",
+  defaultCategory,
+  defaultScope,
 }) {
   let routerNavigate: ReturnType<typeof useNavigate> | null = null;
   try {
@@ -215,18 +156,13 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
   const storeQuery = useCommandPaletteStore((s) => s.query);
   const storeSelectedIndex = useCommandPaletteStore((s) => s.selectedIndex);
   const storeActiveCategory = useCommandPaletteStore((s) => s.activeCategory);
-  const storeFavoriteActions = useCommandPaletteStore((s) => s.favoriteActions);
-  const actionRegistry = useCommandPaletteStore((s) => s.actionRegistry);
 
   const openPalette = useCommandPaletteStore((s) => s.openPalette);
   const closePalette = useCommandPaletteStore((s) => s.closePalette);
   const setStoreQuery = useCommandPaletteStore((s) => s.setQuery);
   const setStoreSelectedIndex = useCommandPaletteStore((s) => s.setSelectedIndex);
   const setStoreActiveCategory = useCommandPaletteStore((s) => s.setActiveCategory);
-  const registerActions = useCommandPaletteStore((s) => s.registerActions);
-  const toggleFavoriteAction = useCommandPaletteStore((s) => s.toggleFavoriteAction);
   const addRecentSearch = useCommandPaletteStore((s) => s.addRecentSearch);
-  const executeStoreAction = useCommandPaletteStore((s) => s.executeAction);
 
   // Effective state (controlled vs store)
   const isControlled = typeof propsIsOpen === "boolean";
@@ -241,35 +177,18 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
   const [datasetCache, setDatasetCache] = useState<Map<string, GraphDataset>>(new Map());
   const activeDataset = useGraphStore((state) => state.dataset);
   const presetFiles = useGraphFilesStore((state) => state.files);
+  const centerNodeOnCanvas = useGraphStore((state) => state.centerNodeOnCanvas);
+  const setSelectedNodeId = useGraphStore((state) => state.setSelectedNodeId);
 
-  // Initialize built-in default actions on mount
+  // Set default category / scope if provided
   useEffect(() => {
-    const defaultActions = createDefaultActions({
-      onNavigateNode,
-      onClose: () => {
-        if (propsOnCloseRef.current) propsOnCloseRef.current();
-        closePalette();
-      },
-      currentFile,
-    });
-    registerActions(defaultActions);
-  }, [registerActions, onNavigateNode, closePalette, currentFile]);
-
-  // Merge custom actions if passed
-  useEffect(() => {
-    if (customActions && customActions.length > 0) {
-      registerActions(customActions);
+    const targetScope = defaultScope ?? defaultCategory;
+    if (targetScope && (targetScope === "current" || targetScope === "all")) {
+      setStoreActiveCategory(targetScope);
     }
-  }, [customActions, registerActions]);
+  }, [defaultCategory, defaultScope, setStoreActiveCategory]);
 
-  // Set default category if provided
-  useEffect(() => {
-    if (defaultCategory && defaultCategory !== "all") {
-      setStoreActiveCategory(defaultCategory);
-    }
-  }, [defaultCategory, setStoreActiveCategory]);
-
-  // Global Cmd+K / Ctrl+K listener with strict unmount cleanup and ref synchronization
+  // Global Cmd+K / Ctrl+K listener with unmount cleanup
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -339,71 +258,51 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     closePalette();
   }, [propsOnClose, closePalette]);
 
-  // Prepare all searchable items
-  const allSearchableItems = useMemo<SearchResultItem[]>(() => {
+  // Prepare searchable items for current graph and all graphs
+  const cleanCurrentFile = useMemo(() => currentFile.replace(/\.json$/, ""), [currentFile]);
+
+  const currentGraphItems = useMemo<SearchResultItem[]>(() => {
     const items: SearchResultItem[] = [];
-
-    // 1. Actions from registry
-    for (const action of actionRegistry.values()) {
-      const isFav = storeFavoriteActions.includes(action.id);
-      items.push({
-        id: action.id,
-        title: action.title,
-        description: action.description,
-        category: action.category,
-        type: action.category as "action" | "navigation" | "layout" | "export",
-        score: 0,
-        matches: [],
-        shortcut: action.shortcut,
-        icon: action.icon,
-        action,
-        handler: action.handler,
-        isFavorite: isFav,
-      });
-    }
-
-    // 2. Nodes from active dataset & cached datasets
-    const processedNodes = new Set<string>();
-    const cleanCurrentFile = currentFile.replace(/\.json$/, "");
-
     const currentNodes = activeDataset?.nodes ?? [];
     for (const node of currentNodes) {
       const itemKey = `${cleanCurrentFile}-${node.id}`;
-      if (!processedNodes.has(itemKey)) {
-        processedNodes.add(itemKey);
-        items.push({
-          id: itemKey,
-          title: node.name,
-          description: node.description || `Node in ${cleanCurrentFile || "graph"}`,
-          category: "nodes",
-          type: "node",
-          score: 0,
-          matches: [],
-          nodeId: node.id,
-          fileId: cleanCurrentFile,
-          nodeStatus: node.status,
-          nodeKind: node.kind,
-        });
-      }
+      items.push({
+        id: itemKey,
+        title: node.name,
+        description: node.description || `Node in ${cleanCurrentFile || "graph"}`,
+        category: "current",
+        score: 0,
+        matches: [],
+        nodeId: node.id,
+        fileId: cleanCurrentFile,
+        sourceFileName: cleanCurrentFile,
+        nodeStatus: node.status,
+        nodeKind: node.kind,
+      });
     }
+    return items;
+  }, [activeDataset, cleanCurrentFile]);
 
-    // Include other preset dataset nodes
+  const allGraphItems = useMemo<SearchResultItem[]>(() => {
+    const items: SearchResultItem[] = [...currentGraphItems];
+    const processedKeys = new Set(currentGraphItems.map((i) => i.id));
+
     for (const [slug, ds] of datasetCache.entries()) {
       if (slug === cleanCurrentFile) continue;
       for (const node of ds.nodes) {
         const itemKey = `${slug}-${node.id}`;
-        if (!processedNodes.has(itemKey)) {
-          processedNodes.add(itemKey);
+        if (!processedKeys.has(itemKey)) {
+          processedKeys.add(itemKey);
           items.push({
             id: itemKey,
             title: node.name,
             description: node.description || `Node in ${slug}`,
-            category: "nodes",
-            type: "node",
+            category: "all",
             score: 0,
             matches: [],
             nodeId: node.id,
             fileId: slug,
+            sourceFileName: slug,
             nodeStatus: node.status,
             nodeKind: node.kind,
           });
@@ -412,56 +311,34 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     }
 
     return items;
-  }, [actionRegistry, storeFavoriteActions, currentFile, activeDataset, datasetCache]);
+  }, [currentGraphItems, datasetCache, cleanCurrentFile]);
 
-  // Compute category counts
-  const categoryCounts = useMemo<Record<CommandCategory, number>>(() => {
-    const counts: Record<CommandCategory, number> = {
-      all: 0,
-      actions: 0,
-      nodes: 0,
-      navigation: 0,
-      layout: 0,
-      export: 0,
-    };
-
+  // Compute match counts for the 2 scopes
+  const scopeCounts = useMemo<Record<SearchScope, number>>(() => {
     const trimmed = storeQuery.trim();
-
     if (!trimmed) {
-      for (const item of allSearchableItems) {
-        counts.all++;
-        if (item.category && counts[item.category as CommandCategory] !== undefined) {
-          counts[item.category as CommandCategory]++;
-        }
-      }
-      return counts;
+      return {
+        current: currentGraphItems.length,
+        all: allGraphItems.length,
+      };
     }
 
-    // Filtered counts
-    const scored = fuzzySearchItems(allSearchableItems, trimmed);
-    for (const res of scored) {
-      counts.all++;
-      if (res.item.category && counts[res.item.category as CommandCategory] !== undefined) {
-        counts[res.item.category as CommandCategory]++;
-      }
-    }
+    const currentMatches = fuzzySearchItems(currentGraphItems, trimmed);
+    const allMatches = fuzzySearchItems(allGraphItems, trimmed);
 
-    return counts;
-  }, [allSearchableItems, storeQuery]);
+    return {
+      current: currentMatches.length,
+      all: allMatches.length,
+    };
+  }, [currentGraphItems, allGraphItems, storeQuery]);
 
-  // Filtered and scored results based on query and active category
+  // Filtered and scored results based on active scope and query
   const filteredResults = useMemo<SearchResultItem[]>(() => {
     const trimmed = storeQuery.trim();
-    let candidates = allSearchableItems;
-
-    if (storeActiveCategory !== "all") {
-      candidates = candidates.filter((item) => item.category === storeActiveCategory);
-    }
+    const candidates = storeActiveCategory === "all" ? allGraphItems : currentGraphItems;
 
     if (!trimmed) {
-      const favorites = candidates.filter((i) => i.isFavorite);
-      const nonFavorites = candidates.filter((i) => !i.isFavorite);
-      return [...favorites, ...nonFavorites].slice(0, maxResults);
+      return candidates.slice(0, maxResults);
     }
 
     const scored = fuzzySearchItems(candidates, trimmed);
@@ -471,9 +348,9 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
       matches: res.titleMatches,
       descriptionMatches: res.descriptionMatches,
     }));
-  }, [allSearchableItems, storeActiveCategory, storeQuery, maxResults]);
+  }, [currentGraphItems, allGraphItems, storeActiveCategory, storeQuery, maxResults]);
 
-  // Clamp effective selected index to prevent out-of-bounds selection when filtering narrows the list
+  // Clamp effective selected index
   const effectiveSelectedIndex = useMemo(() => {
     if (filteredResults.length === 0) return 0;
     return Math.min(Math.max(0, storeSelectedIndex), filteredResults.length - 1);
@@ -488,48 +365,32 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     }
   }, [filteredResults.length, storeSelectedIndex, setStoreSelectedIndex]);
 
-  // Execute or Navigate Item
+  // Execute selection
   const handleSelectItem = useCallback(
-    async (item: SearchResultItem) => {
+    (item: SearchResultItem) => {
       const trimmed = storeQuery.trim();
       if (trimmed) {
         addRecentSearch(trimmed);
       }
 
-      if (item.type === "node" && item.nodeId) {
-        const targetFile = item.fileId || currentFile;
-        if (onNavigateNode) {
-          onNavigateNode(targetFile, item.nodeId);
-        }
+      const targetFile = item.fileId || cleanCurrentFile;
+      if (onNavigateNode) {
+        onNavigateNode(targetFile, item.nodeId);
+      }
+
+      if (targetFile === cleanCurrentFile) {
+        setSelectedNodeId(item.nodeId);
+        centerNodeOnCanvas(item.nodeId);
+      } else if (routerNavigate) {
         try {
-          if (routerNavigate) {
-            void routerNavigate({
-              to: "/graphs/$fileId",
-              params: { fileId: targetFile },
-              search: { node: item.nodeId },
-            });
-          }
+          void routerNavigate({
+            to: "/graphs/$fileId",
+            params: { fileId: targetFile },
+            search: { node: item.nodeId },
+          });
         } catch {
           // Router context not available in tests
         }
-        handleClose();
-        return;
-      }
-
-      if (item.action) {
-        handleClose();
-        if (actionRegistry.has(item.action.id)) {
-          await executeStoreAction(item.action.id);
-        } else if (item.action.handler) {
-          await item.action.handler();
-        }
-        return;
-      }
-
-      if (item.handler) {
-        handleClose();
-        await item.handler();
-        return;
       }
 
       handleClose();
@@ -537,12 +398,12 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     [
       storeQuery,
       addRecentSearch,
-      currentFile,
+      cleanCurrentFile,
       onNavigateNode,
+      setSelectedNodeId,
+      centerNodeOnCanvas,
       routerNavigate,
       handleClose,
-      actionRegistry,
-      executeStoreAction,
     ],
   );
 
@@ -558,11 +419,8 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (e.key === "Tab") {
         e.preventDefault();
-        const currentIndex = CATEGORIES.indexOf(storeActiveCategory);
-        const nextIndex = e.shiftKey
-          ? (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length
-          : (currentIndex + 1) % CATEGORIES.length;
-        setStoreActiveCategory(CATEGORIES[nextIndex]);
+        const nextScope: SearchScope = storeActiveCategory === "current" ? "all" : "current";
+        setStoreActiveCategory(nextScope);
         return;
       }
 
@@ -597,7 +455,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
       if (e.key === "Enter") {
         e.preventDefault();
         if (filteredResults.length > 0 && filteredResults[effectiveSelectedIndex]) {
-          void handleSelectItem(filteredResults[effectiveSelectedIndex]);
+          handleSelectItem(filteredResults[effectiveSelectedIndex]);
         }
       }
     },
@@ -643,10 +501,10 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
         onKeyDown={handleKeyDown}
       >
         <h2 id="command-palette-title" className="sr-only">
-          Command Palette and Quick Actions
+          Node Search
         </h2>
         <p id="command-palette-desc" className="sr-only">
-          Search graph actions, nodes, layouts, navigation, and export commands
+          Search graph nodes across the current graph or all graphs
         </p>
 
         {/* Search Header Input Area */}
@@ -665,9 +523,9 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
             onChange={(e) => setStoreQuery(e.target.value)}
             placeholder={
               placeholder ??
-              (storeActiveCategory === "all"
-                ? "Type a command or search nodes (e.g. 'Reset View', 'Layout', 'Export')..."
-                : `Search in ${storeActiveCategory}...`)
+              (storeActiveCategory === "current"
+                ? "Search nodes in current graph..."
+                : "Search nodes across all graphs...")
             }
             autoFocus
           />
@@ -683,23 +541,23 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
           )}
         </div>
 
-        {/* Category Filter Tabs Bar */}
-        <div className="command-palette-tabs" role="tablist" aria-label="Command categories">
-          {CATEGORIES.map((cat) => {
-            const isActive = storeActiveCategory === cat;
-            const count = categoryCounts[cat];
+        {/* Dual Scope Tabs Bar */}
+        <div className="command-palette-tabs" role="tablist" aria-label="Search scopes">
+          {SCOPES.map((scope) => {
+            const isActive = storeActiveCategory === scope.key;
+            const count = scopeCounts[scope.key];
             return (
               <button
-                key={cat}
+                key={scope.key}
                 type="button"
                 role="tab"
-                id={`tab-${cat}`}
+                id={`tab-${scope.key}`}
                 aria-selected={isActive}
                 aria-controls="command-palette-listbox"
                 className={`command-palette-tab ${isActive ? "command-palette-tab--active" : ""}`}
-                onClick={() => setStoreActiveCategory(cat)}
+                onClick={() => setStoreActiveCategory(scope.key)}
               >
-                <span style={{ textTransform: "capitalize" }}>{cat}</span>
+                <span>{scope.label}</span>
                 <span className="command-palette-tab-count">{count}</span>
               </button>
             );
@@ -711,36 +569,13 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
           id="command-palette-listbox"
           className="command-palette-results"
           role="listbox"
-          aria-label="Command suggestions"
+          aria-label="Node search results"
         >
           {filteredResults.length === 0 ? (
             <div className="command-palette-empty" role="status">
-              <div className="command-palette-empty-title">No matching commands or nodes found</div>
+              <div className="command-palette-empty-title">No matching nodes found</div>
               <div className="command-palette-empty-subtitle">
-                Try searching for layout modes, export formats, or quick navigation commands.
-              </div>
-              <div className="command-palette-recommendations">
-                <button
-                  type="button"
-                  className="command-palette-rec-chip"
-                  onClick={() => setStoreQuery("Reset View")}
-                >
-                  Reset View
-                </button>
-                <button
-                  type="button"
-                  className="command-palette-rec-chip"
-                  onClick={() => setStoreQuery("Layout")}
-                >
-                  Switch Layout
-                </button>
-                <button
-                  type="button"
-                  className="command-palette-rec-chip"
-                  onClick={() => setStoreQuery("Export")}
-                >
-                  Export Options
-                </button>
+                Try searching for a node name, description, role, or kind.
               </div>
             </div>
           ) : (
@@ -752,7 +587,6 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
                 isSelected={index === effectiveSelectedIndex}
                 onSelect={handleSelectItem}
                 onHover={handleHoverItem}
-                onToggleFavorite={toggleFavoriteAction}
               />
             ))
           )}
@@ -769,7 +603,7 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
               <kbd className="command-palette-key">↵</kbd> select
             </span>
             <span className="command-palette-shortcut">
-              <kbd className="command-palette-key">⇥</kbd> filter
+              <kbd className="command-palette-key">⇥</kbd> toggle scope
             </span>
           </div>
           <div className="command-palette-footer-right">
@@ -785,16 +619,13 @@ export const CommandPalette: FC<CommandPaletteProps> = React.memo(function Comma
 
 export default CommandPalette;
 export type {
-  ActionCategory,
-  ActionHandler,
-  CommandAction,
   CommandCategory,
   CommandPaletteProps,
   CommandPaletteScope,
   SearchResultItem,
   SearchResultNode,
+  SearchScope,
   ShortcutBadgeProps,
 } from "./CommandPalette.types";
 export { ShortcutBadge } from "./ShortcutBadge";
 export { fuzzyMatch, fuzzySearchItems, highlightMatches } from "./fuzzySearch";
-export { createDefaultActions, registerDefaultActions } from "./ActionRegistry";

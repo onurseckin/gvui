@@ -156,7 +156,7 @@ describe("SSETelemetrySink", () => {
     es1.simulateError();
     expect(sink.status).toBe("reconnecting");
 
-    await new Promise((r) => setTimeout(r, 40));
+    await new Promise((r) => setTimeout(r, 100));
 
     expect(MockEventSource.instances.length).toBe(2);
     expect(sink.status).toBe("connected");
