@@ -374,6 +374,9 @@ export async function runLayoutAudit(): Promise<void> {
     throw new Error("No graph fixtures discovered for regression audit");
   }
 
+  // Clear in-memory measurer cache for fresh deterministic measurement pass
+  getDefaultMeasurer().clearCache();
+
   console.log("\n===============================================================================");
   console.log("                        LAYOUT ENGINE V3 REGRESSION GATE                        ");
   console.log("===============================================================================\n");

@@ -181,6 +181,78 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain("--edge-source-accent:#a855f7");
   });
 
+  it("resolves marker ID matching source node archetype accent color", () => {
+    // Prompt source (#8b5cf6)
+    const promptHtml = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#8b5cf6" />
+      </svg>,
+    );
+    expect(promptHtml).toContain('marker-end="url(#edge-arrowhead-prompt)"');
+
+    // Planner / Orchestrator source (#3b82f6)
+    const plannerHtml = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#3b82f6" />
+      </svg>,
+    );
+    expect(plannerHtml).toContain('marker-end="url(#edge-arrowhead-planner)"');
+
+    // Worker source (#06b6d4)
+    const workerHtml = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#06b6d4" />
+      </svg>,
+    );
+    expect(workerHtml).toContain('marker-end="url(#edge-arrowhead-worker)"');
+
+    // Gate source (#10b981)
+    const gateHtml = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#10b981" />
+      </svg>,
+    );
+    expect(gateHtml).toContain('marker-end="url(#edge-arrowhead-gate)"');
+
+    // Critic source (#818cf8)
+    const criticHtml = renderToString(
+      <svg>
+        <GraphEdge edge={baseEdge} sourceAccentColor="#818cf8" />
+      </svg>,
+    );
+    expect(criticHtml).toContain('marker-end="url(#edge-arrowhead-critic)"');
+  });
+
+  it("inherits departing source node accent for cyclic edges and arrows without hardcoded yellow", () => {
+    const cycleEdge: PositionedEdge = {
+      ...baseEdge,
+      isCycle: true,
+      label: "Validator Pushback",
+    };
+
+    // Cycle departing from gate node (#10b981)
+    const htmlGateCycle = renderToString(
+      <svg>
+        <GraphEdge edge={cycleEdge} sourceAccentColor="#10b981" />
+      </svg>,
+    );
+
+    expect(htmlGateCycle).toContain("--edge-source-accent:#10b981");
+    expect(htmlGateCycle).toContain('marker-end="url(#edge-arrowhead-gate)"');
+    expect(htmlGateCycle).not.toContain("#f59e0b");
+
+    // Cycle departing from worker node (#06b6d4)
+    const htmlWorkerCycle = renderToString(
+      <svg>
+        <GraphEdge edge={cycleEdge} sourceAccentColor="#06b6d4" />
+      </svg>,
+    );
+
+    expect(htmlWorkerCycle).toContain("--edge-source-accent:#06b6d4");
+    expect(htmlWorkerCycle).toContain('marker-end="url(#edge-arrowhead-worker)"');
+    expect(htmlWorkerCycle).not.toContain("#f59e0b");
+  });
+
   it("renders ports when showPorts is true", () => {
     const edgeWithPorts: PositionedEdge = {
       ...baseEdge,
@@ -420,5 +492,110 @@ describe("GraphEdge Primitive", () => {
     expect(css).toContain(".graph-edge-group:focus-visible");
     expect(css).toContain("outline: 2px solid var(--accent-color, #818cf8)");
     expect(css).toContain("outline-offset: 2px");
+  });
+
+  it("renders compact edge badges with truncated detail on canvas", () => {
+    const edgeWithLongDetail: PositionedEdge = {
+      ...baseEdge,
+      kind: "spawn",
+      stepNumber: "Step 2",
+      container: {
+        title: "Dispatches Worker",
+        detail: "Very long detailed description about the worker dispatched for task execution",
+      },
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={edgeWithLongDetail} />
+      </svg>,
+    );
+
+    expect(html).toContain("Dispatches Worker");
+    expect(html).toContain("2");
+    expect(html).toContain("Very long detailed de...");
+    expect(html).not.toContain("Step 2: Dispatches Worker");
+  });
+
+  it("strictly suppresses badge rendering for unplaced zero-coordinate edges", () => {
+    const unplacedEdge: PositionedEdge = {
+      id: "unplaced-1",
+      source: "n1",
+      target: "n2",
+      path: "",
+      label: "Ghost Label",
+      labelX: 0,
+      labelY: 0,
+    };
+
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={unplacedEdge} />
+      </svg>,
+    );
+
+    expect(html).not.toContain("Ghost Label");
+    expect(html).not.toContain("edge-badge-group");
+  });
+
+  it("propagates edge clicks to onClick callback when badge is clicked", async () => {
+    const { create, act } = await import("react-test-renderer");
+    let clickedEdgeId: string | null = null;
+    const edgeWithBadge: PositionedEdge = {
+      ...baseEdge,
+      label: "Clickable Badge Flow",
+    };
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <svg>
+          <GraphEdge
+            edge={edgeWithBadge}
+            onClick={(id) => {
+              clickedEdgeId = id;
+            }}
+          />
+        </svg>,
+      );
+    });
+
+    const root = renderer!.root;
+    const badgeGroup = root.findByProps({
+      className: "edge-badge-group kind-sequence is-clickable has-click",
+    });
+
+    clickedEdgeId = null;
+    act(() => {
+      badgeGroup.props.onClick({
+        stopPropagation: () => {},
+      });
+    });
+    expect(clickedEdgeId).toBe("e-test");
+  });
+
+  it("resolves markers for alias semantic kinds (dispatch, handoff, pushback, validation, signoff)", () => {
+    const aliases = [
+      { kind: "dispatch", marker: "edge-arrowhead-spawn" },
+      { kind: "handoff", marker: "edge-arrowhead-data" },
+      { kind: "pushback", marker: "edge-arrowhead-loop" },
+      { kind: "validation", marker: "edge-arrowhead-gate" },
+      { kind: "signoff", marker: "edge-arrowhead-critic" },
+    ];
+
+    for (const item of aliases) {
+      const edge: PositionedEdge = {
+        ...baseEdge,
+        kind: item.kind as unknown as PositionedEdge["kind"],
+      };
+
+      const html = renderToString(
+        <svg>
+          <GraphEdge edge={edge} />
+        </svg>,
+      );
+
+      expect(html).toContain(`marker-end="url(#${item.marker})"`);
+    }
   });
 });

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as bunTest from "bun:test";
 import { createElement } from "react";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { GraphDataset, PositionedEdge } from "../../types/graphData";
+import { act, create, type ReactTestRenderer, type ReactTestInstance } from "react-test-renderer";
+import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
 import { generateDatasetSignature, loadStoredViewport } from "../../utils/fileStorage";
 import { loadStoredLayout, saveStoredLayout } from "../../utils/layoutCacheStorage";
 import { localDb } from "../../utils/localDb";
@@ -482,5 +482,118 @@ describe("GraphCanvas rendered lifecycle (worker failure and cache-key sensitivi
     // other half.
     expect(useGraphStore.getState().positionedNodes).toEqual(layoutBeforeFailure);
     expect(calls).toHaveLength(2);
+  });
+});
+
+describe("GraphCanvas Search Overlay Integration", () => {
+  let renderer: ReactTestRenderer | null = null;
+
+  beforeEach(() => {
+    const dataset: GraphDataset = {
+      id: "search-ds",
+      title: "Search Dataset",
+      nodes: [
+        {
+          id: "node-1",
+          name: "Coordinator Agent",
+          kind: "orchestrator",
+          status: "running",
+          metadata: { role: "Coordinator" },
+        },
+        {
+          id: "node-2",
+          name: "Worker Agent",
+          kind: "agent",
+          status: "success",
+          metadata: { role: "Implementer" },
+        },
+      ],
+      edges: [],
+    };
+    const nodes: PositionedNode[] = [
+      {
+        id: "node-1",
+        name: "Coordinator Agent",
+        kind: "orchestrator",
+        status: "running",
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 100,
+        metadata: { role: "Coordinator" },
+      },
+      {
+        id: "node-2",
+        name: "Worker Agent",
+        kind: "agent",
+        status: "success",
+        x: 250,
+        y: 0,
+        width: 200,
+        height: 100,
+        metadata: { role: "Implementer" },
+      },
+    ];
+    mock.module("../layout/customLayoutAdapter", () => ({
+      computeCustomEngineGraphLayoutAsync: () => Promise.resolve({ nodes, edges: [] }),
+      computeCustomEngineGraphLayout: () => ({ nodes, edges: [] }),
+    }));
+    useGraphStore.setState({
+      ...initialStoreState,
+      dataset,
+      positionedNodes: nodes,
+      positionedEdges: [],
+      searchQuery: "",
+      activeFilter: "all",
+      selectedNodeId: null,
+    });
+  });
+
+  afterEach(() => {
+    restoreCustomLayoutAdapterModule();
+    if (renderer) {
+      silenceReactTestRendererDeprecationWarning(() => {
+        act(() => {
+          renderer?.unmount();
+        });
+      });
+      renderer = null;
+    }
+  });
+
+  it("renders GraphSearchOverlay inside GraphCanvas viewport and allows live filtering", async () => {
+    const { GraphCanvas } = await import("./index");
+
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer = create(createElement(GraphCanvas));
+      });
+    });
+    await flushEffects();
+
+    const root = renderer!.root;
+    const searchOverlay = root.findByProps({ role: "search" });
+    expect(searchOverlay).toBeDefined();
+
+    const input = root.findByProps({ className: "graph-search-input" });
+    expect(input).toBeDefined();
+
+    // Type query to filter
+    await act(async () => {
+      input.props.onChange({ target: { value: "Coordinator" } });
+    });
+
+    expect(useGraphStore.getState().searchQuery).toBe("Coordinator");
+
+    // node-1 should not be dimmed, node-2 should be dimmed
+    const nodeWrappers = root.findAll((node: ReactTestInstance) =>
+      Boolean(node.props.className?.startsWith("graph-node-wrapper")),
+    );
+    expect(nodeWrappers.length).toBe(2);
+
+    const dimmedWrappers = root.findAll((node: ReactTestInstance) =>
+      Boolean(node.props.className?.includes("is-dimmed")),
+    );
+    expect(dimmedWrappers.length).toBe(1);
   });
 });

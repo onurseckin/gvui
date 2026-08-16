@@ -3,67 +3,174 @@ import {
   IconBrain,
   IconClock,
   IconCoins,
+  IconCpu,
   IconRobot,
   IconSparkles,
 } from "@tabler/icons-react";
 import type { FC } from "react";
-import type { GraphNodeData, IoPort } from "../../../types/graphData";
+import type {
+  CommandExecutionDetail,
+  GraphDataset,
+  GraphNodeData,
+  IoPort,
+} from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { IoStreamItem } from "../IoStreamItem";
-import { formatCost, formatDuration, formatTokens } from "../streamUtils";
+import { formatBytes, formatCost, formatDuration, formatTokens } from "../streamUtils";
+import { SubagentLineageTree } from "./SubagentLineageTree";
+
+interface ExtendedMetadata {
+  timingBreakdown?: {
+    wallDurationMs?: number;
+    toolDurationMs?: number;
+    activeCommandDurationMs?: number;
+    thinkDurationMs?: number;
+    cognitiveLatencyMs?: number;
+    [key: string]: unknown;
+  };
+  timing?: {
+    wallDurationMs?: number;
+    toolDurationMs?: number;
+    activeCommandDurationMs?: number;
+    thinkDurationMs?: number;
+    cognitiveLatencyMs?: number;
+    [key: string]: unknown;
+  };
+  tokens?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    reasoningTokens?: number;
+    cognitiveTokens?: number;
+    [key: string]: unknown;
+  };
+  memoryMb?: number;
+  memoryBytes?: number;
+  memoryFootprint?: string | number;
+  cognitiveTokens?: number;
+  thinkingLevel?: string;
+  reasoningEffort?: string;
+  repairAttempts?: number;
+  repairRounds?: number;
+  hostModel?: string;
+  commands?: CommandExecutionDetail[];
+  leaseAgent?: string;
+  hostAgent?: {
+    tool?: string;
+    name?: string;
+    model?: string;
+    tier?: string;
+    reasoningEffort?: string;
+    thinkingLevel?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
 
 interface OverviewTabProps {
   node: GraphNodeData;
   inputs: IoPort[];
   outputs: IoPort[];
   nodeNamesById: Map<string, string>;
+  onSelectNode?: (nodeId: string) => void;
+  dataset?: GraphDataset | null;
 }
 
 /**
  * Merged "Overview & I/O" tab component presenting high-level metadata,
- * structured execution telemetry metrics (Tokens In/Out, Reasoning Tokens, Duration breakdown,
- * Cost USD, Repair Rounds), Host Agent card with tier & effort pills, and expandable stream accordions.
+ * humanized execution verification status, structured execution telemetry metrics
+ * (Tokens In/Out, Cognitive Tokens, Duration & Memory Footprint breakdown,
+ * Cost USD, Repair Rounds), Host Agent card with tier, thinking level, and repair attempt badges,
+ * subagent lineage & hierarchical execution call tree, and expandable stream accordions.
  */
-export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeNamesById }) => {
+export const OverviewTab: FC<OverviewTabProps> = ({
+  node,
+  inputs,
+  outputs,
+  nodeNamesById,
+  onSelectNode,
+  dataset,
+}) => {
   const metrics = node.metrics;
+  const metadata = node.metadata as ExtendedMetadata | undefined;
   const timing =
-    metrics?.timingBreakdown ??
-    metrics?.timing ??
-    node.metadata?.timingBreakdown ??
-    node.metadata?.timing;
-  const tokensDetail = metrics?.tokens ?? node.metadata?.tokens;
+    metrics?.timingBreakdown ?? metrics?.timing ?? metadata?.timingBreakdown ?? metadata?.timing;
+  const tokensDetail = metrics?.tokens ?? metadata?.tokens;
 
   const tokensIn = metrics?.tokensIn ?? tokensDetail?.promptTokens;
   const tokensOut = metrics?.tokensOut ?? tokensDetail?.completionTokens;
-  const reasoningTokens = tokensDetail?.reasoningTokens;
+  const cognitiveTokens =
+    (metrics as { cognitiveTokens?: number } | undefined)?.cognitiveTokens ??
+    (tokensDetail as { cognitiveTokens?: number } | undefined)?.cognitiveTokens ??
+    metadata?.cognitiveTokens ??
+    tokensDetail?.reasoningTokens;
 
-  const wallDuration = metrics?.durationMs ?? timing?.wallDurationMs ?? node.metadata?.durationMs;
+  const wallDuration = metrics?.durationMs ?? timing?.wallDurationMs ?? metadata?.durationMs;
   const toolDuration = timing?.toolDurationMs ?? timing?.activeCommandDurationMs;
   const thinkDuration = timing?.thinkDurationMs ?? timing?.cognitiveLatencyMs;
 
+  const memoryMb = (metrics as { memoryMb?: number } | undefined)?.memoryMb ?? metadata?.memoryMb;
+  const memoryBytes =
+    (metrics as { memoryBytes?: number } | undefined)?.memoryBytes ?? metadata?.memoryBytes;
+  const memoryFootprint =
+    (metrics as { memoryFootprint?: string | number } | undefined)?.memoryFootprint ??
+    metadata?.memoryFootprint ??
+    (typeof memoryMb === "number"
+      ? `${memoryMb} MB`
+      : typeof memoryBytes === "number"
+        ? formatBytes(memoryBytes)
+        : undefined);
+
   const costUsd = metrics?.costUsd;
   const repairRounds =
-    node.metadata?.repairRounds ??
+    metadata?.repairRounds ??
+    metadata?.repairAttempts ??
     metrics?.repairRounds ??
     (metrics?.retries && metrics.retries > 0 ? metrics.retries : 0);
+
+  const commands = (metadata?.commands ?? []) as CommandExecutionDetail[];
+  const hasCommands = commands.length > 0;
+  const anyCommandFailed = commands.some((c) => c.exitCode !== 0);
+  const allCommandsSucceeded = hasCommands && !anyCommandFailed;
+
+  const isPushback =
+    anyCommandFailed || node.status === "error" || node.status === "warning" || repairRounds > 0;
+
+  const isCleanExecution =
+    !isPushback && (allCommandsSucceeded || (node.status === "success" && !anyCommandFailed));
 
   const hasMetrics =
     typeof tokensIn === "number" ||
     typeof tokensOut === "number" ||
-    typeof reasoningTokens === "number" ||
+    typeof cognitiveTokens === "number" ||
     typeof wallDuration === "number" ||
     typeof toolDuration === "number" ||
     typeof thinkDuration === "number" ||
     typeof costUsd === "number" ||
-    repairRounds > 0;
+    Boolean(memoryFootprint) ||
+    repairRounds > 0 ||
+    hasCommands;
 
   // Host agent attribution
-  const hostAgent = node.hostAgent ?? node.metadata?.hostAgent;
-  const hostTool = hostAgent?.tool ?? hostAgent?.name ?? node.metadata?.leaseAgent;
-  const hostModel = hostAgent?.model ?? node.model ?? node.harnessModel;
+  const hostAgent = node.hostAgent ?? metadata?.hostAgent;
+  const hostTool = hostAgent?.tool ?? hostAgent?.name ?? metadata?.leaseAgent;
+  const hostModel = hostAgent?.model ?? node.model ?? node.harnessModel ?? metadata?.hostModel;
   const hostTier = hostAgent?.tier ?? node.tier;
-  const reasoningEffort = hostAgent?.reasoningEffort ?? hostAgent?.thinkingLevel;
-  const hasHostCard = Boolean(hostTool || hostModel || hostTier || reasoningEffort);
+  const thinkingLevel =
+    hostAgent?.thinkingLevel ??
+    hostAgent?.reasoningEffort ??
+    metadata?.thinkingLevel ??
+    metadata?.reasoningEffort ??
+    (node as { thinkingLevel?: string })?.thinkingLevel ??
+    (node as { reasoningEffort?: string })?.reasoningEffort;
+
+  const hasHostCard = Boolean(
+    hostTool ||
+    hostModel ||
+    hostTier ||
+    thinkingLevel ||
+    typeof cognitiveTokens === "number" ||
+    repairRounds > 0,
+  );
 
   const contextRows: Array<{ key: string; value: string }> = [];
   if (node.context?.repoPath) {
@@ -86,6 +193,19 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
 
       {hasMetrics && (
         <DrawerSection title="Execution Metrics">
+          {(hasCommands || node.status) && (
+            <div
+              className="drawer-execution-status-row"
+              style={{ marginBottom: 10, display: "flex", gap: 8, flexWrap: "wrap" }}
+            >
+              {isCleanExecution ? (
+                <span className="drawer-command-exit is-success">✅ Verified Clean Execution</span>
+              ) : isPushback ? (
+                <span className="drawer-command-exit is-error">⚠️ Validation Gate Pushback</span>
+              ) : null}
+            </div>
+          )}
+
           <div className="drawer-metric-grid">
             {typeof tokensIn === "number" && (
               <div className="drawer-metric">
@@ -99,16 +219,16 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
                 <span className="drawer-metric-value">{formatTokens(tokensOut)}</span>
               </div>
             )}
-            {typeof reasoningTokens === "number" && (
+            {typeof cognitiveTokens === "number" && (
               <div className="drawer-metric drawer-metric--thinking">
                 <span className="drawer-metric-label">
                   <IconBrain
                     size={11}
                     style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
                   />
-                  Reasoning
+                  Cognitive Tokens (Reasoning)
                 </span>
-                <span className="drawer-metric-value">{formatTokens(reasoningTokens)}</span>
+                <span className="drawer-metric-value">{formatTokens(cognitiveTokens)}</span>
               </div>
             )}
             {typeof wallDuration === "number" && (
@@ -118,9 +238,24 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
                     size={11}
                     style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
                   />
-                  Duration
+                  ⏱️ Duration & Memory Footprint
                 </span>
-                <span className="drawer-metric-value">{formatDuration(wallDuration)}</span>
+                <span className="drawer-metric-value">
+                  {formatDuration(wallDuration)}
+                  {memoryFootprint ? ` · ${memoryFootprint}` : ""}
+                </span>
+              </div>
+            )}
+            {typeof wallDuration !== "number" && memoryFootprint && (
+              <div className="drawer-metric">
+                <span className="drawer-metric-label">
+                  <IconCpu
+                    size={11}
+                    style={{ display: "inline", verticalAlign: "text-top", marginRight: 3 }}
+                  />
+                  Memory Footprint
+                </span>
+                <span className="drawer-metric-value">{memoryFootprint}</span>
               </div>
             )}
             {typeof toolDuration === "number" && (
@@ -178,13 +313,45 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
                       {`Tier ${String(hostTier).toUpperCase()}`}
                     </span>
                   )}
-                  {reasoningEffort && (
+                  {thinkingLevel && (
                     <span className="drawer-effort-pill">
                       <IconSparkles
                         size={11}
                         style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}
                       />
-                      {`Effort: ${reasoningEffort}`}
+                      {`Thinking Level: ${thinkingLevel}`}
+                    </span>
+                  )}
+                  {typeof cognitiveTokens === "number" && (
+                    <span
+                      className="drawer-effort-pill"
+                      style={{
+                        background: "rgba(99, 102, 241, 0.12)",
+                        borderColor: "rgba(99, 102, 241, 0.3)",
+                        color: "#a5b4fc",
+                      }}
+                    >
+                      <IconBrain
+                        size={11}
+                        style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}
+                      />
+                      {`${formatTokens(cognitiveTokens)} Cognitive Tokens`}
+                    </span>
+                  )}
+                  {repairRounds > 0 && (
+                    <span
+                      className="drawer-effort-pill"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.12)",
+                        borderColor: "rgba(245, 158, 11, 0.35)",
+                        color: "#fcd34d",
+                      }}
+                    >
+                      <IconAlertTriangle
+                        size={11}
+                        style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}
+                      />
+                      {`Repair Attempts: ${repairRounds}`}
                     </span>
                   )}
                 </div>
@@ -199,6 +366,8 @@ export const OverviewTab: FC<OverviewTabProps> = ({ node, inputs, outputs, nodeN
           </div>
         </DrawerSection>
       )}
+
+      <SubagentLineageTree node={node} dataset={dataset} onSelectNode={onSelectNode} />
 
       {inputs.length > 0 ? (
         <DrawerSection title="Input Streams" count={inputs.length}>

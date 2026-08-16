@@ -11,6 +11,8 @@ declare module "bun:test" {
     toEqual(expected: unknown): void;
     toBeDefined(): void;
     toBeNull(): void;
+    toBeUndefined(): void;
+    toBeCloseTo(expected: number, numDigits?: number): void;
     toBeGreaterThan(expected: number): void;
     toBeGreaterThanOrEqual(expected: number): void;
     toBeLessThan(expected: number): void;
@@ -18,11 +20,22 @@ declare module "bun:test" {
     toContain(expected: unknown): void;
     toHaveLength(expected: number): void;
     toThrow(expected?: unknown): void;
+    rejects: {
+      toThrow(expected?: unknown): Promise<void>;
+      toBe(expected: unknown): Promise<void>;
+      toEqual(expected: unknown): Promise<void>;
+    };
+    resolves: {
+      toBe(expected: unknown): Promise<void>;
+      toEqual(expected: unknown): Promise<void>;
+    };
     not: {
       toBe(expected: unknown): void;
       toEqual(expected: unknown): void;
       toBeNull(): void;
+      toBeUndefined(): void;
       toContain(expected: unknown): void;
+      toThrow(expected?: unknown): void;
     };
   };
 

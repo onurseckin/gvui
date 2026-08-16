@@ -11,6 +11,8 @@ import {
   IconFileCode,
   IconFilter,
   IconFlame,
+  IconGitFork,
+  IconLayoutList,
   IconMessageCircle,
   IconShieldCheck,
   IconTarget,
@@ -78,6 +80,17 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
       }
       return Array.from(set);
     }, [exchanges]);
+
+    const allExpanded =
+      filteredExchanges.length > 0 && filteredExchanges.every((e) => expandedIds.has(e.id));
+
+    const handleToggleAll = () => {
+      if (allExpanded) {
+        setExpandedIds(new Set());
+      } else {
+        setExpandedIds(new Set(exchanges.map((e) => e.id)));
+      }
+    };
 
     const renderTransferredFiles = (
       rawFiles?: Array<ExchangeTransferredFile | string>,
@@ -266,34 +279,61 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
               <span className="edge-section-sublabel">Chronology Inspector</span>
               <span className="edge-section-count">{filteredExchanges.length}</span>
             </h4>
-            {availableTypes.length > 1 && (
-              <div className="edge-filter-pills">
-                <span className="edge-filter-icon">
-                  <IconFilter size={12} />
-                </span>
-                <button
-                  type="button"
-                  className={`edge-filter-pill ${filterType === "all" ? "is-active" : ""}`}
-                  onClick={() => setFilterType("all")}
-                >
-                  All ({exchanges.length})
-                </button>
-                {availableTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`edge-filter-pill ${filterType === type ? "is-active" : ""}`}
-                    onClick={() => setFilterType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+            {filteredExchanges.length > 0 && (
+              <button
+                type="button"
+                className="edge-expand-all-btn"
+                onClick={handleToggleAll}
+                title={allExpanded ? "Collapse all exchanges" : "Expand all exchanges"}
+              >
+                <IconLayoutList size={12} />
+                <span>{allExpanded ? "Collapse All" : "Expand All"}</span>
+              </button>
             )}
           </div>
 
+          {availableTypes.length > 1 && (
+            <div className="edge-filter-pills">
+              <span className="edge-filter-icon">
+                <IconFilter size={12} />
+              </span>
+              <button
+                type="button"
+                className={`edge-filter-pill ${filterType === "all" ? "is-active" : ""}`}
+                onClick={() => setFilterType("all")}
+              >
+                All ({exchanges.length})
+              </button>
+              {availableTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`edge-filter-pill ${filterType === type ? "is-active" : ""}`}
+                  onClick={() => setFilterType(type)}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          )}
+
           {filteredExchanges.length === 0 ? (
-            <div className="edge-empty-state">No traffic exchanges recorded on this edge.</div>
+            <div className="edge-empty-state">
+              {filterType === "all" ? (
+                "No traffic exchanges recorded on this edge."
+              ) : (
+                <>
+                  <p>No traffic exchanges recorded matching the selected filter.</p>
+                  <button
+                    type="button"
+                    className="edge-filter-reset-btn"
+                    onClick={() => setFilterType("all")}
+                  >
+                    Reset Filter
+                  </button>
+                </>
+              )}
+            </div>
           ) : (
             <div className="edge-timeline">
               {filteredExchanges.map((exchange, index) => {
@@ -309,6 +349,8 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                 const remediationVal = exchange.requiredRemediation ?? exchange.remediation;
                 const payloadStream =
                   exchange.payloadPreview ?? exchange.payloadSnippet ?? exchange.fullPayload;
+                const conditionVal = (exchange as { condition?: string }).condition;
+                const branchOutcome = (exchange as { branchOutcome?: string }).branchOutcome;
 
                 return (
                   <div key={exchange.id} className="edge-timeline-item">
@@ -351,7 +393,7 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
                         <div className="edge-exchange-meta">
                           {typeof exchange.tokens === "number" && (
                             <span className="edge-exchange-metric">
-                              {formatTokens(exchange.tokens)} tok
+                              {`${formatTokens(exchange.tokens)} tok`}
                             </span>
                           )}
                           {typeof (exchange.latencyMs ?? exchange.durationMs) === "number" && (
@@ -373,6 +415,22 @@ export const TrafficChronologyTab: FC<TrafficChronologyTabProps> = memo(
 
                       {/* Deep In/Out Payload Context Flow */}
                       <div className="edge-exchange-context-flow">
+                        {conditionVal && (
+                          <div className="edge-payload-context-row edge-payload-context-row--condition">
+                            <span className="edge-payload-dot">•</span>
+                            <span className="edge-payload-context-label">
+                              <IconGitFork size={12} className="edge-field-icon" /> Branch
+                              Condition:
+                            </span>
+                            <code className="edge-summary-condition-code">{conditionVal}</code>
+                            {branchOutcome && (
+                              <span className="edge-condition-eval status-passed">
+                                {branchOutcome}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         {exchange.inputGoal && (
                           <div className="edge-payload-context-row">
                             <span className="edge-payload-dot">•</span>

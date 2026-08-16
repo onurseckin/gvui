@@ -3,6 +3,7 @@ import { memo, useCallback } from "react";
 
 import "./NodeCard.css";
 import type { NodeCardProps } from "./NodeCard.types";
+import { NodeCardBadges } from "./NodeCardBadges";
 import { NodeCardDescription } from "./NodeCardDescription";
 import { NodeCardFiles } from "./NodeCardFiles";
 import { NodeCardHeader } from "./NodeCardHeader";
@@ -93,6 +94,7 @@ export const NodeCard: FC<NodeCardProps> = memo(
           <div className="node-card-body">
             <NodeCardTitle node={node} />
             <NodeCardDescription node={node} />
+            <NodeCardBadges badges={node.badges} />
             <NodeCardMiniChips node={node} />
             <NodeCardTools node={node} />
             <NodeCardFiles node={node} />

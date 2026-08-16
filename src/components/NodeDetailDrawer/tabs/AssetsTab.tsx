@@ -3,8 +3,11 @@ import {
   IconCheck,
   IconClock,
   IconDeviceDesktop,
+  IconFileCode,
   IconFileText,
+  IconFileTypePdf,
   IconHierarchy,
+  IconMarkdown,
   IconMaximize,
   IconNotes,
   IconPhoto,
@@ -13,7 +16,7 @@ import {
   IconVolume,
   IconX,
 } from "@tabler/icons-react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
 import type { GraphNodeData, MediaAsset, PlaywrightMetadata } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
@@ -26,10 +29,121 @@ export interface AssetsTabProps {
 
 export type AssetFilter = "all" | "screenshots" | "diagrams" | "documents" | "logs";
 
+const isPdf = (a: MediaAsset): boolean => {
+  return (
+    a.type === "pdf" ||
+    a.mimeType === "application/pdf" ||
+    a.url.toLowerCase().endsWith(".pdf") ||
+    /\.pdf(\?.*)?$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("pdf"))
+  );
+};
+
+const isCode = (a: MediaAsset): boolean => {
+  return (
+    a.type === "code" ||
+    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(a.url) ||
+    Boolean(
+      a.mimeType &&
+      (a.mimeType.includes("javascript") ||
+        a.mimeType.includes("json") ||
+        a.mimeType.includes("typescript") ||
+        a.mimeType.includes("python") ||
+        a.mimeType.includes("code")),
+    )
+  );
+};
+
+const isLog = (a: MediaAsset): boolean => {
+  return (
+    a.type === "log" ||
+    a.url.toLowerCase().endsWith(".log") ||
+    (a.title !== undefined && a.title.toLowerCase().includes("log"))
+  );
+};
+
+const isMarkdown = (a: MediaAsset): boolean => {
+  return (
+    a.type === "markdown" ||
+    /\.(md|markdown)$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("markdown"))
+  );
+};
+
+const isDiagram = (a: MediaAsset): boolean => {
+  return (
+    a.type === "diagram" ||
+    a.url.toLowerCase().includes("diagram") ||
+    /\.(svg|drawio|excalidraw)$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
+  );
+};
+
+const isDocument = (a: MediaAsset): boolean => {
+  return (
+    a.type === "document" ||
+    a.type === "pdf" ||
+    a.type === "markdown" ||
+    a.type === "code" ||
+    isPdf(a) ||
+    isMarkdown(a) ||
+    isCode(a) ||
+    Boolean(
+      a.mimeType &&
+      (a.mimeType === "application/pdf" ||
+        a.mimeType.startsWith("text/") ||
+        a.mimeType.includes("pdf") ||
+        a.mimeType.includes("document") ||
+        a.mimeType.includes("msword") ||
+        a.mimeType.includes("spreadsheet") ||
+        a.mimeType.includes("csv")),
+    ) ||
+    /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(a.url)
+  );
+};
+
+const isScreenshot = (a: MediaAsset): boolean => {
+  if (isDiagram(a) || isPdf(a) || isCode(a) || isLog(a) || isMarkdown(a) || isDocument(a)) {
+    return false;
+  }
+  return (
+    a.type === "image" ||
+    a.type === "screenshot" ||
+    !a.type ||
+    a.url.toLowerCase().includes("screenshot") ||
+    (a.title !== undefined && a.title.toLowerCase().includes("screenshot"))
+  );
+};
+
+const getAssetIcon = (asset: MediaAsset): ReactNode => {
+  if (isDiagram(asset)) return <IconHierarchy size={14} />;
+  if (isPdf(asset)) return <IconFileTypePdf size={14} />;
+  if (isCode(asset)) return <IconFileCode size={14} />;
+  if (isLog(asset)) return <IconNotes size={14} />;
+  if (isMarkdown(asset)) return <IconMarkdown size={14} />;
+  if (asset.type === "video") return <IconPlayerPlay size={14} />;
+  if (asset.type === "audio") return <IconVolume size={14} />;
+  if (isDocument(asset)) return <IconFileText size={14} />;
+  return <IconPhoto size={14} />;
+};
+
+const getTypeLabel = (asset: MediaAsset): string => {
+  if (isDiagram(asset)) return "diagram";
+  if (isPdf(asset)) return "pdf";
+  if (isCode(asset)) return "code";
+  if (isLog(asset)) return "log";
+  if (isMarkdown(asset)) return "markdown";
+  if (asset.type === "video") return "video";
+  if (asset.type === "audio") return "audio";
+  if (isDocument(asset)) return "document";
+  return asset.type ?? "image";
+};
+
 /**
  * Assets and media gallery tab supporting Playwright E2E execution summaries,
  * interactive media filters (All, Screenshots, Diagrams, Documents, Logs),
- * thumbnail cards, and full-resolution interactive Lightbox modal dialogs.
+ * thumbnail preview tiles for all asset types (screenshots, diagrams, PDFs, code, logs, docs),
+ * and full-resolution interactive Lightbox modal dialogs.
  */
 export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   const [activeFilter, setActiveFilter] = useState<AssetFilter>("all");
@@ -70,45 +184,6 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
 
   const playwright: PlaywrightMetadata | undefined = node.metadata?.playwrightMetadata;
 
-  const isScreenshot = (a: MediaAsset) => {
-    const isDiag =
-      a.type === "diagram" ||
-      a.url.toLowerCase().includes("diagram") ||
-      (a.title && a.title.toLowerCase().includes("diagram"));
-    return (
-      !isDiag &&
-      (a.type === "image" ||
-        a.type === "screenshot" ||
-        !a.type ||
-        a.url.toLowerCase().includes("screenshot") ||
-        (a.title && a.title.toLowerCase().includes("screenshot")))
-    );
-  };
-
-  const isDiagram = (a: MediaAsset) => {
-    return (
-      a.type === "diagram" ||
-      a.url.toLowerCase().includes("diagram") ||
-      (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
-    );
-  };
-
-  const isDocument = (a: MediaAsset) => {
-    return (
-      a.type === "document" ||
-      a.type === "code" ||
-      (a.mimeType !== undefined && a.mimeType.startsWith("text/"))
-    );
-  };
-
-  const isLog = (a: MediaAsset) => {
-    return (
-      a.type === "log" ||
-      a.url.toLowerCase().endsWith(".log") ||
-      (a.title !== undefined && a.title.toLowerCase().includes("log"))
-    );
-  };
-
   const filteredAssets = useMemo(() => {
     if (activeFilter === "all") return assets;
     if (activeFilter === "screenshots") return assets.filter(isScreenshot);
@@ -122,36 +197,6 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   const diagramsCount = useMemo(() => assets.filter(isDiagram).length, [assets]);
   const documentsCount = useMemo(() => assets.filter(isDocument).length, [assets]);
   const logsCount = useMemo(() => assets.filter(isLog).length, [assets]);
-
-  const getAssetIcon = (type?: string, url?: string, title?: string) => {
-    if (
-      type === "diagram" ||
-      url?.toLowerCase().includes("diagram") ||
-      title?.toLowerCase().includes("diagram")
-    ) {
-      return <IconHierarchy size={14} />;
-    }
-    if (
-      type === "log" ||
-      url?.toLowerCase().endsWith(".log") ||
-      title?.toLowerCase().includes("log")
-    ) {
-      return <IconNotes size={14} />;
-    }
-    switch (type) {
-      case "video":
-        return <IconPlayerPlay size={14} />;
-      case "audio":
-        return <IconVolume size={14} />;
-      case "document":
-      case "code":
-        return <IconFileText size={14} />;
-      case "image":
-      case "screenshot":
-      default:
-        return <IconPhoto size={14} />;
-    }
-  };
 
   return (
     <div className="drawer-tab-content">
@@ -293,10 +338,11 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
           <div className="drawer-asset-gallery-grid">
             {filteredAssets.map((asset, index) => {
               const originalIndex = assets.indexOf(asset);
+              const label = getTypeLabel(asset);
               return (
                 <div
                   key={asset.id}
-                  className="drawer-asset-card"
+                  className={`drawer-asset-card drawer-asset-card--${label}`}
                   onClick={() => setLightboxIndex(originalIndex >= 0 ? originalIndex : index)}
                   role="button"
                   tabIndex={0}
@@ -310,14 +356,59 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                 >
                   <div className="drawer-asset-thumb-wrap">
                     {asset.type === "video" ? (
-                      <div className="drawer-asset-thumb-placeholder">
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--video">
                         <IconPlayerPlay size={28} />
                       </div>
-                    ) : asset.type === "code" ||
-                      asset.type === "log" ||
-                      asset.type === "document" ? (
-                      <div className="drawer-asset-thumb-placeholder">
+                    ) : asset.type === "audio" ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--audio">
+                        <IconVolume size={28} />
+                      </div>
+                    ) : isPdf(asset) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--pdf">
+                        <IconFileTypePdf size={28} className="drawer-asset-placeholder-icon" />
+                        <span className="drawer-asset-placeholder-tag">PDF</span>
+                        {asset.description && (
+                          <span className="drawer-asset-placeholder-preview">
+                            {asset.description}
+                          </span>
+                        )}
+                      </div>
+                    ) : isCode(asset) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--code">
+                        <div className="drawer-asset-placeholder-header">
+                          <IconFileCode size={16} />
+                          <span className="drawer-asset-placeholder-lang">
+                            {asset.url.split(".").pop()?.toUpperCase() ?? "CODE"}
+                          </span>
+                        </div>
+                        <div className="drawer-asset-placeholder-snippet">
+                          <code>{asset.description || asset.url}</code>
+                        </div>
+                      </div>
+                    ) : isLog(asset) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--log">
+                        <div className="drawer-asset-placeholder-header">
+                          <IconNotes size={16} />
+                          <span className="drawer-asset-placeholder-lang">LOG</span>
+                        </div>
+                        <div className="drawer-asset-placeholder-snippet">
+                          <code>{asset.description || asset.url}</code>
+                        </div>
+                      </div>
+                    ) : isMarkdown(asset) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--markdown">
+                        <div className="drawer-asset-placeholder-header">
+                          <IconMarkdown size={16} />
+                          <span className="drawer-asset-placeholder-lang">MD</span>
+                        </div>
+                        <div className="drawer-asset-placeholder-snippet">
+                          <code>{asset.description || asset.url}</code>
+                        </div>
+                      </div>
+                    ) : isDocument(asset) && !asset.url.match(/\.(png|jpe?g|webp|gif|svg)$/i) ? (
+                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--doc">
                         <IconFileText size={28} />
+                        <span className="drawer-asset-placeholder-tag">Doc</span>
                       </div>
                     ) : failedThumbnails.has(asset.id) ? (
                       <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--error">
@@ -333,9 +424,9 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                         onError={() => handleThumbnailError(asset.id)}
                       />
                     )}
-                    <span className="drawer-asset-type-badge">
-                      {getAssetIcon(asset.type, asset.url, asset.title)}
-                      <span>{asset.type ?? "image"}</span>
+                    <span className={`drawer-asset-type-badge drawer-asset-type-badge--${label}`}>
+                      {getAssetIcon(asset)}
+                      <span>{label}</span>
                     </span>
                     <div className="drawer-asset-hover-overlay">
                       <IconMaximize size={20} />

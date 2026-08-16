@@ -7,6 +7,7 @@ import { calculateFitView } from "../../utils/fitView";
 import { generateDatasetSignature } from "../../utils/fileStorage";
 import { localDb } from "../../utils/localDb";
 import type { CustomLayoutConfig, Direction } from "../../engine/layout/custom/config";
+import { getDefaultMeasurer } from "../../engine/layout/measurement";
 import { ExportMenu } from "./ExportMenu";
 import { StepsDropdown } from "./StepsDropdown";
 import { createPanelDismissHandler } from "./panelDismiss";
@@ -66,6 +67,13 @@ export const CanvasToolbar: FC = React.memo(function CanvasToolbar() {
   }, [resetViewport, setPanOffset, setZoomLevel]);
 
   const handleResetView = useCallback(() => {
+    // Clear in-memory label and node measurement caches
+    try {
+      getDefaultMeasurer().clearCache();
+    } catch {
+      // Measurer might not be initialized in test env
+    }
+
     const { dataset } = useGraphStore.getState();
     if (dataset) {
       const baseSignature = generateDatasetSignature(dataset);

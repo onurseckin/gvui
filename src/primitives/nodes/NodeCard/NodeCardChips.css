@@ -196,3 +196,59 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.node-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.node-card-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.node-card-badge-pill.badge-info {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+  color: #67e8f9;
+}
+
+.node-card-badge-pill.badge-warning,
+.node-card-badge-pill.badge-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.node-card-badge-pill.badge-success {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.node-card-badge-pill.badge-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.node-card-badge-pill.badge-gray {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+}

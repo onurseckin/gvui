@@ -198,3 +198,147 @@
   opacity: 0.2;
   filter: grayscale(0.5);
 }
+
+/* Native HTML Badge Layer */
+.graph-html-badge-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.graph-badge-leader-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.graph-edge-badge-html {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1.5px solid var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
+  background: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--edge-text-color, #f4f4f5);
+  user-select: none;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: auto;
+  will-change: transform;
+  outline: none;
+  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.graph-edge-badge-html:focus-visible {
+  outline: 2px solid var(--accent-color, #818cf8);
+  outline-offset: 2px;
+}
+
+.graph-edge-badge-html:hover,
+.graph-edge-badge-html.is-hovered {
+  border-color: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  background: color-mix(in srgb, var(--current-edge-stroke, #18181f) 18%, #18181f 82%);
+  box-shadow: 0 0 8px var(--current-edge-stroke, rgba(129, 140, 248, 0.5));
+}
+
+.graph-edge-badge-html.selected,
+.graph-edge-badge-html.is-highlighted {
+  border-color: var(--accent-color, var(--current-edge-stroke, #818cf8));
+  background: color-mix(in srgb, var(--current-edge-stroke, #18181f) 22%, #18181f 78%);
+  box-shadow: 0 0 10px var(--current-edge-stroke, rgba(129, 140, 248, 0.6));
+}
+
+.graph-edge-badge-html.high-traffic {
+  border-width: 2px;
+}
+
+.graph-edge-badge-html.kind-spawn {
+  --edge-kind-stroke: #06b6d4;
+}
+
+.graph-edge-badge-html.kind-sequence {
+  --edge-kind-stroke: #3f3f46;
+}
+
+.graph-edge-badge-html.kind-data {
+  --edge-kind-stroke: #6366f1;
+}
+
+.graph-edge-badge-html.kind-dependency {
+  --edge-kind-stroke: #64748b;
+}
+
+.graph-edge-badge-html.kind-loop,
+.graph-edge-badge-html.cycle {
+  --edge-kind-stroke: #f43f5e;
+}
+
+.graph-edge-badge-html.kind-gate {
+  --edge-kind-stroke: #10b981;
+}
+
+.graph-edge-badge-html.kind-critic {
+  --edge-kind-stroke: #eab308;
+}
+
+.graph-edge-badge-html .edge-step-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
+  letter-spacing: 0.02em;
+}
+
+.graph-edge-badge-html .edge-badge-label {
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.graph-edge-badge-html .edge-bundle-chip {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: rgba(129, 140, 248, 0.2);
+  color: #c7d2fe;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+}
+
+.graph-edge-badge-html .edge-badge-detail {
+  font-size: 9.5px;
+  opacity: 0.8;
+  padding: 0 3px;
+  border-radius: 2px;
+  background-color: rgba(0, 0, 0, 0.3);
+}

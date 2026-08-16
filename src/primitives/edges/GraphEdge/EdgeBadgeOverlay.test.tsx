@@ -2,7 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import type { Rect } from "../../../engine/layout/custom/types";
-import { EdgeBadgeOverlay, MAX_BADGE_WIDTH, resolveEdgeDisplayText } from "./EdgeBadgeOverlay";
+import {
+  EdgeBadgeOverlay,
+  MAX_BADGE_WIDTH,
+  MAX_DETAIL_LENGTH,
+  formatCompactBadgeDetail,
+  resolveEdgeDisplayText,
+  sanitizeStepBadge,
+} from "./EdgeBadgeOverlay";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -12,6 +19,23 @@ const BADGE_RECT: Rect = { x: 100, y: 86, width: 100, height: 28 };
 function hasDashedConnector(html: string): boolean {
   return html.includes("stroke-dasharray");
 }
+
+describe("sanitizeStepBadge", () => {
+  it("strips 'Step', 'step:', 'Step -', etc. and returns pure step identifiers", () => {
+    expect(sanitizeStepBadge("Step 2")).toBe("2");
+    expect(sanitizeStepBadge("step: 04")).toBe("04");
+    expect(sanitizeStepBadge("Step-3")).toBe("3");
+    expect(sanitizeStepBadge(5)).toBe("5");
+    expect(sanitizeStepBadge("3 -> 2")).toBe("3 -> 2");
+  });
+
+  it("returns undefined for undefined, null, or empty step values", () => {
+    expect(sanitizeStepBadge(undefined)).toBe(undefined);
+    expect(sanitizeStepBadge(null as unknown as undefined)).toBe(undefined);
+    expect(sanitizeStepBadge("")).toBe(undefined);
+    expect(sanitizeStepBadge("   ")).toBe(undefined);
+  });
+});
 
 describe("resolveEdgeDisplayText", () => {
   it("strips legacy 'CYCLE (...)' wrapper from title", () => {
@@ -469,5 +493,396 @@ describe("EdgeBadgeOverlay Semantic Types", () => {
     expect(css).toContain(".edge-badge-group:focus-visible");
     expect(css).toContain("outline: 2px solid var(--accent-color, #818cf8)");
     expect(css).toContain("outline-offset: 2px");
+  });
+});
+
+describe("formatCompactBadgeDetail", () => {
+  it("exports MAX_DETAIL_LENGTH equal to 24", () => {
+    expect(MAX_DETAIL_LENGTH).toBe(24);
+  });
+
+  it("preserves short detail chips intact", () => {
+    expect(formatCompactBadgeDetail("3 Findings")).toBe("3 Findings");
+    expect(formatCompactBadgeDetail("2.4k tokens")).toBe("2.4k tokens");
+    expect(formatCompactBadgeDetail("Pass")).toBe("Pass");
+  });
+
+  it("strictly respects the 24-character exact boundary", () => {
+    const exactly24 = "123456789012345678901234";
+    expect(exactly24.length).toBe(24);
+    expect(formatCompactBadgeDetail(exactly24)).toBe("123456789012345678901234");
+
+    const exactly23 = "12345678901234567890123";
+    expect(exactly23.length).toBe(23);
+    expect(formatCompactBadgeDetail(exactly23)).toBe("12345678901234567890123");
+
+    const exactly25 = "1234567890123456789012345";
+    expect(exactly25.length).toBe(25);
+    const res25 = formatCompactBadgeDetail(exactly25);
+    expect(res25).toBeDefined();
+    expect(res25!.length).toBe(24);
+    expect(res25).toBe("123456789012345678901...");
+  });
+
+  it("truncates multi-line sentence details to max 24 chars with ellipsis", () => {
+    const longDetail = "This worker performs task validation and analysis across multiple files";
+    const truncated = formatCompactBadgeDetail(longDetail);
+    expect(truncated).toBeDefined();
+    expect(truncated!.length).toBeLessThanOrEqual(24);
+    expect(truncated!.endsWith("...")).toBe(true);
+    expect(truncated).toBe("This worker performs...");
+  });
+
+  it("handles extreme detail lengths (2000+ chars) gracefully", () => {
+    const extremeDetail = "A".repeat(3000);
+    const truncated = formatCompactBadgeDetail(extremeDetail);
+    expect(truncated).toBeDefined();
+    expect(truncated!.length).toBe(24);
+    expect(truncated).toBe(`${"A".repeat(21)}...`);
+  });
+
+  it("trims trailing whitespace before ellipsis cleanly", () => {
+    // 20 characters before spaces, so slice(0, 21) takes 20 chars + 1 space -> trimEnd -> 20 chars + "..."
+    const spaceBeforeCut = "12345678901234567890   subsequent text";
+    const truncated = formatCompactBadgeDetail(spaceBeforeCut);
+    expect(truncated).toBeDefined();
+    expect(truncated!.length).toBeLessThanOrEqual(24);
+    expect(truncated).toBe("12345678901234567890...");
+  });
+
+  it("handles unicode and emojis in detail text cleanly", () => {
+    const unicodeDetail = "🎯 5 Validator Pushbacks Logged in Audit";
+    const truncated = formatCompactBadgeDetail(unicodeDetail);
+    expect(truncated).toBeDefined();
+    expect(truncated!.length).toBeLessThanOrEqual(24);
+    expect(truncated!.endsWith("...")).toBe(true);
+  });
+
+  it("flattens multi-line details with newlines and carriage returns before truncating", () => {
+    const multilineDetail = "First line\nSecond line\r\nThird line detail";
+    const formatted = formatCompactBadgeDetail(multilineDetail);
+    expect(formatted).toBeDefined();
+    expect(formatted).not.toContain("\n");
+    expect(formatted).not.toContain("\r");
+    expect(formatted!.length).toBeLessThanOrEqual(24);
+    expect(formatted).toBe("First line Second lin...");
+  });
+
+  it("returns undefined for empty, null, or whitespace-only details", () => {
+    expect(formatCompactBadgeDetail(undefined)).toBe(undefined);
+    expect(formatCompactBadgeDetail("")).toBe(undefined);
+    expect(formatCompactBadgeDetail("   \n\t  ")).toBe(undefined);
+  });
+});
+
+describe("Edge Prefix Cleaning in resolveEdgeDisplayText", () => {
+  it("strips 'EDGE:', 'EDGE -', and 'edge: ' prefixes cleanly", () => {
+    expect(resolveEdgeDisplayText("EDGE: Dispatches Worker", "SPAWN", false)).toBe(
+      "Dispatches Worker",
+    );
+    expect(resolveEdgeDisplayText("EDGE - Dispatches Worker", "SPAWN", false)).toBe(
+      "Dispatches Worker",
+    );
+    expect(resolveEdgeDisplayText("edge: payload data", "DATA", false)).toBe("payload data");
+  });
+
+  it("collapses internal multi-line and extra whitespace to single spaces", () => {
+    expect(resolveEdgeDisplayText("Validator\nPushback\n  (Round 3)  ", "LOOP", false)).toBe(
+      "Validator Pushback (Round 3)",
+    );
+  });
+});
+
+describe("Redundant Step Prefix Cleaner in EdgeBadgeOverlay", () => {
+  it("cleans redundant 'Step X:' prefix from label when stepNumber or container stepBadge is already set", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={100}
+        y={100}
+        kind="spawn"
+        stepNumber={2}
+        label="Step 2: Dispatches Worker"
+      />,
+    );
+    expect(html).toContain("2");
+    expect(html).toContain("Dispatches Worker");
+    expect(html).not.toContain("Step 2: Dispatches Worker");
+  });
+
+  it("renders concise chips like 'Validator Pushback (Round 3)' with detail '3 Findings'", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={100}
+        y={100}
+        kind="loop"
+        container={{
+          title: "Validator Pushback (Round 3)",
+          detail: "3 Findings",
+        }}
+      />,
+    );
+    expect(html).toContain("Validator Pushback (Round 3)");
+    expect(html).toContain("3 Findings");
+    expect(html).toContain("edge-badge-detail");
+  });
+});
+
+describe("Native HTML Badge Overlay Support", () => {
+  it("renders native HTML <div> without <foreignObject> when renderMode='html' or asHtml={true}", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={150}
+        y={100}
+        kind="spawn"
+        label="Dispatches Worker"
+        stepNumber="2"
+        renderMode="html"
+      />,
+    );
+
+    expect(html).toContain("edge-badge-html-overlay");
+    expect(html).toContain("edge-badge-group");
+    expect(html).toContain("kind-spawn");
+    expect(html).toContain("Dispatches Worker");
+    expect(html).toContain("2");
+    expect(html).not.toContain("<foreignObject");
+    expect(html).not.toContain("<g");
+    expect(html).not.toContain("<rect");
+  });
+
+  it("supports interactive click and keyboard navigation in native HTML mode", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={150}
+        y={100}
+        kind="gate"
+        label="Validation Gate"
+        asHtml={true}
+        onClick={() => {}}
+      />,
+    );
+
+    expect(html).toContain("edge-badge-html-overlay");
+    expect(html).toContain('role="button"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain("is-clickable");
+    expect(html).not.toContain("<foreignObject");
+  });
+
+  it("includes CSS styling for .edge-badge-html-overlay in EdgeBadgeOverlay.css", () => {
+    const css = readFileSync(new URL("./EdgeBadgeOverlay.css", import.meta.url).pathname, "utf-8");
+    expect(css).toContain(".edge-badge-html-overlay");
+    expect(css).toContain(".edge-step-badge");
+    expect(css).toContain(".edge-bundle-chip");
+    expect(css).toContain(".edge-badge-detail");
+  });
+});
+
+describe("Extreme Label Length & Complex Boundary Handling", () => {
+  it("bounds extreme length labels (1000+ chars) to MAX_BADGE_WIDTH in SVG mode", () => {
+    const extremeLabel = "VeryLongLabelWord_".repeat(60);
+    const html = renderToString(
+      <EdgeBadgeOverlay x={200} y={150} kind="data" label={extremeLabel} />,
+    );
+
+    expect(html).toContain(`width="${MAX_BADGE_WIDTH}"`);
+    expect(html).toContain(`x="-${MAX_BADGE_WIDTH / 2}"`);
+    expect(html).toContain("edge-badge-label");
+  });
+
+  it("bounds extreme length labels in native HTML mode", () => {
+    const extremeLabel = "VeryLongLabelWord_".repeat(60);
+    const html = renderToString(
+      <EdgeBadgeOverlay x={200} y={150} kind="data" label={extremeLabel} asHtml={true} />,
+    );
+
+    expect(html).toContain("edge-badge-html-overlay");
+    expect(html).toContain(`width:${MAX_BADGE_WIDTH}px`);
+    expect(html).toContain(`left:${200 - MAX_BADGE_WIDTH / 2}px`);
+  });
+
+  it("cleans complex deeply nested prefix noise and multiline whitespace cleanly", () => {
+    const noisyLabel = "  \n  EDGE: [CYCLE - (Step 4: Dispatch Subagent Worker Process)] \n ";
+    expect(resolveEdgeDisplayText(noisyLabel, "SPAWN", true)).toBe(
+      "Step 4: Dispatch Subagent Worker Process",
+    );
+
+    // If rendered with stepNumber = 4, redundant step prefix is stripped
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="spawn" stepNumber={4} label={noisyLabel} />,
+    );
+    expect(html).toContain("4");
+    expect(html).toContain("Dispatch Subagent Worker Process");
+    expect(html).not.toContain("Step 4: Dispatch");
+  });
+});
+
+describe("All 7 Semantic Edge Kinds & Centered Typography Audit", () => {
+  const allKinds = [
+    {
+      kind: "spawn" as const,
+      expectedClass: "kind-spawn",
+      label: "Spawn Worker",
+      color: "#06b6d4",
+    },
+    {
+      kind: "sequence" as const,
+      expectedClass: "kind-sequence",
+      label: "Sequence Step",
+      color: "#3f3f46",
+    },
+    { kind: "data" as const, expectedClass: "kind-data", label: "Data Artifact", color: "#6366f1" },
+    {
+      kind: "dependency" as const,
+      expectedClass: "kind-dependency",
+      label: "Dependency Requirement",
+      color: "#64748b",
+    },
+    {
+      kind: "loop" as const,
+      expectedClass: "kind-loop",
+      label: "Rejection Cycle",
+      color: "#f43f5e",
+    },
+    {
+      kind: "gate" as const,
+      expectedClass: "kind-gate",
+      label: "Validation Gate",
+      color: "#10b981",
+    },
+    {
+      kind: "critic" as const,
+      expectedClass: "kind-critic",
+      label: "Signoff Critic",
+      color: "#eab308",
+    },
+  ];
+
+  it("renders all 7 semantic kinds in SVG mode with centered layout and balanced padding", () => {
+    for (const item of allKinds) {
+      const html = renderToString(
+        <EdgeBadgeOverlay x={120} y={80} kind={item.kind} label={item.label} />,
+      );
+
+      expect(html).toContain(item.expectedClass);
+      expect(html).toContain(item.label);
+      expect(html).toContain("justify-content:center");
+      expect(html).toContain("text-align:center");
+      expect(html).toContain("padding:0 8px");
+      expect(html).toContain("box-sizing:border-box");
+    }
+  });
+
+  it("renders all 7 semantic kinds in Native HTML mode with centered layout and balanced padding", () => {
+    for (const item of allKinds) {
+      const html = renderToString(
+        <EdgeBadgeOverlay x={120} y={80} kind={item.kind} label={item.label} renderMode="html" />,
+      );
+
+      expect(html).toContain("edge-badge-html-overlay");
+      expect(html).toContain(item.expectedClass);
+      expect(html).toContain(item.label);
+      expect(html).toContain("justify-content:center");
+      expect(html).toContain("text-align:center");
+      expect(html).toContain("padding:0 8px");
+    }
+  });
+
+  it("verifies all 7 semantic kinds and variant colors in EdgeBadgeOverlay.css", () => {
+    const css = readFileSync(new URL("./EdgeBadgeOverlay.css", import.meta.url).pathname, "utf-8");
+
+    for (const item of allKinds) {
+      expect(css).toContain(`kind-${item.kind}`);
+      expect(css).toContain(item.color);
+    }
+
+    // Check typography centering & zero whitespace gap properties
+    expect(css).toContain("justify-content: center");
+    expect(css).toContain("text-align: center");
+    expect(css).toContain("padding: 0 8px");
+    expect(css).toContain("box-sizing: border-box");
+    expect(css).toContain("text-overflow: ellipsis");
+  });
+});
+
+describe("High-Traffic & Bundle Badge Rendering", () => {
+  it("renders high-traffic glow and bundle counter chip in SVG mode", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={150}
+        y={100}
+        kind="data"
+        label="Context Pipe"
+        bundleCount={6}
+        isHighTraffic={true}
+        traffic={{
+          volume: 18,
+          messagesCount: 18,
+          status: "congested",
+          glowColor: "#06b6d4",
+        }}
+      />,
+    );
+
+    expect(html).toContain("high-traffic");
+    expect(html).toContain("x6");
+    expect(html).toContain("edge-bundle-chip");
+    expect(html).toContain("Context Pipe");
+    expect(html).toContain("#06b6d4");
+    expect(html).toContain("drop-shadow(0 0 6px #06b6d4)");
+  });
+
+  it("renders high-traffic glow and bundle counter chip in Native HTML mode", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={150}
+        y={100}
+        kind="spawn"
+        label="Worker Stream"
+        bundleCount={4}
+        isHighTraffic={true}
+        renderMode="html"
+      />,
+    );
+
+    expect(html).toContain("edge-badge-html-overlay");
+    expect(html).toContain("high-traffic");
+    expect(html).toContain("x4");
+    expect(html).toContain("edge-bundle-chip");
+    expect(html).toContain("Worker Stream");
+  });
+
+  it("does not render bundle chip when bundleCount is 1 or undefined", () => {
+    const htmlSingle = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="sequence" label="Single Flow" bundleCount={1} />,
+    );
+    expect(htmlSingle).not.toContain("edge-bundle-chip");
+    expect(htmlSingle).not.toContain("x1");
+
+    const htmlUndefined = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="sequence" label="Undefined Flow" />,
+    );
+    expect(htmlUndefined).not.toContain("edge-bundle-chip");
+  });
+
+  it("automatically triggers high-traffic styling when traffic status is congested", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay
+        x={100}
+        y={100}
+        kind="data"
+        label="Heavy Pipe"
+        traffic={{ status: "congested" }}
+      />,
+    );
+    expect(html).toContain("high-traffic");
+  });
+
+  it("automatically triggers high-traffic styling for feedback loops (cycles)", () => {
+    const html = renderToString(
+      <EdgeBadgeOverlay x={100} y={100} kind="loop" isCycle={true} label="Feedback Loop" />,
+    );
+    expect(html).toContain("high-traffic");
+    expect(html).toContain("cycle");
   });
 });

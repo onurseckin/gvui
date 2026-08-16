@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
-import type { GraphEdgeData } from "../../types/graphData";
+import type { SemanticEdgeKind } from "../../primitives/edges/GraphEdge/edgeKinds";
+import type { EdgeTrafficExchange, GraphEdgeData } from "../../types/graphData";
 import { EdgeDetailDrawer } from "./index";
 import { EdgeOverviewTab } from "./tabs/OverviewTab";
 import { EdgeRawJsonTab } from "./tabs/RawJsonTab";
@@ -394,6 +395,268 @@ describe("EdgeDetailDrawer & Traffic Chronology Inspector", () => {
     expect(tabHtml.includes("Evidence:")).toBe(true);
     expect(tabHtml.includes("Monitored gate command exit code 0")).toBe(true);
     expect(tabHtml.includes("26/26 layout tests passing")).toBe(true);
+  });
+
+  test("renders Condition & Branch Evaluation section and copy button in OverviewTab", () => {
+    const edgeWithCondition: GraphEdgeData = {
+      id: "edge-cond-1",
+      source: "node-router",
+      target: "node-worker",
+      kind: "spawn",
+      label: "Branch: High Priority",
+      condition: "task.priority === 'CRITICAL' && auth.verified === true",
+    };
+
+    const overviewHtml = renderToString(
+      <EdgeOverviewTab edge={edgeWithCondition} sourceName="Router" targetName="Worker" />,
+    );
+
+    expect(
+      overviewHtml.includes("Condition &amp; Branch Evaluation") ||
+        overviewHtml.includes("Condition & Branch Evaluation"),
+    ).toBe(true);
+    expect(overviewHtml.includes("BRANCH CONDITION")).toBe(true);
+    expect(overviewHtml.includes("Evaluated Active")).toBe(true);
+    expect(overviewHtml.includes("task.priority === &#x27;CRITICAL&#x27;")).toBe(true);
+    expect(overviewHtml.includes("Copy Expression")).toBe(true);
+
+    const drawerHtml = renderToString(<EdgeDetailDrawer edge={edgeWithCondition} />);
+    expect(drawerHtml.includes("Condition")).toBe(true);
+    expect(drawerHtml.includes("Branch Condition:")).toBe(true);
+  });
+
+  test("renders condition branch evaluation in TrafficChronologyTab exchanges", () => {
+    const edgeWithConditionExchange: GraphEdgeData = {
+      id: "edge-cond-ex-1",
+      source: "node-gate",
+      target: "node-subagent",
+      traffic: {
+        volume: 1,
+        messagesCount: 1,
+        exchanges: [
+          // Bridge exchange with custom condition metadata for test inspection
+          {
+            id: "ex-cond-1",
+            step: 1,
+            direction: "forward",
+            type: "decision",
+            summary: "Evaluated branch guard: tests passing",
+            condition: "coverage >= 0.95 && testFailures === 0",
+            branchOutcome: "BRANCH TAKEN",
+            tokens: 1500,
+          } as unknown as EdgeTrafficExchange,
+        ],
+      },
+    };
+
+    const chronologyHtml = renderToString(
+      <TrafficChronologyTab
+        edge={edgeWithConditionExchange}
+        sourceName="Gate"
+        targetName="Subagent"
+      />,
+    );
+
+    expect(chronologyHtml.includes("Branch Condition:")).toBe(true);
+    expect(chronologyHtml.includes("coverage &gt;= 0.95 &amp;&amp; testFailures === 0")).toBe(true);
+    expect(chronologyHtml.includes("BRANCH TAKEN")).toBe(true);
+    expect(chronologyHtml.includes("Evaluated branch guard: tests passing")).toBe(true);
+  });
+
+  test("renders all 7 distinct semantic kinds in EdgeDetailDrawer with appropriate kind badges and colors", () => {
+    const kinds: Array<{ kind: SemanticEdgeKind; label: string; accent: string }> = [
+      { kind: "spawn", label: "SPAWN / DISPATCH", accent: "#06b6d4" },
+      { kind: "sequence", label: "SEQUENCE", accent: "#3f3f46" },
+      { kind: "data", label: "DATA HANDOFF", accent: "#6366f1" },
+      { kind: "dependency", label: "DEPENDENCY", accent: "#64748b" },
+      { kind: "loop", label: "LOOP / PUSHBACK", accent: "#f43f5e" },
+      { kind: "gate", label: "VALIDATION GATE", accent: "#10b981" },
+      { kind: "critic", label: "CRITIC SIGNOFF", accent: "#eab308" },
+    ];
+
+    for (const item of kinds) {
+      const edge: GraphEdgeData = {
+        id: `edge-${item.kind}`,
+        source: "node-a",
+        target: "node-b",
+        kind: item.kind,
+      };
+
+      const html = renderToString(<EdgeDetailDrawer edge={edge} />);
+      expect(html.includes(`kind-${item.kind}`)).toBe(true);
+      expect(html.includes(item.label)).toBe(true);
+      expect(html.includes(`--edge-kind-accent:${item.accent}`)).toBe(true);
+    }
+  });
+
+  test("handles interactive node jumping via onNavigateNode callback", async () => {
+    const { create, act } = await import("react-test-renderer");
+    let navigatedNodeId: string | null = null;
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <EdgeOverviewTab
+          edge={sampleEdge}
+          sourceName="Planner"
+          targetName="Worker"
+          onNavigateNode={(id) => {
+            navigatedNodeId = id;
+          }}
+        />,
+      );
+    });
+
+    const root = renderer!.root;
+    const buttons = root.findAllByProps({ className: "edge-node-link-btn" });
+    expect(buttons.length).toBe(2);
+
+    // Click source node button
+    navigatedNodeId = null;
+    act(() => {
+      buttons[0].props.onClick();
+    });
+    expect(navigatedNodeId).toBe("node-planner");
+
+    // Click target node button
+    navigatedNodeId = null;
+    act(() => {
+      buttons[1].props.onClick();
+    });
+    expect(navigatedNodeId).toBe("node-worker");
+  });
+
+  test("handles drawer close button click and Escape key trigger", async () => {
+    const { create, act } = await import("react-test-renderer");
+    let closed = false;
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <EdgeDetailDrawer
+          edge={sampleEdge}
+          onClose={() => {
+            closed = true;
+          }}
+        />,
+      );
+    });
+
+    const root = renderer!.root;
+    const closeBtn = root.findByProps({ className: "edge-drawer-close-btn" });
+
+    // Click close button
+    closed = false;
+    act(() => {
+      closeBtn.props.onClick();
+    });
+    expect(closed).toBe(true);
+
+    // Press Escape key on drawer container
+    const drawerAside = root.findByProps({ className: "edge-drawer" });
+    closed = false;
+    act(() => {
+      drawerAside.props.onKeyDown({
+        key: "Escape",
+        stopPropagation: () => {},
+      });
+    });
+    expect(closed).toBe(true);
+  });
+
+  test("finding-02-edge-badge-stress: gracefully handles unknown edge kinds and defaults to sequence", () => {
+    const unknownKindEdge: GraphEdgeData = {
+      id: "edge-unknown-1",
+      source: "node-1",
+      target: "node-2",
+      kind: "unknown_custom_pipeline" as unknown as GraphEdgeData["kind"],
+      label: "Custom Flow",
+    };
+
+    const html = renderToString(<EdgeDetailDrawer edge={unknownKindEdge} />);
+    expect(html.includes("Custom Flow")).toBe(true);
+    expect(html.includes("kind-sequence")).toBe(true);
+    expect(html.includes("SEQUENCE")).toBe(true);
+  });
+
+  test("finding-02-edge-badge-stress: handles zero-traffic edges and empty telemetry cleanly", () => {
+    const zeroTrafficEdge: GraphEdgeData = {
+      id: "edge-zero-traffic",
+      source: "node-alpha",
+      target: "node-beta",
+      traffic: {
+        volume: 0,
+        messagesCount: 0,
+        tokens: 0,
+        exchanges: [],
+        status: "idle",
+      },
+    };
+
+    const html = renderToString(<EdgeDetailDrawer edge={zeroTrafficEdge} />);
+    expect(html.includes("Called 0 times")).toBe(true);
+    expect(html.includes("0 Times")).toBe(true);
+    expect(html.includes("IDLE")).toBe(true);
+    expect(html.includes("edge-tab-badge")).toBe(false);
+
+    const chronologyHtml = renderToString(
+      <TrafficChronologyTab edge={zeroTrafficEdge} sourceName="Alpha" targetName="Beta" />,
+    );
+    expect(chronologyHtml.includes("No traffic exchanges recorded on this edge.")).toBe(true);
+    expect(chronologyHtml.includes("Token Volume")).toBe(true);
+  });
+
+  test("finding-02-edge-badge-stress: handles empty/null handoff payloads and malformed exchange entries safely", () => {
+    const malformedPayloadEdge: GraphEdgeData = {
+      id: "edge-malformed-payload",
+      source: "node-x",
+      target: "node-y",
+      handoff: {
+        kind: "file",
+        summary: "",
+        tokens: 0,
+        preview: "",
+      },
+      traffic: {
+        volume: 2,
+        exchanges: [
+          // Bridge exchange with empty strings and partial finding data
+          {
+            id: "ex-empty-1",
+            step: "",
+            summary: "",
+            payloadPreview: "",
+            tokens: 0,
+            auditFinding: {
+              id: "finding-empty",
+              status: "open",
+            },
+          } as unknown as EdgeTrafficExchange,
+          // Bridge exchange with string finding and string evidence
+          {
+            id: "ex-empty-2",
+            type: "feedback",
+            summary: "String-only finding",
+            finding: "Generic issue note",
+            evidence: "Build log snippet",
+          } as unknown as EdgeTrafficExchange,
+        ],
+      },
+    };
+
+    const overviewHtml = renderToString(
+      <EdgeOverviewTab edge={malformedPayloadEdge} sourceName="X" targetName="Y" />,
+    );
+    expect(overviewHtml.includes("Handoff Contract")).toBe(true);
+    expect(overviewHtml.includes("Handoff Payload Tokens:")).toBe(true);
+
+    const chronologyHtml = renderToString(
+      <TrafficChronologyTab edge={malformedPayloadEdge} sourceName="X" targetName="Y" />,
+    );
+    expect(chronologyHtml.includes("finding-empty")).toBe(true);
+    expect(chronologyHtml.includes("Generic issue note")).toBe(true);
+    expect(chronologyHtml.includes("Build log snippet")).toBe(true);
+    expect(chronologyHtml.includes("0 tok")).toBe(true);
   });
 
   test("renders null safely when edge is null or undefined", () => {

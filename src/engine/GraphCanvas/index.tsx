@@ -5,6 +5,7 @@ import { describeNodeKind } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileStorage";
 import { buildEdgePath } from "../layout/custom/edgePath";
+import { GraphSearchOverlay } from "../../components/Toolbar/GraphSearchOverlay";
 import { GraphBadgeLayer } from "./GraphBadgeLayer";
 import "./GraphCanvas.css";
 import { GraphHtmlLayer } from "./GraphHtmlLayer";
@@ -140,6 +141,7 @@ export const GraphCanvas: FC = () => {
       onClick={handleDeselectNode}
     >
       {isCalculating && <LoadingOverlay />}
+      <GraphSearchOverlay />
       <div className="graph-transform-stage" style={transformStyle}>
         <GraphSvgLayer
           styledEdges={styledEdges}

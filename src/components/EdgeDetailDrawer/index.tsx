@@ -4,6 +4,7 @@ import {
   IconBinary,
   IconClock,
   IconFlame,
+  IconGitFork,
   IconInfoCircle,
   IconX,
 } from "@tabler/icons-react";
@@ -51,6 +52,7 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
 
   useEffect(() => {
     if (!edge) return;
+    if (typeof window === "undefined") return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
     };
@@ -164,6 +166,13 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
       className="edge-drawer"
       role="complementary"
       aria-label={`Edge Details: ${sourceName} to ${targetName}`}
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          handleClose();
+        }
+      }}
     >
       <header
         className="edge-drawer-header"
@@ -210,6 +219,12 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
               {targetName}
             </button>
           </div>
+
+          {edge.condition && (
+            <span className="edge-status-pill edge-status-pill--condition">
+              <IconGitFork size={12} /> Condition
+            </span>
+          )}
 
           {edge.isCycle && (
             <span className="edge-status-pill edge-status-pill--warn">
@@ -259,6 +274,13 @@ export const EdgeDetailDrawer: FC<EdgeDetailDrawerProps> = memo(function EdgeDet
               <span className="edge-summary-value">
                 {activeSteps.map((s) => `Step ${s}`).join(", ")}
               </span>
+            </div>
+          )}
+          {edge.condition && (
+            <div className="edge-interaction-summary-row edge-interaction-summary-row--condition">
+              <span className="edge-summary-bullet">•</span>
+              <span className="edge-summary-label">Branch Condition:</span>
+              <code className="edge-summary-condition-code">{edge.condition}</code>
             </div>
           )}
           <div className="edge-interaction-summary-row edge-interaction-summary-row--relationship">

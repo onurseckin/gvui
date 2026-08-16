@@ -507,5 +507,54 @@ describe("Edge Badge Collision Prevention", () => {
       };
       expect(resolveSafeBadgePlacement(infPointsEdge)).toBeNull();
     });
+
+    it("strictly suppresses unplaced edge with single point at origin", () => {
+      const singleOriginEdge: PositionedEdge = {
+        id: "single-origin",
+        source: "n1",
+        target: "n2",
+        path: "",
+        points: [{ x: 0, y: 0 }],
+      };
+      expect(resolveSafeBadgePlacement(singleOriginEdge)).toBeNull();
+    });
+
+    it("strictly suppresses zero-coordinate edge with empty points array", () => {
+      const emptyPointsEdge: PositionedEdge = {
+        id: "empty-points",
+        source: "n1",
+        target: "n2",
+        path: "",
+        points: [],
+      };
+      expect(resolveSafeBadgePlacement(emptyPointsEdge)).toBeNull();
+    });
+
+    it("computes safe badge placement with leader points when colliding with congested node cluster", () => {
+      const crowdedNodes: PositionedNode[] = [
+        { id: "node-1", name: "Node 1", x: 100, y: 100, width: 120, height: 80 },
+        { id: "node-2", name: "Node 2", x: 230, y: 100, width: 120, height: 80 },
+      ];
+      const collidingEdge: PositionedEdge = {
+        id: "edge-congested",
+        source: "node-1",
+        target: "node-2",
+        path: "M 160 140 L 290 140",
+        labelX: 160,
+        labelY: 140,
+        badgeRect: { x: 120, y: 120, width: 80, height: 26 },
+      };
+
+      const safePlacement = computeSafeBadgePlacement(collidingEdge, crowdedNodes, {
+        clearance: 10,
+      });
+      expect(safePlacement).toBeDefined();
+      expect(safePlacement.badgeRect).toBeDefined();
+      // Ensure the resolved badge rect does not collide with either node
+      for (const node of crowdedNodes) {
+        expect(doesRectOverlap(safePlacement.badgeRect, node, 10)).toBe(false);
+      }
+      expect(safePlacement.leaderPoints).toBeDefined();
+    });
   });
 });

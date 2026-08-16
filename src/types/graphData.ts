@@ -268,6 +268,121 @@ export interface GraphSection {
   nodeIds: string[];
 }
 
+export type ProvenanceEventStatus =
+  | "leased"
+  | "validating"
+  | "satisfied"
+  | "rejected"
+  | "repaired"
+  | "running"
+  | "success"
+  | "error"
+  | "warning"
+  | "pending"
+  | "skipped"
+  | string;
+
+export interface ProvenanceRemediation {
+  findingId?: string;
+  id?: string;
+  severity?: "critical" | "important" | "suggestion" | string;
+  observation?: string;
+  remediation?: string;
+  status?: "open" | "resolved" | string;
+  proof?:
+    | {
+        method?: string;
+        evidence?: string[] | string;
+        [key: string]: unknown;
+      }
+    | string;
+  [key: string]: unknown;
+}
+
+export interface ProvenanceCommandRef {
+  id?: string;
+  argv?: readonly string[] | string;
+  exitCode?: number;
+  durationMs?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  stdoutSnippet?: string;
+  stderrSnippet?: string;
+  cwd?: string;
+  [key: string]: unknown;
+}
+
+export interface ProvenanceEvent {
+  id: string;
+  title?: string;
+  label?: string;
+  type?: string;
+  timestamp?: string | number;
+  durationMs?: number;
+  status?: ProvenanceEventStatus;
+  actorId?: string;
+  actor?: string;
+  agent?: string;
+  role?: string;
+  attempt?: number;
+  totalAttempts?: number;
+  round?: number;
+  leaseToken?: string;
+  validatorLeaseToken?: string;
+  tokenDigest?: string;
+  commandRef?: string | ProvenanceCommandRef;
+  commandId?: string;
+  command?: string | ProvenanceCommandRef;
+  remediations?: ProvenanceRemediation[];
+  remediation?: string | ProvenanceRemediation;
+  resolutionPath?: string | string[];
+  payload?: unknown;
+  payloadSnippet?: string;
+  summary?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface ChainOfCustodyRecord {
+  actorId?: string;
+  actor?: string;
+  role?: string;
+  agent?: string;
+  leaseToken?: string;
+  validatorLeaseToken?: string;
+  tokenDigest?: string;
+  attempt?: number;
+  maxAttempts?: number;
+  totalAttempts?: number;
+  round?: number;
+  status?: ProvenanceEventStatus;
+  timestamp?: string;
+  durationMs?: number;
+  remediations?: ProvenanceRemediation[];
+  commandRefs?: Array<string | ProvenanceCommandRef>;
+  commands?: Array<string | CommandExecutionDetail | ProvenanceCommandRef>;
+  resolutionPath?: string | string[];
+  findings?: FindingDetail[] | ProvenanceRemediation[];
+  [key: string]: unknown;
+}
+
+export interface NodeProvenanceData {
+  custody?: ChainOfCustodyRecord | ChainOfCustodyRecord[];
+  chainOfCustody?: ChainOfCustodyRecord | ChainOfCustodyRecord[];
+  events?: ProvenanceEvent[];
+  timeline?: ProvenanceEvent[];
+  leaseToken?: string;
+  validatorLeaseToken?: string;
+  actorId?: string;
+  attempt?: number;
+  totalAttempts?: number;
+  round?: number;
+  status?: ProvenanceEventStatus;
+  resolutionPath?: string | string[];
+  remediations?: ProvenanceRemediation[];
+  [key: string]: unknown;
+}
+
 export interface NodeMetadata {
   commands?: CommandExecutionDetail[];
   findings?: FindingDetail[];
@@ -283,6 +398,16 @@ export interface NodeMetadata {
   timingBreakdown?: TimingBreakdown;
   timing?: TimingBreakdown;
   tokens?: TokenUsageDetail;
+  provenance?: NodeProvenanceData;
+  chainOfCustody?: ChainOfCustodyRecord | ChainOfCustodyRecord[];
+  timeline?: ProvenanceEvent[];
+  events?: ProvenanceEvent[];
+  leaseToken?: string;
+  validatorLeaseToken?: string;
+  actorId?: string;
+  resolutionPath?: string | string[];
+  attempt?: number;
+  round?: number;
   [key: string]: unknown;
 }
 
@@ -313,6 +438,10 @@ export interface GraphNodeData {
   metadata?: NodeMetadata;
   mediaAssets?: MediaAsset[];
   screenshots?: MediaAsset[];
+  provenance?: NodeProvenanceData;
+  chainOfCustody?: ChainOfCustodyRecord | ChainOfCustodyRecord[];
+  timeline?: ProvenanceEvent[];
+  events?: ProvenanceEvent[];
   rank?: number;
   group?: string;
 }

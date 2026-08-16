@@ -11,6 +11,7 @@ import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
 import "./EdgeBadgeOverlay.css";
 
 export const MAX_BADGE_WIDTH = 280;
+export const MAX_DETAIL_LENGTH = 24;
 
 export interface EdgeBadgeOverlayProps {
   x: number;
@@ -30,7 +31,28 @@ export interface EdgeBadgeOverlayProps {
   isHighTraffic?: boolean;
   bundleCount?: number;
   sourceAccentColor?: string;
-  onClick?: (e: MouseEvent<SVGGElement>) => void;
+  renderMode?: "svg" | "html";
+  asHtml?: boolean;
+  onClick?: (e: MouseEvent<HTMLElement | SVGGElement>) => void;
+}
+
+/**
+ * Truncates multi-line sentence details to a compact canvas chip string (max 24 characters with ellipsis).
+ * Flattens newlines and redundant whitespace while preserving full detail in edge data structures.
+ */
+export function formatCompactBadgeDetail(
+  detail?: string,
+  maxLength: number = MAX_DETAIL_LENGTH,
+): string | undefined {
+  if (detail === undefined || detail === null) return undefined;
+  const flattened = String(detail)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!flattened) return undefined;
+  if (flattened.length <= maxLength) return flattened;
+  const sliceLen = Math.max(0, maxLength - 3);
+  return `${flattened.slice(0, sliceLen).trimEnd()}...`;
 }
 
 /**
@@ -69,7 +91,7 @@ function stripMatchingOuterBrackets(s: string): string {
 
 /**
  * Resolves the display text for an edge badge, robustly stripping legacy compound and nested
- * "CYCLE", "CYCLE (...)", "CYCLE: (...)", "CYCLE - [...]", etc. wrappers and returning
+ * "CYCLE", "CYCLE (...)", "CYCLE: (...)", "CYCLE - [...]", "EDGE:", "EDGE -" wrappers and returning
  * the clean underlying message directly (or "Feedback Loop" if empty cycle).
  */
 export function resolveEdgeDisplayText(
@@ -78,13 +100,18 @@ export function resolveEdgeDisplayText(
   isCycle: boolean,
 ): string {
   if (titleText && titleText.trim().length > 0) {
-    let cleaned = titleText.trim();
+    let cleaned = titleText
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     let previous = "";
 
     while (cleaned !== previous && cleaned.length > 0) {
       previous = cleaned;
       // Strip leading cycle keywords with optional delimiters (: - — – / or whitespace)
       cleaned = cleaned.replace(/^cycle(?:\s*[-:/\u2013\u2014]\s*|\s+)?/i, "").trim();
+      // Strip leading edge keywords with optional delimiters (: - — – / or whitespace)
+      cleaned = cleaned.replace(/^edge(?:\s*[-:/\u2013\u2014]\s*|\s+)?/i, "").trim();
       // Strip matched outer brackets () [] {} <>
       cleaned = stripMatchingOuterBrackets(cleaned);
       // Strip residual leading/trailing delimiter punctuation if any
@@ -119,12 +146,14 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   isHighTraffic = false,
   bundleCount,
   sourceAccentColor,
+  renderMode = "svg",
+  asHtml = false,
   onClick,
 }) {
   const isInteractive = Boolean(onClick || badge?.clickable);
 
   const handleClick = useCallback(
-    (e: MouseEvent<SVGGElement>) => {
+    (e: MouseEvent<HTMLElement | SVGGElement>) => {
       e.stopPropagation();
       onClick?.(e);
     },
@@ -132,7 +161,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   );
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent<SVGGElement>) => {
+    (e: KeyboardEvent<HTMLElement | SVGGElement>) => {
       if (
         (e.key === "Enter" || e.key === " " || e.key === "Spacebar") &&
         isInteractive &&
@@ -140,7 +169,8 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       ) {
         e.preventDefault();
         e.stopPropagation();
-        onClick(e as unknown as MouseEvent<SVGGElement>);
+        // Synthesize click activation from keyboard event
+        onClick(e as unknown as MouseEvent<HTMLElement | SVGGElement>);
       }
     },
     [isInteractive, onClick],
@@ -150,17 +180,25 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   const descriptor = describeEdgeKind(semanticKind);
 
   const effectiveStep = sanitizeStepBadge(container?.stepBadge ?? stepNumber);
-  const titleText = container?.title ?? badge?.text ?? label;
-  const detailText = container?.detail;
+  const rawTitle = container?.title ?? badge?.text ?? label;
+
+  const compactDetail = formatCompactBadgeDetail(container?.detail);
 
   const hasTraffic = Boolean(traffic || isHighTraffic);
   const effectiveHighTraffic =
     isHighTraffic ||
     Boolean((traffic && (traffic.volume ?? 0) > 1) || traffic?.status === "congested" || isCycle);
 
-  if (!titleText?.trim() && !effectiveStep && !isCycle && !kind && !hasTraffic) return null;
+  if (!rawTitle?.trim() && !effectiveStep && !isCycle && !kind && !hasTraffic) return null;
 
-  const displayText = resolveEdgeDisplayText(titleText, descriptor.label, isCycle);
+  let displayText = resolveEdgeDisplayText(rawTitle, descriptor.label, isCycle);
+
+  // Clean redundant step prefix from displayText if effectiveStep is already set on the badge
+  if (displayText && effectiveStep) {
+    const escapedStep = effectiveStep.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const redundantStepRegex = new RegExp(`^step\\s*${escapedStep}\\s*[:-\\s]\\s*`, "i");
+    displayText = displayText.replace(redundantStepRegex, "").trim();
+  }
 
   // Variant determination
   const variant = isCycle
@@ -177,7 +215,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       54,
       (effectiveStep ? effectiveStep.length * 7 + 14 : 0) +
         displayText.length * 6.8 +
-        (detailText ? detailText.length * 6.0 + 10 : 0) +
+        (compactDetail ? compactDetail.length * 6.0 + 10 : 0) +
         (bundleSnippet ? bundleSnippet.length * 6.2 + 12 : 0) +
         20,
     ),
@@ -208,9 +246,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       : "";
 
   const glowColor =
-    traffic?.glowColor ??
-    sourceAccentColor ??
-    (isCycle ? "#f59e0b" : effectiveHighTraffic ? "#06b6d4" : undefined);
+    traffic?.glowColor ?? sourceAccentColor ?? (effectiveHighTraffic ? "#06b6d4" : undefined);
   const glowStyle = glowColor
     ? { filter: `drop-shadow(0 0 6px ${glowColor})`, stroke: glowColor }
     : undefined;
@@ -244,6 +280,108 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
     .filter(Boolean)
     .join(" ");
 
+  const badgeContent = (
+    <div
+      className={`edge-badge-inner variant-${variant} kind-${semanticKind}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
+        height: "100%",
+        gap: "6px",
+        padding: "0 8px",
+        boxSizing: "border-box",
+        textAlign: "center",
+        lineHeight: 1.2,
+        minWidth: 0,
+        flexShrink: 1,
+      }}
+    >
+      {effectiveStep && (
+        <span
+          className="edge-step-badge"
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            padding: "0 4px",
+            borderRadius: "3px",
+            backgroundColor: "rgba(255, 255, 255, 0.12)",
+            color: "#f4f4f5",
+            letterSpacing: "0.02em",
+            flexShrink: 0,
+          }}
+        >
+          {effectiveStep}
+        </span>
+      )}
+      <span className="edge-badge-label">{displayText}</span>
+
+      {bundleSnippet && (
+        <span
+          className="edge-bundle-chip"
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            padding: "0 4px",
+            borderRadius: "3px",
+            backgroundColor: "rgba(129, 140, 248, 0.2)",
+            color: "#c7d2fe",
+            border: "1px solid rgba(129, 140, 248, 0.35)",
+            flexShrink: 0,
+          }}
+          title={`Bundle size: ${bundleCount}`}
+        >
+          {bundleSnippet}
+        </span>
+      )}
+
+      {compactDetail && (
+        <span
+          className="edge-badge-detail"
+          style={{
+            fontSize: "9.5px",
+            opacity: 0.8,
+            padding: "0 3px",
+            borderRadius: "2px",
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            flexShrink: 1,
+          }}
+        >
+          {compactDetail}
+        </span>
+      )}
+    </div>
+  );
+
+  // Native HTML overlay rendering without <foreignObject>
+  if (renderMode === "html" || asHtml) {
+    return (
+      <div
+        className={`edge-badge-html-overlay ${groupClassName}`}
+        onClick={isInteractive ? handleClick : undefined}
+        onKeyDown={isInteractive ? handleKeyDown : undefined}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
+        aria-label={`Edge ${effectiveStep ? `${effectiveStep}: ` : ""}${displayText}`}
+        style={{
+          position: "absolute",
+          left: renderX - width / 2,
+          top: renderY - height / 2,
+          width,
+          height,
+          ...groupStyle,
+        }}
+      >
+        {badgeContent}
+      </div>
+    );
+  }
+
+  // Native SVG rendering with <foreignObject> wrapper for flex layout
   return (
     <g
       transform={`translate(${renderX}, ${renderY})`}
@@ -292,74 +430,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
         height={height}
         style={{ pointerEvents: "none" }}
       >
-        <div
-          className={`edge-badge-inner variant-${variant} kind-${semanticKind}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "100%",
-            height: "100%",
-            gap: "6px",
-            padding: "0 8px",
-            boxSizing: "border-box",
-            textAlign: "center",
-            lineHeight: 1.2,
-            minWidth: 0,
-            flexShrink: 1,
-          }}
-        >
-          {effectiveStep && (
-            <span
-              className="edge-step-badge"
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                padding: "0 4px",
-                borderRadius: "3px",
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                color: "#f4f4f5",
-                letterSpacing: "0.02em",
-              }}
-            >
-              {effectiveStep}
-            </span>
-          )}
-          <span className="edge-badge-label">{displayText}</span>
-
-          {bundleSnippet && (
-            <span
-              className="edge-bundle-chip"
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                padding: "0 4px",
-                borderRadius: "3px",
-                backgroundColor: "rgba(129, 140, 248, 0.2)",
-                color: "#c7d2fe",
-                border: "1px solid rgba(129, 140, 248, 0.35)",
-              }}
-              title={`Bundle size: ${bundleCount}`}
-            >
-              {bundleSnippet}
-            </span>
-          )}
-
-          {detailText && (
-            <span
-              className="edge-badge-detail"
-              style={{
-                fontSize: "9.5px",
-                opacity: 0.8,
-                padding: "0 3px",
-                borderRadius: "2px",
-                backgroundColor: "rgba(0, 0, 0, 0.3)",
-              }}
-            >
-              {detailText}
-            </span>
-          )}
-        </div>
+        {badgeContent}
       </foreignObject>
     </g>
   );

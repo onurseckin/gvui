@@ -1,6 +1,8 @@
 import {
   IconBinary,
+  IconCoins,
   IconFiles,
+  IconHierarchy2,
   IconInfoCircle,
   IconPhoto,
   IconShieldSearch,
@@ -15,13 +17,24 @@ import type { GraphNodeData, IoPort } from "../../types/graphData";
 import { edgeToPort } from "./streamUtils";
 import { AssetsTab } from "./tabs/AssetsTab";
 import { CommandsTab } from "./tabs/CommandsTab";
-import { FilesTab } from "./tabs/FilesTab";
+import { CostTab } from "./tabs/CostTab";
+import { DependenciesTab } from "./tabs/DependenciesTab";
+import { DiffsTab } from "./tabs/DiffsTab";
 import { FindingsTab } from "./tabs/FindingsTab";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RawProvenanceTab } from "./tabs/RawProvenanceTab";
 import "./NodeDetailDrawer.css";
 
-type TabId = "overview" | "assets" | "files" | "commands" | "findings" | "provenance";
+type TabId =
+  | "overview"
+  | "dependencies"
+  | "cost"
+  | "assets"
+  | "files"
+  | "diffs"
+  | "commands"
+  | "findings"
+  | "provenance";
 
 /**
  * Node detail inspection drawer providing rich metadata, execution metrics,
@@ -92,6 +105,7 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
   const commandsCount = (node.metadata?.commands as unknown[])?.length ?? 0;
   const findingsCount = (node.metadata?.findings as unknown[])?.length ?? 0;
+  const dependenciesCount = inputs.length + outputs.length;
   const hasRepairOrCritic =
     ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
 
@@ -101,6 +115,20 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       label: "Overview & I/O",
       icon: IconInfoCircle,
       count: 0,
+      visible: true,
+    },
+    {
+      id: "cost" as TabId,
+      label: "Cost & Tokens",
+      icon: IconCoins,
+      count: 0,
+      visible: true,
+    },
+    {
+      id: "dependencies" as TabId,
+      label: "Dependencies & Impact",
+      icon: IconHierarchy2,
+      count: dependenciesCount,
       visible: true,
     },
     {
@@ -207,8 +235,14 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
             nodeNamesById={nodeNamesById}
           />
         )}
+        {currentTabId === "cost" && (
+          <CostTab node={node} dataset={dataset} onSelectNode={setSelectedNodeId} />
+        )}
+        {currentTabId === "dependencies" && (
+          <DependenciesTab node={node} dataset={dataset} onSelectNode={setSelectedNodeId} />
+        )}
         {currentTabId === "assets" && <AssetsTab node={node} />}
-        {currentTabId === "files" && <FilesTab node={node} />}
+        {(currentTabId === "files" || currentTabId === "diffs") && <DiffsTab node={node} />}
         {currentTabId === "commands" && <CommandsTab node={node} />}
         {currentTabId === "findings" && <FindingsTab node={node} />}
         {currentTabId === "provenance" && <RawProvenanceTab node={node} />}

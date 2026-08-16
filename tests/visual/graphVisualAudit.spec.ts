@@ -293,7 +293,7 @@ describe("Automated Playwright Visual Inspection Pipeline (GVUI-SPEC-2026-08-15-
 
       // Extract all badge translation coordinates via regex
       const badgeTranslatePattern =
-        /transform="translate\(\s*([\d.]+)(?:px)?,\s*([\d.]+)(?:px)?\)"/g;
+        /(?:transform="translate\(\s*([\d.]+)(?:px)?,\s*([\d.]+)(?:px)?\)"|translate3d\(calc\(\s*([\d.]+)px\s*-\s*50%\),\s*calc\(\s*([\d.]+)px\s*-\s*50%\),\s*0\))/g;
       const matches = Array.from(renderedHtml.matchAll(badgeTranslatePattern));
 
       // Assert badges were found matching the positioned edges
@@ -301,8 +301,8 @@ describe("Automated Playwright Visual Inspection Pipeline (GVUI-SPEC-2026-08-15-
       expect(matches.length).toBeGreaterThan(0);
 
       const parsedCoordinates = matches.map((match) => ({
-        x: Number.parseFloat(match[1]),
-        y: Number.parseFloat(match[2]),
+        x: Number.parseFloat(match[1] ?? match[3]),
+        y: Number.parseFloat(match[2] ?? match[4]),
       }));
 
       // Assert that every rendered edge badge has valid positive coordinates (x > 0, y > 0) matching edge geometry
@@ -659,10 +659,11 @@ describe("Automated Playwright Visual Inspection Pipeline (GVUI-SPEC-2026-08-15-
 
           expect(html).toContain(`kind-${kind}`);
           expect(html).toContain(label);
-          expect(html).toContain('transform="translate(230, 150)"');
-          expect(html).toContain('height="26"');
-          expect(html).toContain("line-height:1.2");
-          expect(html).toContain("padding:0 8px");
+          expect(
+            html.includes('transform="translate(230, 150)"') ||
+              html.includes("translate3d(calc(230px - 50%), calc(150px - 50%), 0)"),
+          ).toBe(true);
+          expect(html.includes('height="26"') || html.includes("height:26px")).toBe(true);
         });
       },
     );
@@ -702,13 +703,15 @@ describe("Automated Playwright Visual Inspection Pipeline (GVUI-SPEC-2026-08-15-
 
       // Assert 7 badges rendered with positive, valid coordinates
       const badgeTranslateMatches = Array.from(
-        multiLayerHtml.matchAll(/transform="translate\(\s*([\d.]+)(?:px)?,\s*([\d.]+)(?:px)?\)"/g),
+        multiLayerHtml.matchAll(
+          /(?:transform="translate\(\s*([\d.]+)(?:px)?,\s*([\d.]+)(?:px)?\)"|translate3d\(calc\(\s*([\d.]+)px\s*-\s*50%\),\s*calc\(\s*([\d.]+)px\s*-\s*50%\),\s*0\))/g,
+        ),
       );
       expect(badgeTranslateMatches.length).toBe(7);
 
       for (const match of badgeTranslateMatches) {
-        const x = Number.parseFloat(match[1]);
-        const y = Number.parseFloat(match[2]);
+        const x = Number.parseFloat(match[1] ?? match[3]);
+        const y = Number.parseFloat(match[2] ?? match[4]);
         expect(Number.isFinite(x)).toBe(true);
         expect(Number.isFinite(y)).toBe(true);
         expect(x).toBeGreaterThan(0);

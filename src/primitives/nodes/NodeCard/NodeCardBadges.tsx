@@ -12,11 +12,15 @@ export const NodeCardBadges: FC<NodeCardBadgesProps> = memo(({ badges }) => {
   }
 
   return (
-    <div className="node-card-badges">
+    <div className="node-card-badges" role="list" aria-label="Secondary status badges">
       {badges.map((badge, index) => {
         const variant = badge.variant ?? "gray";
         return (
-          <span key={`${badge.label}-${index}`} className={`node-card-badge-pill badge-${variant}`}>
+          <span
+            key={`${badge.label}-${index}`}
+            className={`node-card-badge-pill badge-${variant}`}
+            role="listitem"
+          >
             {badge.label}
           </span>
         );

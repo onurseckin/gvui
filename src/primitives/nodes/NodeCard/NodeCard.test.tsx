@@ -95,6 +95,7 @@ describe("NodeCard archetypes and kind descriptors", () => {
 import { create, act } from "react-test-renderer";
 import { NodeCardHeader } from "./NodeCardHeader";
 import { NodeCardTitle } from "./NodeCardTitle";
+import { NodeCardBadges } from "./NodeCardBadges";
 import { NodeCard } from "./index";
 
 describe("NodeCardHeader redesign", () => {
@@ -687,4 +688,150 @@ describe("Exhaustive Viewport Stress Matrix (9 Archetypes x 3 Viewport Widths = 
       });
     }
   }
+});
+
+describe("Secondary Status Badges and Constrained Width Placement", () => {
+  test("renders secondary status badges in the body under NodeCardBadges", () => {
+    const node: PositionedNode = {
+      id: "badges-node",
+      name: "Node With Multiple Secondary Badges",
+      kind: "agent",
+      badges: [
+        { label: "HIGH_PRIORITY", variant: "error" },
+        { label: "PARALLEL", variant: "info" },
+        { label: "REVISED", variant: "amber" },
+        { label: "VERIFIED", variant: "success" },
+        { label: "FALLBACK", variant: "gray" },
+      ],
+      x: 0,
+      y: 0,
+      width: 320,
+      height: 140,
+    };
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <NodeCard
+          node={node}
+          isSelected={false}
+          isFiltered={false}
+          isCollapsed={false}
+          onSelect={() => {}}
+          onToggleCollapse={() => {}}
+        />,
+      );
+    });
+
+    const root = renderer!.root;
+    const body = root.findByProps({ className: "node-card-body" });
+    const badgesContainer = body.findByProps({ className: "node-card-badges" });
+    expect(badgesContainer).toBeDefined();
+    expect(badgesContainer.props.role).toBe("list");
+    expect(badgesContainer.props["aria-label"]).toBe("Secondary status badges");
+
+    const pills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-error",
+    });
+    expect(pills.length).toBe(1);
+    expect(pills[0].props.role).toBe("listitem");
+    expect(pills[0].children).toEqual(["HIGH_PRIORITY"]);
+
+    const infoPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-info",
+    });
+    expect(infoPills.length).toBe(1);
+    expect(infoPills[0].props.role).toBe("listitem");
+    expect(infoPills[0].children).toEqual(["PARALLEL"]);
+
+    const amberPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-amber",
+    });
+    expect(amberPills.length).toBe(1);
+    expect(amberPills[0].props.role).toBe("listitem");
+    expect(amberPills[0].children).toEqual(["REVISED"]);
+
+    const successPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-success",
+    });
+    expect(successPills.length).toBe(1);
+    expect(successPills[0].props.role).toBe("listitem");
+    expect(successPills[0].children).toEqual(["VERIFIED"]);
+
+    const grayPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-gray",
+    });
+    expect(grayPills.length).toBe(1);
+    expect(grayPills[0].props.role).toBe("listitem");
+    expect(grayPills[0].children).toEqual(["FALLBACK"]);
+  });
+
+  test("places secondary status badges in the body at constrained width (200px) beneath untrimmed title", () => {
+    const node: PositionedNode = {
+      id: "constrained-badges-node",
+      name: "Long Untrimmed Title That Wraps Across Several Lines In A Constrained 200px Width Container",
+      kind: "gate",
+      badges: [
+        { label: "BLOCKED", variant: "error" },
+        { label: "RETRY_PENDING", variant: "amber" },
+      ],
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 160,
+    };
+
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <NodeCard
+          node={node}
+          isSelected={false}
+          isFiltered={false}
+          isCollapsed={false}
+          onSelect={() => {}}
+          onToggleCollapse={() => {}}
+        />,
+      );
+    });
+
+    const root = renderer!.root;
+    const body = root.findByProps({ className: "node-card-body" });
+
+    // Untrimmed title is first in body
+    const title = body.findByProps({ className: "node-card-title" });
+    expect(title.children).toEqual([node.name]);
+
+    // Secondary badges follow in body
+    const badgesContainer = body.findByProps({ className: "node-card-badges" });
+    expect(badgesContainer).toBeDefined();
+    expect(badgesContainer.props.role).toBe("list");
+
+    const errorPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-error",
+    });
+    expect(errorPills.length).toBe(1);
+    expect(errorPills[0].props.role).toBe("listitem");
+    expect(errorPills[0].children).toEqual(["BLOCKED"]);
+
+    const warnPills = badgesContainer.findAllByProps({
+      className: "node-card-badge-pill badge-amber",
+    });
+    expect(warnPills.length).toBe(1);
+    expect(warnPills[0].props.role).toBe("listitem");
+    expect(warnPills[0].children).toEqual(["RETRY_PENDING"]);
+  });
+
+  test("NodeCardBadges standalone renders null for empty or undefined badges", () => {
+    let renderer: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(<NodeCardBadges badges={[]} />);
+    });
+    expect(renderer!.toJSON()).toBeNull();
+
+    act(() => {
+      renderer = create(<NodeCardBadges badges={undefined} />);
+    });
+    expect(renderer!.toJSON()).toBeNull();
+  });
 });

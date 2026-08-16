@@ -5,7 +5,7 @@ import type { PositionedEdge } from "../../../types/graphData";
 
 import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 import { resolveSafeBadgePlacement } from "./collision";
-import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
+import { resolveEdgeKind } from "./edgeKinds";
 import "./GraphEdge.css";
 
 export type { CollisionOptions, CollisionResolutionResult, SafeBadgePlacement } from "./collision";
@@ -23,6 +23,8 @@ export type { EdgeBadgeOverlayProps } from "./EdgeBadgeOverlay";
 export {
   EdgeBadgeOverlay,
   MAX_BADGE_WIDTH,
+  MAX_DETAIL_LENGTH,
+  formatCompactBadgeDetail,
   resolveEdgeDisplayText,
   sanitizeStepBadge,
 } from "./EdgeBadgeOverlay";
@@ -36,6 +38,42 @@ export {
   getEdgeIconComponent,
   resolveEdgeKind,
 } from "./edgeKinds";
+
+export function resolveEdgeMarkerId(params: {
+  isSelected?: boolean;
+  isHighlighted?: boolean;
+  sourceAccentColor?: string;
+  kind?: string;
+  isCycle?: boolean;
+}): string {
+  if (params.isSelected) return "edge-arrowhead-selected";
+  if (params.isHighlighted) return "edge-arrowhead-highlighted";
+
+  if (params.sourceAccentColor) {
+    const norm = params.sourceAccentColor.toLowerCase();
+    if (norm === "#8b5cf6") return "edge-arrowhead-prompt";
+    if (norm === "#3b82f6") return "edge-arrowhead-planner";
+    if (norm === "#06b6d4") return "edge-arrowhead-worker";
+    if (norm === "#10b981") return "edge-arrowhead-gate";
+    if (norm === "#818cf8") return "edge-arrowhead-critic";
+    if (norm === "#f43f5e") return "edge-arrowhead-loop";
+    if (norm === "#6366f1") return "edge-arrowhead-data";
+    if (norm === "#64748b") return "edge-arrowhead-dependency";
+    if (norm === "#94a3b8" || norm === "#71717a" || norm === "#3f3f46")
+      return "edge-arrowhead-default";
+  }
+
+  if (params.isCycle) return "edge-arrowhead-loop";
+  if (params.kind === "spawn" || params.kind === "dispatch") return "edge-arrowhead-spawn";
+  if (params.kind === "data" || params.kind === "handoff") return "edge-arrowhead-data";
+  if (params.kind === "dependency") return "edge-arrowhead-dependency";
+  if (params.kind === "loop" || params.kind === "pushback") return "edge-arrowhead-loop";
+  if (params.kind === "gate" || params.kind === "validation") return "edge-arrowhead-gate";
+  if (params.kind === "critic" || params.kind === "signoff") return "edge-arrowhead-critic";
+  if (params.kind === "sequence") return "edge-arrowhead-sequence";
+
+  return "edge-arrowhead-sequence";
+}
 
 export interface GraphEdgeProps {
   edge: PositionedEdge;
@@ -110,7 +148,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     const isInteractive = Boolean(onClick);
 
     const handleEdgeClick = useCallback(
-      (e: MouseEvent<SVGGElement>): void => {
+      (e: MouseEvent<HTMLElement | SVGGElement>): void => {
         e.stopPropagation();
         onClick?.(edge.id);
       },
@@ -130,7 +168,6 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     );
 
     const semanticKind = resolveEdgeKind(edge);
-    const descriptor = describeEdgeKind(semanticKind);
     const isHighlightedEdge = Boolean(
       isHighlighted || (edge as { isHighlighted?: boolean }).isHighlighted,
     );
@@ -143,17 +180,16 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     );
 
     const glowColor =
-      edge.traffic?.glowColor ??
-      sourceAccentColor ??
-      (edge.isCycle ? "#f59e0b" : isHighTraffic ? "#06b6d4" : undefined);
+      edge.traffic?.glowColor ?? sourceAccentColor ?? (isHighTraffic ? "#06b6d4" : undefined);
 
-    const markerId = isSelected
-      ? "url(#edge-arrowhead-selected)"
-      : isHighlightedEdge
-        ? "url(#edge-arrowhead-highlighted)"
-        : edge.isCycle
-          ? "url(#edge-arrowhead-cycle)"
-          : `url(#${descriptor.markerId})`;
+    const markerName = resolveEdgeMarkerId({
+      isSelected,
+      isHighlighted: isHighlightedEdge,
+      sourceAccentColor,
+      kind: edge.kind,
+      isCycle: Boolean(edge.isCycle),
+    });
+    const markerId = `url(#${markerName})`;
 
     const edgeGroupStyle: CSSProperties | undefined = sourceAccentColor
       ? ({ "--edge-source-accent": sourceAccentColor } as CSSProperties)

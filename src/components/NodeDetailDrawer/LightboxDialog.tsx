@@ -1,10 +1,15 @@
 import {
+  IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconCopy,
   IconDownload,
+  IconFileCode,
   IconFileText,
+  IconFileTypePdf,
   IconHierarchy,
   IconInfoCircle,
+  IconMarkdown,
   IconNotes,
   IconPhoto,
   IconPhotoOff,
@@ -16,9 +21,108 @@ import {
   IconZoomReset,
 } from "@tabler/icons-react";
 import type { FC, MouseEvent } from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MediaAsset } from "../../types/graphData";
-import { formatBytes } from "./streamUtils";
+import { copyToClipboard, formatBytes } from "./streamUtils";
+
+const isPdf = (a: MediaAsset): boolean => {
+  return (
+    a.type === "pdf" ||
+    a.mimeType === "application/pdf" ||
+    a.url.toLowerCase().endsWith(".pdf") ||
+    /\.pdf(\?.*)?$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("pdf"))
+  );
+};
+
+const isCode = (a: MediaAsset): boolean => {
+  return (
+    a.type === "code" ||
+    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(a.url) ||
+    Boolean(
+      a.mimeType &&
+      (a.mimeType.includes("javascript") ||
+        a.mimeType.includes("json") ||
+        a.mimeType.includes("typescript") ||
+        a.mimeType.includes("python") ||
+        a.mimeType.includes("code")),
+    )
+  );
+};
+
+const isLog = (a: MediaAsset): boolean => {
+  return (
+    a.type === "log" ||
+    a.url.toLowerCase().endsWith(".log") ||
+    (a.title !== undefined && a.title.toLowerCase().includes("log"))
+  );
+};
+
+const isMarkdown = (a: MediaAsset): boolean => {
+  return (
+    a.type === "markdown" ||
+    /\.(md|markdown)$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("markdown"))
+  );
+};
+
+const isDiagram = (a: MediaAsset): boolean => {
+  return (
+    a.type === "diagram" ||
+    a.url.toLowerCase().includes("diagram") ||
+    /\.(svg|drawio|excalidraw)$/i.test(a.url) ||
+    (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
+  );
+};
+
+const isDocument = (a: MediaAsset): boolean => {
+  return (
+    a.type === "document" ||
+    a.type === "pdf" ||
+    a.type === "markdown" ||
+    a.type === "code" ||
+    isPdf(a) ||
+    isMarkdown(a) ||
+    isCode(a) ||
+    Boolean(
+      a.mimeType &&
+      (a.mimeType === "application/pdf" ||
+        a.mimeType.startsWith("text/") ||
+        a.mimeType.includes("pdf") ||
+        a.mimeType.includes("document") ||
+        a.mimeType.includes("msword") ||
+        a.mimeType.includes("spreadsheet") ||
+        a.mimeType.includes("csv")),
+    ) ||
+    /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(a.url)
+  );
+};
+
+const isImage = (a: MediaAsset): boolean => {
+  if (
+    isPdf(a) ||
+    isCode(a) ||
+    isLog(a) ||
+    isMarkdown(a) ||
+    a.type === "video" ||
+    a.type === "audio"
+  ) {
+    return false;
+  }
+  if (isDiagram(a) && !/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(a.url)) {
+    return false;
+  }
+  if (a.type === "image" || a.type === "screenshot" || a.type === "diagram") {
+    return true;
+  }
+  if (/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(a.url)) {
+    return true;
+  }
+  if (Boolean(a.mimeType && a.mimeType.startsWith("image/"))) {
+    return true;
+  }
+  return false;
+};
 
 export interface LightboxDialogProps {
   isOpen: boolean;
@@ -27,11 +131,413 @@ export interface LightboxDialogProps {
   onClose: () => void;
 }
 
+interface CodeToken {
+  type:
+    | "keyword"
+    | "string"
+    | "number"
+    | "comment"
+    | "function"
+    | "type"
+    | "punctuation"
+    | "log-level"
+    | "timestamp"
+    | "plain";
+  value: string;
+  variant?: "error" | "warn" | "info" | "debug";
+}
+
+interface HighlightedLine {
+  lineNumber: number;
+  tokens: CodeToken[];
+}
+
+/**
+ * Tokenize a single line of log or code for high-fidelity syntax highlighting.
+ */
+function tokenizeLine(line: string, isLogFile: boolean): CodeToken[] {
+  if (!line) return [{ type: "plain", value: "" }];
+
+  const tokens: CodeToken[] = [];
+
+  if (isLogFile) {
+    const logRegex =
+      /(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?|\[\d{2}:\d{2}:\d{2}\])|(\b(?:ERROR|FATAL|CRITICAL|FAIL|FAILED)\b)|(\b(?:WARN|WARNING)\b)|(\b(?:INFO|NOTICE)\b)|(\b(?:DEBUG|TRACE)\b)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([^\s\w]+)|([^\s]+)/g;
+
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+
+    while ((match = logRegex.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        tokens.push({ type: "plain", value: line.slice(lastIndex, match.index) });
+      }
+
+      if (match[1]) {
+        tokens.push({ type: "timestamp", value: match[1] });
+      } else if (match[2]) {
+        tokens.push({ type: "log-level", value: match[2], variant: "error" });
+      } else if (match[3]) {
+        tokens.push({ type: "log-level", value: match[3], variant: "warn" });
+      } else if (match[4]) {
+        tokens.push({ type: "log-level", value: match[4], variant: "info" });
+      } else if (match[5]) {
+        tokens.push({ type: "log-level", value: match[5], variant: "debug" });
+      } else if (match[6]) {
+        tokens.push({ type: "string", value: match[6] });
+      } else if (match[7]) {
+        tokens.push({ type: "number", value: match[7] });
+      } else if (match[8]) {
+        tokens.push({ type: "punctuation", value: match[8] });
+      } else {
+        tokens.push({ type: "plain", value: match[0] });
+      }
+
+      lastIndex = logRegex.lastIndex;
+    }
+
+    if (lastIndex < line.length) {
+      tokens.push({ type: "plain", value: line.slice(lastIndex) });
+    }
+
+    return tokens;
+  }
+
+  const commentMatch = line.match(/^(\s*)((\/\/|#|\/\*).*)$/);
+  if (commentMatch && commentMatch[1] !== undefined && commentMatch[2] !== undefined) {
+    if (commentMatch[1]) {
+      tokens.push({ type: "plain", value: commentMatch[1] });
+    }
+    tokens.push({ type: "comment", value: commentMatch[2] });
+    return tokens;
+  }
+
+  const codeRegex =
+    /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\/\/.*|\/\*.*?\*\/|#.*)|(\b(?:const|let|var|function|return|import|export|from|as|default|class|extends|interface|type|enum|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|async|await|yield|new|typeof|instanceof|void|delete|in|of|def|fn|pub|struct|impl|use|mut|self|true|false|null|undefined|nil)\b)|(\b\d+(?:\.\d+)?\b)|(\b[A-Z][a-zA-Z0-9_$]*\b)|(\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\s*\())|([{}()[\].,;:?+\-*/%&|^!=<>]+)|([a-zA-Z_$][a-zA-Z0-9_$]*)|(\s+)/g;
+
+  let match: RegExpExecArray | null;
+  let lastIndex = 0;
+
+  while ((match = codeRegex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: "plain", value: line.slice(lastIndex, match.index) });
+    }
+
+    if (match[1]) {
+      tokens.push({ type: "string", value: match[1] });
+    } else if (match[2]) {
+      tokens.push({ type: "comment", value: match[2] });
+    } else if (match[3]) {
+      tokens.push({ type: "keyword", value: match[3] });
+    } else if (match[4]) {
+      tokens.push({ type: "number", value: match[4] });
+    } else if (match[5]) {
+      tokens.push({ type: "type", value: match[5] });
+    } else if (match[6]) {
+      tokens.push({ type: "function", value: match[6] });
+    } else if (match[7]) {
+      tokens.push({ type: "punctuation", value: match[7] });
+    } else if (match[8]) {
+      tokens.push({ type: "plain", value: match[8] });
+    } else if (match[9]) {
+      tokens.push({ type: "plain", value: match[9] });
+    }
+
+    lastIndex = codeRegex.lastIndex;
+  }
+
+  if (lastIndex < line.length) {
+    tokens.push({ type: "plain", value: line.slice(lastIndex) });
+  }
+
+  return tokens;
+}
+
+function highlightSource(source: string, isLogFile: boolean): HighlightedLine[] {
+  const rawLines = source.split(/\r?\n/);
+  return rawLines.map((line, idx) => ({
+    lineNumber: idx + 1,
+    tokens: tokenizeLine(line, isLogFile),
+  }));
+}
+
+interface CodeViewerProps {
+  asset: MediaAsset;
+  isLogFile: boolean;
+}
+
+const CodeViewer: FC<CodeViewerProps> = memo(function CodeViewer({ asset, isLogFile }) {
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const rawContent = useMemo(() => {
+    if (typeof asset.metadata?.content === "string") return asset.metadata.content;
+    if (typeof asset.metadata?.code === "string") return asset.metadata.code;
+    if (typeof asset.description === "string") return asset.description;
+    return `// Asset: ${asset.title ?? asset.id}\n// Path: ${asset.url}\n// Size: ${formatBytes(asset.sizeBytes ?? 0)}`;
+  }, [asset]);
+
+  const lines = useMemo(() => {
+    return highlightSource(rawContent, isLogFile);
+  }, [rawContent, isLogFile]);
+
+  const handleCopy = useCallback(async () => {
+    const success = await copyToClipboard(rawContent);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [rawContent]);
+
+  const fileExt = useMemo(() => {
+    const parts = asset.url.split(".");
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : isLogFile ? "LOG" : "CODE";
+  }, [asset.url, isLogFile]);
+
+  return (
+    <div className="drawer-lightbox-code-viewer">
+      <div className="drawer-lightbox-code-toolbar">
+        <div className="drawer-lightbox-code-toolbar-left">
+          <span className="drawer-lightbox-lang-badge">{fileExt}</span>
+          <span className="drawer-lightbox-code-chip">{lines.length} lines</span>
+          {typeof asset.sizeBytes === "number" && (
+            <span className="drawer-lightbox-code-chip">{formatBytes(asset.sizeBytes)}</span>
+          )}
+        </div>
+        <div className="drawer-lightbox-code-toolbar-right">
+          <button
+            type="button"
+            className={`drawer-copy-btn ${copied ? "is-copied" : ""}`}
+            onClick={handleCopy}
+            aria-label="Copy code content"
+          >
+            {copied ? (
+              <>
+                <IconCheck size={13} />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <IconCopy size={13} />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+      <div className="drawer-lightbox-code-container">
+        <table className="drawer-code-table">
+          <tbody>
+            {lines.map((line) => (
+              <tr key={line.lineNumber} className="drawer-code-row">
+                <td className="drawer-code-lineno" data-line-number={line.lineNumber}>
+                  {line.lineNumber}
+                </td>
+                <td className="drawer-code-content">
+                  <code>
+                    {line.tokens.map((tok, tIdx) => {
+                      const className = tok.variant
+                        ? `token token-${tok.type} token-${tok.type}--${tok.variant}`
+                        : `token token-${tok.type}`;
+                      return (
+                        <span key={tIdx} className={className}>
+                          {tok.value}
+                        </span>
+                      );
+                    })}
+                  </code>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
+
+interface PdfViewerProps {
+  asset: MediaAsset;
+}
+
+const PdfViewer: FC<PdfViewerProps> = memo(function PdfViewer({ asset }) {
+  return (
+    <div className="drawer-lightbox-pdf-container">
+      <div className="drawer-lightbox-pdf-toolbar">
+        <div className="drawer-lightbox-pdf-toolbar-left">
+          <span className="drawer-lightbox-pdf-tag">
+            <IconFileTypePdf size={16} />
+            <span>PDF Document</span>
+          </span>
+          <span className="drawer-lightbox-pdf-title">{asset.title ?? asset.id}</span>
+        </div>
+        <div className="drawer-lightbox-pdf-toolbar-right">
+          {typeof asset.sizeBytes === "number" && (
+            <span className="drawer-lightbox-chip">{formatBytes(asset.sizeBytes)}</span>
+          )}
+          {asset.url && (
+            <a
+              href={asset.url}
+              target="_blank"
+              rel="noreferrer"
+              className="drawer-lightbox-action-btn"
+              title="Open in new window"
+              aria-label="Open PDF in new tab"
+            >
+              <IconDownload size={16} />
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="drawer-lightbox-pdf-viewport">
+        <object
+          data={asset.url}
+          type="application/pdf"
+          className="drawer-lightbox-pdf-object"
+          aria-label={asset.title ?? "PDF Document Preview"}
+        >
+          <iframe
+            src={asset.url}
+            title={asset.title ?? "PDF Document"}
+            className="drawer-lightbox-pdf-iframe"
+          >
+            <div className="drawer-lightbox-pdf-fallback">
+              <IconFileTypePdf size={48} className="drawer-lightbox-pdf-icon" />
+              <h4 className="drawer-lightbox-pdf-fallback-title">{asset.title ?? asset.id}</h4>
+              <p className="drawer-lightbox-pdf-fallback-desc">
+                PDF document preview. Click below to view or download.
+              </p>
+              {asset.url && (
+                <a
+                  href={asset.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="drawer-lightbox-fallback-btn"
+                >
+                  <IconDownload size={14} /> Open PDF directly
+                </a>
+              )}
+            </div>
+          </iframe>
+        </object>
+      </div>
+    </div>
+  );
+});
+
+interface DocumentViewerProps {
+  asset: MediaAsset;
+}
+
+const DocumentViewer: FC<DocumentViewerProps> = memo(function DocumentViewer({ asset }) {
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const rawContent = useMemo(() => {
+    if (typeof asset.metadata?.content === "string") return asset.metadata.content;
+    if (typeof asset.metadata?.code === "string") return asset.metadata.code;
+    if (typeof asset.description === "string") return asset.description;
+    return undefined;
+  }, [asset]);
+
+  const handleCopy = useCallback(async () => {
+    if (!rawContent) return;
+    const success = await copyToClipboard(rawContent);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [rawContent]);
+
+  const docExt = useMemo(() => {
+    const parts = asset.url.split(".");
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "DOC";
+  }, [asset.url]);
+
+  return (
+    <div className="drawer-lightbox-doc-card">
+      <div className="drawer-lightbox-doc-header">
+        <div className="drawer-lightbox-doc-header-left">
+          <span className="drawer-lightbox-doc-tag">
+            <IconFileText size={16} />
+            <span>{docExt} Document</span>
+          </span>
+          <h4 className="drawer-lightbox-doc-title">{asset.title ?? asset.id}</h4>
+        </div>
+        <div className="drawer-lightbox-doc-header-right">
+          {typeof asset.sizeBytes === "number" && (
+            <span className="drawer-lightbox-chip">{formatBytes(asset.sizeBytes)}</span>
+          )}
+          {rawContent && (
+            <button
+              type="button"
+              className={`drawer-copy-btn ${copied ? "is-copied" : ""}`}
+              onClick={handleCopy}
+              aria-label="Copy document text"
+            >
+              {copied ? (
+                <>
+                  <IconCheck size={13} />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <IconCopy size={13} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          )}
+          {asset.url && (
+            <a
+              href={asset.url}
+              target="_blank"
+              rel="noreferrer"
+              className="drawer-lightbox-action-btn"
+              title="Open / Download document"
+              aria-label="Open document in new tab"
+              download={asset.title ?? asset.id}
+            >
+              <IconDownload size={16} />
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="drawer-lightbox-doc-body">
+        {rawContent ? (
+          <pre className="drawer-pre drawer-lightbox-doc-pre">
+            <code>{rawContent}</code>
+          </pre>
+        ) : (
+          <div className="drawer-lightbox-doc-fallback">
+            <IconFileText size={48} className="drawer-lightbox-doc-icon" />
+            <h5 className="drawer-lightbox-doc-fallback-title">{asset.title ?? asset.id}</h5>
+            <p className="drawer-lightbox-doc-fallback-desc">
+              {asset.description || "Binary document or structured data file artifact."}
+            </p>
+            {asset.url && (
+              <a
+                href={asset.url}
+                target="_blank"
+                rel="noreferrer"
+                className="drawer-lightbox-fallback-btn"
+                download={asset.title ?? asset.id}
+              >
+                <IconDownload size={14} /> Open or Download {docExt} File
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 /**
  * Fullscreen high-DPI Lightbox modal dialog supporting:
  * - 100% to 400% zoom scaling with percentage badge
- * - Interactive pan navigation with grab / grabbing cursor
- * - Prev/Next keyboard navigation (ArrowLeft / ArrowRight) and Escape dismiss
+ * - Interactive pan navigation with grab / grabbing cursor and clamping
+ * - PDF rendering preview with toolbar and responsive container
+ * - Syntax-highlighted code and log viewers with line numbers and copy buttons
+ * - Dedicated document viewer cards for non-image document formats
+ * - Prev/Next keyboard navigation (ArrowLeft / ArrowRight) with single-asset guards and Escape dismiss
  * - Metadata inspector sidebar and direct download links
  */
 export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDialog({
@@ -101,11 +607,13 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
   }, []);
 
   const handlePrev = useCallback(() => {
+    if (assets.length <= 1) return;
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : assets.length - 1));
     resetPanAndZoom();
   }, [assets.length, resetPanAndZoom]);
 
   const handleNext = useCallback(() => {
+    if (assets.length <= 1) return;
     setCurrentIndex((prev) => (prev < assets.length - 1 ? prev + 1 : 0));
     resetPanAndZoom();
   }, [assets.length, resetPanAndZoom]);
@@ -216,10 +724,14 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
         }
       } else if (e.key === "ArrowLeft") {
         e.stopPropagation();
-        handlePrev();
+        if (assets.length > 1) {
+          handlePrev();
+        }
       } else if (e.key === "ArrowRight") {
         e.stopPropagation();
-        handleNext();
+        if (assets.length > 1) {
+          handleNext();
+        }
       } else if (e.key === "+" || e.key === "=") {
         e.preventDefault();
         handleZoomIn();
@@ -234,7 +746,16 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, handlePrev, handleNext, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [
+    isOpen,
+    onClose,
+    handlePrev,
+    handleNext,
+    handleZoomIn,
+    handleZoomOut,
+    handleZoomReset,
+    assets.length,
+  ]);
 
   if (!isOpen || !currentAsset) return null;
 
@@ -244,34 +765,27 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
     }
   };
 
-  const getAssetIcon = (type?: string, url?: string, title?: string) => {
-    if (
-      type === "diagram" ||
-      url?.toLowerCase().includes("diagram") ||
-      title?.toLowerCase().includes("diagram")
-    ) {
-      return <IconHierarchy size={16} />;
-    }
-    if (
-      type === "log" ||
-      url?.toLowerCase().endsWith(".log") ||
-      title?.toLowerCase().includes("log")
-    ) {
-      return <IconNotes size={16} />;
-    }
-    switch (type) {
-      case "video":
-        return <IconPlayerPlay size={16} />;
-      case "audio":
-        return <IconVolume size={16} />;
-      case "document":
-      case "code":
-        return <IconFileText size={16} />;
-      case "image":
-      case "screenshot":
-      default:
-        return <IconPhoto size={16} />;
-    }
+  const isCurrentPdf = isPdf(currentAsset);
+  const isCurrentCode = isCode(currentAsset);
+  const isCurrentLog = isLog(currentAsset);
+  const isCurrentMarkdown = isMarkdown(currentAsset);
+  const isCurrentDiagram = isDiagram(currentAsset);
+  const isCurrentDoc =
+    isDocument(currentAsset) && !currentAsset.url.match(/\.(png|jpe?g|webp|gif|svg)$/i);
+  const isImageOrDiagram =
+    isImage(currentAsset) ||
+    (isCurrentDiagram && /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(currentAsset.url));
+
+  const getAssetIcon = (asset: MediaAsset) => {
+    if (isDiagram(asset)) return <IconHierarchy size={16} />;
+    if (isPdf(asset)) return <IconFileTypePdf size={16} />;
+    if (isCode(asset)) return <IconFileCode size={16} />;
+    if (isLog(asset)) return <IconNotes size={16} />;
+    if (isMarkdown(asset)) return <IconMarkdown size={16} />;
+    if (asset.type === "video") return <IconPlayerPlay size={16} />;
+    if (asset.type === "audio") return <IconVolume size={16} />;
+    if (isDocument(asset)) return <IconFileText size={16} />;
+    return <IconPhoto size={16} />;
   };
 
   return (
@@ -287,9 +801,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
       <div className="drawer-lightbox-dialog">
         <header className="drawer-lightbox-header">
           <div className="drawer-lightbox-header-left">
-            <span className="drawer-lightbox-type-icon">
-              {getAssetIcon(currentAsset.type, currentAsset.url, currentAsset.title)}
-            </span>
+            <span className="drawer-lightbox-type-icon">{getAssetIcon(currentAsset)}</span>
             <div className="drawer-lightbox-title-wrap">
               <h3 className="drawer-lightbox-title">
                 {currentAsset.title ?? `Asset ${currentAsset.id}`}
@@ -309,10 +821,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
           </div>
 
           <div className="drawer-lightbox-header-actions">
-            {(!currentAsset.type ||
-              currentAsset.type === "image" ||
-              currentAsset.type === "screenshot" ||
-              currentAsset.type === "diagram") && (
+            {isImageOrDiagram && (
               <div className="drawer-lightbox-zoom-controls">
                 <button
                   type="button"
@@ -427,14 +936,12 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   Your browser does not support the audio tag.
                 </audio>
               </div>
-            ) : currentAsset.type === "code" ||
-              currentAsset.type === "log" ||
-              currentAsset.type === "document" ? (
-              <div className="drawer-lightbox-doc-preview">
-                <pre className="drawer-pre">
-                  <code>{currentAsset.description || currentAsset.url}</code>
-                </pre>
-              </div>
+            ) : isCurrentPdf ? (
+              <PdfViewer asset={currentAsset} />
+            ) : isCurrentCode || isCurrentLog || isCurrentMarkdown ? (
+              <CodeViewer asset={currentAsset} isLogFile={isCurrentLog} />
+            ) : isCurrentDoc ? (
+              <DocumentViewer asset={currentAsset} />
             ) : hasImageError ? (
               <div className="drawer-lightbox-fallback">
                 <IconPhotoOff size={48} className="drawer-lightbox-fallback-icon" />
@@ -454,7 +961,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   </a>
                 )}
               </div>
-            ) : (
+            ) : isImageOrDiagram ? (
               <div
                 className="drawer-lightbox-image-wrap"
                 style={{
@@ -472,6 +979,8 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   onError={() => setHasImageError(true)}
                 />
               </div>
+            ) : (
+              <DocumentViewer asset={currentAsset} />
             )}
           </div>
 

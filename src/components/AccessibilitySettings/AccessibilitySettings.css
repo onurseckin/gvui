@@ -1,0 +1,302 @@
+.gvui-accessibility-panel {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gvui-bg-surface, #1e1e24);
+  color: var(--gvui-text-primary, #e2e8f0);
+  border-radius: 12px;
+  border: 1px solid var(--gvui-border-default, #2d3748);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 580px;
+  max-height: 85vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  z-index: 1000;
+}
+
+.gvui-accessibility-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gvui-border-default, #2d3748);
+  background-color: var(--gvui-bg-header, #18181b);
+}
+
+.gvui-accessibility-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gvui-accessibility-title-group h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.gvui-accessibility-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.gvui-accessibility-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.gvui-accessibility-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gvui-border-default, #2d3748);
+  background-color: var(--gvui-bg-subtle, #141417);
+}
+
+.gvui-accessibility-tab-btn {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  text-align: center;
+}
+
+.gvui-accessibility-tab-btn:hover {
+  color: #f1f5f9;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.gvui-accessibility-tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+  font-weight: 600;
+  background-color: rgba(56, 189, 248, 0.05);
+}
+
+.gvui-accessibility-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gvui-accessibility-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gvui-accessibility-section-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.gvui-accessibility-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--gvui-border-default, #2d3748);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gvui-accessibility-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gvui-accessibility-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gvui-accessibility-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
+.gvui-accessibility-desc {
+  font-size: 0.775rem;
+  color: #64748b;
+}
+
+.gvui-accessibility-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  max-width: 260px;
+}
+
+.gvui-accessibility-slider {
+  flex: 1;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.gvui-accessibility-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 42px;
+  text-align: right;
+  color: #cbd5e1;
+}
+
+.gvui-accessibility-toggle-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--gvui-border-default, #334155);
+  background-color: #1e293b;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gvui-accessibility-toggle-btn:hover {
+  background-color: #334155;
+  color: #f8fafc;
+}
+
+.gvui-accessibility-toggle-btn.active {
+  background-color: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.gvui-accessibility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.gvui-accessibility-cue-btn {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.gvui-accessibility-cue-btn:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.gvui-accessibility-cue-btn:active {
+  transform: translateY(0);
+}
+
+.gvui-accessibility-cue-btn-tag {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.gvui-accessibility-cue-btn:hover .gvui-accessibility-cue-btn-tag {
+  color: #bfdbfe;
+}
+
+.gvui-accessibility-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.gvui-accessibility-log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: #111827;
+  border: 1px solid #1f2937;
+  font-size: 0.775rem;
+}
+
+.gvui-accessibility-log-type {
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.gvui-accessibility-log-time {
+  color: #6b7280;
+  font-size: 0.7rem;
+}
+
+.gvui-accessibility-empty {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.gvui-accessibility-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--gvui-border-default, #2d3748);
+  background-color: var(--gvui-bg-header, #18181b);
+}
+
+.gvui-accessibility-reset-btn {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gvui-accessibility-reset-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: #f87171;
+}

@@ -682,7 +682,7 @@ function buildViewerCss(): string {
       stroke: var(--accent-color);
       stroke-width: 3px;
     }
-    .graph-edge-path.cycle { stroke: #fbbf24; stroke-dasharray: 6 4; }
+    .graph-edge-path.cycle { stroke: var(--edge-source-accent, #f43f5e); stroke-dasharray: 6 4; }
 
     .edge-badge-group { cursor: default; user-select: none; }
     .edge-badge-rect {
@@ -692,7 +692,7 @@ function buildViewerCss(): string {
       filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.9));
     }
     .edge-badge-group.selected .edge-badge-rect { stroke: var(--accent-color); }
-    .edge-badge-rect.cycle { stroke: #f59e0b; stroke-width: 2px; }
+    .edge-badge-rect.cycle { stroke: var(--edge-source-accent, #f43f5e); stroke-width: 2px; }
     .edge-badge-text {
       fill: #ffffff;
       font-size: 11px;
@@ -700,7 +700,7 @@ function buildViewerCss(): string {
       font-weight: 600;
       pointer-events: none;
     }
-    .edge-badge-group.cycle .edge-badge-text { fill: #fbbf24; font-weight: 700; }
+    .edge-badge-group.cycle .edge-badge-text { fill: var(--edge-source-accent, #fda4af); font-weight: 700; }
 
     /* ------------------------------------------------------------------------------------------
      * Node card. Mirrors src/primitives/nodes/NodeCard/NodeCard.css — same greys, same spacing,
@@ -1075,7 +1075,7 @@ export async function exportGraphAsHTML(
             <path d="M 0 1 L 10 5 L 0 9 z" fill="#9ca3af" />
           </marker>
           <marker id="edge-arrowhead-cycle" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#f43f5e" />
           </marker>
         </defs>
         ${edgesSvg}

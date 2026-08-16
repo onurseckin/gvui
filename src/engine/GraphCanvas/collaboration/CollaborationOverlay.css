@@ -1,0 +1,700 @@
+/* ==========================================================================
+   GVUI Multi-Agent Collaboration & Live Presence Styles
+   ========================================================================== */
+
+.gvui-collaboration-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 25;
+}
+
+/* ==========================================
+   Layers
+   ========================================== */
+
+.gvui-collab-frustums-layer,
+.gvui-collab-selection-rings-layer,
+.gvui-collab-lock-badges-layer,
+.gvui-collab-cursors-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ==========================================
+   Live Cursors & Motion Trails
+   ========================================== */
+
+.gvui-collab-cursor-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.06s linear;
+  will-change: transform;
+}
+
+.gvui-collab-cursor-wrapper.is-idle {
+  opacity: 0.6;
+}
+
+.gvui-collab-cursor-svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  transform-origin: 3px 3px;
+  transition: transform 0.15s ease-out;
+}
+
+.gvui-collab-cursor-wrapper.is-clicking .gvui-collab-cursor-svg {
+  transform: scale(0.9) rotate(-8deg);
+}
+
+.gvui-cursor-click-ripple {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid;
+  animation: gvui-ripple-expand 0.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gvui-ripple-expand {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.gvui-collab-cursor-label {
+  position: absolute;
+  top: 18px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.gvui-cursor-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gvui-cursor-role {
+  opacity: 0.85;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.gvui-cursor-target {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9px;
+}
+
+/* ==========================================
+   Viewport Frustums
+   ========================================== */
+
+.gvui-collab-viewport-frustum {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1.5px dashed;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  pointer-events: none;
+  transition: all 0.2s ease-out;
+  box-sizing: border-box;
+}
+
+.gvui-collab-frustum-tag {
+  position: absolute;
+  top: -18px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================
+   Selection Focus Rings
+   ========================================== */
+
+.gvui-collab-selection-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 2px solid;
+  border-radius: 8px;
+  pointer-events: none;
+  box-sizing: border-box;
+  animation: gvui-selection-pulse 2s infinite ease-in-out;
+}
+
+@keyframes gvui-selection-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.gvui-collab-selection-ring-badge {
+  position: absolute;
+  top: -14px;
+  left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* ==========================================
+   Node Lock Badges
+   ========================================== */
+
+.gvui-collab-node-lock-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #18181b;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #f4f4f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  cursor: help;
+  z-index: 20;
+}
+
+.gvui-lock-badge-icon {
+  font-size: 10px;
+}
+
+.gvui-lock-badge-label {
+  font-weight: 600;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gvui-lock-badge-time {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: #a1a1aa;
+}
+
+/* ==========================================
+   Collaborator HUD (Fixed Screen-Space)
+   ========================================== */
+
+.gvui-collab-hud {
+  position: absolute;
+  z-index: 60;
+  width: 300px;
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  color: #f4f4f5;
+  font-size: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+.gvui-collab-hud--top-right {
+  top: 16px;
+  right: 16px;
+}
+
+.gvui-collab-hud--top-left {
+  top: 16px;
+  left: 16px;
+}
+
+.gvui-collab-hud--bottom-right {
+  bottom: 16px;
+  right: 16px;
+}
+
+.gvui-collab-hud--bottom-left {
+  bottom: 16px;
+  left: 16px;
+}
+
+.gvui-collab-hud.is-collapsed {
+  width: auto;
+  min-width: 160px;
+}
+
+/* Header */
+.gvui-collab-hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gvui-collab-hud.is-collapsed .gvui-collab-hud-header {
+  border-bottom: none;
+}
+
+.gvui-collab-hud-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gvui-collab-hud-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.gvui-collab-hud-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.gvui-collab-hud-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.gvui-collab-hud-conflict-pill {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.gvui-collab-hud-collapse-btn {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 10px;
+}
+
+.gvui-collab-hud-collapse-btn:hover {
+  color: #ffffff;
+}
+
+/* Following Banner */
+.gvui-collab-hud-following-banner {
+  background: rgba(59, 130, 246, 0.2);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.4);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.gvui-unfollow-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 3px;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.gvui-unfollow-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* Tabs */
+.gvui-collab-hud-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 4px;
+}
+
+.gvui-collab-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  font-size: 11px;
+  color: #a1a1aa;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  text-align: center;
+}
+
+.gvui-collab-tab:hover {
+  color: #f4f4f5;
+}
+
+.gvui-collab-tab.is-active {
+  color: #ffffff;
+  font-weight: 600;
+  border-bottom-color: #38bdf8;
+}
+
+/* Search Box */
+.gvui-collab-search-wrap {
+  position: relative;
+  margin: 8px 10px 4px;
+}
+
+.gvui-collab-search-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 22px 4px 8px;
+  color: #ffffff;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.gvui-collab-search-input:focus {
+  border-color: #38bdf8;
+}
+
+.gvui-collab-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+/* Role Chips */
+.gvui-collab-role-chips {
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px;
+  overflow-x: auto;
+}
+
+.gvui-collab-role-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #a1a1aa;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gvui-collab-role-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.gvui-collab-role-chip.is-active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #bae6fd;
+}
+
+/* Agent List */
+.gvui-collab-agent-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gvui-collab-empty {
+  text-align: center;
+  color: #71717a;
+  padding: 16px 8px;
+  font-size: 11px;
+}
+
+/* Presence Badge */
+.gvui-presence-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gvui-presence-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gvui-presence-badge.is-following {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.gvui-presence-avatar {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.gvui-presence-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.gvui-presence-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #18181b;
+}
+
+.gvui-presence-status-dot--active {
+  background: #22c55e;
+}
+
+.gvui-presence-status-dot--idle {
+  background: #f59e0b;
+}
+
+.gvui-presence-status-dot--busy {
+  background: #ec4899;
+}
+
+.gvui-presence-status-dot--following {
+  background: #3b82f6;
+}
+
+.gvui-presence-status-dot--disconnected {
+  background: #71717a;
+}
+
+.gvui-presence-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gvui-presence-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gvui-presence-name {
+  font-weight: 600;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gvui-presence-role-pill {
+  font-size: 9px;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 0 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.gvui-presence-task-subtext {
+  font-size: 10px;
+  color: #a1a1aa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gvui-presence-follow-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #d4d4d8;
+  padding: 3px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gvui-presence-follow-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.gvui-presence-follow-btn.is-active {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+/* Locks Tab */
+.gvui-collab-lock-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gvui-collab-lock-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.gvui-lock-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.gvui-lock-target {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gvui-lock-owner-pill {
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.gvui-lock-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.gvui-lock-timer {
+  color: #a1a1aa;
+}
+
+.gvui-release-lock-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.gvui-release-lock-btn:hover {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+/* Settings Tab */
+.gvui-collab-hud-settings-tab {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gvui-collab-toggle-row {
+  display: flex;
+  align-items: center;
+}
+
+.gvui-collab-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #e4e4e7;
+}
+
+.gvui-collab-toggle-label input[type="checkbox"] {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+/* Footer */
+.gvui-collab-hud-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #71717a;
+}

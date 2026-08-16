@@ -72,16 +72,61 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
         if (!node.tools || node.tools.length === 0) return false;
       }
 
-      const query = searchQuery.trim().toLowerCase();
-      if (!query) return true;
+      const q = searchQuery.trim();
+      if (!q) return true;
 
-      const nameMatch = node.name.toLowerCase().includes(query);
-      const idMatch = node.id.toLowerCase().includes(query);
-      const typeMatch = Boolean(node.type?.toLowerCase().includes(query));
-      const descMatch = Boolean(node.description?.toLowerCase().includes(query));
-      const modelMatch = Boolean(node.model?.toLowerCase().includes(query));
+      let regex: RegExp | null = null;
+      try {
+        regex = new RegExp(q, "i");
+      } catch {
+        regex = null;
+      }
 
-      return nameMatch || idMatch || typeMatch || descMatch || modelMatch;
+      const lowerQ = q.toLowerCase();
+      const matchesText = (val?: string | null): boolean => {
+        if (!val) return false;
+        if (regex) {
+          try {
+            if (regex.test(val)) return true;
+          } catch {
+            // Safe fallback
+          }
+        }
+        return val.toLowerCase().includes(lowerQ);
+      };
+
+      const nameMatch = matchesText(node.name);
+      const idMatch = matchesText(node.id);
+      const typeMatch = matchesText(node.type);
+      const kindMatch = matchesText(node.kind);
+      const descMatch = matchesText(node.description);
+      const modelMatch = matchesText(node.model);
+      const stepMatch = matchesText(node.stepLabel);
+      const badgeMatch =
+        matchesText(node.badge?.text) || Boolean(node.badges?.some((b) => matchesText(b.label)));
+      const roleMatch =
+        matchesText(node.metadata?.role ? String(node.metadata.role) : undefined) ||
+        matchesText(node.metadata?.leaseAgent ? String(node.metadata.leaseAgent) : undefined) ||
+        matchesText(node.hostAgent?.role ? String(node.hostAgent.role) : undefined) ||
+        matchesText(node.hostAgent?.name ? String(node.hostAgent.name) : undefined) ||
+        matchesText(node.provenance?.actorId ? String(node.provenance.actorId) : undefined) ||
+        matchesText(node.group ? String(node.group) : undefined);
+      const statusMatch =
+        matchesText(node.status ? String(node.status) : undefined) ||
+        matchesText(node.metadata?.status ? String(node.metadata.status) : undefined);
+
+      return (
+        nameMatch ||
+        idMatch ||
+        typeMatch ||
+        kindMatch ||
+        descMatch ||
+        modelMatch ||
+        stepMatch ||
+        badgeMatch ||
+        roleMatch ||
+        statusMatch
+      );
     },
     [activeFilter, searchQuery, selectedStep, selectedSteps, isMultiStepActive],
   );

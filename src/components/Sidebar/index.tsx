@@ -1,40 +1,25 @@
 import type { FC } from "react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useGraphFilesStore } from "../../state/useGraphFilesStore";
+import { useGraphStore, type FilterCategory } from "../../state/useGraphStore";
 import { Button } from "../../ui";
+import { SidebarFileList } from "./SidebarFileList";
+import { SidebarFilterControls } from "./SidebarFilterControls";
+import { SidebarModelBreakdown } from "./SidebarModelBreakdown";
+import { SidebarNodeStatus } from "./SidebarNodeStatus";
+import { SidebarTelemetry } from "./SidebarTelemetry";
+import { TokenFootprintBreakdown } from "./TokenFootprintBreakdown";
 import "./Sidebar.css";
 
-interface FileListItemProps {
-  fileId: string;
-  isActive: boolean;
-  onSelect: (fileId: string) => void;
-}
+export { SidebarFileList } from "./SidebarFileList";
+export { SidebarFilterControls } from "./SidebarFilterControls";
+export { SidebarModelBreakdown } from "./SidebarModelBreakdown";
+export { SidebarNodeStatus } from "./SidebarNodeStatus";
+export { SidebarTelemetry } from "./SidebarTelemetry";
+export { TokenFootprintBreakdown } from "./TokenFootprintBreakdown";
 
-const FileListItem = React.memo<FileListItemProps>(function FileListItem({
-  fileId,
-  isActive,
-  onSelect,
-}) {
-  const handleClick = useCallback(() => {
-    onSelect(fileId);
-  }, [onSelect, fileId]);
-
-  return (
-    <li>
-      <Button
-        variant={isActive ? "primary" : "ghost"}
-        className={`sample-btn ${isActive ? "active" : ""}`}
-        title={fileId}
-        onClick={handleClick}
-      >
-        <span className="sample-label">{fileId}</span>
-      </Button>
-    </li>
-  );
-});
-
-interface SidebarProps {
+export interface SidebarProps {
   currentFile: string;
   onSelectSample: (fileId: string) => void;
   onOpenSettings?: () => void;
@@ -46,6 +31,10 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
   onOpenSettings,
 }) {
   const navigate = useNavigate();
+  const dataset = useGraphStore((state) => state.dataset);
+  const activeFilter = useGraphStore((state) => state.activeFilter);
+  const setActiveFilter = useGraphStore((state) => state.setActiveFilter);
+
   const files = useGraphFilesStore((state) => state.files);
   const isRefreshing = useGraphFilesStore((state) => state.isRefreshing);
   const refreshError = useGraphFilesStore((state) => state.error);
@@ -71,30 +60,31 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
     void refreshFiles();
   }, [refreshFiles]);
 
-  const cleanCurrentFile = useMemo(() => currentFile.replace(/\.json$/, ""), [currentFile]);
+  const handleFilterChange = useCallback(
+    (filter: FilterCategory) => {
+      setActiveFilter(filter);
+    },
+    [setActiveFilter],
+  );
 
   return (
-    <aside className="sidebar-container">
+    <aside className="sidebar-container" data-testid="sidebar">
       <div className="sidebar-content">
-        {files.length === 0 ? (
-          <p className="sidebar-empty-state">
-            No graph files yet. Use the add-file button next to the sidebar toggle to load one.
-          </p>
-        ) : (
-          <ul className="sample-list">
-            {files.map((fileId) => {
-              const isActive = currentFile === fileId || cleanCurrentFile === fileId;
-              return (
-                <FileListItem
-                  key={fileId}
-                  fileId={fileId}
-                  isActive={isActive}
-                  onSelect={handleSelectFile}
-                />
-              );
-            })}
-          </ul>
-        )}
+        <SidebarFileList files={files} currentFile={currentFile} onSelectFile={handleSelectFile} />
+
+        <SidebarFilterControls
+          dataset={dataset}
+          activeFilter={activeFilter}
+          onFilterChange={handleFilterChange}
+        />
+
+        <SidebarTelemetry dataset={dataset} />
+
+        <TokenFootprintBreakdown dataset={dataset} />
+
+        <SidebarNodeStatus dataset={dataset} />
+
+        <SidebarModelBreakdown dataset={dataset} />
       </div>
 
       <div className="sidebar-footer">

@@ -2,13 +2,16 @@ import {
   IconArrowRight,
   IconClock,
   IconCoins,
+  IconCopy,
   IconFlame,
+  IconGitFork,
   IconLayersLinked,
   IconLink,
   IconRoute,
 } from "@tabler/icons-react";
 import type { FC } from "react";
-import { memo } from "react";
+import { memo, useState } from "react";
+import { describeEdgeKind, resolveEdgeKind } from "../../../primitives/edges/GraphEdge/edgeKinds";
 import { formatTokens } from "../../../primitives/nodes/NodeCard/nodeCardModel";
 import type { GraphEdgeData } from "../../../types/graphData";
 
@@ -27,9 +30,32 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
 }) {
   const traffic = edge.traffic;
   const handoff = edge.handoff;
+  const [copiedHandoff, setCopiedHandoff] = useState<boolean>(false);
+  const [copiedCondition, setCopiedCondition] = useState<boolean>(false);
+
+  const semanticKind = resolveEdgeKind(edge);
+  const descriptor = describeEdgeKind(semanticKind);
+
   const isHighTraffic = Boolean(
-    edge.isHighTraffic || (traffic && (traffic.volume ?? 0) > 1) || edge.isCycle,
+    edge.isHighTraffic ||
+    (traffic && ((traffic.volume ?? 0) > 1 || (traffic.messagesCount ?? 0) > 1)) ||
+    traffic?.status === "congested" ||
+    edge.isCycle,
   );
+
+  const handleCopyHandoff = () => {
+    if (!handoff?.preview) return;
+    void navigator.clipboard.writeText(handoff.preview);
+    setCopiedHandoff(true);
+    setTimeout(() => setCopiedHandoff(false), 2000);
+  };
+
+  const handleCopyCondition = () => {
+    if (!edge.condition) return;
+    void navigator.clipboard.writeText(edge.condition);
+    setCopiedCondition(true);
+    setTimeout(() => setCopiedCondition(false), 2000);
+  };
 
   return (
     <div className="edge-drawer-tab-content">
@@ -51,7 +77,7 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
 
           <div className="edge-routing-arrow">
             <IconArrowRight size={20} />
-            {edge.kind && <span className={`edge-kind-pill kind-${edge.kind}`}>{edge.kind}</span>}
+            <span className={`edge-kind-pill kind-${semanticKind}`}>{descriptor.label}</span>
           </div>
 
           <div className="edge-routing-endpoint">
@@ -69,12 +95,53 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
         </div>
       </section>
 
+      {edge.condition && (
+        <section className="edge-drawer-section">
+          <div className="edge-section-header-row">
+            <h4 className="edge-drawer-section-title">
+              <IconGitFork size={14} /> Condition &amp; Branch Evaluation
+            </h4>
+            <button
+              type="button"
+              className={`edge-copy-btn ${copiedCondition ? "is-copied" : ""}`}
+              onClick={handleCopyCondition}
+            >
+              <IconCopy size={12} />
+              <span>{copiedCondition ? "Copied" : "Copy Expression"}</span>
+            </button>
+          </div>
+          <div className="edge-condition-card">
+            <div className="edge-condition-header">
+              <span className="edge-condition-badge">BRANCH CONDITION</span>
+              <span className="edge-condition-eval status-passed">Evaluated Active</span>
+            </div>
+            <pre className="edge-pre edge-condition-expr">
+              <code>{edge.condition}</code>
+            </pre>
+          </div>
+        </section>
+      )}
+
       {handoff && (
         <section className="edge-drawer-section">
-          <h4 className="edge-drawer-section-title">Handoff Contract</h4>
+          <div className="edge-section-header-row">
+            <h4 className="edge-drawer-section-title">Handoff Contract</h4>
+            {handoff.preview && (
+              <button
+                type="button"
+                className={`edge-copy-btn ${copiedHandoff ? "is-copied" : ""}`}
+                onClick={handleCopyHandoff}
+              >
+                <IconCopy size={12} />
+                <span>{copiedHandoff ? "Copied" : "Copy Payload"}</span>
+              </button>
+            )}
+          </div>
           <div className="edge-handoff-card">
             <div className="edge-handoff-header">
-              <span className="edge-handoff-kind-chip">{handoff.kind || "data"}</span>
+              <span className={`edge-handoff-kind-chip kind-${handoff.kind || "data"}`}>
+                {handoff.kind || "data"}
+              </span>
               {handoff.summary && <span className="edge-handoff-summary">{handoff.summary}</span>}
             </div>
             {handoff.preview && (
@@ -101,7 +168,7 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
             <span className="edge-metric-label">
               <IconRoute size={13} /> Edge Semantic Type
             </span>
-            <span className="edge-metric-value">{edge.kind ?? "sequence"}</span>
+            <span className="edge-metric-value">{descriptor.label}</span>
           </div>
 
           {edge.isCycle && (
@@ -142,12 +209,23 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
             </div>
           )}
 
-          {edge.tokens !== undefined && (
+          {(edge.tokens !== undefined || traffic?.tokens !== undefined) && (
             <div className="edge-metric-card">
               <span className="edge-metric-label">
                 <IconCoins size={13} /> Channel Tokens
               </span>
-              <span className="edge-metric-value">{formatTokens(edge.tokens)}</span>
+              <span className="edge-metric-value">
+                {formatTokens(edge.tokens ?? traffic?.tokens ?? 0)}
+              </span>
+            </div>
+          )}
+
+          {traffic?.avgLatencyMs !== undefined && (
+            <div className="edge-metric-card">
+              <span className="edge-metric-label">
+                <IconClock size={13} /> Avg Latency
+              </span>
+              <span className="edge-metric-value">{`${traffic.avgLatencyMs}ms`}</span>
             </div>
           )}
         </div>
