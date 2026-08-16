@@ -5,6 +5,7 @@ import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/Nod
 import type {
   CommandExecutionDetail,
   FileRef,
+  FindingDetail,
   GraphDataset,
   GraphEdgeData,
   GraphNodeData,
@@ -14,12 +15,15 @@ import type {
 import { DrawerSection } from "./DrawerSection";
 import {
   copyToClipboard,
+  downloadAssetFile,
   edgeToPort,
   formatBytes,
   formatCost,
   formatDuration,
   formatTokens,
   getByteLength,
+  resolveDownloadFilename,
+  sanitizeFilename,
 } from "./streamUtils";
 import { IoStreamItem } from "./IoStreamItem";
 import { LightboxDialog } from "./LightboxDialog";
@@ -7073,6 +7077,950 @@ index e69de29..b2b2b2b 100644
       expect(JSON.stringify(renderer.toJSON())).toContain("Routing Policy Decision");
 
       act(() => renderer.unmount());
+    });
+  });
+
+  describe("Phase 5: GVUI Drawer & Lightbox Visual Integration Suite", () => {
+    test("AssetsTab renders local file://, absolute /, relative paths, remote https://, and data/blob URIs", () => {
+      const visualNode: GraphNodeData = {
+        id: "node-visual-multi-path",
+        name: "Visual Verification Task",
+        mediaAssets: [
+          {
+            id: "asset-local-file",
+            type: "screenshot",
+            url: "file:///capsules/evidence/desktop-1280x800.png",
+            title: "Desktop Capture (Local File)",
+            dimensions: { width: 1280, height: 800 },
+            sizeBytes: 154200,
+            author: "Playwright Validator",
+          },
+          {
+            id: "asset-abs-path",
+            type: "screenshot",
+            url: "/tmp/evidence/tablet-768x1024.png",
+            title: "Tablet Capture (Absolute Path)",
+            metadata: { viewport: { width: 768, height: 1024 } },
+            sizeBytes: 89300,
+            author: "Validator Agent",
+          },
+          {
+            id: "asset-rel-path",
+            type: "screenshot",
+            url: "evidence/mobile-375x667.webp",
+            title: "Mobile Capture 375x667",
+            sizeBytes: 42100,
+            author: "Worker Agent",
+          },
+          {
+            id: "asset-remote-url",
+            type: "screenshot",
+            url: "https://assets.example.com/reports/visual-gate.png",
+            title: "Gate Evidence Screenshot",
+            dimensions: { width: 1920, height: 1080 },
+            sizeBytes: 256000,
+            author: "Gate Validator",
+          },
+          {
+            id: "asset-data-uri",
+            type: "image",
+            url: "data:image/svg+xml;base64,PHN2Zz48Y2lyY2xlIHI9IjEwIi8+PC9zdmc+",
+            title: "Inline Data URI Graphic",
+            mimeType: "image/svg+xml",
+            sizeBytes: 120,
+          },
+          {
+            id: "asset-blob-uri",
+            type: "screenshot",
+            url: "blob:http://localhost:3000/a812f84a",
+            title: "Blob URI Snapshot",
+            dimensions: { width: 1280, height: 800 },
+            sizeBytes: 98000,
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<AssetsTab node={visualNode} />);
+      });
+
+      const root = renderer.root;
+      const jsonStr = JSON.stringify(renderer.toJSON());
+
+      // Verify resolution badges are rendered
+      expect(jsonStr).toContain("1280×800");
+      expect(jsonStr).toContain("768×1024");
+      expect(jsonStr).toContain("375×667");
+      expect(jsonStr).toContain("1920×1080");
+
+      // Verify MIME chips
+      expect(jsonStr).toContain("image/png");
+      expect(jsonStr).toContain("image/webp");
+      expect(jsonStr).toContain("image/svg+xml");
+
+      // Verify download action buttons exist
+      const downloadButtons = root.findAllByProps({ title: "Download Asset" });
+      expect(downloadButtons.length).toBe(6);
+
+      // Verify copy URL buttons exist
+      const copyButtons = root.findAllByProps({ title: "Copy Asset URL" });
+      expect(copyButtons.length).toBe(6);
+
+      act(() => renderer.unmount());
+    });
+
+    test("AssetsTab download action button triggers asset download handler", () => {
+      const testNode: GraphNodeData = {
+        id: "node-download-test",
+        name: "Download Test Node",
+        mediaAssets: [
+          {
+            id: "asset-dl-1",
+            type: "screenshot",
+            url: "https://example.com/assets/screenshot-1.png",
+            title: "Downloadable Screenshot",
+            dimensions: { width: 1280, height: 800 },
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<AssetsTab node={testNode} />);
+      });
+
+      const root = renderer.root;
+      const dlBtn = root.findByProps({ "aria-label": "Download Downloadable Screenshot" });
+      expect(dlBtn).toBeDefined();
+
+      // Trigger download click
+      act(() => {
+        dlBtn.props.onClick({ stopPropagation: () => {} });
+      });
+
+      act(() => renderer.unmount());
+    });
+
+    test("AssetsTab handles thumbnail onError with robust error fallback UI and path preview", () => {
+      const brokenNode: GraphNodeData = {
+        id: "node-broken-screenshot",
+        name: "Broken Screenshot Node",
+        mediaAssets: [
+          {
+            id: "broken-shot-id-42",
+            type: "screenshot",
+            url: "file:///missing/evidence/screenshot-missing.png",
+            title: "Missing Local Screenshot",
+            dimensions: { width: 1280, height: 800 },
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<AssetsTab node={brokenNode} />);
+      });
+
+      const img = renderer.root.findByType("img");
+      expect(img).toBeDefined();
+
+      act(() => {
+        img.props.onError();
+      });
+
+      const jsonStr = JSON.stringify(renderer.toJSON());
+      expect(jsonStr).toContain("drawer-asset-thumb-placeholder--error");
+      expect(jsonStr).toContain("Failed to load");
+      expect(jsonStr).toContain("file:///missing/evidence/screenshot-missing.png");
+
+      act(() => renderer.unmount());
+    });
+
+    test("FindingDetailCard screenshot gallery renders thumbnails with resolution badges and opens Lightbox on click", () => {
+      const findingWithGallery: FindingDetail = {
+        id: "finding-visual-gallery-01",
+        severity: "critical",
+        observation: "Visual alignment mismatch between drawer tabs and header",
+        status: "open",
+        validatorId: "validator-phase5",
+        screenshots: [
+          {
+            id: "finding-shot-desktop",
+            type: "screenshot",
+            url: "file:///evidence/findings/desktop-view.png",
+            title: "Desktop Visual Discrepancy",
+            dimensions: { width: 1280, height: 800 },
+          },
+          {
+            id: "finding-shot-mobile",
+            type: "screenshot",
+            url: "file:///evidence/findings/mobile-view.png",
+            title: "Mobile Visual Discrepancy",
+            metadata: { viewport: { width: 375, height: 667 } },
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <FindingDetailCard finding={findingWithGallery} defaultExpanded={true} />,
+        );
+      });
+
+      const root = renderer.root;
+      const jsonStr = JSON.stringify(renderer.toJSON());
+
+      expect(jsonStr).toContain("Validation Evidence Screenshots (2)");
+      expect(jsonStr).toContain("Desktop Visual Discrepancy");
+      expect(jsonStr).toContain("Mobile Visual Discrepancy");
+      expect(jsonStr).toContain("1280×800");
+      expect(jsonStr).toContain("375×667");
+
+      // Find the second screenshot card and click to open Lightbox at index 1
+      const thumbCards = root.findAllByProps({ className: "drawer-finding-thumb-card" });
+      expect(thumbCards.length).toBe(2);
+
+      act(() => {
+        thumbCards[1].props.onClick();
+      });
+
+      const updatedJson = JSON.stringify(renderer.toJSON());
+      expect(updatedJson).toContain("drawer-lightbox-overlay");
+      expect(updatedJson).toContain("2 of 2");
+      expect(updatedJson).toContain("Mobile Visual Discrepancy");
+
+      // Close Lightbox
+      const closeBtn = root.findByProps({ "aria-label": "Close dialog" });
+      expect(closeBtn).toBeDefined();
+      act(() => {
+        closeBtn.props.onClick();
+      });
+
+      const closedJson = JSON.stringify(renderer.toJSON());
+      expect(closedJson).not.toContain("drawer-lightbox-overlay");
+
+      act(() => renderer.unmount());
+    });
+
+    test("FindingDetailCard screenshot gallery handles thumbnail load failure with error fallback", () => {
+      const findingWithBrokenThumb: FindingDetail = {
+        id: "finding-broken-thumb",
+        severity: "important",
+        observation: "Missing thumbnail test",
+        status: "open",
+        screenshots: [
+          {
+            id: "shot-broken-1",
+            type: "screenshot",
+            url: "https://unreachable.example.com/fail.png",
+            title: "Unreachable Evidence Shot",
+          },
+        ],
+      };
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <FindingDetailCard finding={findingWithBrokenThumb} defaultExpanded={true} />,
+        );
+      });
+
+      const img = renderer.root.findByType("img");
+      expect(img).toBeDefined();
+
+      act(() => {
+        img.props.onError();
+      });
+
+      const jsonStr = JSON.stringify(renderer.toJSON());
+      expect(jsonStr).toContain("drawer-finding-thumb-error");
+      expect(jsonStr).toContain("Preview unavailable");
+
+      act(() => renderer.unmount());
+    });
+
+    test("LightboxDialog pan/zoom controls and double-click zoom toggle work smoothly", () => {
+      const testAssets: MediaAsset[] = [
+        {
+          id: "shot-lightbox-1",
+          type: "screenshot",
+          url: "https://example.com/img1.png",
+          title: "Visual Capture 1",
+          dimensions: { width: 1280, height: 800 },
+        },
+        {
+          id: "shot-lightbox-2",
+          type: "screenshot",
+          url: "https://example.com/img2.png",
+          title: "Visual Capture 2",
+          dimensions: { width: 768, height: 1024 },
+        },
+      ];
+
+      let isClosed = false;
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <LightboxDialog
+            isOpen={true}
+            assets={testAssets}
+            initialIndex={0}
+            onClose={() => {
+              isClosed = true;
+            }}
+          />,
+        );
+      });
+
+      const root = renderer.root;
+
+      // Check initial 100% zoom
+      const zoomPct = root.findByProps({ className: "drawer-lightbox-zoom-pct" });
+      expect(zoomPct.props.children).toBe("100%");
+
+      // Test Zoom In button (+)
+      const zoomInBtn = root.findByProps({ "aria-label": "Zoom in" });
+      act(() => {
+        zoomInBtn.props.onClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "150%",
+      );
+
+      // Test Zoom In again
+      act(() => {
+        zoomInBtn.props.onClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "200%",
+      );
+
+      // Test Zoom Out button (-)
+      const zoomOutBtn = root.findByProps({ "aria-label": "Zoom out" });
+      act(() => {
+        zoomOutBtn.props.onClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "150%",
+      );
+
+      // Test Zoom Reset button (0)
+      const zoomResetBtn = root.findByProps({ "aria-label": "Reset zoom" });
+      act(() => {
+        zoomResetBtn.props.onClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "100%",
+      );
+
+      // Test Zoom Toggle button (100% / 200%)
+      const zoomToggleBtn = root.findByProps({ "aria-label": "Toggle zoom 100% / 200%" });
+      act(() => {
+        zoomToggleBtn.props.onClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "200%",
+      );
+
+      // Test mouse drag pan when zoomed
+      const viewport = root.findByProps({ className: "drawer-lightbox-viewport is-zoomed" });
+      act(() => {
+        viewport.props.onMouseDown({ clientX: 200, clientY: 200 });
+      });
+      act(() => {
+        viewport.props.onMouseMove({ clientX: 250, clientY: 220 });
+      });
+      act(() => {
+        viewport.props.onMouseUp();
+      });
+
+      // Test double-click to toggle zoom back to 100%
+      const imageWrap = root.findByProps({ className: "drawer-lightbox-image-wrap" });
+      act(() => {
+        imageWrap.props.onDoubleClick();
+      });
+      expect(root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children).toBe(
+        "100%",
+      );
+
+      // Test Next asset button
+      const nextBtn = root.findByProps({ "aria-label": "Next asset" });
+      act(() => {
+        nextBtn.props.onClick();
+      });
+      expect(JSON.stringify(renderer.toJSON())).toContain("2 of 2");
+      expect(JSON.stringify(renderer.toJSON())).toContain("Visual Capture 2");
+
+      // Test Prev asset button
+      const prevBtn = root.findByProps({ "aria-label": "Previous asset" });
+      act(() => {
+        prevBtn.props.onClick();
+      });
+      expect(JSON.stringify(renderer.toJSON())).toContain("1 of 2");
+      expect(JSON.stringify(renderer.toJSON())).toContain("Visual Capture 1");
+
+      // Test close button
+      const closeBtn = root.findByProps({ "aria-label": "Close dialog" });
+      act(() => {
+        closeBtn.props.onClick();
+      });
+      expect(isClosed).toBe(true);
+
+      act(() => renderer.unmount());
+    });
+
+    test("LightboxDialog keyboard navigation handles z/Z, Escape, ArrowLeft/Right, +, -, 0", () => {
+      const testAssets: MediaAsset[] = [
+        {
+          id: "shot-kb-1",
+          type: "screenshot",
+          url: "https://example.com/img1.png",
+          title: "Keyboard Test Asset 1",
+          dimensions: { width: 1280, height: 800 },
+        },
+        {
+          id: "shot-kb-2",
+          type: "screenshot",
+          url: "https://example.com/img2.png",
+          title: "Keyboard Test Asset 2",
+          dimensions: { width: 768, height: 1024 },
+        },
+      ];
+
+      let isClosed = false;
+      let keydownListener: ((e: KeyboardEvent) => void) | null = null;
+      const originalWindow = globalThis.window;
+      const mockWindow = {
+        addEventListener: (event: string, fn: (e: unknown) => void) => {
+          if (event === "keydown") keydownListener = fn as (e: KeyboardEvent) => void;
+        },
+        removeEventListener: () => {},
+      };
+
+      Object.defineProperty(globalThis, "window", {
+        value: mockWindow,
+        configurable: true,
+        writable: true,
+      });
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <LightboxDialog
+            isOpen={true}
+            assets={testAssets}
+            initialIndex={0}
+            onClose={() => {
+              isClosed = true;
+            }}
+          />,
+        );
+      });
+
+      // Press ArrowRight to advance
+      act(() => {
+        keydownListener?.({
+          key: "ArrowRight",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(JSON.stringify(renderer.toJSON())).toContain("Keyboard Test Asset 2");
+
+      // Press ArrowLeft to go back
+      act(() => {
+        keydownListener?.({
+          key: "ArrowLeft",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(JSON.stringify(renderer.toJSON())).toContain("Keyboard Test Asset 1");
+
+      // Press 'z' to toggle zoom
+      act(() => {
+        keydownListener?.({
+          key: "z",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(
+        renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+      ).toBe("200%");
+
+      // Press '+' to zoom in
+      act(() => {
+        keydownListener?.({
+          key: "+",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(
+        renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+      ).toBe("250%");
+
+      // Press '-' to zoom out
+      act(() => {
+        keydownListener?.({
+          key: "-",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(
+        renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+      ).toBe("200%");
+
+      // Press '0' to reset zoom
+      act(() => {
+        keydownListener?.({
+          key: "0",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(
+        renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+      ).toBe("100%");
+
+      // Press Escape to close
+      act(() => {
+        keydownListener?.({
+          key: "Escape",
+          stopPropagation: () => {},
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent);
+      });
+      expect(isClosed).toBe(true);
+
+      act(() => renderer.unmount());
+
+      Object.defineProperty(globalThis, "window", {
+        value: originalWindow,
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    test("LightboxDialog handles image onError with informative fallback UI", () => {
+      const brokenAsset: MediaAsset[] = [
+        {
+          id: "shot-lightbox-broken",
+          type: "screenshot",
+          url: "https://invalid-host.example.com/unreachable-image.png",
+          title: "Broken Lightbox Image",
+        },
+      ];
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <LightboxDialog isOpen={true} assets={brokenAsset} initialIndex={0} onClose={() => {}} />,
+        );
+      });
+
+      const img = renderer.root.findByType("img");
+      expect(img).toBeDefined();
+
+      act(() => {
+        img.props.onError();
+      });
+
+      const jsonStr = JSON.stringify(renderer.toJSON());
+      expect(jsonStr).toContain("drawer-lightbox-fallback");
+      expect(jsonStr).toContain("Image failed to load");
+      expect(jsonStr).toContain("https://invalid-host.example.com/unreachable-image.png");
+
+      act(() => renderer.unmount());
+    });
+  });
+
+  describe("Round 2 Repair: Adversarial Rejection Tests", () => {
+    describe("Filename Sanitization & Asset Downloads", () => {
+      test("sanitizeFilename strips query strings, hash fragments, and path traversal segments", () => {
+        expect(sanitizeFilename("image.png?size=large&token=abc#section")).toBe("image.png");
+        expect(sanitizeFilename("diagram.svg#preview")).toBe("diagram.svg");
+        expect(sanitizeFilename("../../etc/passwd")).toBe("passwd");
+        expect(sanitizeFilename("..\\..\\windows\\system32\\calc.exe")).toBe("calc.exe");
+        expect(sanitizeFilename("/var/log/debug.log?v=2#L42")).toBe("debug.log");
+        expect(sanitizeFilename("   ")).toBe("asset");
+        expect(sanitizeFilename("...")).toBe("asset");
+        expect(sanitizeFilename("")).toBe("asset");
+      });
+
+      test("resolveDownloadFilename safely handles file://, data:, blob:, and remote URIs with extensions", () => {
+        // data: URIs
+        expect(resolveDownloadFilename("data:image/png;base64,iVBORw0KGgoAAAANS=")).toBe(
+          "asset.png",
+        );
+        expect(resolveDownloadFilename("data:image/jpeg;base64,/9j/4AAQSkZJRg==")).toBe(
+          "asset.jpg",
+        );
+        expect(resolveDownloadFilename("data:image/svg+xml;utf8,<svg></svg>")).toBe("asset.svg");
+        expect(resolveDownloadFilename("data:application/json;charset=utf-8,{}")).toBe(
+          "asset.json",
+        );
+        expect(resolveDownloadFilename("data:text/plain;charset=utf-8,hello")).toBe("asset.txt");
+
+        // blob: URIs
+        expect(
+          resolveDownloadFilename(
+            "blob:http://localhost:5173/d3b07384-d113-4944-9c8e-3243f11a8a2d",
+          ),
+        ).toBe("d3b07384-d113-4944-9c8e-3243f11a8a2d.png");
+        expect(
+          resolveDownloadFilename("blob:http://localhost:5173/custom-report.pdf#preview"),
+        ).toBe("custom-report.pdf");
+
+        // file:// URIs
+        expect(
+          resolveDownloadFilename("file:///Users/dev/project/screenshot.png?size=full#heading"),
+        ).toBe("screenshot.png");
+
+        // suggested filename sanitization
+        expect(
+          resolveDownloadFilename(
+            "https://example.com/api/asset?id=123",
+            "../../sanitized-diagram.svg?token=1#sec",
+          ),
+        ).toBe("sanitized-diagram.svg");
+        expect(resolveDownloadFilename("https://example.com/download/test.png", "   ")).toBe(
+          "test.png",
+        );
+        expect(resolveDownloadFilename("", "")).toBe("asset");
+      });
+
+      test("downloadAssetFile triggers document link click with sanitized download name", () => {
+        interface MockAnchor {
+          href: string;
+          download: string;
+          target: string;
+          rel: string;
+          clickCount: number;
+          click: () => void;
+        }
+        let createdLink: MockAnchor | null = null;
+        const originalDoc = globalThis.document;
+
+        const mockDoc = {
+          createElement: (tag: string): unknown => {
+            if (tag === "a") {
+              const link: MockAnchor = {
+                href: "",
+                download: "",
+                target: "",
+                rel: "",
+                clickCount: 0,
+                click() {
+                  this.clickCount++;
+                },
+              };
+              createdLink = link;
+              return link;
+            }
+            return {};
+          },
+          body: {
+            appendChild: (_el: unknown) => {},
+            removeChild: (_el: unknown) => {},
+          },
+        };
+
+        Object.defineProperty(globalThis, "document", {
+          value: mockDoc,
+          configurable: true,
+          writable: true,
+        });
+
+        downloadAssetFile(
+          "https://example.com/assets/report.png?query=1#hash",
+          "../../my-report.png?foo=bar#baz",
+        );
+        expect(createdLink).not.toBeNull();
+        expect((createdLink as unknown as MockAnchor).download).toBe("my-report.png");
+        expect((createdLink as unknown as MockAnchor).href).toBe(
+          "https://example.com/assets/report.png?query=1#hash",
+        );
+        expect((createdLink as unknown as MockAnchor).clickCount).toBe(1);
+
+        Object.defineProperty(globalThis, "document", {
+          value: originalDoc,
+          configurable: true,
+          writable: true,
+        });
+      });
+    });
+
+    describe("Keyboard Zoom Hotkey Guarding in LightboxDialog", () => {
+      test("ignores keyboard zoom and navigation hotkeys when typing in <input>, <textarea>, <select>, and contentEditable elements", () => {
+        const testAssets: MediaAsset[] = [
+          {
+            id: "guard-shot-1",
+            type: "screenshot",
+            url: "https://example.com/shot1.png",
+            title: "Shot 1",
+          },
+          {
+            id: "guard-shot-2",
+            type: "screenshot",
+            url: "https://example.com/shot2.png",
+            title: "Shot 2",
+          },
+        ];
+
+        let keydownListener: ((e: KeyboardEvent) => void) | null = null;
+        const originalWindow = globalThis.window;
+        const mockWindow = {
+          addEventListener: (event: string, fn: (e: unknown) => void) => {
+            if (event === "keydown") keydownListener = fn as (e: KeyboardEvent) => void;
+          },
+          removeEventListener: () => {},
+        };
+
+        Object.defineProperty(globalThis, "window", {
+          value: mockWindow,
+          configurable: true,
+          writable: true,
+        });
+
+        let renderer!: ReactTestRenderer;
+        act(() => {
+          renderer = create(
+            <LightboxDialog
+              isOpen={true}
+              assets={testAssets}
+              initialIndex={0}
+              onClose={() => {}}
+            />,
+          );
+        });
+
+        const inputTarget = {
+          tagName: "INPUT",
+          isContentEditable: false,
+          getAttribute: () => null,
+        };
+        const textareaTarget = {
+          tagName: "TEXTAREA",
+          isContentEditable: false,
+          getAttribute: () => null,
+        };
+        const selectTarget = {
+          tagName: "SELECT",
+          isContentEditable: false,
+          getAttribute: () => null,
+        };
+        const contentEditableTarget = {
+          tagName: "DIV",
+          isContentEditable: true,
+          getAttribute: (attr: string) => (attr === "contenteditable" ? "true" : null),
+        };
+
+        // Test hotkeys inside INPUT target: 'z', '+', '-', '0', 'ArrowRight'
+        act(() => {
+          keydownListener?.({
+            key: "z",
+            target: inputTarget,
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(
+          renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+        ).toBe("100%");
+
+        act(() => {
+          keydownListener?.({
+            key: "+",
+            target: textareaTarget,
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(
+          renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+        ).toBe("100%");
+
+        act(() => {
+          keydownListener?.({
+            key: "ArrowRight",
+            target: selectTarget,
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(JSON.stringify(renderer.toJSON())).toContain("Shot 1");
+
+        act(() => {
+          keydownListener?.({
+            key: "z",
+            target: contentEditableTarget,
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(
+          renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+        ).toBe("100%");
+
+        // Outside editable target: 'z' cleanly toggles between 100% and 200%
+        act(() => {
+          keydownListener?.({
+            key: "z",
+            target: { tagName: "DIV", isContentEditable: false, getAttribute: () => null },
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(
+          renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+        ).toBe("200%");
+
+        act(() => {
+          keydownListener?.({
+            key: "Z",
+            target: { tagName: "DIV", isContentEditable: false, getAttribute: () => null },
+            stopPropagation: () => {},
+            preventDefault: () => {},
+          } as unknown as KeyboardEvent);
+        });
+        expect(
+          renderer.root.findByProps({ className: "drawer-lightbox-zoom-pct" }).props.children,
+        ).toBe("100%");
+
+        act(() => renderer.unmount());
+
+        Object.defineProperty(globalThis, "window", {
+          value: originalWindow,
+          configurable: true,
+          writable: true,
+        });
+      });
+    });
+
+    describe("Empty / Whitespace / Corrupt Asset Handling", () => {
+      test("AssetsTab renders fallback placeholders for empty, whitespace, and undefined URLs without throwing", () => {
+        const corruptNode: GraphNodeData = {
+          id: "corrupt-node-1",
+          name: "Corrupt Node",
+          kind: "agent",
+          status: "success",
+          mediaAssets: [
+            {
+              id: "empty-url-asset",
+              title: "Empty URL Asset",
+              url: "",
+              type: "image",
+            },
+            {
+              id: "whitespace-url-asset",
+              title: "Whitespace URL Asset",
+              url: "   ",
+              type: "screenshot",
+            },
+            {
+              id: "undefined-url-asset",
+              title: "Undefined URL Asset",
+              url: undefined as unknown as string,
+              type: "diagram",
+            },
+          ],
+        };
+
+        let renderer!: ReactTestRenderer;
+        expect(() => {
+          act(() => {
+            renderer = create(<AssetsTab node={corruptNode} />);
+          });
+        }).not.toThrow();
+
+        const json = JSON.stringify(renderer.toJSON());
+        expect(json).toContain("Empty URL Asset");
+        expect(json).toContain("Whitespace URL Asset");
+        expect(json).toContain("Undefined URL Asset");
+        expect(json).toContain("drawer-asset-thumb-placeholder--error");
+        expect(json).toContain("No URL provided");
+
+        act(() => renderer.unmount());
+      });
+
+      test("FindingDetailCard in ErrorInspector gracefully renders screenshots with empty/whitespace URLs", () => {
+        const findingWithEmptyShots: PushbackFindingItem = {
+          id: "finding-empty-shots",
+          severity: "critical",
+          status: "open",
+          isOpposed: true,
+          validatorId: "validator-adversarial",
+          requirement_id: "req-test",
+          observation: "Adversarial finding test observation",
+          remediation: "Fix the finding",
+          revalidation: "Run gate tests",
+          screenshots: [
+            {
+              id: "shot-empty-1",
+              title: "Empty Screenshot",
+              url: "",
+              type: "screenshot",
+            },
+            {
+              id: "shot-whitespace-1",
+              title: "Whitespace Screenshot",
+              url: "   ",
+              type: "screenshot",
+            },
+          ],
+        };
+
+        let renderer!: ReactTestRenderer;
+        expect(() => {
+          act(() => {
+            renderer = create(<FindingDetailCard finding={findingWithEmptyShots} />);
+          });
+        }).not.toThrow();
+
+        const json = JSON.stringify(renderer.toJSON());
+        expect(json).toContain("drawer-finding-thumb-error");
+        expect(json).toContain("No URL provided");
+
+        act(() => renderer.unmount());
+      });
+
+      test("LightboxDialog renders fallback card when opened with empty or whitespace URL asset", () => {
+        const emptyAsset: MediaAsset[] = [
+          {
+            id: "lightbox-empty-asset",
+            title: "Empty Lightbox Asset",
+            url: "   ",
+            type: "image",
+            timestamp: "invalid-timestamp-string",
+          },
+        ];
+
+        let renderer!: ReactTestRenderer;
+        expect(() => {
+          act(() => {
+            renderer = create(
+              <LightboxDialog
+                isOpen={true}
+                assets={emptyAsset}
+                initialIndex={0}
+                onClose={() => {}}
+              />,
+            );
+          });
+        }).not.toThrow();
+
+        const json = JSON.stringify(renderer.toJSON());
+        expect(json).toContain("drawer-lightbox-fallback");
+        expect(json).toContain("Asset URL Unavailable");
+        expect(json).toContain("No valid URL or file path was provided");
+
+        act(() => renderer.unmount());
+      });
     });
   });
 });

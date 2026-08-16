@@ -149,3 +149,125 @@ export function edgeToPort(edge: GraphEdgeData, direction: "in" | "out"): IoPort
     tokens: edge.handoff?.tokens,
   };
 }
+
+/**
+ * Sanitize a filename by removing query strings, hash fragments, path traversal components,
+ * illegal filesystem characters, and leading/trailing dots/spaces.
+ */
+export function sanitizeFilename(filename: string, fallback = "asset"): string {
+  if (!filename || typeof filename !== "string") return fallback;
+
+  // 1. Strip query string and hash
+  let clean = filename.split("?")[0].split("#")[0];
+
+  // 2. Normalize backslashes to forward slashes
+  clean = clean.replace(/\\/g, "/");
+
+  // 3. Remove path traversal segments and extract base name
+  const segments = clean.split("/").filter((s) => s.trim().length > 0 && s !== "." && s !== "..");
+  const base = segments.pop() ?? "";
+
+  // 4. Strip illegal/dangerous characters (\0, control chars, : * ? " < > | / \)
+  const sanitized = base
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
+    .replace(/[/\\?%*:|"<>]/g, "")
+    .replace(/^\.+/, "")
+    .trim();
+
+  return sanitized.length > 0 ? sanitized : fallback;
+}
+
+/**
+ * Resolve a clean, safe download filename given a resource URL and optional suggested filename.
+ * Handles data:, blob:, file://, http/https, relative, and extensionless paths with sensible defaults.
+ */
+export function resolveDownloadFilename(url: string, suggestedFilename?: string): string {
+  if (
+    suggestedFilename &&
+    typeof suggestedFilename === "string" &&
+    suggestedFilename.trim().length > 0
+  ) {
+    const sanitizedSuggested = sanitizeFilename(suggestedFilename);
+    if (sanitizedSuggested && sanitizedSuggested !== "asset") {
+      return sanitizedSuggested;
+    }
+  }
+
+  if (!url || typeof url !== "string" || !url.trim()) {
+    return "asset";
+  }
+
+  const trimmedUrl = url.trim();
+
+  // Data URIs: e.g. data:image/png;base64,...
+  if (trimmedUrl.startsWith("data:")) {
+    const mimeMatch = trimmedUrl.match(/^data:([^;,]+)/i);
+    const mime = mimeMatch ? mimeMatch[1].toLowerCase() : "";
+    const extMap: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/webp": "webp",
+      "image/svg+xml": "svg",
+      "image/gif": "gif",
+      "image/avif": "avif",
+      "image/bmp": "bmp",
+      "application/pdf": "pdf",
+      "application/json": "json",
+      "text/plain": "txt",
+      "text/markdown": "md",
+      "text/html": "html",
+      "text/css": "css",
+      "text/javascript": "js",
+      "application/javascript": "js",
+      "video/mp4": "mp4",
+      "video/webm": "webm",
+      "audio/mpeg": "mp3",
+      "audio/wav": "wav",
+      "audio/ogg": "ogg",
+    };
+    const ext = extMap[mime] ?? (mime.startsWith("image/") ? mime.slice(6) : "png");
+    return `asset.${ext}`;
+  }
+
+  // Blob URIs: e.g. blob:http://localhost:3000/d3b07384-d113-4944-9c8e-3243f11a8a2d
+  if (trimmedUrl.startsWith("blob:")) {
+    const cleanBlob = trimmedUrl.slice(5).split("?")[0].split("#")[0];
+    const segment = cleanBlob.split("/").filter(Boolean).pop() ?? "";
+    const sanitized = sanitizeFilename(segment, "asset");
+    return sanitized.includes(".") ? sanitized : `${sanitized}.png`;
+  }
+
+  // file:// or http:// or relative path
+  let pathOnly = trimmedUrl;
+  if (pathOnly.startsWith("file://")) {
+    pathOnly = pathOnly.slice(7);
+  }
+  const cleanUrl = pathOnly.split("?")[0].split("#")[0].replace(/\\/g, "/");
+  const lastSegment = cleanUrl.split("/").filter(Boolean).pop() ?? "";
+  const sanitized = sanitizeFilename(lastSegment, "asset");
+  return sanitized;
+}
+
+/**
+ * Trigger browser download or opening of an asset URL (data, blob, local file://, or http/https)
+ * with strict filename sanitization and safe default fallbacks.
+ */
+export function downloadAssetFile(url: string, filename?: string): void {
+  if (!url || typeof url !== "string" || !url.trim()) return;
+  if (typeof document !== "undefined" && typeof document.createElement === "function") {
+    try {
+      const targetName = resolveDownloadFilename(url, filename);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = targetName;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      // Graceful fallback for non-DOM or restricted environments
+    }
+  }
+}

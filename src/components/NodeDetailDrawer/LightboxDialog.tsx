@@ -23,22 +23,25 @@ import {
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MediaAsset } from "../../types/graphData";
-import { copyToClipboard, formatBytes } from "./streamUtils";
+import { copyToClipboard, formatBytes, sanitizeFilename } from "./streamUtils";
 
-const isPdf = (a: MediaAsset): boolean => {
+const isPdf = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "pdf" || a.mimeType === "application/pdf") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
   return (
-    a.type === "pdf" ||
-    a.mimeType === "application/pdf" ||
-    a.url.toLowerCase().endsWith(".pdf") ||
-    /\.pdf(\?.*)?$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("pdf"))
+    url.endsWith(".pdf") ||
+    /\.pdf(\?.*)?$/i.test(url) ||
+    Boolean(a.title && a.title.toLowerCase().includes("pdf"))
   );
 };
 
-const isCode = (a: MediaAsset): boolean => {
+const isCode = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "code") return true;
+  const url = typeof a.url === "string" ? a.url : "";
   return (
-    a.type === "code" ||
-    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(a.url) ||
+    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(url) ||
     Boolean(
       a.mimeType &&
       (a.mimeType.includes("javascript") ||
@@ -50,40 +53,48 @@ const isCode = (a: MediaAsset): boolean => {
   );
 };
 
-const isLog = (a: MediaAsset): boolean => {
+const isLog = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "log") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
+  return url.endsWith(".log") || Boolean(a.title && a.title.toLowerCase().includes("log"));
+};
+
+const isMarkdown = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "markdown") return true;
+  const url = typeof a.url === "string" ? a.url : "";
   return (
-    a.type === "log" ||
-    a.url.toLowerCase().endsWith(".log") ||
-    (a.title !== undefined && a.title.toLowerCase().includes("log"))
+    /\.(md|markdown)$/i.test(url) || Boolean(a.title && a.title.toLowerCase().includes("markdown"))
   );
 };
 
-const isMarkdown = (a: MediaAsset): boolean => {
+const isDiagram = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "diagram") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
   return (
-    a.type === "markdown" ||
-    /\.(md|markdown)$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("markdown"))
+    url.includes("diagram") ||
+    /\.(svg|drawio|excalidraw)$/i.test(url) ||
+    Boolean(a.title && a.title.toLowerCase().includes("diagram"))
   );
 };
 
-const isDiagram = (a: MediaAsset): boolean => {
-  return (
-    a.type === "diagram" ||
-    a.url.toLowerCase().includes("diagram") ||
-    /\.(svg|drawio|excalidraw)$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
-  );
-};
-
-const isDocument = (a: MediaAsset): boolean => {
-  return (
+const isDocument = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (
     a.type === "document" ||
     a.type === "pdf" ||
     a.type === "markdown" ||
     a.type === "code" ||
     isPdf(a) ||
     isMarkdown(a) ||
-    isCode(a) ||
+    isCode(a)
+  ) {
+    return true;
+  }
+  const url = typeof a.url === "string" ? a.url : "";
+  return (
     Boolean(
       a.mimeType &&
       (a.mimeType === "application/pdf" ||
@@ -93,12 +104,12 @@ const isDocument = (a: MediaAsset): boolean => {
         a.mimeType.includes("msword") ||
         a.mimeType.includes("spreadsheet") ||
         a.mimeType.includes("csv")),
-    ) ||
-    /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(a.url)
+    ) || /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(url)
   );
 };
 
-const isImage = (a: MediaAsset): boolean => {
+const isImage = (a?: MediaAsset): boolean => {
+  if (!a) return false;
   if (
     isPdf(a) ||
     isCode(a) ||
@@ -109,13 +120,14 @@ const isImage = (a: MediaAsset): boolean => {
   ) {
     return false;
   }
-  if (isDiagram(a) && !/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(a.url)) {
+  const url = typeof a.url === "string" ? a.url : "";
+  if (isDiagram(a) && !/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(url)) {
     return false;
   }
   if (a.type === "image" || a.type === "screenshot" || a.type === "diagram") {
     return true;
   }
-  if (/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(a.url)) {
+  if (/\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(url)) {
     return true;
   }
   if (Boolean(a.mimeType && a.mimeType.startsWith("image/"))) {
@@ -288,7 +300,9 @@ const CodeViewer: FC<CodeViewerProps> = memo(function CodeViewer({ asset, isLogF
   }, [rawContent]);
 
   const fileExt = useMemo(() => {
-    const parts = asset.url.split(".");
+    const url = asset.url || "";
+    const cleanUrl = url.split("?")[0].split("#")[0];
+    const parts = cleanUrl.split(".");
     return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : isLogFile ? "LOG" : "CODE";
   }, [asset.url, isLogFile]);
 
@@ -447,7 +461,9 @@ const DocumentViewer: FC<DocumentViewerProps> = memo(function DocumentViewer({ a
   }, [rawContent]);
 
   const docExt = useMemo(() => {
-    const parts = asset.url.split(".");
+    const url = asset.url || "";
+    const cleanUrl = url.split("?")[0].split("#")[0];
+    const parts = cleanUrl.split(".");
     return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "DOC";
   }, [asset.url]);
 
@@ -601,6 +617,45 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
 
   const currentAsset: MediaAsset | undefined = assets[currentIndex];
 
+  const currentDimensions = useMemo(() => {
+    if (!currentAsset) return undefined;
+    if (
+      currentAsset.dimensions &&
+      typeof currentAsset.dimensions.width === "number" &&
+      typeof currentAsset.dimensions.height === "number"
+    ) {
+      return currentAsset.dimensions;
+    }
+    if (currentAsset.metadata?.dimensions && typeof currentAsset.metadata.dimensions === "object") {
+      const d = currentAsset.metadata.dimensions as { width?: unknown; height?: unknown };
+      if (typeof d.width === "number" && typeof d.height === "number") {
+        return { width: d.width, height: d.height };
+      }
+    }
+    if (currentAsset.metadata?.viewport && typeof currentAsset.metadata.viewport === "object") {
+      const v = currentAsset.metadata.viewport as { width?: unknown; height?: unknown };
+      if (typeof v.width === "number" && typeof v.height === "number") {
+        return { width: v.width, height: v.height };
+      }
+    }
+    const assetObj = currentAsset as unknown as {
+      viewport?: { width?: unknown; height?: unknown };
+    };
+    if (assetObj.viewport && typeof assetObj.viewport === "object") {
+      const v = assetObj.viewport;
+      if (typeof v.width === "number" && typeof v.height === "number") {
+        return { width: v.width, height: v.height };
+      }
+    }
+    const match = (currentAsset.description || currentAsset.title || currentAsset.url || "").match(
+      /\b(\d{3,4})[x×](\d{3,4})\b/,
+    );
+    if (match && match[1] && match[2]) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+    return undefined;
+  }, [currentAsset]);
+
   const resetPanAndZoom = useCallback(() => {
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
@@ -696,7 +751,10 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose();
-      } else if (e.key === "Tab") {
+        return;
+      }
+
+      if (e.key === "Tab") {
         const container =
           dialogRef.current ||
           (typeof document !== "undefined" && typeof document.querySelector === "function"
@@ -742,7 +800,26 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
             firstElement?.focus();
           }
         }
-      } else if (e.key === "ArrowLeft") {
+        return;
+      }
+
+      // Guard zoom and navigation hotkeys when typing in editable form inputs or contenteditable elements
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName ? target.tagName.toUpperCase() : "";
+        const isEditable =
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable ||
+          target.getAttribute("contenteditable") === "true" ||
+          target.getAttribute("contenteditable") === "";
+        if (isEditable) {
+          return;
+        }
+      }
+
+      if (e.key === "ArrowLeft") {
         e.stopPropagation();
         if (assets.length > 1) {
           handlePrev();
@@ -834,9 +911,13 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 {`${currentIndex + 1} of ${assets.length}`}
               </span>
             </div>
-            {currentAsset.dimensions && (
-              <span className="drawer-lightbox-chip">
-                {`${currentAsset.dimensions.width} × ${currentAsset.dimensions.height}`}
+            {currentDimensions && (
+              <span
+                className="drawer-lightbox-chip"
+                title="Resolution"
+                aria-label={`Resolution ${currentDimensions.width} × ${currentDimensions.height}`}
+              >
+                {`${currentDimensions.width} × ${currentDimensions.height}`}
               </span>
             )}
             {typeof currentAsset.sizeBytes === "number" && (
@@ -900,7 +981,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
               </div>
             )}
 
-            {currentAsset.url && (
+            {currentAsset.url && currentAsset.url.trim().length > 0 && (
               <button
                 type="button"
                 className="drawer-lightbox-action-btn"
@@ -926,7 +1007,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
               <IconInfoCircle size={16} />
             </button>
 
-            {currentAsset.url && (
+            {currentAsset.url && currentAsset.url.trim().length > 0 && (
               <a
                 href={currentAsset.url}
                 target="_blank"
@@ -934,7 +1015,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 className="drawer-lightbox-action-btn"
                 title="Download / Open in new tab"
                 aria-label="Download asset"
-                download={currentAsset.title ?? currentAsset.id}
+                download={sanitizeFilename(currentAsset.title ?? currentAsset.id)}
               >
                 <IconDownload size={16} />
               </a>
@@ -976,7 +1057,15 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
               cursor: zoom > 1 ? (isPanning ? "grabbing" : "grab") : "default",
             }}
           >
-            {currentAsset.type === "video" ? (
+            {!currentAsset.url || !currentAsset.url.trim() ? (
+              <div className="drawer-lightbox-fallback">
+                <IconPhotoOff size={48} className="drawer-lightbox-fallback-icon" />
+                <h4 className="drawer-lightbox-fallback-title">Asset URL Unavailable</h4>
+                <p className="drawer-lightbox-fallback-desc">
+                  No valid URL or file path was provided for this asset artifact.
+                </p>
+              </div>
+            ) : currentAsset.type === "video" ? (
               <video
                 src={currentAsset.url}
                 controls
@@ -1020,6 +1109,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
             ) : isImageOrDiagram ? (
               <div
                 className="drawer-lightbox-image-wrap"
+                onDoubleClick={handleZoomToggle}
                 style={{
                   transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
                   transition: isPanning ? "none" : "transform 0.15s ease-out",
@@ -1072,7 +1162,12 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                   <div className="drawer-lightbox-meta-item">
                     <span className="drawer-lightbox-meta-label">Captured</span>
                     <span className="drawer-lightbox-meta-value">
-                      {new Date(currentAsset.timestamp).toLocaleString()}
+                      {(() => {
+                        const d = new Date(currentAsset.timestamp);
+                        return isNaN(d.getTime())
+                          ? String(currentAsset.timestamp)
+                          : d.toLocaleString();
+                      })()}
                     </span>
                   </div>
                 )}
@@ -1082,11 +1177,11 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                     <span className="drawer-lightbox-meta-value">{`Step ${currentAsset.step}`}</span>
                   </div>
                 )}
-                {currentAsset.dimensions && (
+                {currentDimensions && (
                   <div className="drawer-lightbox-meta-item">
                     <span className="drawer-lightbox-meta-label">Dimensions</span>
                     <span className="drawer-lightbox-meta-value">
-                      {`${currentAsset.dimensions.width} × ${currentAsset.dimensions.height}`}
+                      {`${currentDimensions.width} × ${currentDimensions.height}`}
                     </span>
                   </div>
                 )}
@@ -1104,7 +1199,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                     <code className="drawer-lightbox-meta-code">{currentAsset.mimeType}</code>
                   </div>
                 )}
-                {currentAsset.url && (
+                {currentAsset.url && currentAsset.url.trim().length > 0 && (
                   <div className="drawer-lightbox-meta-item">
                     <span className="drawer-lightbox-meta-label">Source URL</span>
                     <code className="drawer-lightbox-meta-code drawer-lightbox-url">
@@ -1115,7 +1210,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                       target="_blank"
                       rel="noreferrer"
                       className="drawer-lightbox-download-link"
-                      download={currentAsset.title ?? currentAsset.id}
+                      download={sanitizeFilename(currentAsset.title ?? currentAsset.id)}
                     >
                       <IconDownload size={12} /> Download Asset
                     </a>

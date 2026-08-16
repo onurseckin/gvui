@@ -4,6 +4,7 @@ import {
   IconClock,
   IconCopy,
   IconDeviceDesktop,
+  IconDownload,
   IconFileCode,
   IconFileText,
   IconFileTypePdf,
@@ -23,7 +24,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import type { GraphNodeData, MediaAsset, PlaywrightMetadata } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { LightboxDialog } from "../LightboxDialog";
-import { copyToClipboard, formatBytes } from "../streamUtils";
+import { copyToClipboard, downloadAssetFile, formatBytes } from "../streamUtils";
 
 export interface AssetsTabProps {
   node: GraphNodeData;
@@ -39,20 +40,23 @@ export type AssetFilter =
   | "documents"
   | "logs";
 
-const isPdf = (a: MediaAsset): boolean => {
+const isPdf = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "pdf" || a.mimeType === "application/pdf") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
   return (
-    a.type === "pdf" ||
-    a.mimeType === "application/pdf" ||
-    a.url.toLowerCase().endsWith(".pdf") ||
-    /\.pdf(\?.*)?$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("pdf"))
+    url.endsWith(".pdf") ||
+    /\.pdf(\?.*)?$/i.test(url) ||
+    Boolean(a.title && a.title.toLowerCase().includes("pdf"))
   );
 };
 
-const isCode = (a: MediaAsset): boolean => {
+const isCode = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "code") return true;
+  const url = typeof a.url === "string" ? a.url : "";
   return (
-    a.type === "code" ||
-    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(a.url) ||
+    /\.(ts|tsx|js|jsx|json|py|rs|go|sh|css|html|yaml|yml|toml|graphql|sql)$/i.test(url) ||
     Boolean(
       a.mimeType &&
       (a.mimeType.includes("javascript") ||
@@ -64,40 +68,48 @@ const isCode = (a: MediaAsset): boolean => {
   );
 };
 
-const isLog = (a: MediaAsset): boolean => {
+const isLog = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "log") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
+  return url.endsWith(".log") || Boolean(a.title && a.title.toLowerCase().includes("log"));
+};
+
+const isMarkdown = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "markdown") return true;
+  const url = typeof a.url === "string" ? a.url : "";
   return (
-    a.type === "log" ||
-    a.url.toLowerCase().endsWith(".log") ||
-    (a.title !== undefined && a.title.toLowerCase().includes("log"))
+    /\.(md|markdown)$/i.test(url) || Boolean(a.title && a.title.toLowerCase().includes("markdown"))
   );
 };
 
-const isMarkdown = (a: MediaAsset): boolean => {
+const isDiagram = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (a.type === "diagram") return true;
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
   return (
-    a.type === "markdown" ||
-    /\.(md|markdown)$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("markdown"))
+    url.includes("diagram") ||
+    /\.(svg|drawio|excalidraw)$/i.test(url) ||
+    Boolean(a.title && a.title.toLowerCase().includes("diagram"))
   );
 };
 
-const isDiagram = (a: MediaAsset): boolean => {
-  return (
-    a.type === "diagram" ||
-    a.url.toLowerCase().includes("diagram") ||
-    /\.(svg|drawio|excalidraw)$/i.test(a.url) ||
-    (a.title !== undefined && a.title.toLowerCase().includes("diagram"))
-  );
-};
-
-const isDocument = (a: MediaAsset): boolean => {
-  return (
+const isDocument = (a?: MediaAsset): boolean => {
+  if (!a) return false;
+  if (
     a.type === "document" ||
     a.type === "pdf" ||
     a.type === "markdown" ||
     a.type === "code" ||
     isPdf(a) ||
     isMarkdown(a) ||
-    isCode(a) ||
+    isCode(a)
+  ) {
+    return true;
+  }
+  const url = typeof a.url === "string" ? a.url : "";
+  return (
     Boolean(
       a.mimeType &&
       (a.mimeType === "application/pdf" ||
@@ -107,21 +119,23 @@ const isDocument = (a: MediaAsset): boolean => {
         a.mimeType.includes("msword") ||
         a.mimeType.includes("spreadsheet") ||
         a.mimeType.includes("csv")),
-    ) ||
-    /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(a.url)
+    ) || /\.(pdf|md|markdown|txt|rtf|docx?|xlsx?|pptx?|csv)$/i.test(url)
   );
 };
 
-const isScreenshot = (a: MediaAsset): boolean => {
+const isScreenshot = (a?: MediaAsset): boolean => {
+  if (!a) return false;
   if (isDiagram(a) || isPdf(a) || isCode(a) || isLog(a) || isMarkdown(a) || isDocument(a)) {
     return false;
   }
+  const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
   return (
     a.type === "image" ||
     a.type === "screenshot" ||
     !a.type ||
-    a.url.toLowerCase().includes("screenshot") ||
-    (a.title !== undefined && a.title.toLowerCase().includes("screenshot"))
+    url.includes("screenshot") ||
+    /\.(png|jpe?g|webp|gif|bmp)$/i.test(url) ||
+    Boolean(a.title && a.title.toLowerCase().includes("screenshot"))
   );
 };
 
@@ -208,17 +222,67 @@ const getTypeLabel = (asset: MediaAsset): string => {
   return asset.type ?? "image";
 };
 
+const extractDimensions = (a: MediaAsset): { width: number; height: number } | undefined => {
+  if (
+    a.dimensions &&
+    typeof a.dimensions.width === "number" &&
+    typeof a.dimensions.height === "number"
+  ) {
+    return a.dimensions;
+  }
+  if (a.metadata?.dimensions && typeof a.metadata.dimensions === "object") {
+    const d = a.metadata.dimensions as { width?: unknown; height?: unknown };
+    if (typeof d.width === "number" && typeof d.height === "number") {
+      return { width: d.width, height: d.height };
+    }
+  }
+  if (a.metadata?.viewport && typeof a.metadata.viewport === "object") {
+    const v = a.metadata.viewport as { width?: unknown; height?: unknown };
+    if (typeof v.width === "number" && typeof v.height === "number") {
+      return { width: v.width, height: v.height };
+    }
+  }
+  const assetObj = a as unknown as { viewport?: { width?: unknown; height?: unknown } };
+  if (assetObj.viewport && typeof assetObj.viewport === "object") {
+    const v = assetObj.viewport;
+    if (typeof v.width === "number" && typeof v.height === "number") {
+      return { width: v.width, height: v.height };
+    }
+  }
+  const match = (a.description || a.title || a.url || "").match(/\b(\d{3,4})[x×](\d{3,4})\b/);
+  if (match && match[1] && match[2]) {
+    return { width: Number(match[1]), height: Number(match[2]) };
+  }
+  return undefined;
+};
+
 const getInferredMime = (asset: MediaAsset): string => {
   if (asset.mimeType) return asset.mimeType;
+  if (asset.metadata?.mimeType && typeof asset.metadata.mimeType === "string") {
+    return asset.metadata.mimeType;
+  }
+  const url = typeof asset.url === "string" ? asset.url : "";
+  if (url.startsWith("data:")) {
+    const mimeMatch = url.match(/^data:([^;,]+)/);
+    if (mimeMatch && mimeMatch[1]) return mimeMatch[1];
+  }
   if (isPdf(asset)) return "application/pdf";
-  if (asset.url.endsWith(".png")) return "image/png";
-  if (asset.url.endsWith(".jpg") || asset.url.endsWith(".jpeg")) return "image/jpeg";
-  if (asset.url.endsWith(".webp")) return "image/webp";
-  if (asset.url.endsWith(".svg")) return "image/svg+xml";
-  if (asset.url.endsWith(".mp4")) return "video/mp4";
-  if (asset.url.endsWith(".json")) return "application/json";
-  if (asset.url.endsWith(".ts")) return "application/typescript";
-  if (asset.url.endsWith(".log") || isLog(asset)) return "text/plain";
+  if (url.endsWith(".png") || url.includes(".png?")) return "image/png";
+  if (
+    url.endsWith(".jpg") ||
+    url.endsWith(".jpeg") ||
+    url.includes(".jpg?") ||
+    url.includes(".jpeg?")
+  )
+    return "image/jpeg";
+  if (url.endsWith(".webp") || url.includes(".webp?")) return "image/webp";
+  if (url.endsWith(".svg") || url.includes(".svg?")) return "image/svg+xml";
+  if (url.endsWith(".mp4") || url.includes(".mp4?")) return "video/mp4";
+  if (url.endsWith(".webm") || url.includes(".webm?")) return "video/webm";
+  if (url.endsWith(".json") || url.includes(".json?")) return "application/json";
+  if (url.endsWith(".ts") || url.endsWith(".tsx")) return "application/typescript";
+  if (url.endsWith(".js") || url.endsWith(".jsx")) return "application/javascript";
+  if (url.endsWith(".log") || isLog(asset)) return "text/plain";
   if (isMarkdown(asset)) return "text/markdown";
   return asset.type ? `${asset.type}/raw` : "image/png";
 };
@@ -228,6 +292,7 @@ const getInferredMime = (asset: MediaAsset): string => {
  * stage filters (Validation Evidence, Worker Snapshots, Critic Certifications),
  * interactive media filters (All, Screenshots, Diagrams, Documents, Logs),
  * thumbnail preview tiles with dimensions, MIME tags, author attribution,
+ * download action triggers, robust error fallbacks,
  * and full-resolution interactive Lightbox modal dialogs.
  */
 export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
@@ -245,8 +310,9 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   }, []);
 
   const handleCopyUrl = useCallback(
-    async (url: string, id: string, e: ReactMouseEvent<HTMLButtonElement>) => {
+    async (url: string | undefined, id: string, e: ReactMouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
+      if (!url || !url.trim()) return;
       const ok = await copyToClipboard(url);
       if (ok) {
         setCopiedAssetId(id);
@@ -256,29 +322,62 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
     [],
   );
 
+  const handleDownloadAsset = useCallback(
+    (asset: MediaAsset, e: ReactMouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      if (!asset.url || !asset.url.trim()) return;
+      downloadAssetFile(asset.url, asset.title ?? asset.id);
+    },
+    [],
+  );
+
   const assets: MediaAsset[] = useMemo(() => {
     const list: MediaAsset[] = [];
     const seenIds = new Set<string>();
 
     const addAsset = (a?: MediaAsset) => {
-      if (!a || !a.url) return;
-      const id = a.id || a.url;
+      if (!a) return;
+      const url = typeof a.url === "string" ? a.url.trim() : "";
+      const id = a.id || url || `asset-${list.length}`;
       if (!seenIds.has(id)) {
         seenIds.add(id);
-        list.push({ ...a, id });
+        const dimensions = extractDimensions(a);
+        list.push({ ...a, id, dimensions: dimensions ?? a.dimensions });
       }
     };
 
     for (const a of node.mediaAssets ?? []) addAsset(a);
     for (const a of node.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
-    for (const a of node.metadata?.mediaAssets ?? []) addAsset(a);
-    for (const a of node.metadata?.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
-    for (const a of node.metadata?.assets ?? []) addAsset(a);
-    for (const a of node.metadata?.playwrightMetadata?.screenshots ?? [])
-      addAsset({ ...a, type: a.type || "image" });
+
+    const metaAssets = Array.isArray(node.metadata?.mediaAssets)
+      ? (node.metadata.mediaAssets as unknown as MediaAsset[])
+      : [];
+    for (const a of metaAssets) addAsset(a);
+
+    const metaShots = Array.isArray(node.metadata?.screenshots)
+      ? (node.metadata.screenshots as unknown as MediaAsset[])
+      : [];
+    for (const a of metaShots) addAsset({ ...a, type: a.type || "image" });
+
+    const generalAssets = Array.isArray(node.metadata?.assets)
+      ? (node.metadata.assets as unknown as MediaAsset[])
+      : [];
+    for (const a of generalAssets) addAsset(a);
+
+    const pwMetadata = node.metadata?.playwrightMetadata as unknown as
+      | PlaywrightMetadata
+      | undefined;
+    for (const a of pwMetadata?.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
 
     // Collect screenshots from findings
-    for (const finding of node.metadata?.findings ?? []) {
+    const findings = Array.isArray(node.metadata?.findings)
+      ? (node.metadata.findings as unknown as Array<{
+          validatorId?: string;
+          author?: string;
+          screenshots?: MediaAsset[];
+        }>)
+      : [];
+    for (const finding of findings) {
       for (const a of finding.screenshots ?? []) {
         addAsset({
           ...a,
@@ -289,10 +388,59 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
       }
     }
 
+    // Collect screenshots from findingDetails
+    const findingDetails = Array.isArray(node.metadata?.findingDetails)
+      ? (node.metadata.findingDetails as unknown as Array<{
+          validatorId?: string;
+          author?: string;
+          screenshots?: MediaAsset[];
+        }>)
+      : [];
+    for (const fd of findingDetails) {
+      for (const a of fd.screenshots ?? []) {
+        addAsset({
+          ...a,
+          type: a.type || "image",
+          author: a.author || fd.validatorId || fd.author || "Validator",
+          metadata: { ...a.metadata, isValidationEvidence: true, validatorId: fd.validatorId },
+        });
+      }
+    }
+
+    // Collect screenshots from gates
+    const gates = Array.isArray(node.metadata?.gates)
+      ? (node.metadata.gates as unknown as Array<{
+          author?: string;
+          screenshots?: MediaAsset[];
+        }>)
+      : [];
+    for (const gate of gates) {
+      for (const a of gate.screenshots ?? []) {
+        addAsset({
+          ...a,
+          type: a.type || "image",
+          author: a.author || "Gate Validator",
+          metadata: { ...a.metadata, isValidationEvidence: true },
+        });
+      }
+    }
+
+    // Collect screenshots from visualReport
+    const visualReport =
+      node.metadata?.visualReport && typeof node.metadata.visualReport === "object"
+        ? (node.metadata.visualReport as unknown as { screenshots?: MediaAsset[] })
+        : undefined;
+    if (visualReport?.screenshots && Array.isArray(visualReport.screenshots)) {
+      for (const a of visualReport.screenshots as MediaAsset[]) {
+        addAsset({ ...a, type: a.type || "image" });
+      }
+    }
+
     return list;
   }, [node]);
 
-  const playwright: PlaywrightMetadata | undefined = node.metadata?.playwrightMetadata;
+  const playwright: PlaywrightMetadata | undefined = node.metadata
+    ?.playwrightMetadata as unknown as PlaywrightMetadata | undefined;
 
   const filteredAssets = useMemo(() => {
     if (activeFilter === "all") return assets;
@@ -556,10 +704,22 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                         <IconFileText size={28} />
                         <span className="drawer-asset-placeholder-tag">Doc</span>
                       </div>
-                    ) : failedThumbnails.has(asset.id) ? (
-                      <div className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--error">
+                    ) : !asset.url || !asset.url.trim() || failedThumbnails.has(asset.id) ? (
+                      <div
+                        className="drawer-asset-thumb-placeholder drawer-asset-thumb-placeholder--error"
+                        role="img"
+                        aria-label={`Preview unavailable for ${asset.title ?? asset.id}`}
+                      >
                         <IconPhotoOff size={24} />
-                        <span className="drawer-asset-thumb-error-label">Failed to load</span>
+                        <span className="drawer-asset-thumb-error-label">
+                          {!asset.url || !asset.url.trim() ? "No URL provided" : "Failed to load"}
+                        </span>
+                        <span
+                          className="drawer-asset-thumb-error-path"
+                          title={asset.url || "Empty URL"}
+                        >
+                          {asset.url || "Unavailable"}
+                        </span>
                       </div>
                     ) : (
                       <img
@@ -590,25 +750,49 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                       }}
                     >
                       <h5 className="drawer-asset-title">{asset.title ?? asset.id}</h5>
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopyUrl(asset.url, asset.id, e)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: isCopied ? "#34d399" : "#71717a",
-                          cursor: "pointer",
-                          padding: "2px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "2px",
-                          fontSize: "10px",
-                        }}
-                        title="Copy Asset URL"
-                        aria-label={`Copy URL for ${asset.title ?? asset.id}`}
-                      >
-                        {isCopied ? <IconCheck size={12} /> : <IconCopy size={12} />}
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                        {asset.url && asset.url.trim().length > 0 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyUrl(asset.url, asset.id, e)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: isCopied ? "#34d399" : "#71717a",
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "2px",
+                                fontSize: "10px",
+                              }}
+                              title="Copy Asset URL"
+                              aria-label={`Copy URL for ${asset.title ?? asset.id}`}
+                            >
+                              {isCopied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDownloadAsset(asset, e)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#71717a",
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                fontSize: "10px",
+                              }}
+                              title="Download Asset"
+                              aria-label={`Download ${asset.title ?? asset.id}`}
+                            >
+                              <IconDownload size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     <div className="drawer-asset-meta-row" style={{ flexWrap: "wrap", gap: "4px" }}>
@@ -616,7 +800,11 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                         <span className="drawer-chip drawer-chip--sm">Step {asset.step}</span>
                       )}
                       {asset.dimensions && (
-                        <span className="drawer-chip drawer-chip--sm" title="Resolution">
+                        <span
+                          className="drawer-chip drawer-chip--sm"
+                          title="Resolution"
+                          aria-label={`Resolution ${asset.dimensions.width}×${asset.dimensions.height}`}
+                        >
                           {`${asset.dimensions.width}×${asset.dimensions.height}`}
                         </span>
                       )}
@@ -626,6 +814,8 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                       {mime && (
                         <span
                           className="drawer-chip drawer-chip--sm"
+                          title="MIME Type"
+                          aria-label={`MIME type ${mime}`}
                           style={{ fontFamily: "var(--font-mono)", fontSize: "9px" }}
                         >
                           {mime}

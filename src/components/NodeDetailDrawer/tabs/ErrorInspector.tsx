@@ -12,6 +12,7 @@ import {
   IconFileCode,
   IconFileDiff,
   IconMaximize,
+  IconPhotoOff,
   IconQuote,
   IconScale,
   IconSearch,
@@ -1501,6 +1502,15 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
   const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [findingLightboxIndex, setFindingLightboxIndex] = useState<number | null>(null);
+  const [failedFindingThumbnails, setFailedFindingThumbnails] = useState<Set<string>>(new Set());
+
+  const handleFindingThumbError = useCallback((id: string) => {
+    setFailedFindingThumbnails((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleCopyText = useCallback(async (text: string, key: string, e: MouseEvent) => {
     e.stopPropagation();
@@ -2001,68 +2011,112 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
               gap: "8px",
             }}
           >
-            {finding.screenshots.map((shot, sIdx) => (
-              <div
-                key={shot.id || `shot-${sIdx}`}
-                className="drawer-finding-thumb-card"
-                onClick={() => setFindingLightboxIndex(sIdx)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setFindingLightboxIndex(sIdx);
-                  }
-                }}
-                style={{
-                  position: "relative",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  border: "1px solid #27272a",
-                  backgroundColor: "#09090b",
-                  cursor: "pointer",
-                  aspectRatio: "16 / 9",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-end",
-                }}
-                aria-label={`Inspect evidence screenshot ${shot.title ?? shot.id}`}
-              >
-                <img
-                  src={shot.thumbnailUrl ?? shot.url}
-                  alt={shot.title ?? `Evidence ${sIdx + 1}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                  }}
-                  loading="lazy"
-                />
+            {finding.screenshots.map((shot, sIdx) => {
+              const shotId = shot.id || `shot-${sIdx}`;
+              const hasNoUrl = !shot.url || !shot.url.trim();
+              const isFailed = hasNoUrl || failedFindingThumbnails.has(shotId);
+              const shotDims =
+                shot.dimensions ||
+                (shot.metadata?.dimensions as { width: number; height: number } | undefined) ||
+                (shot.metadata?.viewport as { width: number; height: number } | undefined);
+
+              return (
                 <div
+                  key={shotId}
+                  className="drawer-finding-thumb-card"
+                  onClick={() => setFindingLightboxIndex(sIdx)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setFindingLightboxIndex(sIdx);
+                    }
+                  }}
                   style={{
                     position: "relative",
-                    background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
-                    padding: "4px 6px",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    border: "1px solid #27272a",
+                    backgroundColor: "#09090b",
+                    cursor: "pointer",
+                    aspectRatio: "16 / 9",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    color: "#fafafa",
-                    fontSize: "10px",
-                    fontFamily: "var(--font-sans)",
+                    flexDirection: "column",
+                    justifyContent: "flex-end",
                   }}
+                  aria-label={`Inspect evidence screenshot ${shot.title ?? shot.id}`}
                 >
-                  <span
-                    style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  {isFailed ? (
+                    <div
+                      className="drawer-finding-thumb-error"
+                      role="img"
+                      aria-label={`Preview unavailable for ${shot.title ?? shot.id}`}
+                    >
+                      <IconPhotoOff size={20} />
+                      <span style={{ fontSize: "9px", fontFamily: "var(--font-sans)" }}>
+                        {hasNoUrl ? "No URL provided" : "Preview unavailable"}
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={shot.thumbnailUrl ?? shot.url}
+                      alt={shot.title ?? `Evidence ${sIdx + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                      }}
+                      loading="lazy"
+                      onError={() => handleFindingThumbError(shotId)}
+                    />
+                  )}
+                  <div
+                    style={{
+                      position: "relative",
+                      background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
+                      padding: "4px 6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      color: "#fafafa",
+                      fontSize: "10px",
+                      fontFamily: "var(--font-sans)",
+                    }}
                   >
-                    {shot.title ?? `Screenshot ${sIdx + 1}`}
-                  </span>
-                  <IconMaximize size={12} style={{ flexShrink: 0, opacity: 0.8 }} />
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {shot.title ?? `Screenshot ${sIdx + 1}`}
+                    </span>
+                    {shotDims && (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "9px",
+                          opacity: 0.8,
+                          marginLeft: "4px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {`${shotDims.width}×${shotDims.height}`}
+                      </span>
+                    )}
+                    <IconMaximize
+                      size={12}
+                      style={{ flexShrink: 0, opacity: 0.8, marginLeft: "4px" }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {findingLightboxIndex !== null && (

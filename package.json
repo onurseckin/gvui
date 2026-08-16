@@ -25,6 +25,7 @@
     "format:check": "oxfmt --check",
     "audit": "bun run build:wasm && bun scripts/runLayoutAudit.ts",
     "test": "cargo test --manifest-path crates/gvui/Cargo.toml && bun test src/ && bun run audit",
+    "test:visual": "bun scripts/visual-capture.ts",
     "build": "bun run build:wasm && bun run build:local",
     "prod": "bun run build:wasm && docker compose -f docker-compose.prod.yml up -d --build",
     "prod:stop": "docker compose -f docker-compose.prod.yml down",
@@ -47,6 +48,7 @@
     "@vitejs/plugin-react": "^6.0.5",
     "oxfmt": "^0.61.0",
     "oxlint": "^1.76.0",
+    "playwright": "^1.62.1",
     "react-test-renderer": "19.2.8",
     "typescript": "^7.0.2",
     "vite": "^8.2.0"

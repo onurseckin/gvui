@@ -1025,6 +1025,26 @@
   font-weight: 500;
   color: #fca5a5;
 }
+.drawer-asset-thumb-error-path {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #fca5a5;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drawer-finding-thumb-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #f87171;
+  background-color: rgba(248, 113, 113, 0.08);
+}
 
 /* Specific Preview Tile Placeholders */
 .drawer-asset-thumb-placeholder--pdf {
