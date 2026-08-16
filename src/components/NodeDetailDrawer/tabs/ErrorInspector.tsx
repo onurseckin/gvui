@@ -26,7 +26,7 @@ import type { FindingDetail, GraphNodeData } from "../../../types/graphData";
 import { DiffViewer } from "../DiffViewer";
 import { DrawerSection } from "../DrawerSection";
 import { LightboxDialog } from "../LightboxDialog";
-import { copyToClipboard } from "../streamUtils";
+import { copyToClipboard, normalizeAssetUrl } from "../streamUtils";
 
 export interface StackFrame {
   raw: string;
@@ -2060,7 +2060,7 @@ export const FindingDetailCard: FC<FindingDetailCardProps> = memo(function Findi
                     </div>
                   ) : (
                     <img
-                      src={shot.thumbnailUrl ?? shot.url}
+                      src={normalizeAssetUrl(shot.thumbnailUrl ?? shot.url)}
                       alt={shot.title ?? `Evidence ${sIdx + 1}`}
                       style={{
                         width: "100%",

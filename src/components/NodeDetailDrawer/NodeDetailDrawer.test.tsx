@@ -22,6 +22,7 @@ import {
   formatDuration,
   formatTokens,
   getByteLength,
+  normalizeAssetUrl,
   resolveDownloadFilename,
   sanitizeFilename,
 } from "./streamUtils";
@@ -8020,6 +8021,53 @@ index e69de29..b2b2b2b 100644
         expect(json).toContain("No valid URL or file path was provided");
 
         act(() => renderer.unmount());
+      });
+
+      test("normalizeAssetUrl normalizes local file, capsule, data, blob, and remote URLs correctly", () => {
+        // Empty / undefined inputs
+        expect(normalizeAssetUrl(undefined)).toBe("");
+        expect(normalizeAssetUrl("")).toBe("");
+        expect(normalizeAssetUrl("   ")).toBe("");
+
+        // Data and Blob URIs
+        expect(normalizeAssetUrl("data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==")).toBe(
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==",
+        );
+        expect(normalizeAssetUrl("blob:http://localhost:4444/d3b07384")).toBe(
+          "blob:http://localhost:4444/d3b07384",
+        );
+
+        // Remote HTTP/HTTPS URIs
+        expect(normalizeAssetUrl("https://example.com/screenshot.png")).toBe(
+          "https://example.com/screenshot.png",
+        );
+        expect(normalizeAssetUrl("http://cdn.org/diagram.svg")).toBe("http://cdn.org/diagram.svg");
+
+        // Existing /api/assets endpoint
+        expect(normalizeAssetUrl("/api/assets?path=%2FUsers%2Fshot.png")).toBe(
+          "/api/assets?path=%2FUsers%2Fshot.png",
+        );
+
+        // Absolute filesystem path
+        expect(
+          normalizeAssetUrl(
+            "/Users/onurseckinsenoglu/repos/gvui/.capsules/run-1/evidence/screenshots/task-1.png",
+          ),
+        ).toBe(
+          `/api/assets?path=${encodeURIComponent(
+            "/Users/onurseckinsenoglu/repos/gvui/.capsules/run-1/evidence/screenshots/task-1.png",
+          )}`,
+        );
+
+        // file:// prefix
+        expect(normalizeAssetUrl("file:///Users/alice/repos/app/shot.png")).toBe(
+          `/api/assets?path=${encodeURIComponent("/Users/alice/repos/app/shot.png")}`,
+        );
+
+        // Relative capsule / evidence path
+        expect(normalizeAssetUrl(".capsules/run-1/evidence/screenshots/shot.png")).toBe(
+          `/api/assets?path=${encodeURIComponent(".capsules/run-1/evidence/screenshots/shot.png")}`,
+        );
       });
     });
   });

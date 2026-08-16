@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "fs";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -146,6 +146,117 @@ function graphFilesApiPlugin(): Plugin {
 }
 
 /**
+ * Dev-server filesystem bridge for serving asset media, screenshots, and documents.
+ * Handles /api/assets?path=... requests, /api/assets/... subpaths, and direct /.capsules/ or /reports/
+ * requests, streaming raw binary files with correct Content-Type, Content-Length, and Cache-Control.
+ */
+function assetFilesApiPlugin(): Plugin {
+  const MIME_MAP: Record<string, string> = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".bmp": "image/bmp",
+    ".pdf": "application/pdf",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg",
+    ".json": "application/json",
+    ".txt": "text/plain",
+    ".log": "text/plain",
+    ".md": "text/markdown",
+  };
+
+  return {
+    name: "asset-files-api",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const urlStr = req.url ?? "";
+        let targetFilePath: string | null = null;
+
+        if (urlStr.startsWith("/api/assets")) {
+          try {
+            const parsedUrl = new URL(urlStr, "http://localhost:4444");
+            const queryPath = parsedUrl.searchParams.get("path");
+            if (queryPath) {
+              targetFilePath = decodeURIComponent(queryPath);
+            } else if (parsedUrl.pathname.startsWith("/api/assets/")) {
+              targetFilePath = decodeURIComponent(parsedUrl.pathname.slice("/api/assets/".length));
+            }
+          } catch {
+            // fallback
+          }
+        } else if (
+          urlStr.startsWith("/.capsules/") ||
+          urlStr.startsWith("/evidence/") ||
+          urlStr.startsWith("/reports/") ||
+          urlStr.startsWith("/test-results/")
+        ) {
+          targetFilePath = decodeURIComponent(urlStr.split("?")[0]);
+        }
+
+        if (!targetFilePath) {
+          return next();
+        }
+
+        // Clean up file:// prefix
+        if (targetFilePath.startsWith("file://")) {
+          targetFilePath = targetFilePath.slice(7);
+        }
+
+        // Resolve path: check exact absolute path, project-relative path, or repo-root path
+        let resolvedPath = targetFilePath;
+        if (
+          !path.isAbsolute(targetFilePath) ||
+          targetFilePath.startsWith("/.capsules") ||
+          targetFilePath.startsWith("/evidence") ||
+          targetFilePath.startsWith("/reports") ||
+          targetFilePath.startsWith("/test-results") ||
+          targetFilePath.startsWith("/public")
+        ) {
+          const rel = targetFilePath.replace(/^\//, "");
+          const projectCandidate = path.resolve(import.meta.dirname, rel);
+          if (existsSync(projectCandidate)) {
+            resolvedPath = projectCandidate;
+          }
+        }
+
+        if (!existsSync(resolvedPath)) {
+          const fallbackRoot = path.resolve(import.meta.dirname, targetFilePath.replace(/^\//, ""));
+          if (existsSync(fallbackRoot)) {
+            resolvedPath = fallbackRoot;
+          }
+        }
+
+        if (!existsSync(resolvedPath) || !statSync(resolvedPath).isFile()) {
+          res.statusCode = 404;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: `Asset not found: ${targetFilePath}` }));
+          return;
+        }
+
+        const ext = path.extname(resolvedPath).toLowerCase();
+        const mimeType = MIME_MAP[ext] ?? "application/octet-stream";
+        const stat = statSync(resolvedPath);
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Content-Length", stat.size);
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+
+        const stream = createReadStream(resolvedPath);
+        stream.pipe(res);
+      });
+    },
+  };
+}
+
+/**
  * Quiet period before a Rust change triggers a rebuild. Anything under this window collapses into a
  * single build, which is the whole point: one `cargo fmt`, `git checkout` or editor save-all touches
  * dozens of `.rs` files at once.
@@ -201,7 +312,7 @@ function wasmAutoRebuildPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), wasmAutoRebuildPlugin(), graphFilesApiPlugin()],
+  plugins: [react(), wasmAutoRebuildPlugin(), graphFilesApiPlugin(), assetFilesApiPlugin()],
   server: {
     host: "0.0.0.0",
     port: 4444,

@@ -23,7 +23,7 @@ import {
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MediaAsset } from "../../types/graphData";
-import { copyToClipboard, formatBytes, sanitizeFilename } from "./streamUtils";
+import { copyToClipboard, formatBytes, normalizeAssetUrl, sanitizeFilename } from "./streamUtils";
 
 const isPdf = (a?: MediaAsset): boolean => {
   if (!a) return false;
@@ -403,13 +403,13 @@ const PdfViewer: FC<PdfViewerProps> = memo(function PdfViewer({ asset }) {
       </div>
       <div className="drawer-lightbox-pdf-viewport">
         <object
-          data={asset.url}
+          data={normalizeAssetUrl(asset.url)}
           type="application/pdf"
           className="drawer-lightbox-pdf-object"
           aria-label={asset.title ?? "PDF Document Preview"}
         >
           <iframe
-            src={asset.url}
+            src={normalizeAssetUrl(asset.url)}
             title={asset.title ?? "PDF Document"}
             className="drawer-lightbox-pdf-iframe"
           >
@@ -1067,17 +1067,26 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
               </div>
             ) : currentAsset.type === "video" ? (
               <video
-                src={currentAsset.url}
+                src={normalizeAssetUrl(currentAsset.url)}
                 controls
                 autoPlay
                 className="drawer-lightbox-video"
-                poster={currentAsset.thumbnailUrl}
+                poster={
+                  currentAsset.thumbnailUrl
+                    ? normalizeAssetUrl(currentAsset.thumbnailUrl)
+                    : undefined
+                }
               >
                 Your browser does not support the video tag.
               </video>
             ) : currentAsset.type === "audio" ? (
               <div className="drawer-lightbox-audio-wrap">
-                <audio src={currentAsset.url} controls autoPlay className="drawer-lightbox-audio">
+                <audio
+                  src={normalizeAssetUrl(currentAsset.url)}
+                  controls
+                  autoPlay
+                  className="drawer-lightbox-audio"
+                >
                   Your browser does not support the audio tag.
                 </audio>
               </div>
@@ -1097,7 +1106,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 </p>
                 {currentAsset.url && (
                   <a
-                    href={currentAsset.url}
+                    href={normalizeAssetUrl(currentAsset.url)}
                     target="_blank"
                     rel="noreferrer"
                     className="drawer-lightbox-fallback-btn"
@@ -1117,7 +1126,7 @@ export const LightboxDialog: FC<LightboxDialogProps> = memo(function LightboxDia
                 }}
               >
                 <img
-                  src={currentAsset.url}
+                  src={normalizeAssetUrl(currentAsset.url)}
                   alt={currentAsset.title ?? currentAsset.id}
                   className="drawer-lightbox-img"
                   loading="eager"

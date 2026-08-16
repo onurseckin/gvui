@@ -24,7 +24,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import type { GraphNodeData, MediaAsset, PlaywrightMetadata } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { LightboxDialog } from "../LightboxDialog";
-import { copyToClipboard, downloadAssetFile, formatBytes } from "../streamUtils";
+import { copyToClipboard, downloadAssetFile, formatBytes, normalizeAssetUrl } from "../streamUtils";
 
 export interface AssetsTabProps {
   node: GraphNodeData;
@@ -723,7 +723,7 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                       </div>
                     ) : (
                       <img
-                        src={asset.thumbnailUrl ?? asset.url}
+                        src={normalizeAssetUrl(asset.thumbnailUrl ?? asset.url)}
                         alt={asset.title ?? asset.id}
                         className="drawer-asset-thumb"
                         loading="lazy"

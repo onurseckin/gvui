@@ -250,6 +250,41 @@ export function resolveDownloadFilename(url: string, suggestedFilename?: string)
 }
 
 /**
+ * Normalize an asset URL into a browser-loadable URL.
+ * Converts local filesystem paths (/Users/..., C:\..., file:///...) and capsule paths
+ * into the Vite /api/assets bridge endpoint so they can be loaded by <img> elements in the browser.
+ */
+export function normalizeAssetUrl(url?: string): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  // Data or blob URIs are already loadable by <img>
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+
+  // Remote HTTP/HTTPS URIs are loadable as-is
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Already routed through /api/assets
+  if (trimmed.startsWith("/api/assets")) {
+    return trimmed;
+  }
+
+  // Strip file:// prefix if present
+  let cleanPath = trimmed;
+  if (cleanPath.startsWith("file://")) {
+    cleanPath = cleanPath.slice(7);
+  }
+
+  // Route local file and capsule paths through /api/assets bridge
+  return `/api/assets?path=${encodeURIComponent(cleanPath)}`;
+}
+
+/**
  * Trigger browser download or opening of an asset URL (data, blob, local file://, or http/https)
  * with strict filename sanitization and safe default fallbacks.
  */
