@@ -106,6 +106,40 @@ These memorable repeated-digit ports were chosen so gvui can run alongside other
 
 ---
 
+## 📊 Importing Execution Graphs from `@onurseckin/skills` (`orchestrating-long-tasks`)
+
+`GVUI` integrates natively with the [`orchestrating-long-tasks`](https://github.com/onurseckin/skills) skill harness to visualize autonomous multi-agent execution trajectories, DAG dependencies, verification gates, and telemetry.
+
+### 1. Export summary graph from the capsule
+
+In the workspace where `orchestrating-long-tasks` was executed, export the summary suite:
+
+```bash
+bun orchestrating-long-tasks/scripts/harness.ts summary:export --run .capsules/<run-id>
+```
+
+This compiles `.capsules/<run-id>/summary/graph.json`, `metrics.json`, `timeline.json`, and `summary.md`.
+
+### 2. Import into GVUI
+
+From the `gvui` repository root, run the CLI import command:
+
+```bash
+bun run gvui:import --capsule /path/to/.capsules/<run-id>
+# Or directly:
+bun scripts/import-capsule.ts --capsule /path/to/.capsules/<run-id>
+```
+
+### What this does:
+
+1. Resolves and parses `.capsules/<run-id>/summary/graph.json` (with automatic fallback to `state.json`).
+2. Validates nodes, edges, and status fields against the `GraphDataset` schema.
+3. Saves the dataset into `public/data/graphs/<slug>.json`.
+4. Registers `<slug>` in `public/data/graphs/manifest.json` so the dataset appears automatically in the graph switcher dropdown.
+5. Prints the direct preview link: `http://localhost:4444/?graph=<slug>`.
+
+---
+
 ## 💾 Local SQLite Database & Layout Caching
 
 `GVUI` uses an in-browser SQLite database powered by **`sql.js`** (`src/utils/sqliteDb.ts`) to store and cache graph layout calculations.

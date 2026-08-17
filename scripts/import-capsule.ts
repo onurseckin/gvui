@@ -110,7 +110,7 @@ if (import.meta.main) {
     console.log(`- Graph ID: ${result.graphId}`);
     console.log(`- Nodes: ${result.dataset.nodes.length} | Edges: ${result.dataset.edges.length}`);
     console.log(`- Output File: ${result.outputPath}`);
-    console.log(`- Preview URL: http://localhost:5173/?graph=${result.graphId}`);
+    console.log(`- Preview URL: http://localhost:4444/?graph=${result.graphId}`);
   } catch (err: unknown) {
     console.error(`❌ Import failed:`, err instanceof Error ? err.message : String(err));
     process.exit(1);
