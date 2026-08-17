@@ -8,8 +8,8 @@ import type {
 } from "../../../engine/layout/custom/types";
 
 /**
- * v2 report surface: metrics are measured, not searched (see
- * docs/planning/layout-engine-v2/04-config-and-quality.md §3). `normalizedEdges` is accepted only
+ * Metrics report surface: metrics are measured directly (see
+ * docs/concepts/quality-model.md and docs/engine/11-emit-and-quality.md). `normalizedEdges` is accepted only
  * for prop compatibility with existing callers — v2's `LayoutMetrics` already carries
  * `unresolvedRouteCount`/`unresolvedBadgeCount` computed engine-side, so this component no longer
  * derives them from the input graph.

@@ -66,7 +66,7 @@ export const GraphTestingPage: FC<GraphTestingPageProps> = ({ onBackToApp }) => 
 
   const { normalizedNodes, normalizedEdges } = useMemo(() => {
     // Scenarios provide an explicit `w`/`h` per node — that's the "skips measurement" input path
-    // documented in docs/planning/layout-engine-v2/02-algorithms.md Phase 0, so node sizing is
+    // documented in docs/engine/03-ingest-and-measurement.md Phase 0, so node sizing is
     // passed straight through. Edge labels have no such explicit box, so they go through the same
     // `MeasurementProvider` the production path uses (see `customLayoutAdapter.ts`'s
     // `buildEngineInputs`), keeping the playground's badge placement honest about the real font

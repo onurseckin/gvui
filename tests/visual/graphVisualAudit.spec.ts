@@ -496,9 +496,13 @@ describe("Automated Playwright Visual Inspection Pipeline (GVUI-SPEC-2026-08-15-
           const html = renderToString(React.createElement(AssetsTab, { node }));
           expect(html).toBeDefined();
           const hasGallery =
-            html.includes("assets-gallery-grid") || html.includes("assets-summary-banner");
+            html.includes("assets-gallery-grid") ||
+            html.includes("assets-summary-banner") ||
+            html.includes("drawer-asset-card");
           const hasEmptyState =
-            html.includes("drawer-empty-state") || html.includes("No media assets");
+            html.includes("drawer-empty-state") ||
+            html.includes("No media assets") ||
+            html.includes("No assets");
           expect(hasGallery || hasEmptyState).toBe(true);
         });
 

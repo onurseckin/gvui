@@ -144,9 +144,8 @@ result. `cross` is the combinatorial crossing count (order inversions between ad
 |                                  |     |     | radial  | 0.11 |     — |     — |  12 |    15 |       2 |
 
 Ten datasets × four engine/direction combinations = **40 fixtures, all valid, all deterministic
-across processes**, slowest **1.17 ms** against a 50 ms budget. For comparison the v1 engine took
-**47,336 ms** on a 30-node mesh and emitted a drawing that failed validation
-([00-diagnosis.md](../planning/layout-engine-v2/00-diagnosis.md)).
+across processes**, slowest **1.17 ms** against a 50 ms budget. For comparison the legacy search-based engine took
+**47,336 ms** on a 30-node mesh and emitted a drawing that failed validation.
 
 Radial reports no _combinatorial_ crossing count because it has no layered graph to count order
 inversions in; the number in the `geo` column is the only one it can honestly produce. Reporting 0
@@ -208,8 +207,7 @@ Not every engine promises the same things, and pretending otherwise makes the qu
 
 A violation of a guaranteed property is a bug and fails the audit. A violation of a best-effort
 property is a quality metric on a drawing that never promised otherwise. Both are reported; only the
-first is an error. The reasoning is in
-[06-results.md §4d](../planning/layout-engine-v2/06-results.md).
+first is an error. The reasoning is in [the quality model](../concepts/quality-model.md).
 
 Radial's best-effort halves are not theoretical. Across the ten datasets it records **9 edge–node
 penetrations, 1 badge–node overlap, 7 badge–badge overlaps and 7 leader lines**; layered records
@@ -247,12 +245,10 @@ substitute, because radial is a tree layout and a mesh has no tree. The present-
 gap is `peer_mesh_service_registry`, where layered emits 29 geometric crossings and 78 bends on 8
 nodes.
 
-The decision was the user's and it was made on the grounds that a mode nobody knows when to pick is
-worse than no mode. It is recorded here rather than buried so that it stays reversible: the engine is
-in git history, its shared helpers survive in
-[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs) (radial uses
-them), and the reasoning is in
-[the v3 plan](../planning/layout-engine-v3/README.md).
+The decision was made on the grounds that a mode nobody knows when to pick is worse than no mode.
+It is recorded here rather than buried so that it stays reversible: the engine is in git history,
+and its shared helpers survive in
+[`7_2_geometric_common.rs`](../../crates/gvui/src/7_engines/7_2_geometric_common.rs) (radial uses them).
 
 **Presets went too.** The settings panel is now just "Settings" and exposes every field of
 `CustomLayoutConfig` directly — Layout, Edges, Labels, Algorithms, Budgets. A preset is a saved point

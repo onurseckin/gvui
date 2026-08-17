@@ -418,7 +418,7 @@ pub enum ItemKind {
     /// A bend point of a long edge.
     Dummy { edge: u32, seq: u16 },
     /// An edge badge occupying reserved area. This is what makes badge space allocation
-    /// correct by construction — see `docs/planning/layout-engine-v2/02-algorithms.md`.
+    /// correct by construction — see `docs/engine/06-layering-and-labels.md`.
     Label(u32),
 }
 

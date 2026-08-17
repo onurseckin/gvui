@@ -51,8 +51,8 @@ export function getEdgeCompositeBadgeText(edge: GraphDataset["edges"][number]): 
 /**
  * Converts dataset nodes/edges into the engine's wire input. Node sizes and edge label boxes are
  * measured once, up front — the same `MeasurementProvider` used by the renderer's node cards —
- * so the Rust side never sees text and reserves *exact* space for every badge (Phase 1 of the v2
- * pipeline; see docs/planning/layout-engine-v2/02-algorithms.md).
+ * so the Rust side never sees text and reserves *exact* space for every badge (Phase 1 of the
+ * pipeline; see docs/engine/03-ingest-and-measurement.md).
  */
 function buildEngineInputs(
   dataset: GraphDataset,

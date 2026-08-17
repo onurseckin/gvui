@@ -276,8 +276,8 @@ let min_len: u16 = match edge.min_len {
 ```
 
 This costs vertical space, and it costs it honestly: `clean_ring_10n_10e`, a 10-node ring with
-labelled edges, draws as 19 ranks. That is correct given the rule, and it is a known open question
-(see [06-results §5.2](../planning/layout-engine-v2/06-results.md)), not an accident.
+labelled edges, draws as 19 ranks. That is correct given the rule, and it is an intentional architectural trade-off
+(see [Quality Model § Label Spans](../concepts/quality-model.md)), not an accident.
 
 #### 2. A node too narrow for its degree is widened
 

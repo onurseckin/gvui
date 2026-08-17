@@ -318,8 +318,7 @@ many pairs of edges must cross. `geometric_crossings` counts **actual intersecti
 polylines**.
 
 The source comment in `6_2_metrics.rs` says the two are expected to agree and that a large gap means
-routing introduced crossings the ordering had resolved. Measurement refined that. From
-[`06-results.md`](../planning/layout-engine-v2/06-results.md), across the layered fixtures:
+routing introduced crossings the ordering had resolved. Measurement refined that across the layered fixtures:
 
 | channel lanes |   1 |   1 |   2 |   3 |   3 |   6 |  10 |
 | ------------- | --: | --: | --: | --: | --: | --: | --: |

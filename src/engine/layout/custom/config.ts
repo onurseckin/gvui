@@ -5,7 +5,7 @@
  * `CustomLayoutConfig`. If you add/rename/remove a field here, make the matching change on the
  * Rust side (and vice versa) — this file is not the source of truth, the Rust struct is.
  *
- * Three tiers, see docs/planning/layout-engine-v2/04-config-and-quality.md:
+ * Three tiers, see docs/concepts/quality-model.md and docs/engine/11-emit-and-quality.md:
  * - Tier 1 — Aesthetics: monotone, predictable knobs. What users tune.
  * - Tier 2 — Algorithm selection: swap the algorithm a phase uses, for A/B and debugging.
  * - Tier 3 — Budgets: safety rails, not quality dials.

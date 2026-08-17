@@ -327,8 +327,7 @@ Be honest about the result. Across the ten audit datasets radial produces:
 The layered engine produces zero of every one of those on the same datasets. These are recorded as
 quality metrics rather than errors because radial never promised otherwise — a straight chord
 between two boxes may graze a third by construction, not by defect. The policy is in
-[the quality model](../concepts/quality-model.md) and
-[06-results.md §4d](../planning/layout-engine-v2/06-results.md); the audit gates radial on
+[the quality model](../concepts/quality-model.md); the audit gates radial on
 determinism, validity and the node-overlap guarantee, and reports the rest.
 
 ---

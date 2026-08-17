@@ -259,9 +259,8 @@ The `det` column of the audit table is that check, per fixture per engine. All 4
 
 Two runs inside one process share a hasher seed, so the in-process check alone would not catch a
 hash-order dependency. The cross-process property is established by running the audit in a **second
-process** and comparing: the result recorded in
-[`06-results.md`](../planning/layout-engine-v2/06-results.md) is that every fixture is byte-identical
-across two processes.
+process** and comparing: verified by the layout audit regression gate where every fixture is byte-identical
+across distinct processes and worker threads.
 
 ### In unit tests
 

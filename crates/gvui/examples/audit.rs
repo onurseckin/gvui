@@ -2,7 +2,7 @@
 //!
 //! Runs every engine over every dataset in `public/data/graphs/` and reports timing, quality
 //! metrics, constraint violations and determinism. This is the gate referenced by
-//! `docs/planning/layout-engine-v2/04-config-and-quality.md`.
+//! `docs/concepts/quality-model.md` and `docs/engine/11-emit-and-quality.md`.
 //!
 //! ```sh
 //! cargo run --release --manifest-path crates/gvui/Cargo.toml --example audit

@@ -200,13 +200,8 @@ Related reading:
   complexity, and the quality model, treated independently of any one phase.
 - [Modes](../modes/README.md) — the layered engine's four `direction` values, and
   [radial](../modes/02-radial.md), the one engine that is not this pipeline.
-- [Planning: v2](../planning/layout-engine-v2/README.md) — the v2 design documents, the diagnosis of
-  v1 that motivated them, and the measured results.
-- [Planning: v3](../planning/layout-engine-v3/README.md) — the aesthetic and usability pass: two
-  modes instead of six, scored port sides, flat peer edges, octilinear.
-- [Planning: v4](../planning/layout-engine-v4/README.md) — edge crossing reduction: why every
-  geometric crossing was one shape, coordinate-space lane assignment, and the measured case against
-  four-side attachment.
+- [Features](../features/README.md) — SQLite caching, Detail Drawer tabs, Graph Export.
+- [Tooling](../tooling/README.md) — Screenshot ingestion, CLI capsule import, Layout audit harness.
 
 ---
 

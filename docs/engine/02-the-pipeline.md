@@ -513,8 +513,8 @@ Same dependency. No loop. That is the whole idea, and it is why the pipeline dia
 
 ## 6. What this bought, and what it cost
 
-**Bought**, measured across eight datasets and five engines
-([full table](../planning/layout-engine-v2/06-results.md)):
+**Bought**, measured across regression datasets and engines
+(verified by the native and WASM layout audit harnesses):
 
 - Median speedup ≈ 1,700×; worst-case fixtures 26,445× and 190,785×.
 - Slowest fixture across all 40 fixture/engine combinations: **1.88 ms**, against the audit's 50 ms

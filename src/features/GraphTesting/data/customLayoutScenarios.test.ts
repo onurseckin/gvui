@@ -141,10 +141,9 @@ describe("CUSTOM_LAYOUT_SCENARIOS", () => {
 
   it("computes a layered layout for every scenario without throwing", async () => {
     // Regression coverage for the full scenario library against the real dispatcher/engine (WASM),
-    // not just the static fixture shape asserted above — this is what would have caught the v1
-    // `dense_kubernetes_mesh` failure mode (docs/planning/layout-engine-v2/04-config-and-quality.md
-    // § 3a): an engine that returns `status !== "success"` on a fixture instead of surfacing a
-    // diagnostic.
+    // not just the static fixture shape asserted above — this is what guarantees robust handling of
+    // complex stress topologies (docs/concepts/quality-model.md § 3a): an engine that returns
+    // `status !== "success"` on a fixture instead of surfacing a diagnostic.
     for (const scenario of Object.values(CUSTOM_LAYOUT_SCENARIOS)) {
       const dataset = toGraphDataset(scenario);
       const result = await computeGraphLayout(dataset, "layered");

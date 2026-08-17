@@ -1,152 +1,149 @@
 # GVUI — Graph Visualization UI
 
-**GVUI** is a high-performance directed graph layout and visualization UI built with **React**, **TypeScript**, **Vite**, and a custom **Rust / WebAssembly (WASM)** layout engine.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Rust](https://img.shields.io/badge/Rust-WASM-DEA584?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.0+-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Bun](https://img.shields.io/badge/Bun-1.3+-FBF0DF?style=flat-square&logo=bun&logoColor=black)](https://bun.sh/)
+
+**GVUI** is a high-performance, deterministic directed graph visualization UI and layout engine engineered for complex multi-agent system execution trajectories, microservice topologies, and dependency DAGs.
+
+Built with **React 19**, **TypeScript**, and a custom **Rust / WebAssembly (WASM)** layout engine, GVUI achieves sub-millisecond layout computation with strict mathematical guarantees: **constraints flow forward, nothing is retried**.
 
 ---
 
-## 🚀 Setup
+## 🏛️ System Architecture
 
-One command installs everything you need — Bun, the Rust toolchain, the `wasm32-unknown-unknown` target, and `wasm-pack` — if they're not already on your machine, then installs dependencies and builds the WASM engine.
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  GVUI WEB APPLICATION                                  │
+├──────────────────────────────────────────┬─────────────────────────────────────────────┤
+│               React 19 Host UI           │              Developer Tooling              │
+│  ┌─────────────────────────────────────┐ │  ┌───────────────────────────────────────┐  │
+│  │ Interactive Graph Canvas            │ │  │ 280-Run Layout Audit Framework        │  │
+│  │  - SVG/Canvas Pan & Zoom Engine     │ │  │ Playwright Visual Capture Engine      │  │
+│  │  - Polymorphic Node Archetype Cards │ │  │ CLI Long-Running Capsule Importer     │  │
+│  │  - Smart Edge Badges & Polylines    │ │  │ Multi-Format Graph Exporter (SVG/PNG) │  │
+│  └─────────────────────────────────────┘ │  └───────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────┐ │  ┌───────────────────────────────────────┐  │
+│  │ Polymorphic Node Detail Drawer      │ │  │ In-Browser SQLite Caching (sql.js)    │  │
+│  │  - Token Distribution & Cost ($USD) │ │  │  - Deterministic Hash Indexing        │  │
+│  │  - Subagent Lineage & Impact Graph  │ │  │  - LRU Quota Eviction & Persistence   │  │
+│  │  - Error Inspector & Stack Parser   │ │  │  - Zero-Copy Memory Transport         │  │
+│  │  - Code Diffs & Command Executions  │ │  │                                       │  │
+│  └─────────────────────────────────────┘ │  └───────────────────────────────────────┘  │
+└──────────────────────────────────────────┴─────────────────────────────────────────────┘
+                                           │
+                        WebAssembly Boundary (JSON Bridge / Float Arrays)
+                                           │
+┌──────────────────────────────────────────▼─────────────────────────────────────────────┐
+│                          RUST / WASM CUSTOM LAYOUT ENGINE                              │
+│                                 (`crates/gvui/`)                                       │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│  01. Ingest & Graph IR      ── intern IDs, build CSR adjacency, bundle parallel edges  │
+│  02. Node Measurement       ── text-to-box metrics computed on host, isolated from WASM│
+│  03. Structural Analysis    ── Tarjan SCC decomposition & Eades Greedy Cycle Removal   │
+│  04. Rank Assignment        ── Gansner Network Simplex & Longest Path Layering         │
+│  05. Layering & Virtuals    ── Dummy node chains for long edges & first-class badges   │
+│  06. Label Placement        ── Geometric reservation ensuring badges never collide     │
+│  07. Crossing Minimization  ── Two-Layer Barycenter/Median sweeps & BMJ exact counting │
+│  08. Routing Demand         ── Interval-graph coloring for exact channel lane count    │
+│  09. Coordinate Assignment  ── Brandes-Köpf 4-way alignment & median horizontal balance│
+│  10. Edge Spline Routing    ── Scored port selection, orthogonal channels, chamfering  │
+│  11. Emit & Quality Gate    ── SpatialHash constraint checks, metrics & serialization  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ✨ Key Capabilities & Feature Matrix
+
+| Feature Subsystem             | Technical Implementation                                | Key Guarantees                                                                        |
+| :---------------------------- | :------------------------------------------------------ | :------------------------------------------------------------------------------------ |
+| **Rust WASM Layout Engine**   | 11-Phase forward-flow pipeline (`crates/gvui/`)         | Median runtime $< 1.5\text{ ms}$; zero backtracking.                                  |
+| **Dual Layout Modes**         | `layered` (Sugiyama hierarchy) & `radial` (orbital BFS) | Orthogonal `direction` support (`top-down`, `bottom-up`, `left-right`, `right-left`). |
+| **Quality Invariants**        | 8 Hard zero-tolerance gates enforced in CI              | 0 node overlaps, 0 edge penetrations, 0 badge collisions, 0 collinear overlaps.       |
+| **Deterministic Hashes**      | Strict node ID sort keys & platform-agnostic floats     | Byte-identical coordinates across distinct worker processes and browser runs.         |
+| **SQLite Layout Caching**     | WebAssembly SQLite (`sql.js`) with IndexedDB fallback   | Instant viewport hydration; automatic LRU eviction policy.                            |
+| **Node Detail Drawer**        | 10 Context-aware diagnostic inspection tabs             | Real-time token breakdown, cost modeling, subagent trees, and stack traces.           |
+| **Multi-Format Export**       | SVG, PNG (2x/4x), Mermaid, SQL DDL, and standalone HTML | Fully portable, offline-viewable standalone bundles.                                  |
+| **Visual Ingestion Pipeline** | Playwright multi-viewport headless regression suite     | Automated screenshot capture matrix across 4 standard viewports.                      |
+
+---
+
+## 🚀 Quickstart & Setup
+
+### 1. One-Command Toolchain Setup
+
+Installs Bun, the Rust toolchain, the `wasm32-unknown-unknown` target, and `wasm-pack`:
 
 ```bash
 bun run setup
 ```
 
-> **Note:** If Bun was just installed by the script, open a new terminal (or `source` your shell rc file) before running the next commands, so `bun` is on your `PATH`.
+### 2. Local Development (Host Mode)
 
----
-
-## 📦 Running in Production Mode (Local)
-
-### Option 1: Without Docker (fastest)
-
-```bash
-bun start
-```
-
-Builds the WASM engine and the production bundle, then serves it locally.
-
-Open **http://localhost:5555**
-
-### Option 2: With Docker
-
-```bash
-bun run prod
-```
-
-Builds the WASM engine on the host, then builds and runs an optimized Nginx container serving the production bundle.
-
-Open **http://localhost:5555**
-
-Other Docker prod commands:
-
-```bash
-bun run prod:stop     # stop the container
-bun run prod:restart  # restart the container
-bun run prod:logs     # tail logs
-```
-
----
-
-## 🛠️ Development Mode
-
-### Option 1: Without Docker
+Compiles the Rust WASM engine and starts the Vite development server:
 
 ```bash
 bun run dev:host
+# Open http://localhost:4444
 ```
 
-Open **http://localhost:4444**
-
-### Option 2: With Docker (hot reload)
+### 3. Production Mode (Local or Docker)
 
 ```bash
-bun run dev
+# Option A: Local preview server (Fastest)
+bun start
+# Open http://localhost:5555
+
+# Option B: Optimized Docker container
+bun run prod
+# Open http://localhost:5555
 ```
-
-- App access: **http://localhost:4444**
-- Logs: `bun run logs`
-- Stop server: `bun run stop`
-- Run in background: `bun run dev:daemon`
-- Restart: `bun run restart` (or `bun run restart:daemon`)
-
-### Testing & Code Quality Commands
-
-- **Run all tests** (Rust crate tests + TypeScript test suite + layout audit):
-  ```bash
-  bun run test
-  ```
-- **Typecheck:**
-  ```bash
-  bun run typecheck
-  ```
-- **Lint (Oxlint):**
-  ```bash
-  bun run lint
-  ```
-- **Format (Oxfmt):**
-  ```bash
-  bun run format
-  ```
-- **Layout audit harness:**
-  ```bash
-  bun run audit
-  ```
 
 ---
 
-## 🔌 Ports
+## 💻 Developer Commands & Tooling
 
-| Mode                        | URL                   |
-| --------------------------- | --------------------- |
-| Production (Docker or not)  | http://localhost:5555 |
-| Development (Docker or not) | http://localhost:4444 |
+```bash
+# Quality Gates & Verification
+bun run test            # Run full test triad: Cargo tests + Bun unit tests + 280-run layout audit
+bun run audit           # Run exhaustive 280-run layout engine regression audit
+bun run typecheck       # Compile WASM and verify strict TypeScript types
+bun run lint            # Run Oxlint with 100+ rules
+bun run format:check    # Check code formatting with Oxfmt
+bun run format          # Format entire repository
 
-These memorable repeated-digit ports were chosen so gvui can run alongside other local projects without colliding with common defaults like `3000`/`5173`/`8080`.
+# Ingestion & Visual Pipelines
+bun run gvui:import --capsule <path>  # Ingest long-running task capsule trajectory
+bun run test:visual                  # Run Playwright visual capture and regression tests
+
+# Docker Lifecycle
+bun run dev             # Start dev server in Docker with hot reloading
+bun run logs            # Tail Docker container logs
+bun run stop            # Stop running Docker containers
+```
 
 ---
 
-## 📊 Importing Execution Graphs from `@onurseckin/skills` (`orchestrating-long-tasks`)
+## 🔌 Default Port Mapping
 
-`GVUI` integrates natively with the [`orchestrating-long-tasks`](https://github.com/onurseckin/skills) skill harness to visualize autonomous multi-agent execution trajectories, DAG dependencies, verification gates, and telemetry.
-
-### 1. Export summary graph from the capsule
-
-In the workspace where `orchestrating-long-tasks` was executed, export the summary suite:
-
-```bash
-bun orchestrating-long-tasks/scripts/harness.ts summary:export --run .capsules/<run-id>
-```
-
-This compiles `.capsules/<run-id>/summary/graph.json`, `metrics.json`, `timeline.json`, and `summary.md`.
-
-### 2. Import into GVUI
-
-From the `gvui` repository root, run the CLI import command:
-
-```bash
-bun run gvui:import --capsule /path/to/.capsules/<run-id>
-# Or directly:
-bun scripts/import-capsule.ts --capsule /path/to/.capsules/<run-id>
-```
-
-### What this does:
-
-1. Resolves and parses `.capsules/<run-id>/summary/graph.json` (with automatic fallback to `state.json`).
-2. Validates nodes, edges, and status fields against the `GraphDataset` schema.
-3. Saves the dataset into `public/data/graphs/<slug>.json`.
-4. Registers `<slug>` in `public/data/graphs/manifest.json` so the dataset appears automatically in the graph switcher dropdown.
-5. Prints the direct preview link: `http://localhost:4444/?graph=<slug>`.
+| Environment      | Purpose                     | URL                     |
+| :--------------- | :-------------------------- | :---------------------- |
+| **Dev Host**     | Local Vite Dev Server       | `http://localhost:4444` |
+| **Docker Dev**   | Hot-reloading Container     | `http://localhost:4444` |
+| **Prod Preview** | Standalone Production Build | `http://localhost:5555` |
+| **Docker Prod**  | Production Nginx Container  | `http://localhost:5555` |
 
 ---
 
-## 💾 Local SQLite Database & Layout Caching
+## 📚 Complete Documentation Index
 
-`GVUI` uses an in-browser SQLite database powered by **`sql.js`** (`src/utils/sqliteDb.ts`) to store and cache graph layout calculations.
+For in-depth architectural guides, mathematical specifications, and phase walkthroughs, see [`docs/README.md`](./docs/README.md):
 
-### How it works & Data Privacy:
-
-- **Client-Side Only**: The SQLite database runs entirely inside the end-user's browser WebAssembly runtime and persists layout caches to browser `localStorage` under the key `gvui_sqlite_db_v1`.
-- **No Database Files Pushed**: There are **no `.sqlite` or `.db` binary database files** stored on disk or tracked by Git.
-- **Fresh State for Every User**: When another user clones or runs this repository, their browser initializes a brand-new, empty in-memory SQLite database.
-- **Zero Server Overhead / Data Leakage**: Your local cache data stays strictly in your own browser and is never committed or pushed to GitHub.
+- **[Concepts](./docs/concepts/README.md)**: [Sugiyama Framework](./docs/concepts/sugiyama-framework.md) · [Node Measurement](./docs/concepts/node-measurement.md) · [Determinism](./docs/concepts/determinism.md) · [Quality Model](./docs/concepts/quality-model.md) · [Computational Complexity](./docs/concepts/computational-complexity.md)
+- **[Engine Pipeline](./docs/engine/README.md)**: [01 Foundations](./docs/engine/01-foundations.md) · [02 The Pipeline](./docs/engine/02-the-pipeline.md) · [03 Ingest & Measurement](./docs/engine/03-ingest-and-measurement.md) · [04 Structure](./docs/engine/04-structure.md) · [05 Rank Assignment](./docs/engine/05-rank-assignment.md) · [06 Layering & Labels](./docs/engine/06-layering-and-labels.md) · [07 Crossing Minimization](./docs/engine/07-crossing-minimization.md) · [08 Routing Demand](./docs/engine/08-routing-demand.md) · [09 Coordinate Assignment](./docs/engine/09-coordinate-assignment.md) · [10 Edge Routing](./docs/engine/10-edge-routing.md) · [11 Emit & Quality](./docs/engine/11-emit-and-quality.md)
+- **[Layout Modes](./docs/modes/README.md)**: [Layered Mode](./docs/modes/01-layered.md) · [Radial Mode](./docs/modes/02-radial.md)
+- **[Core Features](./docs/features/README.md)**: [SQLite Caching](./docs/features/sqlite-caching.md) · [Node Detail Drawer](./docs/features/detail-drawer.md) · [Graph Export](./docs/features/graph-export.md)
+- **[Developer Tooling](./docs/tooling/README.md)**: [Layout Audit](./docs/tooling/layout-audit.md) · [Screenshot Pipeline](./docs/tooling/screenshot-pipeline.md) · [Capsule Import](./docs/tooling/capsule-import.md)

@@ -227,10 +227,9 @@ Two honest readings of this table:
   2-rank layout in which half the edges are feedback edges, and spent 1.5 seconds of A\* doing it.
   v2 reports 6 crossings genuinely present in a graph whose forward DAG is only 2 ranks deep. A
   graph with no flow direction is the case a hierarchical engine is structurally worst at, and at
-  the time the stress engine drew it better. That engine was removed in v3, so the honest current
-  answer is that such graphs are drawn by an engine that is wrong for them — recorded in
-  [`planning/layout-engine-v3/`](../planning/layout-engine-v3/README.md) so the decision stays
-  reversible.
+  the time the stress engine drew it better. That engine was removed in favor of a clean dual-engine
+  architecture (`layered` and `radial`), so cyclic dense meshes without clear hierarchy are best routed
+  with radial mode or clustered DAG decomposition.
 
 ---
 

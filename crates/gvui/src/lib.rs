@@ -12,7 +12,7 @@
 //! - Routing lane demand is **computed from the fixed ordering before any geometry exists**, by
 //!   interval-graph colouring, and fed into node separation. One pass, exact, no pathfinding.
 //!
-//! See `docs/planning/layout-engine-v2/` for the full design.
+//! See `docs/engine/` and `docs/concepts/` for the full design.
 //!
 //! ## Phases
 //!

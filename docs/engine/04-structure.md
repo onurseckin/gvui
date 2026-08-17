@@ -299,7 +299,7 @@ barycenter sweeps never saw them. And `count_total_graph_crossings` never counte
 
 ### The measured consequence
 
-From [00-diagnosis §3b](../planning/layout-engine-v2/00-diagnosis.md):
+From the comparative analysis of feedback edge inclusion:
 
 | dataset                       | forward | feedback | adjacency entries in layer graph | crossings the ordering stage saw |
 | ----------------------------- | ------: | -------: | -------------------------------: | -------------------------------: |
