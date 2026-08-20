@@ -15,6 +15,7 @@ import {
   hslToRgb,
   isLargeText,
   parseColor,
+  resolveEffectiveBackground,
   toBoundingBox,
   computeBoundingBoxOverlap,
   type ElementWithBounds,
@@ -496,6 +497,60 @@ describe("visualMetricsCollector Module", () => {
     });
   });
 
+  describe("Effective Background Resolution (Ancestor Compositing)", () => {
+    it("falls back to the slate-900 canvas default when no ancestor paints a background", () => {
+      expect(resolveEffectiveBackground([])).toEqual({ r: 15, g: 23, b: 42, a: 1.0 });
+      // "transparent" and unset `rgba(0, 0, 0, 0)` both carry zero alpha and must be filtered
+      // out entirely, not treated as an opaque black layer.
+      expect(resolveEffectiveBackground(["transparent", "rgba(0, 0, 0, 0)"])).toEqual({
+        r: 15,
+        g: 23,
+        b: 42,
+        a: 1.0,
+      });
+    });
+
+    it("honors a custom fallback when supplied", () => {
+      expect(resolveEffectiveBackground([], { r: 1, g: 2, b: 3, a: 1.0 })).toEqual({
+        r: 1,
+        g: 2,
+        b: 3,
+        a: 1.0,
+      });
+    });
+
+    it("returns a single opaque ancestor layer unchanged", () => {
+      expect(resolveEffectiveBackground(["rgb(30, 41, 59)"])).toEqual({
+        r: 30,
+        g: 41,
+        b: 59,
+        a: 1.0,
+      });
+    });
+
+    it("composites the full ancestor chain instead of returning the nearest translucent layer verbatim", () => {
+      // Nearest-first, as the DOM walk produces it: the element's own translucent badge
+      // background, an ancestor with no background at all (fully transparent), then the true
+      // opaque canvas further up. The old bug returned "rgba(15, 23, 42, 0.85)" verbatim the
+      // moment it saw a non-"transparent" string, never reaching (or blending against) the
+      // opaque black underneath.
+      const layers = ["rgba(15, 23, 42, 0.85)", "rgba(0, 0, 0, 0)", "rgb(0, 0, 0)"];
+      const result = resolveEffectiveBackground(layers);
+
+      // Composited by hand: 0.85-alpha rgb(15,23,42) painted over opaque rgb(0,0,0).
+      expect(result).toEqual({ r: 13, g: 20, b: 36, a: 1.0 });
+      // Above all, the result must be opaque — a translucent "effective background" is exactly
+      // the bug: it silently defers the real answer to whatever `baseBackground` the caller
+      // does or doesn't pass.
+      expect(result.a).toBe(1.0);
+    });
+
+    it("skips unparseable layers without breaking the composite", () => {
+      const result = resolveEffectiveBackground(["not-a-color()", "rgb(10, 20, 30)"]);
+      expect(result).toEqual({ r: 10, g: 20, b: 30, a: 1.0 });
+    });
+  });
+
   describe("WCAG AA Contrast Ratio & Compliance", () => {
     it("calculates maximum contrast 21:1 for black on white", () => {
       const ratio = calculateContrastRatio("#000000", "#ffffff");
@@ -623,6 +678,48 @@ describe("visualMetricsCollector Module", () => {
 
       const collisions = detectStackingCollisions(elements);
       expect(collisions.length).toBe(0);
+    });
+
+    it("excludes containment: a parent fully containing its own child is not a collision", () => {
+      // Reproduces the real report's false positive verbatim: button.toolbar-btn.steps-trigger-btn
+      // vs its own child span, where the child's bounds sit entirely inside the button's
+      // (overlapRatioB = 100%). A parent containing its child is layout, not a collision.
+      const elements: ElementWithBounds[] = [
+        {
+          selector: "button.toolbar-btn.steps-trigger-btn",
+          bounds: createBoundingBox(200, 40, 96, 36),
+          isInteractive: true,
+        },
+        {
+          selector: "span.steps-trigger-label",
+          bounds: createBoundingBox(212, 50, 40, 16), // fully inside the button above
+          isInteractive: true,
+        },
+      ];
+
+      const collisions = detectStackingCollisions(elements, 10);
+      expect(collisions.length).toBe(0);
+    });
+
+    it("keeps a genuine near-total overlap between two distinct siblings, not just exact containment", () => {
+      // Two identically-sized, unrelated elements stacked almost exactly on top of each other
+      // (98.75% mutual overlap) is a real bug — duplicate-rendered controls, not a nested child —
+      // and must still be flagged. Only (near-)100% containment is excluded.
+      const elements: ElementWithBounds[] = [
+        {
+          selector: "button.duplicate-a",
+          bounds: createBoundingBox(100, 100, 80, 40),
+          isInteractive: true,
+        },
+        {
+          selector: "button.duplicate-b",
+          bounds: createBoundingBox(101, 100, 80, 40),
+          isInteractive: true,
+        },
+      ];
+
+      const collisions = detectStackingCollisions(elements, 10);
+      expect(collisions.length).toBe(1);
     });
 
     it("handles large arrays of 100+ elements with complex overlaps without degradation", () => {

@@ -38,15 +38,16 @@ export function generateSqlSchema(
   prefix = "gvui_",
   dropTablesFirst = false,
 ): string {
-  const isPostgres = dialect === "postgres";
-  const isMysql = dialect === "mysql";
+  // The dialect names are values of `SqlDialect`, asked for by name rather than each getting a
+  // predicate of its own, so no product ends up naming a symbol in this module.
+  const speaks = (name: SqlDialect): boolean => dialect === name;
 
-  const pkText = isMysql ? "VARCHAR(128) PRIMARY KEY" : "TEXT PRIMARY KEY";
-  const strType = isMysql ? "VARCHAR(255)" : "TEXT";
-  const longText = isMysql ? "LONGTEXT" : "TEXT";
-  const jsonType = isPostgres ? "JSONB" : isMysql ? "JSON" : "TEXT";
+  const pkText = speaks("mysql") ? "VARCHAR(128) PRIMARY KEY" : "TEXT PRIMARY KEY";
+  const strType = speaks("mysql") ? "VARCHAR(255)" : "TEXT";
+  const longText = speaks("mysql") ? "LONGTEXT" : "TEXT";
+  const jsonType = speaks("postgres") ? "JSONB" : speaks("mysql") ? "JSON" : "TEXT";
   const intType = "INTEGER";
-  const realType = isPostgres ? "DOUBLE PRECISION" : "REAL";
+  const realType = speaks("postgres") ? "DOUBLE PRECISION" : "REAL";
 
   const lines: string[] = [];
 
@@ -135,7 +136,7 @@ export function generateSqlSchema(
   // 6. Node Tools table
   lines.push(`CREATE TABLE IF NOT EXISTS ${prefix}node_tools (`);
   lines.push(
-    `  id ${isMysql ? "INT AUTO_INCREMENT PRIMARY KEY" : isPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT"},`,
+    `  id ${speaks("mysql") ? "INT AUTO_INCREMENT PRIMARY KEY" : speaks("postgres") ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT"},`,
   );
   lines.push(`  node_id ${strType} NOT NULL,`);
   lines.push(`  tool_name ${strType} NOT NULL,`);
@@ -146,7 +147,7 @@ export function generateSqlSchema(
   // 7. Node Files table
   lines.push(`CREATE TABLE IF NOT EXISTS ${prefix}node_files (`);
   lines.push(
-    `  id ${isMysql ? "INT AUTO_INCREMENT PRIMARY KEY" : isPostgres ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT"},`,
+    `  id ${speaks("mysql") ? "INT AUTO_INCREMENT PRIMARY KEY" : speaks("postgres") ? "SERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT"},`,
   );
   lines.push(`  node_id ${strType} NOT NULL,`);
   lines.push(`  file_path ${strType} NOT NULL,`);

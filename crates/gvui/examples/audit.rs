@@ -251,7 +251,13 @@ fn main() {
         .expect("dataset directory readable")
         .filter_map(|e| e.ok())
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "json"))
+        // `manifest.json` is the generated index of this directory, not a dataset in it — it
+        // holds a JSON array of dataset names, not a `{nodes, edges}` shape, and parsing it as one
+        // panics. `runLayoutAudit.ts` excludes it the same way; keep the two harnesses in parity.
+        .filter(|p| {
+            p.extension().is_some_and(|x| x == "json")
+                && p.file_name().is_some_and(|n| n != "manifest.json")
+        })
         .collect();
     files.sort();
 

@@ -568,6 +568,34 @@ describe("the shipped dataset renders", () => {
     }
   });
 
+  test("a node with a real context window and provider-specific counter renders both, not just the schema shape", () => {
+    // Both fields are optional in the schema and render nothing by default (EvidenceChip below), so
+    // a suite that never exercises a node carrying them would pass even if the render path broke.
+    // At least one shipped node must genuinely carry both, or this assertion catches the regression.
+    let sawContextWindow = false;
+    let sawTokenExtra = false;
+    for (const dataset of datasets) {
+      for (const node of dataset.nodes) {
+        const telemetry = readTelemetry(node);
+        const footprint = readTokenFootprint(node);
+        if (telemetry.contextWindow === undefined && footprint.otherCounters.length === 0) continue;
+        const html = renderToString(<CostTab node={node} dataset={dataset} />);
+        if (telemetry.contextWindow !== undefined) {
+          sawContextWindow = true;
+          expect(html).toContain('data-testid="node-context-window"');
+          expect(html).toContain(">200k<");
+        }
+        for (const counter of footprint.otherCounters) {
+          sawTokenExtra = true;
+          expect(html).toContain('data-testid="other-counter"');
+          expect(html).toContain(counter.name);
+        }
+      }
+    }
+    expect(sawContextWindow).toBe(true);
+    expect(sawTokenExtra).toBe(true);
+  });
+
   test("every shipped node renders its overview and provenance", () => {
     for (const dataset of datasets) {
       for (const node of dataset.nodes) {
@@ -586,12 +614,16 @@ describe("the shipped dataset renders", () => {
     }
   });
 
-  test("a node that never recorded a probe round shows no round count at all", () => {
+  test("a node that never recorded a probe round shows no round count at all, and a node that recorded a real zero shows that zero", () => {
     for (const dataset of datasets) {
       for (const node of dataset.nodes) {
         const html = renderToString(<CostTab node={node} dataset={dataset} />);
-        // Nothing in the shipped capsule reports probe rounds, so none may show a counted zero.
-        expect(html.includes("never recorded for this node")).toBe(true);
+        const recorded = typeof node.metadata?.probeRounds === "number";
+        // The structural nodes (prompt, plan, critic, terminal) never had rounds tracked at all, so
+        // they show the absence rather than a manufactured zero. The task, validator and gate nodes
+        // in this run genuinely went through zero probe rounds, and that measured zero must render
+        // as the number it is, not be collapsed into "never recorded".
+        expect(html.includes("never recorded for this node")).toBe(!recorded);
       }
     }
   });

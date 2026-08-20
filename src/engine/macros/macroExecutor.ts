@@ -803,6 +803,9 @@ export class MacroExecutor {
           restoreEdges?: PositionedEdge[];
         };
         const baseNode = payload.node;
+        // kind and status are open vocabulary and optional on GraphNodeData; the spread already
+        // carries whatever the recorded step declared, and a step that declared neither leaves
+        // both undefined rather than putting words like "agent" or "pending" in the node's mouth.
         const newNode: PositionedNode = {
           ...baseNode,
           id: String(baseNode.id),
@@ -811,8 +814,6 @@ export class MacroExecutor {
           y: Number(baseNode.y ?? 0),
           width: Number(baseNode.width ?? 180),
           height: Number(baseNode.height ?? 80),
-          kind: baseNode.kind ?? "agent",
-          status: baseNode.status ?? "pending",
         };
 
         // Remove if node with same ID exists already

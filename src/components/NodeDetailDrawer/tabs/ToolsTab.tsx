@@ -1,6 +1,7 @@
 import { IconTool } from "@tabler/icons-react";
 import type { FC } from "react";
 import { memo, useMemo } from "react";
+import { describeToolCategory } from "../../OpenSchema/vocabulary";
 import type { GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { describeEvidence, EvidenceChip } from "../EvidenceChip";
@@ -13,6 +14,25 @@ export interface ToolsTabProps {
 function groupKey(row: ToolRow): string {
   return row.evidenceClass ?? "unlabelled";
 }
+
+/**
+ * The generic kind of tool, read through the open vocabulary: a preset category, this dataset's own
+ * word, or an honest statement that nobody filed the tool under one.
+ */
+const ToolCategoryChip: FC<{ category?: string }> = ({ category }) => {
+  const described = describeToolCategory(category);
+  return (
+    <span
+      className={`tool-row-category ${described.recognized ? "is-preset" : "is-open"}`}
+      data-testid="tool-row-category"
+      data-recorded={described.recorded ? "yes" : "no"}
+      style={{ color: described.accent }}
+      title={described.recorded ? undefined : "No category was recorded for this tool"}
+    >
+      {described.label}
+    </span>
+  );
+};
 
 /**
  * The tools this node's agent was granted or reported using. A tool the host reported and a tool an
@@ -61,6 +81,14 @@ export const ToolsTab: FC<ToolsTabProps> = memo(function ToolsTab({ node }) {
                       {row.name}
                     </span>
                     <span className="tool-row-meta">
+                      <ToolCategoryChip category={row.category} />
+                      {row.extras.map((extra) => (
+                        <span
+                          key={extra.key}
+                          className="tool-row-extra"
+                          data-testid="tool-row-extra"
+                        >{`${extra.key}: ${extra.value}`}</span>
+                      ))}
                       {row.type ? <span className="tool-row-type">{row.type}</span> : null}
                       {row.firstReportedAt ? (
                         <span className="tool-row-time">{`first seen ${row.firstReportedAt}`}</span>

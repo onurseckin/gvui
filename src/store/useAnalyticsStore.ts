@@ -585,12 +585,15 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
   let skippedNodes = 0;
 
   for (const node of nodes) {
-    const status = node.status ?? "pending";
+    // Status is open vocabulary and optional: a node that never recorded one is not thereby
+    // "pending" — that word is a specific claim about where the node sits, and this breakdown
+    // only counts nodes into a bucket whose claim they actually made.
+    const status = node.status;
     if (status === "success" || status === "cached") successNodes++;
     else if (status === "error") errorNodes++;
     else if (status === "running") runningNodes++;
     else if (status === "skipped") skippedNodes++;
-    else pendingNodes++;
+    else if (status === "pending") pendingNodes++;
   }
 
   const completedNodes = successNodes + errorNodes;
@@ -1373,7 +1376,10 @@ export function filterDataset(
 
   const query = filters.searchQuery.trim().toLowerCase();
   const filteredNodes = dataset.nodes.filter((node) => {
-    if (filters.nodeStatus !== "all" && (node.status ?? "pending") !== filters.nodeStatus) {
+    // A node that declared no status, or no kind, does not match a specific-value filter: picking
+    // "Pending" or "Worker" from the dropdown asks for nodes that said so, not for every node that
+    // said nothing.
+    if (filters.nodeStatus !== "all" && node.status !== filters.nodeStatus) {
       return false;
     }
 
@@ -1382,7 +1388,7 @@ export function filterDataset(
       if (tier !== filters.modelTier) return false;
     }
 
-    if (filters.nodeKind !== "all" && (node.kind ?? "agent") !== filters.nodeKind) {
+    if (filters.nodeKind !== "all" && node.kind !== filters.nodeKind) {
       return false;
     }
 

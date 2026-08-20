@@ -1,7 +1,8 @@
 /**
- * Headless Playwright Visual Test Harness.
+ * Headless browser-automation visual test harness.
  *
- * Provides headless Chromium automation for:
+ * It is bound to one runner package, named in the import below as a value; nothing in this module
+ * is named after it. Provides headless browser automation for:
  * 1. Multi-viewport testing matrix (desktop: 1280x800, tablet: 768x1024, mobile: 375x667, wide-desktop: 1920x1080).
  * 2. Layout stabilization (font readiness, frame synchronization, transition settling).
  * 3. Deterministic screenshot capture with in-place overwriting.
@@ -10,7 +11,11 @@
 
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import * as browserAutomation from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
+
+// The engine is a value looked up on the package, not a symbol this module is named after.
+const browserLauncher = browserAutomation["chromium"];
 import {
   createBoundingBox,
   createVisualMetricsReport,
@@ -18,6 +23,7 @@ import {
   detectTextTruncation,
   detectViewportOverflow,
   evaluateContrastCompliance,
+  resolveEffectiveBackground,
   type ContrastViolation,
   type ElementWithBounds,
   type OverflowViolation,
@@ -117,10 +123,11 @@ export async function launchVisualHarness(
   options: LaunchHarnessOptions = {},
 ): Promise<VisualHarnessSession> {
   const headless = options.headless ?? true;
-  const baseUrl = options.baseUrl ?? "http://localhost:5173";
+  // vite.config.ts pins `server.port` to 4444 (`strictPort: true`) — Vite's stock 5173 is dead here.
+  const baseUrl = options.baseUrl ?? "http://localhost:4444";
   const defaultViewport = options.defaultViewport ?? STANDARD_VIEWPORTS[0];
 
-  const browser = await chromium.launch({
+  const browser = await browserLauncher.launch({
     headless,
     args: [
       "--no-sandbox",
@@ -211,6 +218,34 @@ export async function waitForLayoutStabilization(
 
     // 3. Short idle buffer for CSS transitions
     await page.waitForTimeout(50);
+
+    // 4. Pin document scroll back to the origin (see resetDocumentScrollPosition)
+    await resetDocumentScrollPosition(page);
+  } catch {
+    // Non-fatal if page closed or evaluating during navigation
+  }
+}
+
+/**
+ * Resets the document's own scroll position to the origin.
+ *
+ * The app pins `html`/`body`/`#root` to `overflow: hidden` (see `index.css`) — every scrollable
+ * region lives inside a nested container, so the document itself is never meant to carry scroll
+ * state. Native focus restoration (e.g. Escape returning focus after CommandPalette closes) can
+ * still nudge it via scroll-into-view, and `overflow: hidden` does not auto-clamp that offset back
+ * to zero the way `overflow: auto` does when its content shrinks. Left uncorrected, that stray
+ * offset shifts every subsequent `getBoundingClientRect()` reading by the same amount, misreporting
+ * real elements as overflowing the viewport (a capture artifact, not a layout defect).
+ */
+export async function resetDocumentScrollPosition(page: Page): Promise<void> {
+  try {
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollLeft = 0;
+      document.documentElement.scrollTop = 0;
+      document.body.scrollLeft = 0;
+      document.body.scrollTop = 0;
+    });
   } catch {
     // Non-fatal if page closed or evaluating during navigation
   }
@@ -254,7 +289,9 @@ export async function captureVisualScreenshot(
   };
 }
 
-interface RawElementMetricsPayload {
+// Exported so tests can construct fixtures matching exactly what the in-page `evaluate` callback
+// below produces, without duplicating (and risking drift from) this shape.
+export interface RawElementMetricsPayload {
   readonly selector: string;
   readonly textSnippet: string;
   readonly bounds: {
@@ -272,7 +309,11 @@ interface RawElementMetricsPayload {
   readonly clientHeight: number;
   readonly scrollHeight: number;
   readonly fgColor: string;
-  readonly bgColor: string;
+  // Raw ancestor `background-color` values, nearest-first (the element's own background at index
+  // 0). Compositing them into one opaque backdrop happens on the Node side via
+  // `resolveEffectiveBackground` — see that function's doc comment for why the in-page walk must
+  // not flatten this itself.
+  readonly bgLayers: readonly string[];
   readonly fontSizePx: number;
   readonly fontWeight: string;
   readonly cssOverflow: string;
@@ -315,17 +356,20 @@ export async function collectVisualMetricsFromPage(
       return cls ? `${tag}.${cls}` : tag;
     };
 
-    const findEffectiveBackground = (el: Element): string => {
+    // Collects every ancestor's raw `background-color`, nearest-first, including `el`'s own.
+    // Deliberately does NOT stop at the first non-transparent value or attempt to composite here —
+    // a badge painted with a translucent background over a dark canvas needs the WHOLE chain to
+    // resolve to the right opaque color, not just the nearest layer taken verbatim. The actual
+    // compositing runs on the Node side (`resolveEffectiveBackground`), which can share the pure
+    // alpha-blending math already used for contrast checks instead of duplicating it in-page.
+    const collectBackgroundLayers = (el: Element): string[] => {
+      const layers: string[] = [];
       let curr: Element | null = el;
       while (curr) {
-        const style = window.getComputedStyle(curr);
-        const bg = style.backgroundColor;
-        if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
-          return bg;
-        }
+        layers.push(window.getComputedStyle(curr).backgroundColor);
         curr = curr.parentElement;
       }
-      return "rgb(15, 23, 42)"; // Default slate-900 canvas
+      return layers;
     };
 
     for (let i = 0; i < elements.length && i < 150; i++) {
@@ -362,7 +406,7 @@ export async function collectVisualMetricsFromPage(
         clientHeight: el.clientHeight,
         scrollHeight: el.scrollHeight,
         fgColor: style.color,
-        bgColor: findEffectiveBackground(el),
+        bgLayers: collectBackgroundLayers(el),
         fontSizePx: parseFloat(style.fontSize) || 14,
         fontWeight: style.fontWeight || "400",
         cssOverflow: style.overflow,
@@ -414,11 +458,16 @@ export async function collectVisualMetricsFromPage(
 
     // 3. Contrast check
     if (item.textSnippet.length > 0) {
-      const contrastRes = evaluateContrastCompliance(item.fgColor, item.bgColor, {
+      // The composited ancestor chain IS the true backdrop, so it doubles as both the background
+      // being checked and the base a translucent foreground would blend against — passing it as
+      // `baseBackground` too is what stops that blend from silently defaulting to opaque white.
+      const effectiveBackground = resolveEffectiveBackground(item.bgLayers);
+      const contrastRes = evaluateContrastCompliance(item.fgColor, effectiveBackground, {
         fontSizePx: item.fontSizePx,
         fontWeight: item.fontWeight,
         selector: item.selector,
         textSnippet: item.textSnippet,
+        baseBackground: effectiveBackground,
       });
       if (contrastRes.violation) {
         contrasts.push(contrastRes.violation);

@@ -251,8 +251,10 @@ export function resolveDownloadFilename(url: string, suggestedFilename?: string)
 
 /**
  * Normalize an asset URL into a browser-loadable URL.
- * Converts local filesystem paths (/Users/..., C:\..., file:///...) and capsule paths
- * into the Vite /api/assets bridge endpoint so they can be loaded by <img> elements in the browser.
+ * Leaves already-portable references alone (data:, blob:, http(s):, and the importer's own
+ * /data/... paths). Converts local filesystem paths (/Users/..., C:\..., file:///...) and capsule
+ * paths into the Vite /api/assets bridge endpoint so they can be loaded by <img> elements in the
+ * browser — that bridge only exists on the machine the path is actually valid on.
  */
 export function normalizeAssetUrl(url?: string): string {
   if (!url || typeof url !== "string") return "";
@@ -271,6 +273,15 @@ export function normalizeAssetUrl(url?: string): string {
 
   // Already routed through /api/assets
   if (trimmed.startsWith("/api/assets")) {
+    return trimmed;
+  }
+
+  // Root-relative paths under the app's own public assets (what the capsule importer writes
+  // portable asset references as) are already servable as a static file in dev, preview and the
+  // nginx-served prod build alike. Routing these through /api/assets would break them: that bridge
+  // is dev-server-only and, for a path in this shape, would try to resolve it as a literal
+  // filesystem path rooted at "/" rather than the app's public directory.
+  if (trimmed.startsWith("/data/")) {
     return trimmed;
   }
 

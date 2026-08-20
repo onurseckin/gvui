@@ -223,7 +223,7 @@ describe("CUSTOM_LAYOUT_SCENARIOS", () => {
     }
   });
 
-  it("verifies 280-run matrix proof: asserts per-run execution time <= 250ms and zero geometry corruption across all fixtures", async () => {
+  it("verifies 216-run matrix proof: asserts per-run execution time <= 250ms and zero geometry corruption across all fixtures", async () => {
     const scenarioDatasets = Object.values(CUSTOM_LAYOUT_SCENARIOS).map(toGraphDataset);
     const publicDatasets = loadPublicGraphDatasets();
     const allFixtures = [...scenarioDatasets, ...publicDatasets];

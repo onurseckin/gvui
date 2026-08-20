@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Nothing reaches a remote without the type check and the unit suite passing.
+#
+# These live on push rather than commit deliberately: they take long enough that running them on
+# every checkpoint discourages small commits, and a suite run against a working tree under active
+# edit reports that tree's transient state rather than the commit's. Push is the boundary where the
+# work leaves this machine, so it is the boundary worth guarding.
+#
+# `git push --no-verify` skips this, as usual.
+
+set -uo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root" || exit 1
+
+fail=0
+
+# The wasm package is already built in a working tree; `tsc -b` alone avoids the multi-minute
+# wasm-pack rebuild that `bun run typecheck` would trigger.
+if ! bun x tsc -b; then
+  printf '\npre-push: type check failed.\n' >&2
+  fail=1
+fi
+
+# `bun test src/` and not `bun run test`: the latter also runs cargo and the 280-run layout audit,
+# which belong to `bun run audit` rather than to every push.
+if ! bun test src/; then
+  printf '\npre-push: unit tests failed.\n' >&2
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  printf 'pre-push: refusing to push. Fix the above, or use --no-verify if you know why.\n' >&2
+  exit 1
+fi

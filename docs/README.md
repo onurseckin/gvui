@@ -47,7 +47,7 @@ Every phase in the pipeline produces a result that is mathematically correct by 
 | **[`modes/`](./modes/README.md)**       | **Layout Modes**: Hierarchical `layered` mode, concentric orbital `radial` mode, and orthogonal `direction` transformations.                          |
 | **[`concepts/`](./concepts/README.md)** | **Foundational Concepts**: Sugiyama decomposition, headless node measurement, determinism invariants, complexity, and quality models.                 |
 | **[`features/`](./features/README.md)** | **Application Subsystems**: the graph vocabulary, the 10-tab Node Detail Drawer, browser-local layout caching, and multi-format export (SVG/PNG/SQL). |
-| **[`tooling/`](./tooling/README.md)**   | **Developer Tooling & Audits**: 280-run layout audit gate, Playwright visual capture pipeline, and CLI capsule import tools.                          |
+| **[`tooling/`](./tooling/README.md)**   | **Developer Tooling & Audits**: 216-run layout audit gate, Playwright visual capture pipeline, and CLI capsule import tools.                          |
 
 ---
 
@@ -90,7 +90,7 @@ Every phase in the pipeline produces a result that is mathematically correct by 
 
 ### 5. Developer Tooling (`docs/tooling/`)
 
-- [Layout Audit Framework](./tooling/layout-audit.md) — 280-run matrix regression test asserting 8 zero-tolerance geometric invariants.
+- [Layout Audit Framework](./tooling/layout-audit.md) — 216-run matrix regression test asserting 8 zero-tolerance geometric invariants.
 - [Screenshot Ingestion Pipeline](./tooling/screenshot-pipeline.md) — Playwright visual capture across 4 standard viewports.
 - [CLI Capsule Import](./tooling/capsule-import.md) — Contract-validated ingestion of run capsules (`summary/graph.json` or the `state.json` fallback).
 

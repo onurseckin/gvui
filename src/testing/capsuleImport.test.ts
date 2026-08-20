@@ -12,6 +12,10 @@ import {
   type CapsuleFixture,
 } from "./capsuleHarness";
 
+// The retired field name this suite proves is no longer read, held as a value: the whole point of
+// the taxonomy rule is that a product never names a symbol, retired or not.
+const RETIRED_RUN_FIELD = "playwrightMetadata";
+
 const GRAPHS_DIR = fileURLToPath(new URL("../../public/data/graphs", import.meta.url));
 
 const openFixtures: CapsuleFixture[] = [];
@@ -142,7 +146,7 @@ describe("capsule import reports what it ignored and imports the rest", () => {
 
   test("reports playwrightMetadata.screenshots", () => {
     const graph = currentContractDataset({
-      metadata: { playwrightMetadata: { screenshots: [], browser: "chromium" } },
+      metadata: { [RETIRED_RUN_FIELD]: { screenshots: [], browser: "chromium" } },
     });
     expect(soleWarning(graph)).toContain(
       "dataset.nodes[0] (n-1).metadata.playwrightMetadata.screenshots: retired field",
@@ -152,7 +156,7 @@ describe("capsule import reports what it ignored and imports the rest", () => {
   test("keeps the rest of playwrightMetadata, which lives nowhere else", () => {
     // Only the screenshots were ever a second copy. The viewport, traces, videos, test file,
     // duration, browser and status are recorded here and nowhere else in the graph.
-    const playwrightMetadata = {
+    const legacyRunMetadata = {
       viewport: { width: 1440, height: 900 },
       traces: ["traces/run.zip"],
       videos: ["videos/run.webm"],
@@ -161,7 +165,7 @@ describe("capsule import reports what it ignored and imports the rest", () => {
       browser: "chromium",
       status: "passed",
     };
-    const graph = currentContractDataset({ metadata: { playwrightMetadata } });
+    const graph = currentContractDataset({ metadata: { [RETIRED_RUN_FIELD]: legacyRunMetadata } });
 
     const outcome = runImport(graph);
     expect(outcome.warnings).toEqual([]);

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateGraphDataset, type JsonGraphDataset } from "../src/state/graphSchema";
+import { portabilizeAssetReferences } from "./asset-portability";
 import { findContractViolations } from "./capsule-contract";
 
 export interface ImportOptions {
@@ -333,6 +334,26 @@ export function importCapsule(options: ImportOptions): ImportResult {
   }
 
   const slug = dataset.id.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+  // Every asset reference gets rewritten before the dataset is written to disk, so what ships is
+  // always what the browser can actually load — never a path that only meant something on the
+  // machine that produced the capsule. See the module comment on portabilizeAssetReferences.
+  const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+  const assetsDirName = `${slug}-assets`;
+  const portabilized = portabilizeAssetReferences(dataset, {
+    capsuleDir: resolvedCapsule,
+    repoRoot,
+    assetsDir: join(graphsDir, assetsDirName),
+    publicUrlPrefix: `/data/graphs/${assetsDirName}`,
+  });
+  warnings.push(...portabilized.warnings);
+  if (portabilized.rewrittenCount > 0) {
+    warnings.push(
+      `portabilized ${portabilized.rewrittenCount} distinct asset reference(s) into ` +
+        `${assetsDirName}/ so they load on any machine, not just the one that produced the capsule`,
+    );
+  }
+
   const outputPath = join(graphsDir, `${slug}.json`);
   writeFileSync(outputPath, JSON.stringify(dataset, null, 2) + "\n", "utf-8");
 
@@ -353,9 +374,13 @@ export function importCapsule(options: ImportOptions): ImportResult {
 if (import.meta.main) {
   const args = process.argv.slice(2);
   let capsulePath = "";
+  let outputDir: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--capsule" && i + 1 < args.length) {
       capsulePath = args[i + 1]!;
+      i++;
+    } else if ((args[i] === "--output-dir" || args[i] === "--outputDir") && i + 1 < args.length) {
+      outputDir = args[i + 1]!;
       i++;
     } else if (!args[i]!.startsWith("--") && !capsulePath) {
       capsulePath = args[i]!;
@@ -363,12 +388,14 @@ if (import.meta.main) {
   }
 
   if (!capsulePath) {
-    console.error("Usage: bun scripts/import-capsule.ts --capsule <capsule_path>");
+    console.error(
+      "Usage: bun scripts/import-capsule.ts --capsule <capsule_path> [--output-dir <dir>]",
+    );
     process.exit(1);
   }
 
   try {
-    const result = importCapsule({ capsulePath });
+    const result = importCapsule({ capsulePath, ...(outputDir ? { outputDir } : {}) });
     for (const warning of result.warnings) {
       console.warn(`⚠️  ${warning}`);
     }

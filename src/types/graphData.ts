@@ -34,6 +34,51 @@ export function resolveEvidenceClass(evidenceClass?: EvidenceClass): EvidenceCla
   return evidenceClass ?? "unknown";
 }
 
+/**
+ * The tool categories this renderer ships a preset vocabulary for. A category says WHAT KIND of
+ * thing a tool is; the tool's own name is a value recorded beside it, so no product is ever a
+ * concept in this schema.
+ */
+export type KnownToolCategory =
+  | "browser-automation"
+  | "build"
+  | "database"
+  | "documentation"
+  | "file-edit"
+  | "formatter"
+  | "http-client"
+  | "linter"
+  | "package-manager"
+  | "search"
+  | "shell"
+  | "test-runner"
+  | "type-checker"
+  | "version-control";
+
+/** The preset category vocabulary. A dataset may file its tools under anything it likes. */
+export const TOOL_CATEGORIES: readonly KnownToolCategory[] = [
+  "browser-automation",
+  "build",
+  "database",
+  "documentation",
+  "file-edit",
+  "formatter",
+  "http-client",
+  "linter",
+  "package-manager",
+  "search",
+  "shell",
+  "test-runner",
+  "type-checker",
+  "version-control",
+];
+
+/**
+ * What kind of tool something is. Open on the same terms as node kinds and edge kinds: a category
+ * this renderer has never seen still reads as itself instead of being dropped or renamed.
+ */
+export type ToolCategory = KnownToolCategory | (string & {});
+
 /** The roles this renderer ships a preset treatment for. */
 export type KnownNodeRole =
   | "coordinator"
@@ -84,8 +129,12 @@ export interface BadgeDetail {
  */
 export interface NodeTool {
   name: string;
+  /** The generic kind of tool. Never read out of the name; absent when nobody declared it. */
+  category?: ToolCategory;
   type?: "generic" | "custom";
   firstReportedAt?: string;
+  /** What only this tool reports, under the names its reporter used. */
+  extras?: Record<string, unknown>;
   evidence_class?: EvidenceClass;
 }
 
@@ -349,6 +398,8 @@ export interface MediaAsset {
  * Screenshots are absent by design — they are evidence and evidence lives in `GraphNodeData.assets`.
  */
 export interface BrowserTestRun {
+  /** The generic kind of tool this was, which the producer derived from how it read the report. */
+  category?: ToolCategory;
   runner?: string;
   testFile?: string;
   browser?: string;
@@ -359,6 +410,8 @@ export interface BrowserTestRun {
   traces?: string[];
   /** Recorded session videos, by path or url. */
   videos?: string[];
+  /** What this runner reported that no other runner in its category would, under its own names. */
+  extras?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -474,7 +527,13 @@ export interface NodeScript {
   logPath?: string;
   stdoutTail?: string;
   stderrTail?: string;
+  /** What the caller declared this command to be. Never read out of the argv. */
+  category?: ToolCategory;
+  tool?: string;
+  extras?: Record<string, unknown>;
   evidence_class?: EvidenceClass;
+  /** Provenance of the declared fields above, keyed by the field name it labels. */
+  evidence?: Record<string, EvidenceClass>;
 }
 
 /** One recorded move of the task state machine, plus what the review carried when it caused one. */
@@ -500,11 +559,17 @@ export interface NodeTelemetry {
   agentId?: string;
   role?: NodeRole;
   host?: string;
+  /** Who served the model, as the host named it. Never taken off the front of the model string. */
+  provider?: Evidenced<string>;
+  /** The model string exactly as the host reported it, never parsed or matched by substring. */
   model?: Evidenced<string>;
   modelTier?: Evidenced<ModelTier | string>;
   thinkingLevel?: Evidenced<string>;
+  contextWindow?: Evidenced<number>;
   tokensIn?: Evidenced<number>;
   tokensOut?: Evidenced<number>;
+  /** Counters only some providers keep, under the names those providers reported them by. */
+  tokenExtras?: Record<string, Evidenced<number>>;
   grantStatus?: string;
 }
 

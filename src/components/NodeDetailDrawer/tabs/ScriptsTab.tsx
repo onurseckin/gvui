@@ -4,6 +4,7 @@ import { memo, useMemo, useState } from "react";
 import type { GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { EvidenceChip, UnknownValue } from "../EvidenceChip";
+import { describeToolCategory } from "../../OpenSchema/vocabulary";
 import { readScripts, type ScriptRow } from "../nodeSchema";
 import { copyToClipboard, formatDuration } from "../streamUtils";
 import { CommandsTab } from "./CommandsTab";
@@ -116,6 +117,24 @@ export const ScriptsTab: FC<ScriptsTabProps> = memo(function ScriptsTab({ node }
                 >
                   {copiedId === script.id ? <IconCheck size={11} /> : <IconCopy size={11} />}
                 </button>
+              </div>
+
+              <div className="script-attribute-row" data-testid="script-declared-tool">
+                {script.category ? (
+                  <span>
+                    {`category: ${describeToolCategory(script.category).label}`}
+                    <EvidenceChip evidenceClass={script.evidence.category} />
+                  </span>
+                ) : null}
+                {script.tool ? (
+                  <span>
+                    {`tool: ${script.tool}`}
+                    <EvidenceChip evidenceClass={script.evidence.tool} />
+                  </span>
+                ) : null}
+                {script.extras.map((extra) => (
+                  <span key={extra.key}>{`${extra.key}: ${extra.value}`}</span>
+                ))}
               </div>
 
               <div className="script-attribute-row">

@@ -633,6 +633,31 @@ export function compositeMultipleLayers(
 }
 
 /**
+ * Resolves the true opaque backdrop behind an element from its ancestor background chain.
+ *
+ * `layers` must be ordered nearest-ancestor-first (the element's own background at index 0,
+ * its parent's next, and so on) — the natural order produced by walking `parentElement`. Each
+ * layer is painted over everything behind it, so they are composited furthest-first here.
+ * Fully-transparent layers (unparseable, or alpha 0 — e.g. an unset `background-color`) are
+ * skipped rather than treated as opaque black. `fallback` is the base a real page never fails to
+ * paint (its own canvas), used only when no ancestor contributes any color at all.
+ */
+export function resolveEffectiveBackground(
+  layers: readonly string[],
+  fallback: RgbColor = { r: 15, g: 23, b: 42, a: 1.0 }, // slate-900 canvas default
+): RgbColor {
+  const opaqueLayers: RgbColor[] = [];
+  for (const raw of layers) {
+    const parsed = parseColor(raw);
+    if (parsed && parsed.a > 0) {
+      opaqueLayers.push(parsed);
+    }
+  }
+  opaqueLayers.reverse(); // furthest ancestor first, so compositeMultipleLayers paints nearest last
+  return compositeMultipleLayers(opaqueLayers, fallback);
+}
+
+/**
  * Calculates the WCAG relative luminance of an sRGB color.
  * L = 0.2126 * Rlin + 0.7152 * Glin + 0.0722 * Blin
  */
@@ -791,6 +816,14 @@ export interface ElementWithBounds {
 /**
  * Detects unintended overlapping bounding boxes among sibling / interactive elements.
  */
+// A box whose overlap covers (very nearly) 100% of its own area is not overlapping a sibling —
+// it is nested inside the other box, e.g. an icon `span` inside its own `button`. Bounding boxes
+// carry no DOM parent/child link, so full geometric containment is the only signal this pure,
+// zero-dependency function has for telling "nested" apart from "colliding"; 99.5% tolerates
+// subpixel rounding between a child's rect and its parent's without masking a genuine near-total
+// overlap between two unrelated siblings.
+const CONTAINMENT_OVERLAP_PERCENTAGE = 99.5;
+
 export function detectStackingCollisions(
   elements: readonly ElementWithBounds[],
   overlapAreaThreshold = 50,
@@ -803,10 +836,15 @@ export function detectStackingCollisions(
       const elB = elements[j];
 
       const overlap = computeBoundingBoxOverlap(elA.bounds, elB.bounds);
+      const isContainment =
+        overlap.overlapPercentageA >= CONTAINMENT_OVERLAP_PERCENTAGE ||
+        overlap.overlapPercentageB >= CONTAINMENT_OVERLAP_PERCENTAGE;
+
       if (
         overlap.hasOverlap &&
         overlap.overlapArea >= overlapAreaThreshold &&
-        overlap.intersectionBox
+        overlap.intersectionBox &&
+        !isContainment
       ) {
         const severity: "error" | "warning" =
           elA.isInteractive && elB.isInteractive ? "error" : "warning";

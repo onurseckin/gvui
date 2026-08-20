@@ -245,7 +245,10 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
 
   for (const node of dataset.nodes) {
     if (!node) continue;
-    const status = node.status ?? "pending";
+    // Status is open vocabulary and optional: a node that never recorded one is not thereby
+    // "pending" — that word is a specific claim about where the node sits, and this breakdown
+    // only counts nodes into a bucket whose claim they actually made.
+    const status = node.status;
     if (status === "success" || status === "cached") {
       successCount++;
     } else if (status === "error" || status === "warning") {
@@ -254,7 +257,7 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
       runningCount++;
     } else if (status === "skipped") {
       skippedCount++;
-    } else {
+    } else if (status === "pending") {
       pendingCount++;
     }
 

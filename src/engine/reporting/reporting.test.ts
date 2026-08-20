@@ -257,9 +257,9 @@ describe("Executive Reporting Engine Test Suite", () => {
       expect(attribution.byNode[0].tokenPercentage).toBeGreaterThan(0);
 
       expect(attribution.byModel.length).toBeGreaterThan(0);
-      const claudeModel = attribution.byModel.find((m) => m.category.includes("claude"));
-      expect(claudeModel).toBeDefined();
-      expect(claudeModel?.nodeCount).toBe(2);
+      const matchedModel = attribution.byModel.find((m) => m.category.includes("claude"));
+      expect(matchedModel).toBeDefined();
+      expect(matchedModel?.nodeCount).toBe(2);
 
       expect(attribution.bySection.length).toBe(3);
       const executionSection = attribution.bySection.find((s) => s.category.includes("Execution"));

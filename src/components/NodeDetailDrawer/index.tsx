@@ -139,7 +139,8 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
     footprint.cacheReadTokens !== undefined ||
     footprint.cacheCreationTokens !== undefined ||
     footprint.totalTokens !== undefined ||
-    footprint.costUsd !== undefined;
+    footprint.costUsd !== undefined ||
+    footprint.otherCounters.length > 0;
   const genericFields = collectGenericNodeFields(node);
 
   const tabs = [

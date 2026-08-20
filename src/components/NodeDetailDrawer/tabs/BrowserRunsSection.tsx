@@ -3,6 +3,7 @@ import type { FC, ReactNode } from "react";
 import { memo } from "react";
 import { DrawerSection } from "../DrawerSection";
 import { EvidenceChip, UnknownValue } from "../EvidenceChip";
+import { describeToolCategory } from "../../OpenSchema/vocabulary";
 import type { BrowserRunRow, BrowserRunViewportRow } from "../nodeSchema";
 
 export interface BrowserRunsSectionProps {
@@ -112,6 +113,9 @@ export const BrowserRunsSection: FC<BrowserRunsSectionProps> = memo(function Bro
           </div>
 
           <div className="drawer-browser-run-meta-grid">
+            <RunMetric label="Category" run={run} field="category">
+              {run.category === undefined ? undefined : describeToolCategory(run.category).label}
+            </RunMetric>
             <RunMetric label="Runner" run={run} field="runner">
               {run.runner}
             </RunMetric>
@@ -143,6 +147,20 @@ export const BrowserRunsSection: FC<BrowserRunsSectionProps> = memo(function Bro
               )}
             </RunMetric>
           </div>
+
+          {run.extras.length > 0 ? (
+            <div className="drawer-browser-run-artifacts" data-testid="browser-run-extras">
+              <span className="drawer-metric-label">Also reported</span>
+              <div className="drawer-chip-wrap">
+                {run.extras.map((extra) => (
+                  <code
+                    key={extra.key}
+                    className="drawer-chip"
+                  >{`${extra.key}: ${extra.value}`}</code>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <ArtifactList label="Traces" testId="browser-run-traces" paths={run.traces} />
           <ArtifactList label="Videos" testId="browser-run-videos" paths={run.videos} />

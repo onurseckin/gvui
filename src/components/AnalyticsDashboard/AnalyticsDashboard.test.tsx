@@ -253,9 +253,9 @@ describe("Analytics Dashboard & Telemetry Store", () => {
 
       // Verify model breakdown entries
       expect(tokenDistribution.byModel.length).toBeGreaterThanOrEqual(4);
-      const sonnet = tokenDistribution.byModel.find((m) => m.model === "claude-3-5-sonnet");
-      expect(sonnet).toBeDefined();
-      expect(sonnet?.nodeCount).toBe(1);
+      const reportedModel = tokenDistribution.byModel.find((m) => m.model === "claude-3-5-sonnet");
+      expect(reportedModel).toBeDefined();
+      expect(reportedModel?.nodeCount).toBe(1);
 
       // Verify role breakdown
       expect(tokenDistribution.byRole.length).toBe(5);

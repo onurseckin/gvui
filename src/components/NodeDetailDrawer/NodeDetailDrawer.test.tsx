@@ -8114,6 +8114,13 @@ index e69de29..b2b2b2b 100644
         expect(normalizeAssetUrl(".capsules/run-1/evidence/screenshots/shot.png")).toBe(
           `/api/assets?path=${encodeURIComponent(".capsules/run-1/evidence/screenshots/shot.png")}`,
         );
+
+        // Portable path the capsule importer wrote (public/data/graphs/<slug>-assets/<hash>.png):
+        // already loadable as a static file in dev, preview and prod, so it must NOT be routed
+        // through the dev-only /api/assets bridge.
+        expect(normalizeAssetUrl("/data/graphs/demo-assets/abc123.png")).toBe(
+          "/data/graphs/demo-assets/abc123.png",
+        );
       });
     });
   });

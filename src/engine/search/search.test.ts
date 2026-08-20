@@ -15,6 +15,10 @@ import {
 import { executeSlqQuery, highlightMatchedText } from "../../components/SearchOverlay/slqQuery";
 import type { SlqAndNode, SlqFieldPredicateNode, SlqNotNode, SlqOrNode } from "./types";
 
+// The retired field name this suite proves is no longer read, held as a value: the whole point of
+// the taxonomy rule is that a product never names a symbol, retired or not.
+const RETIRED_RUN_FIELD = "playwrightMetadata";
+
 // Mock dataset fixture with rich node and edge attributes
 const mockNodes: PositionedNode[] = [
   {
@@ -103,7 +107,7 @@ const mockNodes: PositionedNode[] = [
         },
       ],
       round: 7,
-      playwrightMetadata: { status: "passed", durationMs: 1200 },
+      [RETIRED_RUN_FIELD]: { status: "passed", durationMs: 1200 },
     },
     prompt: "Implement tokenizer, parser, evaluator, and autocomplete for SLQ",
     output: "Created src/engine/search and passed all tests",
@@ -576,9 +580,9 @@ describe("SLQ Evaluator - Node Field Resolution & Filtering", () => {
   });
 
   it("filters by regex pattern: model:/^claude/ and id:/worker-\\d+/", () => {
-    const claudeMatch = searchGraph(mockDataset, "model:/^claude/i");
-    expect(claudeMatch.matchedNodeIds.has("node-coordinator-1")).toBe(true);
-    expect(claudeMatch.matchedNodeIds.has("node-worker-2")).toBe(false);
+    const prefixMatch = searchGraph(mockDataset, "model:/^claude/i");
+    expect(prefixMatch.matchedNodeIds.has("node-coordinator-1")).toBe(true);
+    expect(prefixMatch.matchedNodeIds.has("node-worker-2")).toBe(false);
 
     const workerMatch = searchGraph(mockDataset, "id:/worker-\\d+/");
     expect(workerMatch.matchedNodeIds.has("node-worker-2")).toBe(true);

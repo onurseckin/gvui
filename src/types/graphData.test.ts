@@ -10,8 +10,7 @@ import {
   type GraphNodeData,
 } from "./graphData";
 
-const SHIPPED_DATASET =
-  "public/data/graphs/2026-08-15-automated-playwright-visual-validation-and-asset-pipeline.json";
+const SHIPPED_DATASET = "public/data/graphs/fixture-demo.json";
 
 function loadShippedDataset(): GraphDataset {
   return JSON.parse(readFileSync(SHIPPED_DATASET, "utf8")) as GraphDataset;
@@ -142,7 +141,9 @@ describe("The shipped dataset", () => {
     for (const edge of dataset.edges) {
       const descriptor = describeEdgeKind(edge);
       expect(EDGE_KINDS).toContain(descriptor.kind);
-      expect(resolveEdgeAccent(edge)).toBe(descriptor.accent);
+      // The producer stamps its own accent on every edge in this run, and a dataset-supplied
+      // accent wins over the kind's default per resolveEdgeAccent's own contract.
+      expect(resolveEdgeAccent(edge)).toBe(edge.accent ?? descriptor.accent);
     }
   });
 
@@ -155,9 +156,17 @@ describe("The shipped dataset", () => {
     expect(describeEdgeKind("join").accent).not.toBe(describeEdgeKind("sequence").accent);
   });
 
-  it("renders a node that recorded no role as its bare kind rather than crashing", () => {
+  it("renders every node without crashing, whether or not it recorded a role", () => {
+    // The shipped run records a role for its agent nodes (implementer, validator,
+    // completeness-critic) and none for its structural nodes (input, orchestrator, gate,
+    // terminal). Both cases must render: a declared role labels itself, and its absence falls back
+    // to the bare kind rather than throwing.
+    const withRole = dataset.nodes.filter((node) => resolveNodeRole(node) !== undefined);
+    const withoutRole = dataset.nodes.filter((node) => resolveNodeRole(node) === undefined);
+    expect(withRole.length).toBeGreaterThan(0);
+    expect(withoutRole.length).toBeGreaterThan(0);
+
     for (const node of dataset.nodes) {
-      expect(resolveNodeRole(node)).toBe(undefined);
       expect(describeNodeArchetype(node).label.length).toBeGreaterThan(0);
     }
   });

@@ -6,7 +6,7 @@ This section documents the command-line interfaces, testing frameworks, and auto
 
 | Tool / Pipeline                                         | Description                                                                                                  |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| [Layout Audit Framework](./layout-audit.md)             | Exhaustive 280-run matrix regression test asserting 8 zero-tolerance geometric invariants and budgets.       |
+| [Layout Audit Framework](./layout-audit.md)             | Exhaustive 216-run matrix regression test asserting 8 zero-tolerance geometric invariants and budgets.       |
 | [Screenshot & Visual Capture](./screenshot-pipeline.md) | Playwright headless harness driving multi-viewport captures, drawer traversal, and visual catalogs.          |
 | [CLI Capsule Import](./capsule-import.md)               | Ingests orchestrator task capsules (`summary/graph.json` or `state.json`) directly into GVUI graph datasets. |
 
@@ -16,7 +16,7 @@ This section documents the command-line interfaces, testing frameworks, and auto
 
 ```bash
 # Layout Audit & Testing
-bun run audit             # Run 280-run layout audit gate
+bun run audit             # Run 216-run layout audit gate
 bun run test              # Run Rust tests + Bun unit tests + layout audit
 
 # Visual Regression & Capture

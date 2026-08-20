@@ -45,14 +45,23 @@ export interface ScriptRow {
   logPath?: string;
   stdoutTail?: string;
   stderrTail?: string;
+  /** What the caller declared this command to be; the harness read none of it off the argv. */
+  category?: string;
+  tool?: string;
+  extras: Array<{ key: string; value: string }>;
+  /** Provenance of the declared fields, keyed by the field it labels. */
+  evidence: Record<string, EvidenceClass>;
   evidenceClass?: EvidenceClass;
   source: RecordSource;
 }
 
 export interface ToolRow {
   name: string;
+  /** The generic kind of tool. Absent when nobody declared one; never read out of the name. */
+  category?: string;
   type?: string;
   firstReportedAt?: string;
+  extras: Array<{ key: string; value: string }>;
   evidenceClass?: EvidenceClass;
   source: RecordSource;
 }
@@ -70,6 +79,7 @@ export interface BrowserRunViewportRow {
  */
 export interface BrowserRunRow {
   commandId?: string;
+  category?: string;
   runner?: string;
   testFile?: string;
   browser?: string;
@@ -80,6 +90,8 @@ export interface BrowserRunRow {
   traces: string[];
   videos: string[];
   reportPath?: string;
+  /** What this runner reported that the generic fields have no home for. */
+  extras: Array<{ key: string; value: string }>;
   /** How each field came to be known, keyed by the field it labels. */
   evidence: Record<string, EvidenceClass>;
 }
@@ -106,11 +118,15 @@ export interface TelemetryView {
   role?: string;
   host?: string;
   grantStatus?: string;
+  provider?: EvidencedValue<string>;
   model?: EvidencedValue<string>;
   modelTier?: EvidencedValue<string>;
   thinkingLevel?: EvidencedValue<string>;
+  contextWindow?: EvidencedValue<number>;
   tokensIn?: EvidencedValue<number>;
   tokensOut?: EvidencedValue<number>;
+  /** Counters this host keeps beyond input and output, under the names it reported them by. */
+  tokenExtras: Array<{ name: string; value: EvidencedValue<number> }>;
 }
 
 export interface BranchContext {
@@ -137,6 +153,16 @@ export interface TokenFootprint {
   cacheReadTokens?: number;
   totalTokens?: number;
   costUsd?: number;
+  /**
+   * Counters this run's host keeps that the fixed fields above have no name for, carried under the
+   * host's own names so an unusual provider loses none of what it reported.
+   */
+  otherCounters: Array<{
+    name: string;
+    value: number;
+    evidenceClass?: EvidenceClass;
+    isEstimated?: boolean;
+  }>;
   isEstimated: boolean;
   evidenceClass?: EvidenceClass;
 }
@@ -185,6 +211,22 @@ function extraField(node: GraphNodeData, key: string): unknown {
 function extraArray(node: GraphNodeData, key: string): unknown[] {
   const value = extraField(node, key);
   return Array.isArray(value) ? value : [];
+}
+
+/**
+ * An open bag as the view can show it: scalar entries under the names the producer used, rendered
+ * as text. A nested value is skipped rather than flattened into something nobody reported.
+ */
+function extrasRows(value: unknown): Array<{ key: string; value: string }> {
+  if (!isRecord(value)) return [];
+  const rows: Array<{ key: string; value: string }> = [];
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry === "string") rows.push({ key, value: entry });
+    else if (typeof entry === "number" || typeof entry === "boolean") {
+      rows.push({ key, value: String(entry) });
+    }
+  }
+  return rows;
 }
 
 function metadataArray(node: GraphNodeData, key: string): unknown[] {
@@ -261,6 +303,10 @@ function canonicalScript(value: unknown): ScriptRow | undefined {
     logPath: readText(value, "logPath"),
     stdoutTail: readText(value, "stdoutTail"),
     stderrTail: readText(value, "stderrTail"),
+    category: readText(value, "category"),
+    tool: readText(value, "tool"),
+    extras: extrasRows(value.extras),
+    evidence: evidenceMap(value.evidence),
     evidenceClass: readEvidenceClass(value, "evidence_class"),
     source: "canonical",
   };
@@ -288,6 +334,8 @@ function legacyScript(value: unknown): ScriptRow | undefined {
     logPath: readText(value, "logPath") ?? readText(value, "recordPath"),
     stdoutTail: readText(value, "stdoutTail") ?? readText(value, "stdoutSnippet"),
     stderrTail: readText(value, "stderrTail") ?? readText(value, "stderrSnippet"),
+    extras: [],
+    evidence: {},
     source: "legacy",
   };
 }
@@ -315,8 +363,10 @@ export function readTools(node: GraphNodeData): ToolRow[] {
     const evidenceClass = readEvidenceClass(entry, "evidence_class");
     rows.push({
       name,
+      category: readText(entry, "category"),
       type: readText(entry, "type"),
       firstReportedAt: readText(entry, "firstReportedAt"),
+      extras: extrasRows(entry.extras),
       evidenceClass,
       source: evidenceClass ? "canonical" : "legacy",
     });
@@ -352,6 +402,7 @@ function browserRunRow(value: unknown): BrowserRunRow | undefined {
     : [];
   const row: BrowserRunRow = {
     commandId: readText(value, "commandId"),
+    category: readText(value, "category"),
     runner: readText(value, "runner"),
     testFile: readText(value, "testFile"),
     browser: readText(value, "browser"),
@@ -362,11 +413,13 @@ function browserRunRow(value: unknown): BrowserRunRow | undefined {
     traces: readTextArray(value, "traces") ?? [],
     videos: readTextArray(value, "videos") ?? [],
     reportPath: readText(value, "reportPath"),
+    extras: extrasRows(value.extras),
     evidence: evidenceMap(value.evidence),
   };
   // An entry that carried no fact is not a run that happened; rendering it would invent a scaffold.
   const carriesFact =
     row.commandId !== undefined ||
+    row.category !== undefined ||
     row.runner !== undefined ||
     row.testFile !== undefined ||
     row.browser !== undefined ||
@@ -456,6 +509,20 @@ function unlabelled<T>(value: T | undefined): EvidencedValue<T> | undefined {
   return value === undefined ? undefined : { value, isEstimated: false };
 }
 
+/**
+ * The counters a host keeps beyond input and output, in the order the dataset listed them and under
+ * the names it used. Nothing here is matched against a known counter name.
+ */
+function tokenExtraRows(value: unknown): Array<{ name: string; value: EvidencedValue<number> }> {
+  if (!isRecord(value)) return [];
+  const rows: Array<{ name: string; value: EvidencedValue<number> }> = [];
+  for (const [name, entry] of Object.entries(value)) {
+    const counter = evidencedNumberFrom(entry);
+    if (counter) rows.push({ name, value: counter });
+  }
+  return rows;
+}
+
 /** The host runtime record, which carries the tool and effort fields telemetry has no home for. */
 function hostAgentRecord(node: GraphNodeData): Record<string, unknown> {
   const fromMetrics = node.metrics?.hostAgent;
@@ -478,11 +545,14 @@ export function readTelemetry(node: GraphNodeData): TelemetryView {
       role: readText(canonical, "role"),
       host: readText(canonical, "host"),
       grantStatus: readText(canonical, "grantStatus"),
+      provider: evidencedFrom(canonical.provider),
       model: evidencedFrom(canonical.model),
       modelTier: evidencedFrom(canonical.modelTier),
       thinkingLevel: evidencedFrom(canonical.thinkingLevel),
+      contextWindow: evidencedNumberFrom(canonical.contextWindow),
       tokensIn: evidencedNumberFrom(canonical.tokensIn),
       tokensOut: evidencedNumberFrom(canonical.tokensOut),
+      tokenExtras: tokenExtraRows(canonical.tokenExtras),
     };
   }
 
@@ -503,6 +573,7 @@ export function readTelemetry(node: GraphNodeData): TelemetryView {
     ),
     tokensIn: unlabelled(node.metrics?.tokensIn),
     tokensOut: unlabelled(node.metrics?.tokensOut),
+    tokenExtras: [],
   };
 }
 
@@ -526,6 +597,7 @@ export function nodeCarriesAgent(node: GraphNodeData): boolean {
     telemetry.agentId,
     telemetry.host,
     telemetry.grantStatus,
+    telemetry.provider,
     telemetry.model,
     telemetry.modelTier,
     telemetry.thinkingLevel,
@@ -583,6 +655,12 @@ export function readTokenFootprint(node: GraphNodeData): TokenFootprint {
     cacheReadTokens,
     totalTokens: declaredTotal ?? summedTotal,
     costUsd: typeof costUsd === "number" && Number.isFinite(costUsd) ? costUsd : undefined,
+    otherCounters: telemetry.tokenExtras.map((entry) => ({
+      name: entry.name,
+      value: entry.value.value,
+      evidenceClass: entry.value.evidenceClass,
+      isEstimated: entry.value.isEstimated,
+    })),
     isEstimated: tokens.isEstimated === true,
     evidenceClass: readEvidenceClass(tokens, "evidenceClass"),
   };

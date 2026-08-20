@@ -20,7 +20,7 @@ Built with **React 19**, **TypeScript**, and a custom **Rust / WebAssembly (WASM
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │               React 19 Host UI           │              Developer Tooling              │
 │  ┌─────────────────────────────────────┐ │  ┌───────────────────────────────────────┐  │
-│  │ Interactive Graph Canvas            │ │  │ 280-Run Layout Audit Framework        │  │
+│  │ Interactive Graph Canvas            │ │  │ 216-Run Layout Audit Framework        │  │
 │  │   - 19 semantic edge kinds + markers│ │  │ Playwright Visual Capture Engine      │  │
 │  │   - 9 role archetypes on node cards │ │  │ Contract-Checked Capsule Importer     │  │
 │  │   - Branch sections carry a reason  │ │  │ Multi-Format Exporter (SVG/PNG/SQL)   │  │
@@ -110,8 +110,8 @@ bun run prod
 
 ```bash
 # Quality Gates & Verification
-bun run test            # Run full test triad: Cargo tests + Bun unit tests + 280-run layout audit
-bun run audit           # Run exhaustive 280-run layout engine regression audit
+bun run test            # Run full test triad: Cargo tests + Bun unit tests + 216-run layout audit
+bun run audit           # Run exhaustive 216-run layout engine regression audit
 bun run typecheck       # Compile WASM and verify strict TypeScript types
 bun run lint            # Run Oxlint with 100+ rules
 bun run format:check    # Check code formatting with Oxfmt

@@ -3,10 +3,10 @@
  * Automated Playwright Visual Capture & Metrics Collection Script.
  *
  * Drives end-to-end user interactions across GVUI components and captures
- * deterministic screenshots with in-place overwrites across viewports:
- * 1. Desktop: 1280x800
- * 2. Tablet: 768x1024
- * 3. Mobile: 375x667
+ * deterministic screenshots with in-place overwrites across every viewport in
+ * `STANDARD_VIEWPORTS` (desktop, tablet, mobile, wide-desktop) — see
+ * `browserVisualHarness.ts` for the authoritative matrix; this file must not
+ * duplicate that list.
  *
  * Interactions executed:
  * - Phase 1: Left sidebar file selection and navigation
@@ -26,7 +26,7 @@ import {
   waitForLayoutStabilization,
   type CapturedScreenshotRecord,
   type ViewportConfig,
-} from "../src/testing/visual/playwrightVisualHarness";
+} from "../src/testing/visual/browserVisualHarness";
 import {
   createEmptyViewportMetrics,
   createVisualMetricsReport,
@@ -43,8 +43,8 @@ export interface VisualCaptureCliOptions {
   readonly viewports: readonly ViewportConfig[];
 }
 
-function parseCliArgs(argv: readonly string[]): VisualCaptureCliOptions {
-  let baseUrl = "http://localhost:5173";
+export function parseCliArgs(argv: readonly string[]): VisualCaptureCliOptions {
+  let baseUrl = "http://localhost:4444";
   let taskId = "task-01-gvui-headless-playwright-visual-capture-engine";
   let outputDir = "reports/screenshots";
   let reportPath = "reports/visual-report.json";
@@ -75,10 +75,9 @@ function parseCliArgs(argv: readonly string[]): VisualCaptureCliOptions {
     }
   }
 
-  // Multi-viewport matrix: Desktop (1280x800), Tablet (768x1024), Mobile (375x667)
-  const viewports = STANDARD_VIEWPORTS.filter((v) =>
-    ["desktop", "tablet", "mobile"].includes(v.name),
-  );
+  // Full matrix, sourced from the harness rather than duplicated here — see
+  // `STANDARD_VIEWPORTS` in `browserVisualHarness.ts` for the definitions and dimensions.
+  const viewports = STANDARD_VIEWPORTS;
 
   return {
     baseUrl,

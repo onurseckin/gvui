@@ -16,6 +16,10 @@ import {
   type JsonGraphDataset,
 } from "./graphSchema";
 
+// The retired field name this suite proves is no longer read, held as a value: the whole point of
+// the taxonomy rule is that a product never names a symbol, retired or not.
+const RETIRED_RUN_FIELD = "playwrightMetadata";
+
 const minimalDataset = {
   id: "run-1",
   title: "Run 1",
@@ -530,7 +534,7 @@ describe("normalizeGraphDataset", () => {
           assets: [{ id: "a3", type: "image", url: "/a3.png" }],
           mediaAssets: [{ id: "a4", type: "image", url: "/a4.png" }],
           screenshots: [{ id: "a5", type: "image", url: "/a5.png" }],
-          playwrightMetadata: { screenshots: [{ id: "a6", type: "image", url: "/a6.png" }] },
+          [RETIRED_RUN_FIELD]: { screenshots: [{ id: "a6", type: "image", url: "/a6.png" }] },
         },
       },
     ],

@@ -160,6 +160,7 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
   const handleCopySummary = useCallback(async () => {
     const lines = [
       `Node Token Footprint: ${node.name} (${node.id})`,
+      `Provider: ${telemetry.provider?.value ?? "unknown"}`,
       `Model: ${telemetry.model?.value ?? "unknown"}`,
       `Tier: ${telemetry.modelTier?.value ?? "unknown"}`,
       `Cost: ${footprint.costUsd === undefined ? "not recorded" : formatDetailedUsd(footprint.costUsd, true)}`,
@@ -225,6 +226,23 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
 
         <div className="cost-header-meta-chips">
           <div className="cost-meta-chip">
+            <span className="chip-label">Provider:</span>
+            {telemetry.provider ? (
+              <span className="chip-value" data-testid="node-provider">
+                {telemetry.provider.value}
+              </span>
+            ) : (
+              <UnknownValue what="Provider" />
+            )}
+            {telemetry.provider ? (
+              <EvidenceChip
+                evidenceClass={telemetry.provider.evidenceClass}
+                isEstimated={telemetry.provider.isEstimated}
+              />
+            ) : null}
+          </div>
+
+          <div className="cost-meta-chip">
             <span className="chip-label">Model:</span>
             {telemetry.model ? (
               <span className="chip-value" title={telemetry.model.value}>
@@ -250,6 +268,23 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
             ) : (
               <UnknownValue what="Tier" />
             )}
+          </div>
+
+          <div className="cost-meta-chip">
+            <span className="chip-label">Context Window:</span>
+            {telemetry.contextWindow ? (
+              <span className="chip-value" data-testid="node-context-window">
+                {formatTokens(telemetry.contextWindow.value)}
+              </span>
+            ) : (
+              <UnknownValue what="Context window" />
+            )}
+            {telemetry.contextWindow ? (
+              <EvidenceChip
+                evidenceClass={telemetry.contextWindow.evidenceClass}
+                isEstimated={telemetry.contextWindow.isEstimated}
+              />
+            ) : null}
           </div>
 
           <div className="cost-meta-chip">
@@ -334,6 +369,25 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
           </p>
         ) : null}
       </DrawerSection>
+
+      {footprint.otherCounters.length > 0 ? (
+        <DrawerSection title="Other Counters Reported" count={footprint.otherCounters.length}>
+          <div className="drawer-metric-grid">
+            {footprint.otherCounters.map((counter) => (
+              <div className="drawer-metric" data-testid="other-counter" key={counter.name}>
+                <span className="drawer-metric-label">{counter.name}</span>
+                <span className="drawer-metric-value">
+                  {formatTokens(counter.value)}
+                  <EvidenceChip
+                    evidenceClass={counter.evidenceClass}
+                    isEstimated={counter.isEstimated}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        </DrawerSection>
+      ) : null}
 
       <DrawerSection title="Rounds Recorded">
         <div className="drawer-metric-grid">

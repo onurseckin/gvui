@@ -19,6 +19,7 @@ import {
   vocabularyLabel,
 } from "../../primitives/vocabulary";
 import { UNKNOWN_LABEL } from "../../state/graphSchema";
+import { TOOL_CATEGORIES } from "../../types/graphData";
 import type { GraphEdgeData, GraphNodeData } from "../../types/graphData";
 import { humanizeKey } from "./valueShapes";
 
@@ -30,6 +31,11 @@ import { humanizeKey } from "./valueShapes";
  */
 
 export { NEUTRAL_ACCENT, stableAccent };
+
+/** What a tool with no category recorded reads as. Absence is stated, never filled in. */
+export const UNCATEGORISED_LABEL = "UNCATEGORISED";
+
+const TOOL_CATEGORY_PRESETS = new Set<string>(TOOL_CATEGORIES);
 
 export type VocabularyIcon = ComponentType<{
   size?: number | string;
@@ -177,6 +183,40 @@ export function describeOpenEdgeKind(edge: Pick<GraphEdgeData, "kind">): OpenEdg
     label: descriptor.label,
     accent: descriptor.accent,
     recognized: isKnownEdgeKind(resolved),
+    raw,
+  };
+}
+
+export interface OpenToolCategory {
+  label: string;
+  accent: string;
+  /** False when the dataset filed the tool under no category at all, which is not a claim. */
+  recorded: boolean;
+  /** False when the category is this dataset's own word rather than one of the presets. */
+  recognized: boolean;
+  raw?: string;
+}
+
+/**
+ * What kind of tool something is, read on the same terms as every other open vocabulary here: a
+ * category the preset list has never seen keeps its own name and gets an accent of its own, and a
+ * tool nobody categorised says so instead of being filed under a guess.
+ */
+export function describeToolCategory(value: unknown): OpenToolCategory {
+  const raw = readVocabularyMember(value);
+  if (raw === undefined) {
+    return {
+      label: UNCATEGORISED_LABEL,
+      accent: NEUTRAL_ACCENT,
+      recorded: false,
+      recognized: false,
+    };
+  }
+  return {
+    label: vocabularyLabel(raw),
+    accent: stableAccent(raw),
+    recorded: true,
+    recognized: TOOL_CATEGORY_PRESETS.has(raw),
     raw,
   };
 }
