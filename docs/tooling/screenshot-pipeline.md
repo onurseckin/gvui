@@ -61,7 +61,7 @@ Visual capture systematically tests four standardized viewport configurations (`
 
 1. **Phase 1 — Sidebar Navigation**: Selects and switches between available graph datasets.
 2. **Phase 2 — Canvas Viewport Stabilization**: Triggers layout calculations, verifies SVG rendering, and executes keyboard reset (`'R'`).
-3. **Phase 3 — Node Drawer Traversal**: Clicks targeted nodes, verifies header styling, and cycles through all drawer tabs (`Overview`, `Cost`, `Dependencies`, `Assets`, `Diffs`, `Executions`, `Findings`, `Provenance`).
+3. **Phase 3 — Node Drawer Traversal**: Clicks targeted nodes, then loops over the four tab names the script asks for — `overview`, `findings`, `assets`, `io` — writing one `drawer-<tab>` screenshot per name. The click is best-effort: a tab control that is not visible is skipped and the shot is still taken, so the phase never fails a node for lacking evidence it does not have. Two caveats a reader has to know: the tab locator is `[data-tab='<tab>'], [role='tab']:has-text('<tab>')`, whereas the drawer renders its tabs as `<button class="drawer-tab">` with neither attribute, and `io` is not one of the drawer's ten tab ids (`overview`, `cost`, `dependencies`, `assets`, `files`, `scripts`, `tools`, `state-machine`, `findings`, `provenance`). Until the locator and the tab list are reconciled with [the drawer](../features/detail-drawer.md#3-tabs), every `drawer-*` screenshot is the same Overview view under four different filenames.
 4. **Phase 4 — Modals & Dialogs**: Opens Command Palette (`Cmd+K`), tests search filtering, opens Lightbox zoom dialog, and verifies focus trapping.
 
 ---

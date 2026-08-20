@@ -477,8 +477,8 @@ export function getNodeRetries(node: GraphNodeData | null | undefined): number {
 
 export function getNodeModel(node: GraphNodeData | null | undefined): string | null {
   if (!node) return null;
-  if (node.model) return node.model;
-  if (node.harnessModel) return node.harnessModel;
+  const reported = node.telemetry?.model?.value;
+  if (reported) return reported;
   if (node.hostAgent?.model) return node.hostAgent.model;
   if (node.metadata?.hostAgent?.model) return node.metadata.hostAgent.model;
   return null;
@@ -838,13 +838,18 @@ export function compareNodeProperties(
   if (!base && !comp) return [];
   const diffs: PropertyDiff[] = [];
 
-  const fieldsToCheck: Array<{ key: keyof GraphNodeData; label: string }> = [
+  // `read` covers the fields that live behind a reader rather than at the top of the node, so a
+  // model comparison follows the same path the rest of the UI reads it through.
+  const fieldsToCheck: Array<{
+    key: string;
+    label: string;
+    read?: (node: GraphNodeData) => unknown;
+  }> = [
     { key: "name", label: "Name" },
     { key: "kind", label: "Node Kind" },
     { key: "status", label: "Execution Status" },
-    { key: "model", label: "Model" },
-    { key: "harnessModel", label: "Harness Model" },
-    { key: "tier", label: "Model Tier" },
+    { key: "model", label: "Model", read: (node) => getNodeModel(node) ?? undefined },
+    { key: "tier", label: "Model Tier", read: (node) => node.telemetry?.modelTier?.value },
     { key: "description", label: "Description" },
     { key: "group", label: "Group / Section" },
     { key: "rank", label: "Topological Rank" },
@@ -854,9 +859,15 @@ export function compareNodeProperties(
     { key: "output", label: "Output Preview" },
   ];
 
+  const readField = (node: GraphNodeData | null, field: (typeof fieldsToCheck)[number]) => {
+    if (!node) return undefined;
+    if (field.read) return field.read(node);
+    return (node as unknown as Record<string, unknown>)[field.key];
+  };
+
   for (const field of fieldsToCheck) {
-    const valA = base ? base[field.key] : undefined;
-    const valB = comp ? comp[field.key] : undefined;
+    const valA = readField(base, field);
+    const valB = readField(comp, field);
     const isDiff = !deepEqual(valA, valB);
     if (isDiff || (valA !== undefined && valB !== undefined)) {
       diffs.push({

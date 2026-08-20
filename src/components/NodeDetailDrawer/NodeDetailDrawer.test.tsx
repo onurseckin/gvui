@@ -86,7 +86,7 @@ describe("NodeDetailDrawer tests", () => {
     kind: "orchestrator",
     status: "running",
     step: 2,
-    model: "claude-3-5-sonnet",
+    telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
     description: "Orchestrates subagent tasks across workers",
     files: [
       {
@@ -460,8 +460,8 @@ describe("NodeDetailDrawer tests", () => {
       expect(html.includes("Output Streams")).toBe(true);
       expect(html.includes("Validation Gate Decision")).toBe(true);
       expect(html.includes("Reviewer Critic")).toBe(true);
-      expect(html.includes("Tools")).toBe(true);
-      expect(html.includes("run_command")).toBe(true);
+      // Tools live in their own tab so the drawer stops presenting the same list twice.
+      expect(html.includes("run_command")).toBe(false);
     });
 
     test("renders rich telemetry cards: reasoning tokens in indigo, timing breakdown, cost, and repair rounds warning", () => {
@@ -647,49 +647,57 @@ describe("NodeDetailDrawer tests", () => {
   });
 
   describe("AssetsTab & LightboxDialog asset gallery", () => {
-    test("renders asset gallery cards and playwright test execution summary", async () => {
+    test("renders asset gallery cards and the browser test run summary", async () => {
       const assetNode: GraphNodeData = {
         id: "node-validator-1",
         name: "UI Verification Validator",
         kind: "gate",
         status: "success",
-        metadata: {
-          playwrightMetadata: {
+        assets: [
+          {
+            id: "asset-1",
+            type: "image",
+            url: "/screenshots/node-drawer-full.png",
+            title: "Full Node Drawer Expanded",
+            description: "High-resolution screenshot of open node drawer with 5 tabs",
+            dimensions: { width: 1280, height: 720 },
+            sizeBytes: 1024 * 120,
+            step: 3,
+          },
+          {
+            id: "asset-2",
+            type: "video",
+            url: "/videos/validation-run.webm",
+            title: "Playwright E2E Run Video",
+            description: "Full viewport interaction recording",
+            sizeBytes: 1024 * 1024 * 3,
+            step: 3,
+          },
+        ],
+        browserTests: [
+          {
+            commandId: "cmd-e2e",
             testFile: "tests/e2e/nodeDrawer.spec.ts",
             status: "passed",
             browser: "chromium",
             viewport: { width: 1280, height: 720 },
             durationMs: 3450,
+            evidence: {
+              testFile: "agent_reported",
+              status: "harness_observed",
+              browser: "agent_reported",
+              viewport: "agent_reported",
+              durationMs: "harness_observed",
+            },
           },
-          mediaAssets: [
-            {
-              id: "asset-1",
-              type: "image",
-              url: "/screenshots/node-drawer-full.png",
-              title: "Full Node Drawer Expanded",
-              description: "High-resolution screenshot of open node drawer with 5 tabs",
-              dimensions: { width: 1280, height: 720 },
-              sizeBytes: 1024 * 120,
-              step: 3,
-            },
-            {
-              id: "asset-2",
-              type: "video",
-              url: "/videos/validation-run.webm",
-              title: "Playwright E2E Run Video",
-              description: "Full viewport interaction recording",
-              sizeBytes: 1024 * 1024 * 3,
-              step: 3,
-            },
-          ],
-        },
+        ],
       };
 
       const html = renderToString(<AssetsTab node={assetNode} />);
 
-      expect(html.includes("Playwright Test Suite Execution")).toBe(true);
+      expect(html.includes("Browser Test Runs")).toBe(true);
       expect(html.includes("tests/e2e/nodeDrawer.spec.ts")).toBe(true);
-      expect(html.includes("Passed")).toBe(true);
+      expect(html.includes("passed")).toBe(true);
       expect(html.includes("chromium")).toBe(true);
       expect(html.includes("1280")).toBe(true);
       expect(html.includes("720")).toBe(true);
@@ -704,7 +712,7 @@ describe("NodeDetailDrawer tests", () => {
       const filterNode: GraphNodeData = {
         id: "node-filter-test",
         name: "Filter Test Node",
-        mediaAssets: [
+        assets: [
           {
             id: "a1",
             type: "screenshot",
@@ -938,7 +946,7 @@ describe("NodeDetailDrawer tests", () => {
       const brokenAssetNode: GraphNodeData = {
         id: "node-broken-asset",
         name: "Broken Asset Node",
-        mediaAssets: [
+        assets: [
           {
             id: "broken-thumb-1",
             type: "image",
@@ -972,7 +980,7 @@ describe("NodeDetailDrawer tests", () => {
       const emptyAssetNode: GraphNodeData = {
         id: "node-no-assets",
         name: "Empty Asset Node",
-        mediaAssets: [],
+        assets: [],
       };
 
       const html = renderToString(<AssetsTab node={emptyAssetNode} />);
@@ -984,7 +992,7 @@ describe("NodeDetailDrawer tests", () => {
       const allTypesNode: GraphNodeData = {
         id: "node-all-asset-types",
         name: "Multi-Asset Verification Node",
-        mediaAssets: [
+        assets: [
           {
             id: "asset-screenshot-1",
             type: "screenshot",
@@ -1075,7 +1083,7 @@ describe("NodeDetailDrawer tests", () => {
       const filterNode: GraphNodeData = {
         id: "node-filter-interact",
         name: "Filter Interactive Node",
-        mediaAssets: [
+        assets: [
           {
             id: "a-screen",
             type: "screenshot",
@@ -1435,7 +1443,7 @@ describe("NodeDetailDrawer tests", () => {
       const docCategoryNode: GraphNodeData = {
         id: "node-doc-cat-test",
         name: "Document Categorization Node",
-        mediaAssets: [
+        assets: [
           {
             id: "doc-pdf-mime",
             type: "document",
@@ -4940,7 +4948,7 @@ index e69de29..b2b2b2b 100644
       expect(skipped.statusClass).toContain("is-skipped");
 
       const fallback = describeLineageStatus(undefined);
-      expect(fallback.label).toBe("READY");
+      expect(fallback.label).toBe("UNKNOWN");
       expect(fallback.statusClass).toContain("is-neutral");
     });
 
@@ -5065,9 +5073,43 @@ index e69de29..b2b2b2b 100644
       expect(tree[0]?.id).toBe("node-coord");
       expect(tree[0]?.children?.length).toBe(1);
       expect(tree[0]?.children?.[0]?.id).toBe("node-sub-1");
-      expect(tree[0]?.children?.[0]?.children?.length).toBe(1);
-      expect(tree[0]?.children?.[0]?.children?.[0]?.id).toBe("node-val-1");
-      expect(tree[0]?.children?.[0]?.children?.[0]?.role).toBe("critic");
+      // A validation edge records a verdict, not a delegation, so it is not lineage.
+      expect(tree[0]?.children?.[0]?.children).toBeUndefined();
+
+      const dispatched = extractLineageTree(rootNode, {
+        ...sampleDataset,
+        edges: [
+          { id: "edge-1", source: "node-coord", target: "node-sub-1", kind: "dispatch" },
+          { id: "edge-2", source: "node-sub-1", target: "node-val-1", kind: "spawn" },
+        ],
+      });
+      expect(dispatched[0]?.children?.[0]?.children?.[0]?.id).toBe("node-val-1");
+      expect(dispatched[0]?.children?.[0]?.children?.[0]?.role).toBe("critic");
+    });
+
+    test("extractLineageTree renders an empty lineage instead of the whole graph", () => {
+      const promptNode: GraphNodeData = {
+        id: "node-input-prompt",
+        name: "User Request Prompt",
+        kind: "input",
+        status: "success",
+      };
+
+      const wholeGraph: GraphDataset = {
+        id: "dataset-sequence",
+        title: "Sequence Only Dataset",
+        nodes: [
+          promptNode,
+          { id: "node-plan", name: "Plan", kind: "orchestrator" },
+          { id: "node-task", name: "Task", kind: "agent" },
+        ],
+        edges: [
+          { id: "e1", source: "node-input-prompt", target: "node-plan", kind: "sequence" },
+          { id: "e2", source: "node-plan", target: "node-task", kind: "dispatch" },
+        ],
+      };
+
+      expect(extractLineageTree(promptNode, wholeGraph)).toEqual([]);
     });
 
     test("extractLineageTree synthesizes hierarchy from provenance chain of custody", () => {
@@ -6533,9 +6575,8 @@ index e69de29..b2b2b2b 100644
       const json = JSON.stringify(renderer.toJSON());
       expect(json).toContain("claude-3-opus");
       expect(json).toContain("Tier:");
-      expect(json).toContain("Graph Cost Rank:");
-      expect(json).toContain("of 3");
-      expect(json).toContain("Graph Share:");
+      expect(json).toContain("Cost Rank:");
+      expect(json).toContain("Token Share:");
 
       act(() => renderer.unmount());
     });
@@ -6573,14 +6614,10 @@ index e69de29..b2b2b2b 100644
         cacheWriteMetric.findByProps({ className: "drawer-metric-value" }).props.children,
       ).toBe("10,000");
 
-      const json = JSON.stringify(renderer.toJSON());
-      expect(json).toContain("Thinking Config:");
-      expect(json).toContain("high");
-
       act(() => renderer.unmount());
     });
 
-    test("CostTab renders financial analytics, cache savings, and repair impact multiplier", () => {
+    test("CostTab reports probe and repair rounds without pricing anything", () => {
       const node = costSampleDataset.nodes[0];
       let renderer!: ReactTestRenderer;
       act(() => {
@@ -6588,43 +6625,47 @@ index e69de29..b2b2b2b 100644
       });
 
       const root = renderer.root;
-      const cacheHitRate = root.findByProps({ "data-testid": "node-cache-hit-rate" });
-      expect(cacheHitRate.props.children.join("")).toContain("%");
+      // This node recorded a repair round and never recorded a probe round, so the probe counter
+      // has to read "unknown" — a zero here would be a number the run never reported.
+      const probeRounds = root.findByProps({ "data-testid": "metric-probe-rounds" });
+      expect(probeRounds.findAllByProps({ className: "drawer-unknown-value" }).length).toBe(1);
+      expect(probeRounds.findByProps({ className: "cost-metric-subtext" }).props.children).toBe(
+        "never recorded for this node",
+      );
+      const repairRounds = root.findByProps({ "data-testid": "metric-repair-rounds" });
+      expect(repairRounds.findAllByProps({ className: "drawer-unknown-value" }).length).toBe(0);
+      expect(repairRounds.findByProps({ className: "drawer-metric-value" }).props.children).toBe(1);
 
-      const cacheSavings = root.findByProps({ "data-testid": "node-cache-savings" });
-      expect(cacheSavings.props.children).toContain("$");
-
-      const repairImpact = root.findByProps({ "data-testid": "cost-repair-impact" });
-      expect(repairImpact).toBeDefined();
       const json = JSON.stringify(renderer.toJSON());
-      expect(json).toContain("repair rounds");
-      expect(json).toContain("retries");
+      // No price list means no simulated tiers, no cache "savings" and no per-token rate.
+      expect(json).not.toContain("Tier Cost Comparison");
+      expect(json).not.toContain("Cache Savings");
+      expect(json).not.toContain("Cost per 1k Tokens");
 
       act(() => renderer.unmount());
     });
 
-    test("CostTab renders Model Tier Cost Comparison grid with current tier highlight", () => {
-      const node = costSampleDataset.nodes[0];
+    test("CostTab shows no cost at all for a node whose run reported none", () => {
+      const unpricedNode: GraphNodeData = {
+        id: "unpriced-node",
+        name: "Unpriced Implementer",
+        metrics: {
+          tokensIn: 4000,
+          tokensOut: 900,
+        },
+      };
+
       let renderer!: ReactTestRenderer;
       act(() => {
-        renderer = create(<CostTab node={node} dataset={costSampleDataset} />);
+        renderer = create(<CostTab node={unpricedNode} dataset={null} />);
       });
 
       const root = renderer.root;
-      const tierGrid = root.findByProps({ "data-testid": "tier-comparison-grid" });
-      expect(tierGrid).toBeDefined();
+      expect(root.findByProps({ "data-testid": "cost-not-recorded" })).toBeDefined();
 
-      const currentTag = root.findByProps({ "data-testid": "current-tier-tag" });
-      expect(currentTag.props.children).toBe("Current");
-
-      const cardXS = root.findByProps({ "data-testid": "tier-comparison-card-xs" });
-      const cardS = root.findByProps({ "data-testid": "tier-comparison-card-s" });
-      const cardM = root.findByProps({ "data-testid": "tier-comparison-card-m" });
-      const cardL = root.findByProps({ "data-testid": "tier-comparison-card-l" });
-      expect(cardXS).toBeDefined();
-      expect(cardS).toBeDefined();
-      expect(cardM).toBeDefined();
-      expect(cardL).toBeDefined();
+      const json = JSON.stringify(renderer.toJSON());
+      expect(json).not.toContain("$");
+      expect(json).toContain("4,000");
 
       act(() => renderer.unmount());
     });
@@ -6667,9 +6708,9 @@ index e69de29..b2b2b2b 100644
         await copyBtn.props.onClick();
       });
 
-      expect(written).toContain("Node Cost & Token Footprint: Frontier Architect");
-      expect(written).toContain("Model: claude-3-opus (Tier: L)");
-      expect(written).toContain("Total Cost:");
+      expect(written).toContain("Node Token Footprint: Frontier Architect");
+      expect(written).toContain("Model: claude-3-opus");
+      expect(written).toContain("Cost: $0.85000");
 
       const span = copyBtn.findByType("span");
       expect(span.props.children).toBe("Copied");
@@ -6704,7 +6745,7 @@ index e69de29..b2b2b2b 100644
       expect(json).toContain("$0.00");
       expect(json).toContain("Zero Node");
 
-      // Node without metrics
+      // Node without metrics: every absent field reads as an explicit unknown.
       const emptyNode: GraphNodeData = {
         id: "empty-node",
         name: "Empty Node Without Metrics",
@@ -6715,7 +6756,9 @@ index e69de29..b2b2b2b 100644
       });
       const emptyJson = JSON.stringify(renderer.toJSON());
       expect(emptyJson).not.toContain("NaN");
-      expect(emptyJson).toContain("$0.00");
+      expect(emptyJson).not.toContain("$");
+      expect(emptyJson).toContain("no cost recorded");
+      expect(emptyJson).toContain("unknown");
 
       act(() => renderer.unmount());
     });
@@ -6754,10 +6797,11 @@ index e69de29..b2b2b2b 100644
       const costAmount = root.findByProps({ "data-testid": "node-cost-usd" });
       expect(costAmount.props.children).toBe("$0.0001");
 
-      const reasoningMetric = root.findByProps({ "data-testid": "metric-reasoning-tokens" });
-      expect(reasoningMetric.findByProps({ className: "drawer-metric-value" }).props.children).toBe(
-        "120",
-      );
+      // `hostAgent.thinkingTokens` is not a recorded reasoning count, so the field stays unknown.
+      const reasoningValue = root
+        .findByProps({ "data-testid": "metric-reasoning-tokens" })
+        .findByProps({ className: "drawer-unknown-value" });
+      expect(reasoningValue.props.children).toBe("unknown");
 
       act(() => renderer.unmount());
     });
@@ -6921,7 +6965,7 @@ index e69de29..b2b2b2b 100644
       const nodeWithRichAssets: GraphNodeData = {
         id: "node-rich-assets",
         name: "Validator Pipeline Run",
-        mediaAssets: [
+        assets: [
           {
             id: "asset-worker-1",
             type: "image",
@@ -7086,7 +7130,7 @@ index e69de29..b2b2b2b 100644
       const visualNode: GraphNodeData = {
         id: "node-visual-multi-path",
         name: "Visual Verification Task",
-        mediaAssets: [
+        assets: [
           {
             id: "asset-local-file",
             type: "screenshot",
@@ -7149,11 +7193,13 @@ index e69de29..b2b2b2b 100644
       const root = renderer.root;
       const jsonStr = JSON.stringify(renderer.toJSON());
 
-      // Verify resolution badges are rendered
+      // Resolution badges come from a recorded size only. `asset-rel-path` names 375x667 in its
+      // title and its file name and records neither, so it gets no badge: a resolution read off a
+      // name would state a measurement of the image that nobody took.
       expect(jsonStr).toContain("1280×800");
       expect(jsonStr).toContain("768×1024");
-      expect(jsonStr).toContain("375×667");
       expect(jsonStr).toContain("1920×1080");
+      expect(jsonStr).not.toContain("375×667");
 
       // Verify MIME chips
       expect(jsonStr).toContain("image/png");
@@ -7175,7 +7221,7 @@ index e69de29..b2b2b2b 100644
       const testNode: GraphNodeData = {
         id: "node-download-test",
         name: "Download Test Node",
-        mediaAssets: [
+        assets: [
           {
             id: "asset-dl-1",
             type: "screenshot",
@@ -7207,7 +7253,7 @@ index e69de29..b2b2b2b 100644
       const brokenNode: GraphNodeData = {
         id: "node-broken-screenshot",
         name: "Broken Screenshot Node",
-        mediaAssets: [
+        assets: [
           {
             id: "broken-shot-id-42",
             type: "screenshot",
@@ -7910,7 +7956,7 @@ index e69de29..b2b2b2b 100644
           name: "Corrupt Node",
           kind: "agent",
           status: "success",
-          mediaAssets: [
+          assets: [
             {
               id: "empty-url-asset",
               title: "Empty URL Asset",

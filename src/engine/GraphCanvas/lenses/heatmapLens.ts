@@ -4,6 +4,7 @@ import type {
   PositionedEdge,
   PositionedNode,
 } from "../../../types/graphData";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import { evaluateColorRamp, normalizeValue, resolveColorStops, rgbaString } from "./colorRamps";
 import type {
   EdgeLensOverlay,
@@ -84,7 +85,7 @@ export function extractNodeHeatmapValue(node: GraphNodeData, metric: HeatmapMetr
       }
       // If tier is high or thinking effort is high, estimate a baseline if duration is present
       const duration = extractNodeHeatmapValue(node, "duration");
-      if (node.hostAgent?.reasoningEffort === "high" || node.tier === "l") {
+      if (node.hostAgent?.reasoningEffort === "high" || node.telemetry?.modelTier?.value === "l") {
         return duration * 0.6;
       }
       return duration * 0.2;
@@ -251,7 +252,7 @@ export function evaluateHeatmapLens(
 
     const tooltipContent: LensTooltipData = {
       title: node.name || node.id,
-      subtitle: `Kind: ${node.kind || "agent"} • Status: ${node.status || "completed"}`,
+      subtitle: `Kind: ${node.kind || UNKNOWN_LABEL} • Status: ${node.status || UNKNOWN_LABEL}`,
       primaryMetric: {
         label:
           metric === "duration"

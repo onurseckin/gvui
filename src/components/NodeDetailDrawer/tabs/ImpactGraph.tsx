@@ -8,7 +8,8 @@ import {
 } from "@tabler/icons-react";
 import type { FC } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
-import { describeNodeKind, describeNodeStatus } from "../../../primitives/nodes/NodeCard/nodeKinds";
+import { describeNodeKind } from "../../../primitives/nodes/NodeCard/nodeKinds";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import { useGraphStore } from "../../../state/useGraphStore";
 import type {
   GraphDataset,
@@ -17,6 +18,7 @@ import type {
   NodeKind,
   NodeStatus,
 } from "../../../types/graphData";
+import { describeOpenStatus } from "../../OpenSchema";
 
 export interface DependencyEdgeInfo {
   id: string;
@@ -55,7 +57,7 @@ export interface BlockerChainItem {
   nodeId: string;
   nodeName: string;
   kind?: NodeKind;
-  status: NodeStatus;
+  status?: NodeStatus;
   step?: number;
   isRootCause: boolean;
   failureReason?: string;
@@ -71,7 +73,8 @@ export interface BlastRadiusMetrics {
   kindBreakdown: Record<string, number>;
   affectedTokens: number;
   affectedDurationMs: number;
-  affectedCostUsd: number;
+  /** Recorded dollars on the affected nodes. Absent when none of them reported a cost. */
+  affectedCostUsd?: number;
 }
 
 export interface GraphAnalysisResult {
@@ -327,12 +330,9 @@ export function analyzeNodeDependencies(
     const item = upstreamQueue.shift();
     if (!item) break;
 
-    const n = nodeMap.get(item.id) ?? {
-      id: item.id,
-      name: item.id,
-      kind: "agent" as NodeKind,
-      status: "pending" as NodeStatus,
-    };
+    // An id an edge points at but the dataset never defined has no kind and no status of its own,
+    // and inventing either would put a node on screen that the graph never described.
+    const n = nodeMap.get(item.id) ?? { id: item.id, name: item.id };
 
     const edgeData =
       edgeMap.get(`${item.id}->${focusNode.id}`) ?? edgeMap.get(`${item.id}->${item.id}`);
@@ -345,8 +345,8 @@ export function analyzeNodeDependencies(
       kind: n.kind,
       status: n.status,
       step: n.step,
-      model: n.model ?? n.harnessModel,
-      tier: n.tier,
+      model: n.telemetry?.model?.value,
+      tier: n.telemetry?.modelTier?.value,
       hopDistance: -item.depth,
       direction: "upstream",
       isBlocker,
@@ -401,7 +401,7 @@ export function analyzeNodeDependencies(
 
   let affectedTokens = 0;
   let affectedDurationMs = 0;
-  let affectedCostUsd = 0;
+  let affectedCostUsd: number | undefined;
   const statusBreakdown: Record<string, number> = {};
   const kindBreakdown: Record<string, number> = {};
   let maxDownstreamDepth = 0;
@@ -414,12 +414,9 @@ export function analyzeNodeDependencies(
       maxDownstreamDepth = item.depth;
     }
 
-    const n = nodeMap.get(item.id) ?? {
-      id: item.id,
-      name: item.id,
-      kind: "agent" as NodeKind,
-      status: "pending" as NodeStatus,
-    };
+    // An id an edge points at but the dataset never defined has no kind and no status of its own,
+    // and inventing either would put a node on screen that the graph never described.
+    const n = nodeMap.get(item.id) ?? { id: item.id, name: item.id };
 
     const edgeData =
       edgeMap.get(`${focusNode.id}->${item.id}`) ?? edgeMap.get(`${item.id}->${item.id}`);
@@ -431,8 +428,8 @@ export function analyzeNodeDependencies(
       kind: n.kind,
       status: n.status,
       step: n.step,
-      model: n.model ?? n.harnessModel,
-      tier: n.tier,
+      model: n.telemetry?.model?.value,
+      tier: n.telemetry?.modelTier?.value,
       hopDistance: item.depth,
       direction: "downstream",
       failureReason,
@@ -467,12 +464,13 @@ export function analyzeNodeDependencies(
     const tOut = n.metrics?.tokensOut ?? 0;
     affectedTokens += tIn + tOut;
     affectedDurationMs += n.metrics?.durationMs ?? 0;
-    affectedCostUsd += n.metrics?.costUsd ?? 0;
+    const nodeCost = n.metrics?.costUsd;
+    if (typeof nodeCost === "number") affectedCostUsd = (affectedCostUsd ?? 0) + nodeCost;
 
-    const st = String(n.status ?? "pending").toLowerCase();
+    const st = String(n.status ?? UNKNOWN_LABEL).toLowerCase();
     statusBreakdown[st] = (statusBreakdown[st] ?? 0) + 1;
 
-    const kd = String(n.kind ?? "agent").toLowerCase();
+    const kd = String(n.kind ?? UNKNOWN_LABEL).toLowerCase();
     kindBreakdown[kd] = (kindBreakdown[kd] ?? 0) + 1;
 
     // Expand downstream
@@ -535,7 +533,7 @@ export function analyzeNodeDependencies(
         nodeId: b.id,
         nodeName: b.name,
         kind: b.kind,
-        status: (b.status ?? "error") as NodeStatus,
+        status: b.status,
         step: b.step,
         isRootCause: i === 0,
         failureReason: b.failureReason,
@@ -547,7 +545,7 @@ export function analyzeNodeDependencies(
       nodeId: focusNode.id,
       nodeName: focusNode.name,
       kind: focusNode.kind,
-      status: (focusNode.status ?? "pending") as NodeStatus,
+      status: focusNode.status,
       step: focusNode.step,
       isRootCause: false,
       failureReason: extractNodeFailureReason(focusNode),
@@ -560,8 +558,8 @@ export function analyzeNodeDependencies(
     kind: focusNode.kind,
     status: focusNode.status,
     step: focusNode.step,
-    model: focusNode.model ?? focusNode.harnessModel,
-    tier: focusNode.tier,
+    model: focusNode.telemetry?.model?.value,
+    tier: focusNode.telemetry?.modelTier?.value,
     hopDistance: 0,
     direction: "focus",
     failureReason: extractNodeFailureReason(focusNode),
@@ -663,7 +661,7 @@ export const ImpactGraph: FC<ImpactGraphProps> = memo(function ImpactGraph({
   }, [analysis, viewMode, searchQuery]);
 
   const focusKind = describeNodeKind(currentNode);
-  const focusStatus = describeNodeStatus(currentNode);
+  const focusStatus = describeOpenStatus(currentNode);
   const FocusIcon = focusKind.IconComponent;
 
   const totalConnected = upstreamNodes.length + downstreamNodes.length;
@@ -766,7 +764,7 @@ export const ImpactGraph: FC<ImpactGraphProps> = memo(function ImpactGraph({
             ) : (
               upstreamNodes.map((item) => {
                 const k = describeNodeKind(item.node);
-                const s = describeNodeStatus(item.node);
+                const s = describeOpenStatus(item.node);
                 const KIcon = k.IconComponent;
                 return (
                   <button
@@ -862,7 +860,7 @@ export const ImpactGraph: FC<ImpactGraphProps> = memo(function ImpactGraph({
             ) : (
               downstreamNodes.map((item) => {
                 const k = describeNodeKind(item.node);
-                const s = describeNodeStatus(item.node);
+                const s = describeOpenStatus(item.node);
                 const KIcon = k.IconComponent;
                 return (
                   <button

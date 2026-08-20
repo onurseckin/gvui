@@ -1,9 +1,6 @@
 import {
-  IconBrowser,
   IconCheck,
-  IconClock,
   IconCopy,
-  IconDeviceDesktop,
   IconDownload,
   IconFileCode,
   IconFileText,
@@ -17,13 +14,14 @@ import {
   IconPlayerPlay,
   IconShieldCheck,
   IconVolume,
-  IconX,
 } from "@tabler/icons-react";
 import type { FC, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
-import type { GraphNodeData, MediaAsset, PlaywrightMetadata } from "../../../types/graphData";
+import type { GraphNodeData, MediaAsset } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
+import { BrowserRunsSection } from "./BrowserRunsSection";
 import { LightboxDialog } from "../LightboxDialog";
+import { readAssets, readBrowserTests } from "../nodeSchema";
 import { copyToClipboard, downloadAssetFile, formatBytes, normalizeAssetUrl } from "../streamUtils";
 
 export interface AssetsTabProps {
@@ -35,20 +33,21 @@ export type AssetFilter =
   | "validation"
   | "worker"
   | "critic"
+  | "unattributed"
   | "screenshots"
   | "diagrams"
   | "documents"
   | "logs";
 
+/**
+ * File type comes from what the asset declares — its `type`, its MIME type, or the extension the
+ * file itself carries. A word inside a human-written title is not a declaration of anything.
+ */
 const isPdf = (a?: MediaAsset): boolean => {
   if (!a) return false;
   if (a.type === "pdf" || a.mimeType === "application/pdf") return true;
   const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
-  return (
-    url.endsWith(".pdf") ||
-    /\.pdf(\?.*)?$/i.test(url) ||
-    Boolean(a.title && a.title.toLowerCase().includes("pdf"))
-  );
+  return url.endsWith(".pdf") || /\.pdf(\?.*)?$/i.test(url);
 };
 
 const isCode = (a?: MediaAsset): boolean => {
@@ -72,27 +71,21 @@ const isLog = (a?: MediaAsset): boolean => {
   if (!a) return false;
   if (a.type === "log") return true;
   const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
-  return url.endsWith(".log") || Boolean(a.title && a.title.toLowerCase().includes("log"));
+  return url.endsWith(".log");
 };
 
 const isMarkdown = (a?: MediaAsset): boolean => {
   if (!a) return false;
   if (a.type === "markdown") return true;
   const url = typeof a.url === "string" ? a.url : "";
-  return (
-    /\.(md|markdown)$/i.test(url) || Boolean(a.title && a.title.toLowerCase().includes("markdown"))
-  );
+  return /\.(md|markdown)$/i.test(url);
 };
 
 const isDiagram = (a?: MediaAsset): boolean => {
   if (!a) return false;
   if (a.type === "diagram") return true;
   const url = typeof a.url === "string" ? a.url.toLowerCase() : "";
-  return (
-    url.includes("diagram") ||
-    /\.(svg|drawio|excalidraw)$/i.test(url) ||
-    Boolean(a.title && a.title.toLowerCase().includes("diagram"))
-  );
+  return /\.(svg|drawio|excalidraw)$/i.test(url);
 };
 
 const isDocument = (a?: MediaAsset): boolean => {
@@ -133,70 +126,37 @@ const isScreenshot = (a?: MediaAsset): boolean => {
     a.type === "image" ||
     a.type === "screenshot" ||
     !a.type ||
-    url.includes("screenshot") ||
-    /\.(png|jpe?g|webp|gif|bmp)$/i.test(url) ||
-    Boolean(a.title && a.title.toLowerCase().includes("screenshot"))
+    /\.(png|jpe?g|webp|gif|bmp)$/i.test(url)
   );
 };
 
-const isValidationEvidence = (a: MediaAsset): boolean => {
-  const author = (a.author ?? "").toLowerCase();
-  const title = (a.title ?? "").toLowerCase();
-  const desc = (a.description ?? "").toLowerCase();
-  const id = (a.id ?? "").toLowerCase();
-  return (
-    author.includes("validator") ||
-    author.includes("gate") ||
-    title.includes("validator") ||
-    title.includes("validation") ||
-    title.includes("finding") ||
-    title.includes("evidence") ||
-    title.includes("pushback") ||
-    desc.includes("validator") ||
-    desc.includes("validation") ||
-    desc.includes("evidence") ||
-    id.includes("finding") ||
-    id.includes("val") ||
-    Boolean(a.metadata?.isValidationEvidence || a.metadata?.validatorId)
-  );
+/** The producing stages a run records against its evidence. */
+type AssetStage = "validation" | "execution" | "critic";
+
+/**
+ * Which stage produced this asset, taken from what the run recorded against it. An author name, a
+ * title or an id that happens to contain "val" is a label somebody chose, not a record of who made
+ * the file, so nothing is read out of one: an asset the run never attributed stays unattributed.
+ */
+const readAssetStage = (a: MediaAsset): AssetStage | undefined => {
+  const stage = a.metadata?.stage;
+  if (stage === "validation" || stage === "execution" || stage === "critic") return stage;
+  if (a.metadata?.isValidationEvidence === true) return "validation";
+  if (typeof a.metadata?.validatorId === "string" && a.metadata.validatorId.trim().length > 0) {
+    return "validation";
+  }
+  if (a.metadata?.isWorkerSnapshot === true) return "execution";
+  if (a.metadata?.isCriticCertification === true) return "critic";
+  return undefined;
 };
 
-const isWorkerSnapshot = (a: MediaAsset): boolean => {
-  const author = (a.author ?? "").toLowerCase();
-  const title = (a.title ?? "").toLowerCase();
-  const desc = (a.description ?? "").toLowerCase();
-  return (
-    author.includes("worker") ||
-    author.includes("agent") ||
-    author.includes("planner") ||
-    author.includes("executor") ||
-    title.includes("worker") ||
-    title.includes("execution") ||
-    title.includes("snapshot") ||
-    title.includes("step") ||
-    desc.includes("worker") ||
-    desc.includes("playwright") ||
-    a.step !== undefined ||
-    Boolean(a.metadata?.isWorkerSnapshot)
-  );
-};
+const isValidationEvidence = (a: MediaAsset): boolean => readAssetStage(a) === "validation";
 
-const isCriticCertification = (a: MediaAsset): boolean => {
-  const author = (a.author ?? "").toLowerCase();
-  const title = (a.title ?? "").toLowerCase();
-  const desc = (a.description ?? "").toLowerCase();
-  return (
-    author.includes("critic") ||
-    author.includes("auditor") ||
-    title.includes("critic") ||
-    title.includes("certification") ||
-    title.includes("completeness") ||
-    title.includes("signoff") ||
-    desc.includes("critic") ||
-    desc.includes("completeness") ||
-    Boolean(a.metadata?.isCriticCertification)
-  );
-};
+const isWorkerSnapshot = (a: MediaAsset): boolean => readAssetStage(a) === "execution";
+
+const isCriticCertification = (a: MediaAsset): boolean => readAssetStage(a) === "critic";
+
+const isUnattributed = (a: MediaAsset): boolean => readAssetStage(a) === undefined;
 
 const getAssetIcon = (asset: MediaAsset): ReactNode => {
   if (isDiagram(asset)) return <IconHierarchy size={14} />;
@@ -222,6 +182,11 @@ const getTypeLabel = (asset: MediaAsset): string => {
   return asset.type ?? "image";
 };
 
+/**
+ * The pixel size the run measured, from whichever record states it. Nothing is read out of a
+ * title, a description or a file name: "…-1920x1080.png" is a name somebody chose, and a
+ * resolution chip built from it claims a measurement of the image that nobody took.
+ */
 const extractDimensions = (a: MediaAsset): { width: number; height: number } | undefined => {
   if (
     a.dimensions &&
@@ -249,14 +214,15 @@ const extractDimensions = (a: MediaAsset): { width: number; height: number } | u
       return { width: v.width, height: v.height };
     }
   }
-  const match = (a.description || a.title || a.url || "").match(/\b(\d{3,4})[x×](\d{3,4})\b/);
-  if (match && match[1] && match[2]) {
-    return { width: Number(match[1]), height: Number(match[2]) };
-  }
   return undefined;
 };
 
-const getInferredMime = (asset: MediaAsset): string => {
+/**
+ * The MIME type the asset declares, or the one its own file extension states. An asset that
+ * declares neither gets no MIME chip: "image/png" on an unknown file is a guess wearing a fact's
+ * clothes.
+ */
+const getInferredMime = (asset: MediaAsset): string | undefined => {
   if (asset.mimeType) return asset.mimeType;
   if (asset.metadata?.mimeType && typeof asset.metadata.mimeType === "string") {
     return asset.metadata.mimeType;
@@ -284,11 +250,11 @@ const getInferredMime = (asset: MediaAsset): string => {
   if (url.endsWith(".js") || url.endsWith(".jsx")) return "application/javascript";
   if (url.endsWith(".log") || isLog(asset)) return "text/plain";
   if (isMarkdown(asset)) return "text/markdown";
-  return asset.type ? `${asset.type}/raw` : "image/png";
+  return undefined;
 };
 
 /**
- * Assets and media gallery tab supporting Playwright E2E execution summaries,
+ * Assets and media gallery tab supporting browser test run summaries,
  * stage filters (Validation Evidence, Worker Snapshots, Critic Certifications),
  * interactive media filters (All, Screenshots, Diagrams, Documents, Logs),
  * thumbnail preview tiles with dimensions, MIME tags, author attribution,
@@ -332,6 +298,7 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   );
 
   const assets: MediaAsset[] = useMemo(() => {
+    const owned = readAssets(node);
     const list: MediaAsset[] = [];
     const seenIds = new Set<string>();
 
@@ -339,37 +306,15 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
       if (!a) return;
       const url = typeof a.url === "string" ? a.url.trim() : "";
       const id = a.id || url || `asset-${list.length}`;
-      if (!seenIds.has(id)) {
-        seenIds.add(id);
-        const dimensions = extractDimensions(a);
-        list.push({ ...a, id, dimensions: dimensions ?? a.dimensions });
-      }
+      if (seenIds.has(id)) return;
+      seenIds.add(id);
+      const dimensions = extractDimensions(a);
+      list.push({ ...a, id, dimensions: dimensions ?? a.dimensions });
     };
 
-    for (const a of node.mediaAssets ?? []) addAsset(a);
-    for (const a of node.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
+    for (const a of owned) addAsset(a);
 
-    const metaAssets = Array.isArray(node.metadata?.mediaAssets)
-      ? (node.metadata.mediaAssets as unknown as MediaAsset[])
-      : [];
-    for (const a of metaAssets) addAsset(a);
-
-    const metaShots = Array.isArray(node.metadata?.screenshots)
-      ? (node.metadata.screenshots as unknown as MediaAsset[])
-      : [];
-    for (const a of metaShots) addAsset({ ...a, type: a.type || "image" });
-
-    const generalAssets = Array.isArray(node.metadata?.assets)
-      ? (node.metadata.assets as unknown as MediaAsset[])
-      : [];
-    for (const a of generalAssets) addAsset(a);
-
-    const pwMetadata = node.metadata?.playwrightMetadata as unknown as
-      | PlaywrightMetadata
-      | undefined;
-    for (const a of pwMetadata?.screenshots ?? []) addAsset({ ...a, type: a.type || "image" });
-
-    // Collect screenshots from findings
+    // A finding may carry its evidence inline; it joins the gallery credited to its author.
     const findings = Array.isArray(node.metadata?.findings)
       ? (node.metadata.findings as unknown as Array<{
           validatorId?: string;
@@ -379,74 +324,33 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
       : [];
     for (const finding of findings) {
       for (const a of finding.screenshots ?? []) {
+        // The finding's own author when it named one; nothing invented when it did not.
+        const author = a.author ?? finding.validatorId ?? finding.author;
         addAsset({
           ...a,
           type: a.type || "image",
-          author: a.author || finding.validatorId || finding.author || "Validator",
-          metadata: { ...a.metadata, isValidationEvidence: true, validatorId: finding.validatorId },
+          ...(author === undefined ? {} : { author }),
+          metadata: {
+            ...a.metadata,
+            isValidationEvidence: true,
+            ...(finding.validatorId === undefined ? {} : { validatorId: finding.validatorId }),
+          },
         });
-      }
-    }
-
-    // Collect screenshots from findingDetails
-    const findingDetails = Array.isArray(node.metadata?.findingDetails)
-      ? (node.metadata.findingDetails as unknown as Array<{
-          validatorId?: string;
-          author?: string;
-          screenshots?: MediaAsset[];
-        }>)
-      : [];
-    for (const fd of findingDetails) {
-      for (const a of fd.screenshots ?? []) {
-        addAsset({
-          ...a,
-          type: a.type || "image",
-          author: a.author || fd.validatorId || fd.author || "Validator",
-          metadata: { ...a.metadata, isValidationEvidence: true, validatorId: fd.validatorId },
-        });
-      }
-    }
-
-    // Collect screenshots from gates
-    const gates = Array.isArray(node.metadata?.gates)
-      ? (node.metadata.gates as unknown as Array<{
-          author?: string;
-          screenshots?: MediaAsset[];
-        }>)
-      : [];
-    for (const gate of gates) {
-      for (const a of gate.screenshots ?? []) {
-        addAsset({
-          ...a,
-          type: a.type || "image",
-          author: a.author || "Gate Validator",
-          metadata: { ...a.metadata, isValidationEvidence: true },
-        });
-      }
-    }
-
-    // Collect screenshots from visualReport
-    const visualReport =
-      node.metadata?.visualReport && typeof node.metadata.visualReport === "object"
-        ? (node.metadata.visualReport as unknown as { screenshots?: MediaAsset[] })
-        : undefined;
-    if (visualReport?.screenshots && Array.isArray(visualReport.screenshots)) {
-      for (const a of visualReport.screenshots as MediaAsset[]) {
-        addAsset({ ...a, type: a.type || "image" });
       }
     }
 
     return list;
   }, [node]);
 
-  const playwright: PlaywrightMetadata | undefined = node.metadata
-    ?.playwrightMetadata as unknown as PlaywrightMetadata | undefined;
+  // Browser runs live on the node that owns them; nothing is read out of a metadata alias.
+  const browserRuns = useMemo(() => readBrowserTests(node), [node]);
 
   const filteredAssets = useMemo(() => {
     if (activeFilter === "all") return assets;
     if (activeFilter === "validation") return assets.filter(isValidationEvidence);
     if (activeFilter === "worker") return assets.filter(isWorkerSnapshot);
     if (activeFilter === "critic") return assets.filter(isCriticCertification);
+    if (activeFilter === "unattributed") return assets.filter(isUnattributed);
     if (activeFilter === "screenshots") return assets.filter(isScreenshot);
     if (activeFilter === "diagrams") return assets.filter(isDiagram);
     if (activeFilter === "documents") return assets.filter(isDocument);
@@ -457,6 +361,7 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
   const validationCount = useMemo(() => assets.filter(isValidationEvidence).length, [assets]);
   const workerCount = useMemo(() => assets.filter(isWorkerSnapshot).length, [assets]);
   const criticCount = useMemo(() => assets.filter(isCriticCertification).length, [assets]);
+  const unattributedCount = useMemo(() => assets.filter(isUnattributed).length, [assets]);
   const screenshotsCount = useMemo(() => assets.filter(isScreenshot).length, [assets]);
   const diagramsCount = useMemo(() => assets.filter(isDiagram).length, [assets]);
   const documentsCount = useMemo(() => assets.filter(isDocument).length, [assets]);
@@ -464,84 +369,7 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
 
   return (
     <div className="drawer-tab-content">
-      {playwright && (
-        <DrawerSection title="Playwright Test Suite Execution">
-          <div className="drawer-playwright-card">
-            <div className="drawer-playwright-header">
-              <span className="drawer-playwright-icon">
-                <IconBrowser size={16} />
-              </span>
-              <span className="drawer-playwright-title">
-                {playwright.testFile ?? "Automated E2E Suite"}
-              </span>
-              <span
-                className={`drawer-status-pill ${
-                  playwright.status === "passed"
-                    ? "drawer-status-pill--success"
-                    : playwright.status === "timedOut"
-                      ? "drawer-status-pill--warn"
-                      : "drawer-status-pill--error"
-                }`}
-              >
-                {playwright.status === "passed" ? (
-                  <>
-                    <IconCheck size={12} /> Passed
-                  </>
-                ) : playwright.status === "timedOut" ? (
-                  <>
-                    <IconClock size={12} /> Timed Out
-                  </>
-                ) : (
-                  <>
-                    <IconX size={12} /> {playwright.status ?? "Failed"}
-                  </>
-                )}
-              </span>
-            </div>
-
-            <div className="drawer-playwright-meta-grid">
-              {playwright.browser && (
-                <div className="drawer-metric">
-                  <span className="drawer-metric-label">Engine</span>
-                  <span className="drawer-metric-value">{playwright.browser}</span>
-                </div>
-              )}
-              {playwright.viewport && (
-                <div className="drawer-metric">
-                  <span className="drawer-metric-label">Viewport</span>
-                  <span className="drawer-metric-value">
-                    <IconDeviceDesktop
-                      size={12}
-                      style={{
-                        display: "inline",
-                        verticalAlign: "middle",
-                        marginRight: 4,
-                      }}
-                    />
-                    {playwright.viewport.width} &times; {playwright.viewport.height}
-                  </span>
-                </div>
-              )}
-              {typeof playwright.durationMs === "number" && (
-                <div className="drawer-metric">
-                  <span className="drawer-metric-label">Duration</span>
-                  <span className="drawer-metric-value">
-                    <IconClock
-                      size={12}
-                      style={{
-                        display: "inline",
-                        verticalAlign: "middle",
-                        marginRight: 4,
-                      }}
-                    />
-                    {(playwright.durationMs / 1000).toFixed(2)}s
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </DrawerSection>
-      )}
+      <BrowserRunsSection runs={browserRuns} />
 
       <DrawerSection title="Validator Media & Inspection Assets" count={assets.length}>
         {assets.length > 1 && (
@@ -578,6 +406,18 @@ export const AssetsTab: FC<AssetsTabProps> = memo(function AssetsTab({ node }) {
                 onClick={() => setActiveFilter("critic")}
               >
                 {`Critic Certifications (${criticCount})`}
+              </button>
+            )}
+            {unattributedCount > 0 && (
+              <button
+                type="button"
+                className={`drawer-filter-chip ${
+                  activeFilter === "unattributed" ? "is-active" : ""
+                }`}
+                onClick={() => setActiveFilter("unattributed")}
+                title="The run recorded no producing stage for these"
+              >
+                {`Producer unknown (${unattributedCount})`}
               </button>
             )}
             {screenshotsCount > 0 && (

@@ -123,6 +123,9 @@
   color: #93c5fd;
 }
 .drawer-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
@@ -131,11 +134,6 @@
   background-color: rgba(129, 140, 248, 0.14);
   border: 1px solid rgba(129, 140, 248, 0.32);
   color: #c7d2fe;
-}
-.drawer-model--harness {
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #a1a1aa;
 }
 .drawer-id {
   font-family: var(--font-mono);

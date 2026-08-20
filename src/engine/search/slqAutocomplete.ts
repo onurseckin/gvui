@@ -59,18 +59,10 @@ export const STANDARD_FIELDS: readonly SlqFieldDefinition[] = Object.freeze([
   {
     name: "model",
     aliases: ["llm", "harnessModel"],
+    // No baked-in vendor names: the only models worth suggesting are the ones the loaded dataset
+    // actually carries, which the dynamic pass below contributes.
     description: "LLM model powering the node agent",
     type: "string",
-    enumValues: [
-      "gemini-1.5-pro",
-      "gemini-1.5-flash",
-      "gemini-2.0-flash",
-      "claude-3-5-sonnet",
-      "claude-3-7-sonnet",
-      "gpt-4o",
-      "o1",
-      "o3-mini",
-    ],
     target: "node",
   },
   {

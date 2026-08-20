@@ -13,6 +13,7 @@ import type {
   TokenMetrics,
   ViewportRange,
 } from "./types";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 
 export function sanitizeNumber(
   val: unknown,
@@ -60,7 +61,11 @@ export function normalizeSpan(rawSpan: Partial<ProfileSpan>): ProfileSpan {
   }
   const duration = Math.max(0, endTime - startTime);
   const tokens = sanitizeTokenMetrics(rawSpan.tokens);
-  const costUsd = Math.max(0, sanitizeNumber(rawSpan.costUsd, 0));
+  // Recorded dollars only: a span that reported none keeps none rather than showing a firm $0.
+  const costUsd =
+    typeof rawSpan.costUsd === "number" && Number.isFinite(rawSpan.costUsd)
+      ? Math.max(0, rawSpan.costUsd)
+      : undefined;
   const metadata =
     typeof rawSpan.metadata === "object" && rawSpan.metadata !== null
       ? { ...rawSpan.metadata }
@@ -218,7 +223,7 @@ export function flattenSpanTree(
       duration: node.duration,
       selfTime,
       tokens: node.tokens,
-      costUsd: node.costUsd ?? 0,
+      costUsd: node.costUsd,
       depth,
       xPct: 0,
       widthPct: 100,
@@ -399,7 +404,6 @@ export function computeMetrics(spans: ProfileSpan[]): FlamegraphMetrics {
         reasoningTokens: 0,
         totalTokens: 0,
       },
-      totalCostUsd: 0,
       maxDepth: 0,
       concurrencyPeak: 0,
       latencyP50: 0,
@@ -439,7 +443,8 @@ export function computeMetrics(spans: ProfileSpan[]): FlamegraphMetrics {
   let completionTokens = 0;
   let reasoningTokens = 0;
   let totalTokens = 0;
-  let totalCostUsd = 0;
+  // Stays undefined until a span reports dollars, so an unpriced profile totals to nothing at all.
+  let totalCostUsd: number | undefined;
 
   const latencies: number[] = [];
   const statusCounts: Record<SpanStatus, number> = {
@@ -491,7 +496,7 @@ export function computeMetrics(spans: ProfileSpan[]): FlamegraphMetrics {
     completionTokens += span.tokens.completionTokens;
     reasoningTokens += span.tokens.reasoningTokens;
     totalTokens += span.tokens.totalTokens;
-    totalCostUsd += span.costUsd ?? 0;
+    if (span.costUsd !== undefined) totalCostUsd = (totalCostUsd ?? 0) + span.costUsd;
 
     latencies.push(span.duration);
 
@@ -513,7 +518,6 @@ export function computeMetrics(spans: ProfileSpan[]): FlamegraphMetrics {
           reasoningTokens: 0,
           totalTokens: 0,
         },
-        costUsd: 0,
       };
     }
     agentBreakdown[aId].spanCount += 1;
@@ -522,7 +526,9 @@ export function computeMetrics(spans: ProfileSpan[]): FlamegraphMetrics {
     agentBreakdown[aId].tokens.completionTokens += span.tokens.completionTokens;
     agentBreakdown[aId].tokens.reasoningTokens += span.tokens.reasoningTokens;
     agentBreakdown[aId].tokens.totalTokens += span.tokens.totalTokens;
-    agentBreakdown[aId].costUsd += span.costUsd ?? 0;
+    if (span.costUsd !== undefined) {
+      agentBreakdown[aId].costUsd = (agentBreakdown[aId].costUsd ?? 0) + span.costUsd;
+    }
 
     if (span.duration > 0) {
       sweepEvents.push({ time: span.startTime, delta: 1 });
@@ -765,7 +771,8 @@ export function formatTimestamp(ms: number): string {
 /**
  * Format USD cost.
  */
-export function formatCostUsd(usd: number): string {
+export function formatCostUsd(usd: number | undefined): string {
+  if (usd === undefined) return UNKNOWN_LABEL;
   if (typeof usd !== "number" || isNaN(usd) || usd <= 0) return "$0.0000";
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
   return `$${usd.toFixed(2)}`;

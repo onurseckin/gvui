@@ -231,13 +231,17 @@
   gap: 6px;
   padding: 0 8px;
   border-radius: 6px;
-  border: 1.5px solid var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
-  background: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
+  border: 1.5px solid
+    var(--edge-kind-badge-border, var(--current-edge-stroke, rgba(255, 255, 255, 0.15)));
+  background: var(
+    --edge-kind-badge-bg,
+    color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%)
+  );
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--edge-text-color, #f4f4f5);
+  color: var(--edge-kind-text, #f4f4f5);
   user-select: none;
   line-height: 1.2;
   text-align: center;
@@ -245,7 +249,7 @@
   pointer-events: auto;
   will-change: transform;
   outline: none;
-  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+  --current-edge-stroke: var(--edge-kind-stroke, #3f3f46);
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -275,34 +279,10 @@
   border-width: 2px;
 }
 
-.graph-edge-badge-html.kind-spawn {
-  --edge-kind-stroke: #06b6d4;
-}
-
-.graph-edge-badge-html.kind-sequence {
-  --edge-kind-stroke: #3f3f46;
-}
-
-.graph-edge-badge-html.kind-data {
-  --edge-kind-stroke: #6366f1;
-}
-
-.graph-edge-badge-html.kind-dependency {
-  --edge-kind-stroke: #64748b;
-}
-
-.graph-edge-badge-html.kind-loop,
-.graph-edge-badge-html.cycle {
-  --edge-kind-stroke: #f43f5e;
-}
-
-.graph-edge-badge-html.kind-gate {
-  --edge-kind-stroke: #10b981;
-}
-
-.graph-edge-badge-html.kind-critic {
-  --edge-kind-stroke: #eab308;
-}
+/*
+ * No per-kind blocks here on purpose: GraphBadgeLayer stamps --edge-kind-* inline from
+ * EDGE_KIND_DESCRIPTORS, so a badge picks up a new kind's treatment without this file being touched.
+ */
 
 .graph-edge-badge-html .edge-step-badge {
   font-size: 9px;
@@ -341,4 +321,24 @@
   padding: 0 3px;
   border-radius: 2px;
   background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Dataset regions: how deep the excursion runs, and the one control a reader has over it. */
+.group-header-depth {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 5px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.35);
+  color: #a1a1aa;
+  white-space: nowrap;
+}
+
+.group-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
 }

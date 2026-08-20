@@ -106,7 +106,7 @@ export function calculateNodeRisk(
 
   // 5. Model & Reasoning Complexity Risk (0.0 - 1.0)
   let complexityRisk = 0;
-  if (node.tier === "l") complexityRisk += 0.4;
+  if (node.telemetry?.modelTier?.value === "l") complexityRisk += 0.4;
   if (node.hostAgent?.reasoningEffort === "high") complexityRisk += 0.3;
   if (node.tools && node.tools.length > 4) complexityRisk += 0.3;
   complexityRisk = clamp(complexityRisk, 0, 1);

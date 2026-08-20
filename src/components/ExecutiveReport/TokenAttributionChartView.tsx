@@ -1,16 +1,11 @@
 import type { FC } from "react";
+import { formatUsd } from "../../engine/reporting/formatters";
 import type { TokenAttribution } from "../../engine/reporting/types";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 
 export interface TokenAttributionChartViewProps {
   attribution: TokenAttribution;
   theme?: "dark" | "light";
-}
-
-function formatUsd(cost: number): string {
-  if (cost < 0.01 && cost > 0) {
-    return `$${cost.toFixed(4)}`;
-  }
-  return `$${cost.toFixed(2)}`;
 }
 
 export const TokenAttributionChartView: FC<TokenAttributionChartViewProps> = ({ attribution }) => {
@@ -137,8 +132,10 @@ export const TokenAttributionChartView: FC<TokenAttributionChartViewProps> = ({ 
                     <div style={{ fontSize: "10px", color: "#71717a" }}>{node.nodeId}</div>
                   </td>
                   <td>
-                    {node.model || "standard"}{" "}
-                    <span style={{ fontSize: "10px", color: "#a1a1aa" }}>({node.tier || "M"})</span>
+                    {node.model || UNKNOWN_LABEL}{" "}
+                    <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
+                      ({node.tier || UNKNOWN_LABEL})
+                    </span>
                   </td>
                   <td>{node.tokensIn.toLocaleString()}</td>
                   <td>{node.tokensOut.toLocaleString()}</td>

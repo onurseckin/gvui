@@ -13,6 +13,7 @@ import {
 } from "@tabler/icons-react";
 import type { FC } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import type { FileMode, FileRef, GraphNodeData } from "../../../types/graphData";
 import { DiffViewer, type DiffStats, calculateDiffStats } from "../DiffViewer";
 import { DrawerSection } from "../DrawerSection";
@@ -292,7 +293,7 @@ export const DiffsTab: FC<DiffsTabProps> = memo(function DiffsTab({ node }) {
   // Filtered files by search and mode
   const filteredFiles = useMemo(() => {
     return activeFiles.filter((file) => {
-      if (selectedMode !== "all" && (file.mode ?? "write") !== selectedMode) {
+      if (selectedMode !== "all" && (file.mode ?? UNKNOWN_LABEL) !== selectedMode) {
         return false;
       }
       if (searchQuery.trim()) {
@@ -381,8 +382,10 @@ export const DiffsTab: FC<DiffsTabProps> = memo(function DiffsTab({ node }) {
       delete: 0,
       read: 0,
     };
+    // A file whose mode the run never recorded is counted apart: read and write are not the same
+    // claim, and guessing one of them for an unrecorded file is the guess that matters most here.
     for (const f of activeFiles) {
-      const m = f.mode ?? "write";
+      const m = f.mode ?? UNKNOWN_LABEL;
       counts[m] = (counts[m] ?? 0) + 1;
     }
     return counts;
@@ -623,6 +626,18 @@ export const DiffsTab: FC<DiffsTabProps> = memo(function DiffsTab({ node }) {
                     Deleted ({modeCounts.delete})
                   </button>
                 )}
+                {(modeCounts[UNKNOWN_LABEL] ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    className={`drawer-mode-filter-btn ${
+                      selectedMode === UNKNOWN_LABEL ? "is-active" : ""
+                    }`}
+                    onClick={() => setSelectedMode(UNKNOWN_LABEL)}
+                    title="The run recorded no mode for these files"
+                  >
+                    {`Unrecorded mode (${modeCounts[UNKNOWN_LABEL]})`}
+                  </button>
+                )}
               </div>
 
               <div className="drawer-diff-buttons-group">
@@ -697,8 +712,8 @@ export const DiffsTab: FC<DiffsTabProps> = memo(function DiffsTab({ node }) {
                         }
                       }}
                     >
-                      <span className={`drawer-file-mode mode-${file.mode ?? "write"}`}>
-                        {file.mode ?? "write"}
+                      <span className={`drawer-file-mode mode-${file.mode ?? UNKNOWN_LABEL}`}>
+                        {file.mode ?? UNKNOWN_LABEL}
                       </span>
                       <code className="drawer-tree-path">{file.path}</code>
                       {hasFileChurn && (

@@ -442,6 +442,7 @@ describe("Flamegraph Engine & Pure Computation", () => {
       expect(formatTimestamp(120)).toBe("+120ms");
       expect(formatTimestamp(4500)).toBe("+4.50s");
 
+      expect(formatCostUsd(undefined)).toBe("unknown");
       expect(formatCostUsd(0)).toBe("$0.0000");
       expect(formatCostUsd(0.0025)).toBe("$0.0025");
       expect(formatCostUsd(1.5)).toBe("$1.50");

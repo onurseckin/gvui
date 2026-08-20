@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
-import type { PositionedEdge } from "../../../types/graphData";
+import { EDGE_KINDS, type PositionedEdge } from "../../../types/graphData";
+import { describeEdgeKind, GENERATED_EDGE_MARKER_ID } from "./edgeKinds";
 import { GraphEdge } from "./index";
 
 describe("GraphEdge Primitive", () => {
@@ -171,86 +172,67 @@ describe("GraphEdge Primitive", () => {
     expect(html).toContain("edge-badge-group");
   });
 
-  it("applies sourceAccentColor as --edge-source-accent custom property and passes to badge", () => {
+  it("colours an edge from its own kind, not from the node it left", () => {
+    const pushbackEdge: PositionedEdge = { ...baseEdge, kind: "pushback", label: "defect" };
+    const signoffEdge: PositionedEdge = { ...baseEdge, kind: "signoff", label: "approved" };
+
+    const pushbackHtml = renderToString(
+      <svg>
+        <GraphEdge edge={pushbackEdge} />
+      </svg>,
+    );
+    const signoffHtml = renderToString(
+      <svg>
+        <GraphEdge edge={signoffEdge} />
+      </svg>,
+    );
+
+    // Same source node, opposite meanings: the treatments must not match.
+    expect(pushbackHtml).toContain("--edge-kind-stroke:#f43f5e");
+    expect(pushbackHtml).toContain('marker-end="url(#edge-arrowhead-pushback)"');
+    expect(signoffHtml).toContain("--edge-kind-stroke:#eab308");
+    expect(signoffHtml).toContain('marker-end="url(#edge-arrowhead-signoff)"');
+  });
+
+  it("honours a dataset-supplied per-edge accent", () => {
     const html = renderToString(
       <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#a855f7" />
+        <GraphEdge edge={{ ...baseEdge, kind: "data", accent: "#a855f7" }} />
       </svg>,
     );
 
-    expect(html).toContain("--edge-source-accent:#a855f7");
+    expect(html).toContain("--edge-kind-stroke:#a855f7");
   });
 
-  it("resolves marker ID matching source node archetype accent color", () => {
-    // Prompt source (#8b5cf6)
-    const promptHtml = renderToString(
+  it("distinguishes a probe from a pushback on the canvas", () => {
+    const probeHtml = renderToString(
       <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#8b5cf6" />
+        <GraphEdge edge={{ ...baseEdge, kind: "probe", label: "prove it" }} />
       </svg>,
     );
-    expect(promptHtml).toContain('marker-end="url(#edge-arrowhead-prompt)"');
 
-    // Planner / Orchestrator source (#3b82f6)
-    const plannerHtml = renderToString(
-      <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#3b82f6" />
-      </svg>,
-    );
-    expect(plannerHtml).toContain('marker-end="url(#edge-arrowhead-planner)"');
-
-    // Worker source (#06b6d4)
-    const workerHtml = renderToString(
-      <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#06b6d4" />
-      </svg>,
-    );
-    expect(workerHtml).toContain('marker-end="url(#edge-arrowhead-worker)"');
-
-    // Gate source (#10b981)
-    const gateHtml = renderToString(
-      <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#10b981" />
-      </svg>,
-    );
-    expect(gateHtml).toContain('marker-end="url(#edge-arrowhead-gate)"');
-
-    // Critic source (#818cf8)
-    const criticHtml = renderToString(
-      <svg>
-        <GraphEdge edge={baseEdge} sourceAccentColor="#818cf8" />
-      </svg>,
-    );
-    expect(criticHtml).toContain('marker-end="url(#edge-arrowhead-critic)"');
+    expect(probeHtml).toContain("kind-probe");
+    expect(probeHtml).toContain('marker-end="url(#edge-arrowhead-probe)"');
+    expect(probeHtml).not.toContain("#f43f5e");
   });
 
-  it("inherits departing source node accent for cyclic edges and arrows without hardcoded yellow", () => {
-    const cycleEdge: PositionedEdge = {
+  it("keeps a declared kind on a cyclic edge", () => {
+    const cyclePushback: PositionedEdge = {
       ...baseEdge,
+      kind: "pushback",
       isCycle: true,
       label: "Validator Pushback",
     };
 
-    // Cycle departing from gate node (#10b981)
-    const htmlGateCycle = renderToString(
+    const html = renderToString(
       <svg>
-        <GraphEdge edge={cycleEdge} sourceAccentColor="#10b981" />
+        <GraphEdge edge={cyclePushback} />
       </svg>,
     );
 
-    expect(htmlGateCycle).toContain("--edge-source-accent:#10b981");
-    expect(htmlGateCycle).toContain('marker-end="url(#edge-arrowhead-gate)"');
-    expect(htmlGateCycle).not.toContain("#f59e0b");
-
-    // Cycle departing from worker node (#06b6d4)
-    const htmlWorkerCycle = renderToString(
-      <svg>
-        <GraphEdge edge={cycleEdge} sourceAccentColor="#06b6d4" />
-      </svg>,
-    );
-
-    expect(htmlWorkerCycle).toContain("--edge-source-accent:#06b6d4");
-    expect(htmlWorkerCycle).toContain('marker-end="url(#edge-arrowhead-worker)"');
-    expect(htmlWorkerCycle).not.toContain("#f59e0b");
+    expect(html).toContain("kind-pushback");
+    expect(html).toContain('marker-end="url(#edge-arrowhead-pushback)"');
+    expect(html).toContain("cycle");
   });
 
   it("renders ports when showPorts is true", () => {
@@ -574,28 +556,29 @@ describe("GraphEdge Primitive", () => {
     expect(clickedEdgeId).toBe("e-test");
   });
 
-  it("resolves markers for alias semantic kinds (dispatch, handoff, pushback, validation, signoff)", () => {
-    const aliases = [
-      { kind: "dispatch", marker: "edge-arrowhead-spawn" },
-      { kind: "handoff", marker: "edge-arrowhead-data" },
-      { kind: "pushback", marker: "edge-arrowhead-loop" },
-      { kind: "validation", marker: "edge-arrowhead-gate" },
-      { kind: "signoff", marker: "edge-arrowhead-critic" },
-    ];
-
-    for (const item of aliases) {
-      const edge: PositionedEdge = {
-        ...baseEdge,
-        kind: item.kind as unknown as PositionedEdge["kind"],
-      };
-
+  it("gives every preset kind its own arrowhead", () => {
+    for (const kind of EDGE_KINDS) {
       const html = renderToString(
         <svg>
-          <GraphEdge edge={edge} />
+          <GraphEdge edge={{ ...baseEdge, kind }} />
         </svg>,
       );
 
-      expect(html).toContain(`marker-end="url(#${item.marker})"`);
+      expect(html).toContain(`marker-end="url(#edge-arrowhead-${kind})"`);
+      expect(html).toContain(`kind-${kind}`);
     }
+  });
+
+  it("draws a kind it has no preset for as itself, in its own generated colour", () => {
+    const html = renderToString(
+      <svg>
+        <GraphEdge edge={{ ...baseEdge, kind: "supersedes" }} />
+      </svg>,
+    );
+
+    expect(html).toContain("kind-supersedes");
+    expect(html).not.toContain("kind-sequence");
+    expect(html).toContain(`marker-end="url(#${GENERATED_EDGE_MARKER_ID})"`);
+    expect(html).toContain(`--edge-kind-stroke:${describeEdgeKind("supersedes").accent}`);
   });
 });

@@ -141,7 +141,8 @@ export interface LensTooltipData {
     label: string;
     formatted: string;
     unit?: string;
-    raw: number;
+    /** Absent when the node recorded no value for the metric; `formatted` says so in words. */
+    raw?: number;
   };
   factors: LensTooltipFactor[];
   summaryNote?: string;
@@ -153,7 +154,8 @@ export interface LensTooltipData {
 
 export interface NodeLensOverlay {
   nodeId: string;
-  rawValue: number;
+  /** Absent when the node recorded nothing for the active metric. */
+  rawValue?: number;
   normalizedValue: number; // 0.0 to 1.0
   color: string;
   fillColor: string;
@@ -174,13 +176,15 @@ export interface NodeLensOverlay {
   riskScore?: number;
   riskLevel?: "low" | "moderate" | "high" | "critical";
   tokenBreakdown?: {
-    promptTokens: number;
-    completionTokens: number;
-    reasoningTokens: number;
-    cacheReadTokens: number;
-    cacheWriteTokens: number;
-    totalTokens: number;
-    costUsd: number;
+    /** Each count is absent unless the dataset recorded it; none of them default to zero. */
+    promptTokens?: number;
+    completionTokens?: number;
+    reasoningTokens?: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+    totalTokens?: number;
+    /** Absent unless the dataset recorded a dollar figure for this node. */
+    costUsd?: number;
   };
 }
 
@@ -188,7 +192,8 @@ export interface EdgeLensOverlay {
   edgeId: string;
   source: string;
   target: string;
-  rawValue: number;
+  /** Absent when the edge recorded nothing for the active metric. */
+  rawValue?: number;
   normalizedValue: number; // 0.0 to 1.0
   color: string;
   glowColor: string;
@@ -261,14 +266,17 @@ export interface NodeRiskDetail {
 
 export interface NodeTokenDetail {
   nodeId: string;
-  promptTokens: number;
-  completionTokens: number;
-  reasoningTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  costUsd: number;
-  costIntensity: number; // USD per second or tokens per ms
+  /** Every count is absent unless the dataset recorded it. A zero here is a measurement. */
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  cacheCreationTokens?: number;
+  cacheReadTokens?: number;
+  totalTokens?: number;
+  /** Recorded dollars only. Absent when the dataset carries no cost for this node. */
+  costUsd?: number;
+  /** Recorded cost spread over recorded duration. Absent whenever the cost is. */
+  costIntensity?: number;
   tier: ModelTier | "unknown";
   isTopConsumer: boolean; // Top 20% Pareto
 }

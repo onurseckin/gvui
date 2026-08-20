@@ -2,7 +2,7 @@ import type { FC } from "react";
 import { useState } from "react";
 import { IconCoins } from "@tabler/icons-react";
 import type { TokenDistributionMetrics } from "../../store/useAnalyticsStore";
-import { formatCost, formatTokens } from "../../primitives/nodes/NodeCard/nodeCardModel";
+import { formatRecordedCost, formatTokens } from "../../primitives/nodes/NodeCard/nodeCardModel";
 
 export interface TokenDistributionCardProps {
   distribution: TokenDistributionMetrics;
@@ -13,7 +13,6 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
     totalCacheReadTokens,
     totalTokens,
     totalCostUsd,
-    cacheSavingsUsd,
     cacheEfficiencyPercent,
     byModel,
     byRole,
@@ -21,6 +20,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
   } = distribution;
 
   const [activeTab, setActiveTab] = useState<"models" | "roles" | "tiers">("models");
+  const costLabel = formatRecordedCost(totalCostUsd);
 
   return (
     <div className="analytics-card" data-testid="token-distribution-card">
@@ -30,7 +30,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
           Token Footprint & Cost Distribution
         </h3>
         <span className="analytics-card-badge">
-          {formatTokens(totalTokens)} tok · {formatCost(totalCostUsd)}
+          {formatTokens(totalTokens)} tok · {costLabel}
         </span>
       </div>
 
@@ -72,7 +72,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
           </div>
         </div>
 
-        {/* Cache Savings Banner */}
+        {/* Cache Efficiency Banner */}
         {totalCacheReadTokens > 0 && (
           <div
             style={{
@@ -90,7 +90,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
               ⚡ Prompt Cache Efficiency: {cacheEfficiencyPercent.toFixed(1)}%
             </span>
             <span style={{ color: "#67e8f9", fontWeight: 700 }}>
-              Saved ~{formatCost(cacheSavingsUsd)}
+              {formatTokens(totalCacheReadTokens)} tok read from cache
             </span>
           </div>
         )}
@@ -118,7 +118,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
             className={`analytics-filter-pill ${activeTab === "tiers" ? "active" : ""}`}
             onClick={() => setActiveTab("tiers")}
           >
-            Tier Simulation
+            By Tier ({byTier.length})
           </button>
         </div>
 
@@ -151,7 +151,7 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
                     </td>
                     <td>{m.nodeCount}</td>
                     <td>{formatTokens(m.totalTokens)}</td>
-                    <td>{formatCost(m.costUsd)}</td>
+                    <td>{formatRecordedCost(m.costUsd)}</td>
                     <td>{m.percentageOfTokens.toFixed(1)}%</td>
                   </tr>
                 ))
@@ -177,46 +177,44 @@ export const TokenDistributionCard: FC<TokenDistributionCardProps> = ({ distribu
                   <td style={{ fontWeight: 600 }}>{r.label}</td>
                   <td>{r.tokens.toLocaleString()}</td>
                   <td>{r.percentage.toFixed(1)}%</td>
-                  <td>{formatCost(r.costUsd)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
 
-        {/* Table 3: By Tier Simulation */}
+        {/* Table 3: By Reported Tier */}
         {activeTab === "tiers" && (
-          <div>
-            <table className="token-models-table">
-              <thead>
+          <table className="token-models-table">
+            <thead>
+              <tr>
+                <th>Model Tier</th>
+                <th>Nodes</th>
+                <th>Tokens</th>
+                <th>Recorded Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byTier.length === 0 ? (
                 <tr>
-                  <th>Model Tier</th>
-                  <th>Simulated Total Cost</th>
-                  <th>Variance vs Actual</th>
+                  <td colSpan={4} style={{ textAlign: "center", color: "#71717a" }}>
+                    No tier telemetry recorded
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {byTier.map((t) => {
-                  const diff = t.simulatedCostUsd - totalCostUsd;
-                  return (
-                    <tr key={`tier-sim-${t.tier}`}>
-                      <td>
-                        <span className={`tier-badge ${t.tier}`} style={{ marginRight: 6 }}>
-                          {t.tierName}
-                        </span>
-                        <span>{t.label}</span>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{formatCost(t.simulatedCostUsd)}</td>
-                      <td style={{ color: diff <= 0 ? "#10b981" : "#f59e0b" }}>
-                        {diff <= 0 ? "-" : "+"}
-                        {formatCost(Math.abs(diff))}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              ) : (
+                byTier.map((t) => (
+                  <tr key={`tier-row-${t.tier}`}>
+                    <td>
+                      <span className={`tier-badge ${t.tier}`}>{t.tier.toUpperCase()}</span>
+                    </td>
+                    <td>{t.nodeCount}</td>
+                    <td>{formatTokens(t.tokens)}</td>
+                    <td>{formatRecordedCost(t.costUsd)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

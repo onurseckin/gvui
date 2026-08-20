@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { diffStates } from "../../store/useHistoryReplayStore";
 import type { ReplayEvent, StateDiffResult } from "./types";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 
 export interface StateDiffModalProps {
   isOpen: boolean;
@@ -245,8 +246,8 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         </td>
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{n.id}</td>
                         <td>{n.name}</td>
-                        <td>{n.kind ?? "agent"}</td>
-                        <td>{n.status ?? "pending"}</td>
+                        <td>{n.kind ?? UNKNOWN_LABEL}</td>
+                        <td>{n.status ?? UNKNOWN_LABEL}</td>
                       </tr>
                     ))}
                     {removedNodes.map((n) => (
@@ -256,8 +257,8 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         </td>
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{n.id}</td>
                         <td>{n.name}</td>
-                        <td>{n.kind ?? "agent"}</td>
-                        <td>{n.status ?? "pending"}</td>
+                        <td>{n.kind ?? UNKNOWN_LABEL}</td>
+                        <td>{n.status ?? UNKNOWN_LABEL}</td>
                       </tr>
                     ))}
                     {modifiedNodes.map((m) => (
@@ -265,7 +266,7 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         <td>MODIFIED</td>
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{m.nodeId}</td>
                         <td>{m.after.name}</td>
-                        <td>{m.after.kind ?? "agent"}</td>
+                        <td>{m.after.kind ?? UNKNOWN_LABEL}</td>
                         <td>
                           {m.fromStatus} →{" "}
                           <strong
@@ -318,7 +319,7 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{e.id}</td>
                         <td>{e.source}</td>
                         <td>{e.target}</td>
-                        <td>{e.kind ?? e.label ?? "sequence"}</td>
+                        <td>{e.kind ?? e.label ?? UNKNOWN_LABEL}</td>
                       </tr>
                     ))}
                     {removedEdges.map((e) => (
@@ -329,7 +330,7 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{e.id}</td>
                         <td>{e.source}</td>
                         <td>{e.target}</td>
-                        <td>{e.kind ?? e.label ?? "sequence"}</td>
+                        <td>{e.kind ?? e.label ?? UNKNOWN_LABEL}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -364,7 +365,7 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         </td>
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{l.taskId}</td>
                         <td>{l.agentId}</td>
-                        <td>{l.role ?? "implementer"}</td>
+                        <td>{l.role ?? UNKNOWN_LABEL}</td>
                         <td>{l.issuedAt ? new Date(l.issuedAt).toLocaleTimeString() : "-"}</td>
                       </tr>
                     ))}
@@ -373,7 +374,7 @@ export const StateDiffModal: FC<StateDiffModalProps> = memo(function StateDiffMo
                         <td>RELEASED</td>
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{l.taskId}</td>
                         <td>{l.agentId}</td>
-                        <td>{l.role ?? "implementer"}</td>
+                        <td>{l.role ?? UNKNOWN_LABEL}</td>
                         <td>{l.issuedAt ? new Date(l.issuedAt).toLocaleTimeString() : "-"}</td>
                       </tr>
                     ))}

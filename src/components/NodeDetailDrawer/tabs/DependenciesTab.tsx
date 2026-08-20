@@ -13,6 +13,7 @@ import type { FC } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { describeNodeKind, describeNodeStatus } from "../../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../../state/useGraphStore";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import type { GraphDataset, GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
 import { copyToClipboard, formatDuration, formatTokens } from "../streamUtils";
@@ -51,8 +52,8 @@ export function formatImpactReport(analysis: GraphAnalysisResult): string {
   const lines: string[] = [];
 
   lines.push(`# Impact & Dependency Analysis: ${focusNode.name} (${focusNode.id})`);
-  lines.push(`- **Status:** ${focusNode.status ?? "pending"}`);
-  lines.push(`- **Kind:** ${focusNode.kind ?? "agent"}`);
+  lines.push(`- **Status:** ${focusNode.status ?? UNKNOWN_LABEL}`);
+  lines.push(`- **Kind:** ${focusNode.kind ?? UNKNOWN_LABEL}`);
   lines.push(`- **Topological Depth:** ${topologicalDepth}`);
   lines.push(`- **Topological Height:** ${topologicalHeight}`);
   lines.push(`- **Direct Prerequisites:** ${directPrerequisites.length}`);
@@ -60,8 +61,20 @@ export function formatImpactReport(analysis: GraphAnalysisResult): string {
   lines.push(
     `- **Transitive Blast Radius:** ${blastRadius.totalAffectedNodes} nodes (${blastRadius.severity.toUpperCase()} severity)`,
   );
-  lines.push(`- **Affected Tokens:** ${formatTokens(blastRadius.affectedTokens)}`);
-  lines.push(`- **Affected Duration:** ${formatDuration(blastRadius.affectedDurationMs)}`);
+  // A blast radius where nobody reported a measurement has no total, so the report says so rather
+  // than printing a zero the dataset never carried.
+  lines.push(
+    `- **Affected Tokens:** ${
+      blastRadius.affectedTokens > 0 ? formatTokens(blastRadius.affectedTokens) : UNKNOWN_LABEL
+    }`,
+  );
+  lines.push(
+    `- **Affected Duration:** ${
+      blastRadius.affectedDurationMs > 0
+        ? formatDuration(blastRadius.affectedDurationMs)
+        : UNKNOWN_LABEL
+    }`,
+  );
 
   if (hasCycle) {
     lines.push(`\n## ⚠️ Circular Dependencies Detected`);
@@ -74,7 +87,9 @@ export function formatImpactReport(analysis: GraphAnalysisResult): string {
     lines.push(`\n## 🛑 Root Cause Blocker Chain`);
     for (const b of blockerChain) {
       lines.push(
-        `- **${b.nodeName}** (${b.nodeId}) [${b.status}]: ${b.failureReason ?? "No failure message"}`,
+        `- **${b.nodeName}** (${b.nodeId}) [${b.status ?? UNKNOWN_LABEL}]: ${
+          b.failureReason ?? "No failure message"
+        }`,
       );
     }
   }
@@ -82,14 +97,18 @@ export function formatImpactReport(analysis: GraphAnalysisResult): string {
   if (directPrerequisites.length > 0) {
     lines.push(`\n## Direct Prerequisites (Upstream)`);
     for (const p of directPrerequisites) {
-      lines.push(`- [${p.name}] (${p.id}) - Kind: ${p.kind}, Status: ${p.status}`);
+      lines.push(
+        `- [${p.name}] (${p.id}) - Kind: ${p.kind ?? UNKNOWN_LABEL}, Status: ${p.status ?? UNKNOWN_LABEL}`,
+      );
     }
   }
 
   if (directDependents.length > 0) {
     lines.push(`\n## Direct Dependents (Downstream)`);
     for (const d of directDependents) {
-      lines.push(`- [${d.name}] (${d.id}) - Kind: ${d.kind}, Status: ${d.status}`);
+      lines.push(
+        `- [${d.name}] (${d.id}) - Kind: ${d.kind ?? UNKNOWN_LABEL}, Status: ${d.status ?? UNKNOWN_LABEL}`,
+      );
     }
   }
 
@@ -306,8 +325,12 @@ export const DependenciesTab: FC<DependenciesTabProps> = memo(function Dependenc
                         </span>
                       )}
                       <span className="drawer-blocker-name">{b.nodeName}</span>
-                      <span className={`drawer-blocker-status drawer-blocker-status--${b.status}`}>
-                        {b.status}
+                      <span
+                        className={`drawer-blocker-status drawer-blocker-status--${
+                          b.status ?? "unknown"
+                        }`}
+                      >
+                        {b.status ?? UNKNOWN_LABEL}
                       </span>
                     </button>
                     {b.failureReason && (

@@ -1,6 +1,6 @@
 import type { ModelTier, PositionedEdge, PositionedNode } from "../../../types/graphData";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import { evaluateColorRamp, normalizeValue, resolveColorStops, rgbaString } from "./colorRamps";
-import { extractNodeHeatmapValue } from "./heatmapLens";
 import type {
   EdgeLensOverlay,
   HistogramBucket,
@@ -14,91 +14,68 @@ import type {
 } from "./types";
 
 // ============================================================================
-// Model Tier Pricing Constants
-// ============================================================================
-
-export interface TierPricing {
-  promptUsdPer1M: number;
-  completionUsdPer1M: number;
-  reasoningUsdPer1M: number;
-  cacheWriteUsdPer1M: number;
-  cacheReadUsdPer1M: number;
-}
-
-export const TIER_PRICING: Readonly<Record<ModelTier | "unknown", TierPricing>> = Object.freeze({
-  xs: {
-    promptUsdPer1M: 0.15,
-    completionUsdPer1M: 0.6,
-    reasoningUsdPer1M: 0.6,
-    cacheWriteUsdPer1M: 0.1875,
-    cacheReadUsdPer1M: 0.0375,
-  },
-  s: {
-    promptUsdPer1M: 0.5,
-    completionUsdPer1M: 1.5,
-    reasoningUsdPer1M: 1.5,
-    cacheWriteUsdPer1M: 0.625,
-    cacheReadUsdPer1M: 0.125,
-  },
-  m: {
-    promptUsdPer1M: 3.0,
-    completionUsdPer1M: 15.0,
-    reasoningUsdPer1M: 15.0,
-    cacheWriteUsdPer1M: 3.75,
-    cacheReadUsdPer1M: 0.3,
-  },
-  l: {
-    promptUsdPer1M: 15.0,
-    completionUsdPer1M: 75.0,
-    reasoningUsdPer1M: 75.0,
-    cacheWriteUsdPer1M: 18.75,
-    cacheReadUsdPer1M: 1.5,
-  },
-  unknown: {
-    promptUsdPer1M: 1.0,
-    completionUsdPer1M: 3.0,
-    reasoningUsdPer1M: 3.0,
-    cacheWriteUsdPer1M: 1.25,
-    cacheReadUsdPer1M: 0.25,
-  },
-});
-
-// ============================================================================
 // Token & Cost Extraction Utilities
 // ============================================================================
 
+/**
+ * Host-reported tier only. A tier is never derived from a model name: that would dress a guess up
+ * as a measurement, and the chip it feeds is indistinguishable from a reported one.
+ */
+function resolveReportedTier(node: PositionedNode): ModelTier | "unknown" {
+  const reported = node.telemetry?.modelTier?.value ?? node.hostAgent?.tier;
+  if (typeof reported !== "string") return "unknown";
+  const normalized = reported.toLowerCase();
+  if (normalized === "xs" || normalized === "s" || normalized === "m" || normalized === "l") {
+    return normalized;
+  }
+  return "unknown";
+}
+
+/** Wall duration exactly as the run recorded it, or nothing. */
+function readRecordedDurationMs(node: PositionedNode): number | undefined {
+  const candidates = [node.metrics?.durationMs, node.metrics?.timingBreakdown?.wallDurationMs];
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+/**
+ * Recorded counts only. A node that reported nothing gets no number at all: summing five absences
+ * into a zero would report a measurement the run never took.
+ */
 export function extractNodeTokenDetail(node: PositionedNode): NodeTokenDetail {
   const t = node.metrics?.tokens;
   const m = node.metrics;
 
-  const promptTokens = t?.promptTokens ?? m?.tokensIn ?? 0;
-  const completionTokens = t?.completionTokens ?? m?.tokensOut ?? 0;
-  const reasoningTokens = t?.reasoningTokens ?? 0;
-  const cacheCreationTokens = t?.cacheCreationTokens ?? 0;
-  const cacheReadTokens = t?.cacheReadTokens ?? 0;
+  const promptTokens = t?.promptTokens ?? m?.tokensIn;
+  const completionTokens = t?.completionTokens ?? m?.tokensOut;
+  const reasoningTokens = t?.reasoningTokens;
+  const cacheCreationTokens = t?.cacheCreationTokens;
+  const cacheReadTokens = t?.cacheReadTokens;
 
+  const parts = [
+    promptTokens,
+    completionTokens,
+    reasoningTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
+  ].filter((part): part is number => typeof part === "number" && Number.isFinite(part));
   const totalTokens =
-    t?.totalTokens ??
-    promptTokens + completionTokens + reasoningTokens + cacheCreationTokens + cacheReadTokens;
+    t?.totalTokens ?? (parts.length > 0 ? parts.reduce((sum, part) => sum + part, 0) : undefined);
 
-  const tier: ModelTier | "unknown" =
-    node.tier ?? (node.hostAgent?.tier as ModelTier | undefined) ?? "unknown";
-  const pricing = TIER_PRICING[tier] ?? TIER_PRICING.unknown;
+  // Recorded dollars only. There is no rate card in this codebase, so a run whose nodes never
+  // carried a cost simply has no cost to show.
+  const recordedCost =
+    typeof m?.costUsd === "number" && Number.isFinite(m.costUsd) ? m.costUsd : undefined;
 
-  // Calculate cost
-  let costUsd = m?.costUsd ?? 0;
-  if (costUsd === 0 && totalTokens > 0) {
-    costUsd =
-      (promptTokens / 1_000_000) * pricing.promptUsdPer1M +
-      (completionTokens / 1_000_000) * pricing.completionUsdPer1M +
-      (reasoningTokens / 1_000_000) * pricing.reasoningUsdPer1M +
-      (cacheCreationTokens / 1_000_000) * pricing.cacheWriteUsdPer1M +
-      (cacheReadTokens / 1_000_000) * pricing.cacheReadUsdPer1M;
-  }
-
-  // Cost Intensity: USD per second of duration (or tokens per ms)
-  const durationMs = Math.max(10, extractNodeHeatmapValue(node, "duration"));
-  const costIntensity = (costUsd / (durationMs / 1000)) * 1000; // Cost per 1000s or density
+  // Dollars per second needs a duration the run measured. Falling back to a nominal one would
+  // turn a recorded cost into an invented rate.
+  const durationMs = readRecordedDurationMs(node);
+  const costIntensity =
+    recordedCost === undefined || durationMs === undefined || durationMs <= 0
+      ? undefined
+      : (recordedCost / (durationMs / 1000)) * 1000;
 
   return {
     nodeId: node.id,
@@ -108,17 +85,19 @@ export function extractNodeTokenDetail(node: PositionedNode): NodeTokenDetail {
     cacheCreationTokens,
     cacheReadTokens,
     totalTokens,
-    costUsd: Number(costUsd.toFixed(6)),
-    costIntensity: Number(costIntensity.toFixed(6)),
-    tier,
+    costUsd: recordedCost === undefined ? undefined : Number(recordedCost.toFixed(6)),
+    costIntensity: costIntensity === undefined ? undefined : Number(costIntensity.toFixed(6)),
+    tier: resolveReportedTier(node),
     isTopConsumer: false, // Calculated after sorting all nodes
   };
 }
 
 /**
- * Formats token counts into clean human-readable strings (e.g. 1.2k, 45.8k, 2.4M).
+ * Formats a recorded token count (e.g. 1.2k, 45.8k, 2.4M). A count nobody recorded is not a count
+ * and renders as unknown, because "0 tok" claims a measurement the run never took.
  */
-export function formatTokenCount(tokens: number): string {
+export function formatTokenCount(tokens: number | undefined): string {
+  if (tokens === undefined) return UNKNOWN_LABEL;
   if (!Number.isFinite(tokens) || tokens <= 0) return "0 tok";
   if (tokens < 1000) return `${Math.round(tokens)} tok`;
   if (tokens < 1_000_000) return `${(tokens / 1000).toFixed(1)}k tok`;
@@ -126,19 +105,37 @@ export function formatTokenCount(tokens: number): string {
 }
 
 /**
- * Formats USD cost cleanly.
+ * Formats USD cost cleanly. An absent cost renders as "unknown" rather than as a confident $0.00.
  */
-export function formatCostUsd(usd: number): string {
-  if (!Number.isFinite(usd) || usd <= 0) return "$0.00";
+export function formatCostUsd(usd: number | undefined): string {
+  if (usd === undefined || !Number.isFinite(usd)) return UNKNOWN_LABEL;
+  if (usd <= 0) return "$0.00";
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
   if (usd < 1) return `$${usd.toFixed(3)}`;
   return `$${usd.toFixed(2)}`;
 }
 
+/** Cost per second of recorded duration; absent whenever the underlying cost is. */
+export function formatCostIntensity(intensity: number | undefined): string {
+  if (intensity === undefined || !Number.isFinite(intensity)) return UNKNOWN_LABEL;
+  return `$${intensity.toFixed(3)}/s`;
+}
+
+/** Formats a legend or summary bound in the units of the active metric. */
+function formatMetricBound(metric: TokenMetric, value: number | undefined): string {
+  if (metric === "costUsd") return formatCostUsd(value);
+  if (metric === "costIntensity") return formatCostIntensity(value);
+  return formatTokenCount(value);
+}
+
 /**
- * Extracts raw metric value based on TokenMetric.
+ * Extracts raw metric value based on TokenMetric. Cost metrics come back undefined when the node
+ * carries no recorded dollars, so callers can tell "no cost reported" from "cost was zero".
  */
-export function extractNodeTokenMetricValue(detail: NodeTokenDetail, metric: TokenMetric): number {
+export function extractNodeTokenMetricValue(
+  detail: NodeTokenDetail,
+  metric: TokenMetric,
+): number | undefined {
   switch (metric) {
     case "totalTokens":
       return detail.totalTokens;
@@ -155,6 +152,27 @@ export function extractNodeTokenMetricValue(detail: NodeTokenDetail, metric: Tok
     default:
       return detail.totalTokens;
   }
+}
+
+/**
+ * A component's share of a node's total. Both numbers have to be recorded for a share to exist:
+ * a percentage of an unknown total is arithmetic on a value nobody measured.
+ */
+function shareOfTotal(
+  part: number | undefined,
+  total: number | undefined,
+): { percentage?: number } {
+  if (part === undefined || total === undefined || total <= 0) return {};
+  return { percentage: Math.round((part / total) * 100) };
+}
+
+/** What this node took of the graph, or a plain statement that nothing was recorded for it. */
+function summariseConsumption(total: number | undefined, graphTotal: number | undefined): string {
+  if (total === undefined) return "No token consumption recorded for this node.";
+  if (graphTotal === undefined || graphTotal <= 0) {
+    return `Consumed ${formatTokenCount(total)}; the graph has no positive total to take a share of.`;
+  }
+  return `Consumes ${((total / graphTotal) * 100).toFixed(1)}% of total graph tokens.`;
 }
 
 // ============================================================================
@@ -182,29 +200,36 @@ export function evaluateTokenLens(
 
   const tokenDetails = new Map<string, NodeTokenDetail>();
   const rawValuesList: number[] = [];
-  const nodeValues = new Map<string, number>();
+  const nodeValues = new Map<string, number | undefined>();
 
-  let totalTokensSum = 0;
-  let totalCostSum = 0;
+  // Stays undefined until some node actually reports tokens, so a silent run totals to nothing
+  // rather than to a confident zero.
+  let totalTokensSum: number | undefined;
+  // Stays undefined until some node actually reports dollars, so an unpriced run totals to nothing
+  // rather than to a confident zero.
+  let totalCostSum: number | undefined;
 
   for (const node of nodes) {
     const detail = extractNodeTokenDetail(node);
     tokenDetails.set(node.id, detail);
     const val = extractNodeTokenMetricValue(detail, metric);
     nodeValues.set(node.id, val);
-    rawValuesList.push(val);
+    if (val !== undefined) rawValuesList.push(val);
 
-    totalTokensSum += detail.totalTokens;
-    totalCostSum += detail.costUsd;
+    if (detail.totalTokens !== undefined)
+      totalTokensSum = (totalTokensSum ?? 0) + detail.totalTokens;
+    if (detail.costUsd !== undefined) totalCostSum = (totalCostSum ?? 0) + detail.costUsd;
   }
 
-  // Pareto 80/20 Rule: Flag top 20% consumer nodes
+  // Pareto 80/20 Rule: Flag top 20% consumer nodes. A node that reported no tokens cannot be one
+  // of the biggest consumers, so it ranks last rather than as a zero-token measurement.
   const sortedByTokens = Array.from(tokenDetails.values()).sort(
-    (a, b) => b.totalTokens - a.totalTokens,
+    (a, b) => (b.totalTokens ?? -1) - (a.totalTokens ?? -1),
   );
   const topCount = Math.max(1, Math.ceil(nodes.length * 0.2));
   for (let i = 0; i < Math.min(topCount, sortedByTokens.length); i++) {
-    if (sortedByTokens[i].totalTokens > 0) {
+    const total = sortedByTokens[i].totalTokens;
+    if (total !== undefined && total > 0) {
       sortedByTokens[i].isTopConsumer = true;
     }
   }
@@ -223,9 +248,12 @@ export function evaluateTokenLens(
 
   for (const node of nodes) {
     const detail = tokenDetails.get(node.id)!;
-    const rawVal = nodeValues.get(node.id) ?? 0;
-
-    const normalized = normalizeValue(rawVal, rawMin, rawMax, config.scaleType, sortedValues);
+    const rawVal = nodeValues.get(node.id);
+    // An unreported metric has no place on the ramp; it sits at the floor and says so in its badge.
+    const normalized =
+      rawVal === undefined
+        ? 0
+        : normalizeValue(rawVal, rawMin, rawMax, config.scaleType, sortedValues);
 
     // Threshold check
     const meetsThreshold = normalized >= config.minThreshold && normalized <= config.maxThreshold;
@@ -259,7 +287,7 @@ export function evaluateTokenLens(
       badgeText = formatCostUsd(detail.costUsd);
       badgeVariant = normalized > 0.7 ? "amber" : "cyan";
     } else if (metric === "costIntensity") {
-      badgeText = `$${detail.costIntensity.toFixed(3)}/s`;
+      badgeText = formatCostIntensity(detail.costIntensity);
       badgeVariant = "indigo";
     } else {
       badgeText = formatTokenCount(rawVal);
@@ -270,47 +298,38 @@ export function evaluateTokenLens(
       metric === "costUsd"
         ? formatCostUsd(rawVal)
         : metric === "costIntensity"
-          ? `$${rawVal.toFixed(3)}/s`
+          ? formatCostIntensity(rawVal)
           : formatTokenCount(rawVal);
 
     const tooltipContent: LensTooltipData = {
       title: `${node.name || node.id} ${detail.isTopConsumer ? "⚡ [TOP CONSUMER]" : ""}`,
-      subtitle: `Tier ${detail.tier.toUpperCase()} • Cost: ${formatCostUsd(detail.costUsd)} • Total: ${formatTokenCount(detail.totalTokens)}`,
+      subtitle: `Tier ${detail.tier === "unknown" ? UNKNOWN_LABEL : detail.tier.toUpperCase()} • Cost: ${formatCostUsd(detail.costUsd)} • Total: ${formatTokenCount(detail.totalTokens)}`,
       primaryMetric: {
         label:
           metric === "costUsd"
-            ? "Estimated LLM Cost"
+            ? "Recorded LLM Cost"
             : metric === "costIntensity"
               ? "Cost Density / Velocity"
               : "Token Consumption",
         formatted: formattedMetric,
         unit: metric === "costUsd" ? "USD" : "tokens",
-        raw: rawVal,
+        ...(rawVal === undefined ? {} : { raw: rawVal }),
       },
       factors: [
         {
           label: "Prompt (Input) Tokens",
           value: formatTokenCount(detail.promptTokens),
-          percentage:
-            detail.totalTokens > 0
-              ? Math.round((detail.promptTokens / detail.totalTokens) * 100)
-              : 0,
+          ...shareOfTotal(detail.promptTokens, detail.totalTokens),
         },
         {
           label: "Completion (Output) Tokens",
           value: formatTokenCount(detail.completionTokens),
-          percentage:
-            detail.totalTokens > 0
-              ? Math.round((detail.completionTokens / detail.totalTokens) * 100)
-              : 0,
+          ...shareOfTotal(detail.completionTokens, detail.totalTokens),
         },
         {
           label: "Reasoning (Thinking) Tokens",
           value: formatTokenCount(detail.reasoningTokens),
-          percentage:
-            detail.totalTokens > 0
-              ? Math.round((detail.reasoningTokens / detail.totalTokens) * 100)
-              : 0,
+          ...shareOfTotal(detail.reasoningTokens, detail.totalTokens),
         },
         {
           label: "Cache Read Tokens",
@@ -321,19 +340,16 @@ export function evaluateTokenLens(
           value: formatTokenCount(detail.cacheCreationTokens),
         },
         {
-          label: "Est. Total Cost",
+          label: "Recorded Total Cost",
           value: formatCostUsd(detail.costUsd),
         },
       ],
-      summaryNote:
-        detail.totalTokens > 0
-          ? `Consumes ${((detail.totalTokens / Math.max(1, totalTokensSum)) * 100).toFixed(1)}% of total graph tokens.`
-          : "No token consumption recorded for this node.",
+      summaryNote: summariseConsumption(detail.totalTokens, totalTokensSum),
     };
 
     nodeOverlays.set(node.id, {
       nodeId: node.id,
-      rawValue: rawVal,
+      ...(rawVal === undefined ? {} : { rawValue: rawVal }),
       normalizedValue: normalized,
       color,
       fillColor,
@@ -361,13 +377,17 @@ export function evaluateTokenLens(
 
   // Edge Overlays (Token payload transfer across channels)
   const edgeOverlays = new Map<string, EdgeLensOverlay>();
-  const edgeTokenValues = edges.map((e) => e.traffic?.tokens ?? e.tokens ?? 0);
+  // Only edges whose traffic was actually recorded take part in the scale.
+  const edgeTokenValues = edges
+    .map((e) => e.traffic?.tokens)
+    .filter((tokens): tokens is number => tokens !== undefined);
   const edgeMin = edgeTokenValues.length > 0 ? Math.min(...edgeTokenValues) : 0;
   const edgeMax = edgeTokenValues.length > 0 ? Math.max(...edgeTokenValues) : 1;
 
   for (const edge of edges) {
-    const rawTokens = edge.traffic?.tokens ?? edge.tokens ?? 0;
-    const normalized = normalizeValue(rawTokens, edgeMin, edgeMax, config.scaleType);
+    const rawTokens = edge.traffic?.tokens;
+    const normalized =
+      rawTokens === undefined ? 0 : normalizeValue(rawTokens, edgeMin, edgeMax, config.scaleType);
     const isFiltered = normalized < config.minThreshold || normalized > config.maxThreshold;
 
     const color = evaluateColorRamp(stops, normalized, config.invertRamp);
@@ -378,7 +398,7 @@ export function evaluateTokenLens(
       edgeId: edge.id,
       source: edge.source,
       target: edge.target,
-      rawValue: rawTokens,
+      ...(rawTokens === undefined ? {} : { rawValue: rawTokens, trafficTokens: rawTokens }),
       normalizedValue: normalized,
       color,
       glowColor: color,
@@ -387,8 +407,7 @@ export function evaluateTokenLens(
       isSubCritical: false,
       isFiltered,
       opacity,
-      trafficTokens: rawTokens,
-      badgeText: rawTokens > 0 ? formatTokenCount(rawTokens) : undefined,
+      badgeText: rawTokens !== undefined && rawTokens > 0 ? formatTokenCount(rawTokens) : undefined,
     });
   }
 
@@ -414,14 +433,15 @@ export function evaluateTokenLens(
   }
 
   const unit = metric === "costUsd" ? "USD" : "tokens";
+  const hasValues = rawValuesList.length > 0;
 
   const legendData: LensLegendData = {
     title: `Token Distribution: ${metric.charAt(0).toUpperCase() + metric.slice(1)}`,
     unit,
     minRaw: rawMin,
     maxRaw: rawMax,
-    formattedMin: metric === "costUsd" ? formatCostUsd(rawMin) : formatTokenCount(rawMin),
-    formattedMax: metric === "costUsd" ? formatCostUsd(rawMax) : formatTokenCount(rawMax),
+    formattedMin: formatMetricBound(metric, hasValues ? rawMin : undefined),
+    formattedMax: formatMetricBound(metric, hasValues ? rawMax : undefined),
     colorStops: [...stops],
     histogramBuckets,
   };
@@ -437,14 +457,13 @@ export function evaluateTokenLens(
     rawAverage,
     rawMedian,
     rawSum,
-    formattedMin: metric === "costUsd" ? formatCostUsd(rawMin) : formatTokenCount(rawMin),
-    formattedMax: metric === "costUsd" ? formatCostUsd(rawMax) : formatTokenCount(rawMax),
-    formattedAverage:
-      metric === "costUsd" ? formatCostUsd(rawAverage) : formatTokenCount(rawAverage),
-    formattedSum: metric === "costUsd" ? formatCostUsd(rawSum) : formatTokenCount(rawSum),
+    formattedMin: formatMetricBound(metric, hasValues ? rawMin : undefined),
+    formattedMax: formatMetricBound(metric, hasValues ? rawMax : undefined),
+    formattedAverage: formatMetricBound(metric, hasValues ? rawAverage : undefined),
+    formattedSum: formatMetricBound(metric, hasValues ? rawSum : undefined),
     unit,
-    totalCostUsd: Number(totalCostSum.toFixed(4)),
-    totalTokens: totalTokensSum,
+    totalCostUsd: totalCostSum === undefined ? undefined : Number(totalCostSum.toFixed(4)),
+    ...(totalTokensSum === undefined ? {} : { totalTokens: totalTokensSum }),
   };
 
   return {

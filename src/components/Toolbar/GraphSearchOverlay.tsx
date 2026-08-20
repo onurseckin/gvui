@@ -3,11 +3,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconChevronUp, IconSearch, IconX } from "@tabler/icons-react";
 import {
   describeNodeKind,
-  describeNodeStatus,
+  NODE_KIND_DESCRIPTORS,
   resolveNodeStatus,
 } from "../../primitives/nodes/NodeCard/nodeKinds";
+import { hasPreset } from "../../primitives/vocabulary";
 import { useGraphStore, type FilterCategory } from "../../state/useGraphStore";
 import type { PositionedNode } from "../../types/graphData";
+import { describeOpenStatus, readRawKind } from "../OpenSchema";
 import "./GraphSearchOverlay.css";
 
 export interface GraphSearchOverlayProps {
@@ -87,13 +89,20 @@ export function isNodeSearchMatch(
     return true;
   }
 
-  // 2. Match Archetype / Kind / Type / Model
+  // 2. Match Archetype / Kind / Type / Model. A node whose role names its archetype is still
+  // findable by its kind, so both labels are searched rather than only the one on display.
   const kindDesc = describeNodeKind(node);
+  const rawKind = readRawKind(node);
+  const kindLabel =
+    rawKind !== undefined && hasPreset(NODE_KIND_DESCRIPTORS, rawKind)
+      ? NODE_KIND_DESCRIPTORS[rawKind].label
+      : undefined;
   if (
     matchesText(node.kind) ||
     matchesText(node.type) ||
     matchesText(kindDesc.label) ||
-    matchesText(node.model)
+    matchesText(kindLabel) ||
+    matchesText(node.telemetry?.model?.value)
   ) {
     return true;
   }
@@ -116,15 +125,13 @@ export function isNodeSearchMatch(
     return true;
   }
 
-  // 4. Match Status
-  const status = node.status ? String(node.status) : undefined;
-  const resolvedStatus = resolveNodeStatus(node);
-  const statusDesc = describeNodeStatus(node).label;
+  // 4. Match Status. Only a status the node actually recorded is searchable — matching a status
+  // the renderer inferred would surface nodes that never claimed it.
+  const recordedStatus = describeOpenStatus(node);
   const rawStatus = node.metadata?.status ? String(node.metadata.status) : undefined;
   if (
-    matchesText(status) ||
-    matchesText(resolvedStatus) ||
-    matchesText(statusDesc) ||
+    (recordedStatus.recorded &&
+      (matchesText(recordedStatus.raw) || matchesText(recordedStatus.label))) ||
     matchesText(rawStatus)
   ) {
     return true;
@@ -438,7 +445,7 @@ export const GraphSearchOverlay: FC<GraphSearchOverlayProps> = memo(function Gra
                 const isSelected = index === highlightedIndex;
                 const isCanvasSelected = selectedNodeId === node.id;
                 const kindDesc = describeNodeKind(node);
-                const statusDesc = describeNodeStatus(node);
+                const statusDesc = describeOpenStatus(node);
                 const roleText =
                   node.metadata?.role ||
                   node.metadata?.leaseAgent ||
@@ -446,7 +453,9 @@ export const GraphSearchOverlay: FC<GraphSearchOverlayProps> = memo(function Gra
                   node.hostAgent?.role ||
                   node.provenance?.actorId;
 
-                const statusClass = `status-${resolveNodeStatus(node)}`;
+                const statusClass = statusDesc.recorded
+                  ? `status-${statusDesc.raw}`
+                  : "status-unknown";
 
                 return (
                   <div

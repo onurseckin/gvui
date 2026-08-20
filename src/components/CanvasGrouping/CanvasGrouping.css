@@ -829,3 +829,26 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+/*
+ * Dataset sections (branch excursions). They are structure rather than user annotation, so they
+ * read as an inset region with no drag or edit affordances.
+ */
+.group-boundary-path.is-section {
+  stroke-dasharray: 8 6;
+  pointer-events: none;
+}
+
+.group-region-header-container.is-section {
+  cursor: default;
+}
+
+.group-header-reason {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-style: italic;
+  opacity: 0.85;
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderToString } from "react-dom/server";
 import { EdgeMarkerDefs } from "./EdgeMarkerDefs";
+import { describeEdgeKind, GENERATED_EDGE_MARKER_ID } from "./edgeKinds";
 
 describe("EdgeMarkerDefs", () => {
   it("renders marker definitions for all source node archetypes, semantic edge kinds, and neutral default", () => {
@@ -33,7 +34,10 @@ describe("EdgeMarkerDefs", () => {
     expect(html).toContain('id="edge-arrowhead-dependency"');
     expect(html).toContain('id="edge-arrowhead-cycle"');
 
-    // 4. Circle Markers
+    // 4. The one marker every kind with no preset shares
+    expect(html).toContain('id="edge-arrowhead-generated"');
+
+    // 5. Circle Markers
     expect(html).toContain('id="edge-circle"');
     expect(html).toContain('id="edge-circle-connected"');
   });
@@ -70,5 +74,25 @@ describe("EdgeMarkerDefs", () => {
     expect(html).toContain('id="canvas-1-edge-arrowhead-worker"');
     expect(html).toContain('id="canvas-1-edge-arrowhead-spawn"');
     expect(html).toContain('id="canvas-1-edge-arrowhead-data"');
+  });
+  it("draws the generated arrowhead in the edge's own colour, whatever that kind is", () => {
+    const html = renderToString(
+      <svg>
+        <EdgeMarkerDefs />
+      </svg>,
+    );
+
+    const marker = html.slice(html.indexOf('id="edge-arrowhead-generated"'));
+    expect(marker.slice(0, marker.indexOf("</marker>"))).toContain('fill="context-stroke"');
+  });
+
+  it("names a marker that exists for every kind with no preset", () => {
+    expect(describeEdgeKind("supersedes").markerId).toBe(GENERATED_EDGE_MARKER_ID);
+    const html = renderToString(
+      <svg>
+        <EdgeMarkerDefs />
+      </svg>,
+    );
+    expect(html).toContain(`id="${describeEdgeKind("supersedes").markerId}"`);
   });
 });

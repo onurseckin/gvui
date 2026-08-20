@@ -3,7 +3,7 @@
 .graph-edge-group {
   cursor: pointer;
   shape-rendering: geometricPrecision;
-  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+  --current-edge-stroke: var(--edge-kind-stroke, #3f3f46);
 }
 
 .graph-edge-group:focus-visible {
@@ -29,12 +29,17 @@ marker path {
   vector-effect: non-scaling-stroke;
 }
 
-/* Base Edge Path - Neutral dark-mode zinc by default (Static, Solid, Clean) */
+/*
+ * Every kind's stroke, weight and dash come from --edge-kind-* custom properties. The renderer sets
+ * them inline from EDGE_KIND_DESCRIPTORS, and the class blocks below repeat them so a class-only
+ * render (static export, snapshot) still draws the right treatment. edgeKinds.test.ts fails if the
+ * two ever disagree.
+ */
 .graph-edge-path {
   fill: none;
   stroke: var(--current-edge-stroke, #3f3f46);
-  stroke-width: 1.5px;
-  stroke-dasharray: none;
+  stroke-width: var(--edge-kind-width, 1.5px);
+  stroke-dasharray: var(--edge-kind-dash, none);
   vector-effect: non-scaling-stroke;
   shape-rendering: geometricPrecision;
   transition:
@@ -43,93 +48,232 @@ marker path {
     filter 0.2s ease;
 }
 
-/* 1. Spawn / Dispatch - Cyan/Blue solid by default */
-.graph-edge-group.kind-spawn,
-.graph-edge-group.kind-dispatch {
-  --edge-kind-stroke: #06b6d4;
-}
-
-.graph-edge-path.kind-spawn,
-.graph-edge-path.kind-dispatch {
-  stroke: var(--current-edge-stroke, #06b6d4);
-  stroke-width: 2px;
-  stroke-dasharray: none;
-}
-
-/* 2. Sequence - Neutral slate/zinc (#3f3f46), understated solid */
-.graph-edge-group.kind-sequence {
+.graph-edge-group.kind-sequence,
+.graph-edge-path.kind-sequence,
+.edge-badge-group.kind-sequence,
+.edge-badge-rect.kind-sequence {
   --edge-kind-stroke: #3f3f46;
+  --edge-kind-width: 1.5px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #a1a1aa;
+  --edge-kind-badge-bg: rgba(24, 24, 27, 0.85);
+  --edge-kind-badge-border: #3f3f46;
 }
 
-.graph-edge-path.kind-sequence {
-  stroke: var(--current-edge-stroke, #3f3f46);
-  stroke-width: 1.5px;
-  stroke-dasharray: none;
-}
-
-/* 3. Data Handoff - Indigo solid */
-.graph-edge-group.kind-data,
-.graph-edge-group.kind-handoff {
-  --edge-kind-stroke: #6366f1;
-}
-
-.graph-edge-path.kind-data,
-.graph-edge-path.kind-handoff {
-  stroke: var(--current-edge-stroke, #6366f1);
-  stroke-width: 2px;
-  stroke-dasharray: none;
-}
-
-/* 4. Dependency - Slate solid */
-.graph-edge-group.kind-dependency {
+.graph-edge-group.kind-dependency,
+.graph-edge-path.kind-dependency,
+.edge-badge-group.kind-dependency,
+.edge-badge-rect.kind-dependency {
   --edge-kind-stroke: #64748b;
+  --edge-kind-width: 1.5px;
+  --edge-kind-dash: 5 4;
+  --edge-kind-text: #94a3b8;
+  --edge-kind-badge-bg: rgba(100, 116, 139, 0.12);
+  --edge-kind-badge-border: rgba(100, 116, 139, 0.6);
 }
 
-.graph-edge-path.kind-dependency {
-  stroke: var(--current-edge-stroke, #64748b);
-  stroke-width: 1.5px;
-  stroke-dasharray: none;
+.graph-edge-group.kind-join,
+.graph-edge-path.kind-join,
+.edge-badge-group.kind-join,
+.edge-badge-rect.kind-join {
+  --edge-kind-stroke: #2dd4bf;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #5eead4;
+  --edge-kind-badge-bg: rgba(45, 212, 191, 0.12);
+  --edge-kind-badge-border: rgba(45, 212, 191, 0.6);
 }
 
-/* 5. Loop / Pushback - Crimson solid */
-.graph-edge-group.kind-loop,
-.graph-edge-group.kind-pushback,
-.graph-edge-group.cycle {
-  --edge-kind-stroke: #f43f5e;
+.graph-edge-group.kind-conditional,
+.graph-edge-path.kind-conditional,
+.edge-badge-group.kind-conditional,
+.edge-badge-rect.kind-conditional {
+  --edge-kind-stroke: #f59e0b;
+  --edge-kind-width: 1.75px;
+  --edge-kind-dash: 10 3 2 3;
+  --edge-kind-text: #fcd34d;
+  --edge-kind-badge-bg: rgba(245, 158, 11, 0.12);
+  --edge-kind-badge-border: rgba(245, 158, 11, 0.6);
 }
 
-.graph-edge-path.kind-loop,
-.graph-edge-path.kind-pushback,
-.graph-edge-path.cycle {
-  stroke: var(--current-edge-stroke, #f43f5e);
-  stroke-width: 2px;
-  stroke-dasharray: none;
+.graph-edge-group.kind-fallback,
+.graph-edge-path.kind-fallback,
+.edge-badge-group.kind-fallback,
+.edge-badge-rect.kind-fallback {
+  --edge-kind-stroke: #fb923c;
+  --edge-kind-width: 1.75px;
+  --edge-kind-dash: 4 4;
+  --edge-kind-text: #fdba74;
+  --edge-kind-badge-bg: rgba(251, 146, 60, 0.12);
+  --edge-kind-badge-border: rgba(251, 146, 60, 0.6);
 }
 
-/* 6. Gate / Validation - Emerald Green solid */
+.graph-edge-group.kind-spawn,
+.graph-edge-path.kind-spawn,
+.edge-badge-group.kind-spawn,
+.edge-badge-rect.kind-spawn {
+  --edge-kind-stroke: #06b6d4;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 6 4;
+  --edge-kind-text: #67e8f9;
+  --edge-kind-badge-bg: rgba(6, 182, 212, 0.12);
+  --edge-kind-badge-border: rgba(6, 182, 212, 0.6);
+}
+
+.graph-edge-group.kind-dispatch,
+.graph-edge-path.kind-dispatch,
+.edge-badge-group.kind-dispatch,
+.edge-badge-rect.kind-dispatch {
+  --edge-kind-stroke: #22d3ee;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 2 5;
+  --edge-kind-text: #a5f3fc;
+  --edge-kind-badge-bg: rgba(34, 211, 238, 0.12);
+  --edge-kind-badge-border: rgba(34, 211, 238, 0.6);
+}
+
+.graph-edge-group.kind-data,
+.graph-edge-path.kind-data,
+.edge-badge-group.kind-data,
+.edge-badge-rect.kind-data {
+  --edge-kind-stroke: #6366f1;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #a5b4fc;
+  --edge-kind-badge-bg: rgba(99, 102, 241, 0.12);
+  --edge-kind-badge-border: rgba(99, 102, 241, 0.6);
+}
+
+.graph-edge-group.kind-handoff,
+.graph-edge-path.kind-handoff,
+.edge-badge-group.kind-handoff,
+.edge-badge-rect.kind-handoff {
+  --edge-kind-stroke: #8b5cf6;
+  --edge-kind-width: 2.25px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #c4b5fd;
+  --edge-kind-badge-bg: rgba(139, 92, 246, 0.12);
+  --edge-kind-badge-border: rgba(139, 92, 246, 0.6);
+}
+
 .graph-edge-group.kind-gate,
-.graph-edge-group.kind-validation {
-  --edge-kind-stroke: #10b981;
-}
-
 .graph-edge-path.kind-gate,
-.graph-edge-path.kind-validation {
-  stroke: var(--current-edge-stroke, #10b981);
-  stroke-width: 2px;
-  stroke-dasharray: none;
+.edge-badge-group.kind-gate,
+.edge-badge-rect.kind-gate {
+  --edge-kind-stroke: #10b981;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #6ee7b7;
+  --edge-kind-badge-bg: rgba(16, 185, 129, 0.12);
+  --edge-kind-badge-border: rgba(16, 185, 129, 0.6);
 }
 
-/* 7. Critic / Signoff - Metallic Gold solid */
+.graph-edge-group.kind-validation,
+.graph-edge-path.kind-validation,
+.edge-badge-group.kind-validation,
+.edge-badge-rect.kind-validation {
+  --edge-kind-stroke: #34d399;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 10 4;
+  --edge-kind-text: #a7f3d0;
+  --edge-kind-badge-bg: rgba(52, 211, 153, 0.12);
+  --edge-kind-badge-border: rgba(52, 211, 153, 0.6);
+}
+
 .graph-edge-group.kind-critic,
-.graph-edge-group.kind-signoff {
-  --edge-kind-stroke: #eab308;
+.graph-edge-path.kind-critic,
+.edge-badge-group.kind-critic,
+.edge-badge-rect.kind-critic {
+  --edge-kind-stroke: #818cf8;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 12 4 2 4;
+  --edge-kind-text: #c7d2fe;
+  --edge-kind-badge-bg: rgba(129, 140, 248, 0.12);
+  --edge-kind-badge-border: rgba(129, 140, 248, 0.6);
 }
 
-.graph-edge-path.kind-critic,
-.graph-edge-path.kind-signoff {
-  stroke: var(--current-edge-stroke, #eab308);
-  stroke-width: 2px;
-  stroke-dasharray: none;
+.graph-edge-group.kind-signoff,
+.graph-edge-path.kind-signoff,
+.edge-badge-group.kind-signoff,
+.edge-badge-rect.kind-signoff {
+  --edge-kind-stroke: #eab308;
+  --edge-kind-width: 2.75px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #fde047;
+  --edge-kind-badge-bg: rgba(234, 179, 8, 0.16);
+  --edge-kind-badge-border: rgba(234, 179, 8, 0.75);
+}
+
+.graph-edge-group.kind-probe,
+.graph-edge-path.kind-probe,
+.edge-badge-group.kind-probe,
+.edge-badge-rect.kind-probe {
+  --edge-kind-stroke: #38bdf8;
+  --edge-kind-width: 1.75px;
+  --edge-kind-dash: 3 3;
+  --edge-kind-text: #7dd3fc;
+  --edge-kind-badge-bg: rgba(56, 189, 248, 0.12);
+  --edge-kind-badge-border: rgba(56, 189, 248, 0.6);
+}
+
+.graph-edge-group.kind-pushback,
+.graph-edge-path.kind-pushback,
+.edge-badge-group.kind-pushback,
+.edge-badge-rect.kind-pushback {
+  --edge-kind-stroke: #f43f5e;
+  --edge-kind-width: 2.5px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #fda4af;
+  --edge-kind-badge-bg: rgba(244, 63, 94, 0.16);
+  --edge-kind-badge-border: rgba(244, 63, 94, 0.75);
+}
+
+.graph-edge-group.kind-loop,
+.graph-edge-path.kind-loop,
+.edge-badge-group.kind-loop,
+.edge-badge-rect.kind-loop {
+  --edge-kind-stroke: #fb7185;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 6 4;
+  --edge-kind-text: #fecdd3;
+  --edge-kind-badge-bg: rgba(251, 113, 133, 0.14);
+  --edge-kind-badge-border: rgba(251, 113, 133, 0.7);
+}
+
+.graph-edge-group.kind-branch,
+.graph-edge-path.kind-branch,
+.edge-badge-group.kind-branch,
+.edge-badge-rect.kind-branch {
+  --edge-kind-stroke: #d946ef;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 10 5;
+  --edge-kind-text: #f0abfc;
+  --edge-kind-badge-bg: rgba(217, 70, 239, 0.12);
+  --edge-kind-badge-border: rgba(217, 70, 239, 0.6);
+}
+
+.graph-edge-group.kind-collect,
+.graph-edge-path.kind-collect,
+.edge-badge-group.kind-collect,
+.edge-badge-rect.kind-collect {
+  --edge-kind-stroke: #f0abfc;
+  --edge-kind-width: 2.25px;
+  --edge-kind-dash: none;
+  --edge-kind-text: #f5d0fe;
+  --edge-kind-badge-bg: rgba(240, 171, 252, 0.12);
+  --edge-kind-badge-border: rgba(240, 171, 252, 0.6);
+}
+
+.graph-edge-group.kind-backtrack,
+.graph-edge-path.kind-backtrack,
+.edge-badge-group.kind-backtrack,
+.edge-badge-rect.kind-backtrack {
+  --edge-kind-stroke: #c084fc;
+  --edge-kind-width: 2px;
+  --edge-kind-dash: 2 6;
+  --edge-kind-text: #e9d5ff;
+  --edge-kind-badge-bg: rgba(192, 132, 252, 0.12);
+  --edge-kind-badge-border: rgba(192, 132, 252, 0.6);
 }
 
 /* Hover Interaction (Static stroke-width enlargement without animation) */
@@ -152,20 +296,15 @@ marker path {
   filter: drop-shadow(0 0 6px var(--current-edge-stroke, rgba(129, 140, 248, 0.6)));
 }
 
-/* Highlight / Selection for Loop & Cycles: Reverse Animated Dashes */
+/* Reverse-animated kinds (pushback, loop, backtrack) run their dashes back toward the source. */
+.graph-edge-path.reverse-flow.selected,
+.graph-edge-path.reverse-flow.is-highlighted,
 .graph-edge-path.cycle.selected,
 .graph-edge-path.cycle.is-highlighted,
-.graph-edge-path.kind-loop.selected,
-.graph-edge-path.kind-loop.is-highlighted,
-.graph-edge-path.kind-pushback.selected,
-.graph-edge-path.kind-pushback.is-highlighted,
+.graph-edge-group.selected .graph-edge-path.reverse-flow,
+.graph-edge-group.is-highlighted .graph-edge-path.reverse-flow,
 .graph-edge-group.selected .graph-edge-path.cycle,
-.graph-edge-group.is-highlighted .graph-edge-path.cycle,
-.graph-edge-group.selected .graph-edge-path.kind-loop,
-.graph-edge-group.is-highlighted .graph-edge-path.kind-loop,
-.graph-edge-group.selected .graph-edge-path.kind-pushback,
-.graph-edge-group.is-highlighted .graph-edge-path.kind-pushback {
-  stroke: var(--accent-color, var(--current-edge-stroke, #f43f5e)) !important;
+.graph-edge-group.is-highlighted .graph-edge-path.cycle {
   stroke-dasharray: 6 4 !important;
   animation: edge-flow-reverse 1.2s linear infinite !important;
 }
@@ -175,86 +314,25 @@ marker path {
   cursor: pointer;
   user-select: none;
   outline: none;
-  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+  --current-edge-stroke: var(--edge-kind-stroke, #3f3f46);
 }
 
+/*
+ * Badge chrome follows the same --edge-kind-* properties, so a badge can never disagree with the
+ * line it labels.
+ */
 .edge-badge-rect {
-  fill: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
-  stroke: var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
+  fill: var(
+    --edge-kind-badge-bg,
+    color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%)
+  );
+  stroke: var(--edge-kind-badge-border, var(--current-edge-stroke, rgba(255, 255, 255, 0.15)));
   stroke-width: 1.5px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
   transition:
     fill 0.2s ease,
     stroke 0.2s ease,
     filter 0.2s ease;
-}
-
-/* Badge Semantic Variants */
-.edge-badge-group.kind-spawn,
-.edge-badge-rect.variant-spawn,
-.edge-badge-rect.variant-cyan,
-.edge-badge-rect.kind-spawn {
-  --edge-kind-stroke: #06b6d4;
-  stroke: var(--current-edge-stroke, rgba(6, 182, 212, 0.6));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #06b6d4) 12%, #081a20 88%);
-}
-
-.edge-badge-group.kind-sequence,
-.edge-badge-rect.variant-sequence,
-.edge-badge-rect.variant-neutral,
-.edge-badge-rect.kind-sequence {
-  --edge-kind-stroke: #3f3f46;
-  stroke: var(--current-edge-stroke, #3f3f46);
-  fill: color-mix(in srgb, var(--current-edge-stroke, #3f3f46) 12%, #111114 88%);
-}
-
-.edge-badge-group.kind-data,
-.edge-badge-rect.variant-data,
-.edge-badge-rect.variant-indigo,
-.edge-badge-rect.kind-data {
-  --edge-kind-stroke: #6366f1;
-  stroke: var(--current-edge-stroke, rgba(99, 102, 241, 0.6));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #6366f1) 12%, #111024 88%);
-}
-
-.edge-badge-group.kind-dependency,
-.edge-badge-rect.variant-dependency,
-.edge-badge-rect.variant-slate,
-.edge-badge-rect.kind-dependency {
-  --edge-kind-stroke: #64748b;
-  stroke: var(--current-edge-stroke, rgba(100, 116, 139, 0.6));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #64748b) 12%, #0f172a 88%);
-}
-
-.edge-badge-group.kind-loop,
-.edge-badge-group.cycle,
-.edge-badge-rect.variant-loop,
-.edge-badge-rect.variant-pushback,
-.edge-badge-rect.variant-warning,
-.edge-badge-rect.cycle,
-.edge-badge-rect.kind-loop {
-  --edge-kind-stroke: #f43f5e;
-  stroke: var(--current-edge-stroke, rgba(244, 63, 94, 0.7));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #f43f5e) 12%, #1c0b10 88%);
-}
-
-.edge-badge-group.kind-gate,
-.edge-badge-rect.variant-gate,
-.edge-badge-rect.variant-validation,
-.edge-badge-rect.variant-success,
-.edge-badge-rect.kind-gate {
-  --edge-kind-stroke: #10b981;
-  stroke: var(--current-edge-stroke, rgba(16, 185, 129, 0.6));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #10b981) 12%, #061d14 88%);
-}
-
-.edge-badge-group.kind-critic,
-.edge-badge-rect.variant-critic,
-.edge-badge-rect.variant-signoff,
-.edge-badge-rect.kind-critic {
-  --edge-kind-stroke: #eab308;
-  stroke: var(--current-edge-stroke, rgba(234, 179, 8, 0.7));
-  fill: color-mix(in srgb, var(--current-edge-stroke, #eab308) 12%, #1c1606 88%);
 }
 
 /* Badge Typography & Centered Alignment */
@@ -271,56 +349,11 @@ marker path {
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--edge-text-color, #f4f4f5);
+  color: var(--edge-kind-text, #f4f4f5);
   user-select: none;
   letter-spacing: 0.02em;
   min-width: 0;
   flex-shrink: 1;
-}
-
-.edge-badge-inner.variant-spawn,
-.edge-badge-inner.variant-cyan,
-.edge-badge-inner.kind-spawn {
-  color: #67e8f9;
-}
-
-.edge-badge-inner.variant-sequence,
-.edge-badge-inner.variant-neutral,
-.edge-badge-inner.kind-sequence {
-  color: #a1a1aa;
-}
-
-.edge-badge-inner.variant-data,
-.edge-badge-inner.variant-indigo,
-.edge-badge-inner.kind-data {
-  color: #a5b4fc;
-}
-
-.edge-badge-inner.variant-dependency,
-.edge-badge-inner.variant-slate,
-.edge-badge-inner.kind-dependency {
-  color: #94a3b8;
-}
-
-.edge-badge-inner.variant-loop,
-.edge-badge-inner.variant-pushback,
-.edge-badge-inner.variant-warning,
-.edge-badge-inner.cycle,
-.edge-badge-inner.kind-loop {
-  color: #fda4af;
-}
-
-.edge-badge-inner.variant-gate,
-.edge-badge-inner.variant-validation,
-.edge-badge-inner.variant-success,
-.edge-badge-inner.kind-gate {
-  color: #6ee7b7;
-}
-
-.edge-badge-inner.variant-critic,
-.edge-badge-inner.variant-signoff,
-.edge-badge-inner.kind-critic {
-  color: #fde047;
 }
 
 .edge-badge-label {
@@ -378,7 +411,7 @@ marker path {
 }
 
 .graph-edge-path.high-traffic {
-  stroke-width: 2px;
+  stroke-width: calc(var(--edge-kind-width, 1.5px) + 0.5px);
 }
 
 .shared-anchor-junction {

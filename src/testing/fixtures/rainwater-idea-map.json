@@ -1,0 +1,418 @@
+{
+  "id": "rainwater-idea-map",
+  "title": "Rainwater harvesting for the Kadıköy block",
+  "description": "A sketch of whether the apartment block should catch its own roof water: what we know, what we are guessing, who objected, and what we decided to try first.",
+  "directed": true,
+  "entry": "n-seed",
+  "exits": ["n-decision-tanks", "n-decision-defer"],
+  "nodes": [
+    {
+      "id": "n-seed",
+      "name": "The roof throws away every drop",
+      "kind": "premise",
+      "description": "140 m² of bitumen roof sheds straight into the storm drain. If any of that is worth catching, everything else follows from it.",
+      "metadata": {
+        "role": "me",
+        "confidence": "hunch",
+        "noticedOn": "2026-02-11",
+        "tags": ["water", "roof"]
+      }
+    },
+    {
+      "id": "n-obs-rainfall",
+      "name": "810 mm a year, mostly November to March",
+      "kind": "observation",
+      "status": "success",
+      "description": "Istanbul's long-run average. The supply is real but seasonal, so any store has to carry water from winter into summer or it is a winter-only toy.",
+      "metadata": {
+        "confidence": "measured",
+        "sourceNote": "Kandilli station 30-year mean, read off the published table",
+        "tags": ["water"]
+      }
+    },
+    {
+      "id": "n-constraint-roof",
+      "name": "Two downpipes, both on the north face",
+      "kind": "constraint",
+      "description": "The roof drains into exactly two pipes and both land in the north garden strip. Anything we install has to sit within a few metres of one of them.",
+      "metadata": {
+        "confidence": "measured",
+        "noticedOn": "2026-02-14",
+        "tags": ["roof", "plumbing"]
+      }
+    },
+    {
+      "id": "n-question-demand",
+      "name": "How much non-potable water does the block actually use?",
+      "kind": "open-question",
+      "description": "Garden, stairwell washing, the car park hose. Nobody has ever separated this from drinking water on the bill.",
+      "metadata": {
+        "role": "me",
+        "confidence": "unknown",
+        "tags": ["demand"]
+      }
+    },
+    {
+      "id": "n-obs-meter",
+      "name": "Shared meter reads 41 m³ a month",
+      "kind": "observation",
+      "status": "success",
+      "description": "Across eight flats and the common areas. It is a ceiling, not an answer: it still mixes drinking water with everything else.",
+      "metadata": {
+        "confidence": "measured",
+        "sourceNote": "Twelve months of shared-meter invoices in the building folder",
+        "tags": ["demand", "money"]
+      }
+    },
+    {
+      "id": "n-constraint-budget",
+      "name": "The shared fund holds about 60,000 TRY",
+      "kind": "constraint",
+      "description": "And the facade repair already has a claim on part of it. Whatever we do first has to leave that repair funded.",
+      "metadata": {
+        "confidence": "measured",
+        "estimatedCostTry": 60000,
+        "tags": ["money"]
+      }
+    },
+    {
+      "id": "n-option-cistern",
+      "name": "Buried 5 m³ cistern in the north strip",
+      "kind": "option",
+      "description": "The version that would actually carry winter water into July. Also the version that involves an excavator and a permit conversation.",
+      "metadata": {
+        "confidence": "hunch",
+        "estimatedCostTry": 48000,
+        "tags": ["money", "water"]
+      }
+    },
+    {
+      "id": "n-option-tank",
+      "name": "Two 1 m³ tanks on the service balcony",
+      "kind": "option",
+      "description": "Small, reversible, no digging. Covers the garden through spring and nothing more, but it can be installed in an afternoon.",
+      "metadata": {
+        "confidence": "hunch",
+        "estimatedCostTry": 9000,
+        "tags": ["money", "water"]
+      }
+    },
+    {
+      "id": "n-option-nothing",
+      "name": "Do nothing until the facade work is done",
+      "kind": "option",
+      "status": "skipped",
+      "description": "The honest baseline. Set aside once we realised the drum trial costs almost nothing and answers the demand question either way.",
+      "metadata": {
+        "confidence": "settled",
+        "tags": ["money"]
+      }
+    },
+    {
+      "id": "n-risk-permit",
+      "name": "A buried tank may count as a structural change",
+      "kind": "risk",
+      "status": "warning",
+      "description": "Hülya thinks the municipality would want drawings for anything excavated. Unconfirmed, and it would delay the cistern by a season if true.",
+      "metadata": {
+        "role": "building-manager",
+        "raisedBy": "Hülya",
+        "confidence": "hunch",
+        "tags": ["permits", "money"]
+      }
+    },
+    {
+      "id": "n-risk-mosquito",
+      "name": "Standing water breeds mosquitoes in August",
+      "kind": "risk",
+      "status": "warning",
+      "description": "Applies to both storage options. Solvable with sealed lids and a first-flush diverter, but it is the objection the neighbours will raise first.",
+      "metadata": {
+        "confidence": "settled",
+        "tags": ["health", "neighbours"]
+      }
+    },
+    {
+      "id": "n-challenge-freeze",
+      "name": "What bursts when the balcony tanks freeze?",
+      "kind": "challenge",
+      "description": "Mert's objection, and it is a good one: the service balcony is unheated and the January minimum here has gone below -5 °C twice in the last decade.",
+      "metadata": {
+        "role": "devils-advocate",
+        "raisedBy": "Mert",
+        "confidence": "hunch",
+        "tags": ["plumbing", "risk"]
+      }
+    },
+    {
+      "id": "n-experiment-gauge",
+      "name": "Tape a rain gauge to the parapet for one winter",
+      "kind": "experiment",
+      "description": "Cheap way to find out whether the station average holds over our own roof, or whether the neighbouring block's height shelters us.",
+      "metadata": {
+        "confidence": "unknown",
+        "estimatedCostTry": 400,
+        "tags": ["water", "trial"]
+      }
+    },
+    {
+      "id": "n-experiment-drum",
+      "name": "Run one downpipe into a 200 L drum for a month",
+      "kind": "experiment",
+      "description": "Measures both sides at once: how fast the roof fills a container, and how fast the garden empties it.",
+      "metadata": {
+        "confidence": "unknown",
+        "estimatedCostTry": 1200,
+        "tags": ["demand", "trial"]
+      }
+    },
+    {
+      "id": "n-stakeholder-hulya",
+      "name": "Hülya, building manager",
+      "kind": "stakeholder",
+      "description": "Holds the shared fund and every past correspondence with the municipality. Nothing gets installed without her agreement.",
+      "metadata": {
+        "role": "building-manager",
+        "tags": ["people"]
+      }
+    },
+    {
+      "id": "n-stakeholder-mert",
+      "name": "Mert, the plumber who did the risers",
+      "kind": "stakeholder",
+      "description": "Knows where every pipe in the building runs, and is the only person here who has seen a frozen balcony line.",
+      "metadata": {
+        "role": "plumber",
+        "tags": ["people", "plumbing"]
+      }
+    },
+    {
+      "id": "n-decision-tanks",
+      "name": "Start with the balcony tanks",
+      "kind": "decision",
+      "status": "success",
+      "description": "Cheap, reversible, and it buys a season of real numbers. Insulate the run and fit a drain valve for January.",
+      "metadata": {
+        "confidence": "settled",
+        "noticedOn": "2026-03-02",
+        "tags": ["money", "water"]
+      }
+    },
+    {
+      "id": "n-decision-defer",
+      "name": "Revisit the cistern when the scaffolding is up",
+      "kind": "decision",
+      "description": "The excavator and the facade crew want the same strip of garden. Doing them together is the only version anyone will approve.",
+      "metadata": {
+        "confidence": "settled",
+        "noticedOn": "2026-03-02",
+        "tags": ["money", "permits"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-seed-question",
+      "source": "n-seed",
+      "target": "n-question-demand",
+      "kind": "sparked-by",
+      "label": "so how much do we need?"
+    },
+    {
+      "id": "e-rainfall-seed",
+      "source": "n-obs-rainfall",
+      "target": "n-seed",
+      "kind": "supports",
+      "label": "supply is real"
+    },
+    {
+      "id": "e-roof-seed",
+      "source": "n-constraint-roof",
+      "target": "n-seed",
+      "kind": "refines",
+      "label": "only two collection points"
+    },
+    {
+      "id": "e-meter-question",
+      "source": "n-obs-meter",
+      "target": "n-question-demand",
+      "kind": "answers",
+      "label": "upper bound only"
+    },
+    {
+      "id": "e-seed-cistern",
+      "source": "n-seed",
+      "target": "n-option-cistern",
+      "kind": "sparked-by"
+    },
+    {
+      "id": "e-seed-tank",
+      "source": "n-seed",
+      "target": "n-option-tank",
+      "kind": "sparked-by"
+    },
+    {
+      "id": "e-seed-nothing",
+      "source": "n-seed",
+      "target": "n-option-nothing",
+      "kind": "sparked-by"
+    },
+    {
+      "id": "e-permit-cistern",
+      "source": "n-risk-permit",
+      "target": "n-option-cistern",
+      "kind": "contradicts",
+      "label": "drawings, and a season lost"
+    },
+    {
+      "id": "e-mosquito-cistern",
+      "source": "n-risk-mosquito",
+      "target": "n-option-cistern",
+      "kind": "contradicts"
+    },
+    {
+      "id": "e-mosquito-tank",
+      "source": "n-risk-mosquito",
+      "target": "n-option-tank",
+      "kind": "contradicts"
+    },
+    {
+      "id": "e-budget-cistern",
+      "source": "n-constraint-budget",
+      "target": "n-option-cistern",
+      "kind": "costs",
+      "label": "48,000 of 60,000 TRY"
+    },
+    {
+      "id": "e-budget-tank",
+      "source": "n-constraint-budget",
+      "target": "n-option-tank",
+      "kind": "costs",
+      "label": "9,000 TRY"
+    },
+    {
+      "id": "e-freeze-tank",
+      "source": "n-challenge-freeze",
+      "target": "n-option-tank",
+      "kind": "contradicts",
+      "label": "unheated balcony"
+    },
+    {
+      "id": "e-mert-freeze",
+      "source": "n-stakeholder-mert",
+      "target": "n-challenge-freeze",
+      "kind": "sparked-by"
+    },
+    {
+      "id": "e-hulya-permit",
+      "source": "n-stakeholder-hulya",
+      "target": "n-risk-permit",
+      "kind": "sparked-by"
+    },
+    {
+      "id": "e-hulya-budget",
+      "source": "n-stakeholder-hulya",
+      "target": "n-constraint-budget",
+      "kind": "supports",
+      "label": "holds the fund"
+    },
+    {
+      "id": "e-gauge-rainfall",
+      "source": "n-experiment-gauge",
+      "target": "n-obs-rainfall",
+      "kind": "refines",
+      "label": "our roof, not the station"
+    },
+    {
+      "id": "e-drum-question",
+      "source": "n-experiment-drum",
+      "target": "n-question-demand",
+      "kind": "answers",
+      "label": "measures both sides"
+    },
+    {
+      "id": "e-tank-decision",
+      "source": "n-option-tank",
+      "target": "n-decision-tanks",
+      "kind": "supports"
+    },
+    {
+      "id": "e-meter-decision",
+      "source": "n-obs-meter",
+      "target": "n-decision-tanks",
+      "kind": "supports",
+      "label": "2 m³ covers the garden"
+    },
+    {
+      "id": "e-decision-drum",
+      "source": "n-decision-tanks",
+      "target": "n-experiment-drum",
+      "kind": "depends-on",
+      "label": "run the drum first"
+    },
+    {
+      "id": "e-decision-nothing",
+      "source": "n-decision-tanks",
+      "target": "n-option-nothing",
+      "kind": "contradicts",
+      "label": "baseline set aside"
+    },
+    {
+      "id": "e-cistern-defer",
+      "source": "n-option-cistern",
+      "target": "n-decision-defer",
+      "kind": "supports"
+    },
+    {
+      "id": "e-defer-decision",
+      "source": "n-decision-defer",
+      "target": "n-decision-tanks",
+      "kind": "depends-on",
+      "label": "phase two waits on phase one"
+    }
+  ],
+  "sections": [
+    {
+      "id": "sec-water",
+      "kind": "theme",
+      "title": "Water in, water out",
+      "description": "What the roof supplies and what the block consumes, and the two cheap trials that would turn both guesses into numbers.",
+      "nodeIds": [
+        "n-seed",
+        "n-obs-rainfall",
+        "n-constraint-roof",
+        "n-question-demand",
+        "n-obs-meter",
+        "n-experiment-gauge",
+        "n-experiment-drum"
+      ]
+    },
+    {
+      "id": "sec-money",
+      "kind": "theme",
+      "title": "What it costs and what it needs signing",
+      "description": "The three storage options, the money that constrains them, and where the two decisions landed.",
+      "nodeIds": [
+        "n-constraint-budget",
+        "n-option-cistern",
+        "n-option-tank",
+        "n-option-nothing",
+        "n-risk-permit",
+        "n-decision-tanks",
+        "n-decision-defer"
+      ]
+    },
+    {
+      "id": "sec-people",
+      "kind": "theme",
+      "title": "Who has to agree",
+      "description": "The two people whose agreement the plan needs, and the objections they brought with them.",
+      "nodeIds": [
+        "n-stakeholder-hulya",
+        "n-stakeholder-mert",
+        "n-challenge-freeze",
+        "n-risk-mosquito"
+      ]
+    }
+  ]
+}

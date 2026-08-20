@@ -1,13 +1,10 @@
+import { IconAlertTriangle, IconCheck, IconCopy, IconSearch } from "@tabler/icons-react";
 import type { FC } from "react";
-import React, { useMemo, useState, useCallback } from "react";
-import { IconCheck, IconCopy, IconRefresh, IconSparkles } from "@tabler/icons-react";
+import React, { useCallback, useMemo, useState } from "react";
 import type { GraphDataset, GraphNodeData } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
-import {
-  extractNodeTokenFootprint,
-  TIER_PRICING,
-  type ExtractedNodeTokens,
-} from "../../Sidebar/TokenFootprintBreakdown";
+import { EvidenceChip, UnknownValue } from "../EvidenceChip";
+import { readTelemetry, readTokenFootprint, type TokenFootprint } from "../nodeSchema";
 import { copyToClipboard, formatTokens } from "../streamUtils";
 
 export interface CostTabProps {
@@ -33,6 +30,64 @@ export function formatDetailedUsd(usd: number, highPrecision = false): string {
   return `$${usd.toFixed(5)}`;
 }
 
+interface TokenSlice {
+  key: string;
+  testId: string;
+  label: string;
+  dotClass: string;
+  segmentClass: string;
+  value?: number;
+}
+
+function tokenSlices(footprint: TokenFootprint): TokenSlice[] {
+  return [
+    {
+      key: "prompt",
+      testId: "metric-prompt-tokens",
+      label: "Input / Prompt",
+      dotClass: "dot-prompt",
+      segmentClass: "seg-prompt",
+      value: footprint.inputTokens,
+    },
+    {
+      key: "completion",
+      testId: "metric-completion-tokens",
+      label: "Output / Gen",
+      dotClass: "dot-completion",
+      segmentClass: "seg-completion",
+      value: footprint.outputTokens,
+    },
+    {
+      key: "reasoning",
+      testId: "metric-reasoning-tokens",
+      label: "Reasoning",
+      dotClass: "dot-reasoning",
+      segmentClass: "seg-reasoning",
+      value: footprint.reasoningTokens,
+    },
+    {
+      key: "cache-read",
+      testId: "metric-cache-read-tokens",
+      label: "Cache Read (Hit)",
+      dotClass: "dot-cache",
+      segmentClass: "seg-cache",
+      value: footprint.cacheReadTokens,
+    },
+    {
+      key: "cache-write",
+      testId: "metric-cache-write-tokens",
+      label: "Cache Creation",
+      dotClass: "dot-cache-write",
+      segmentClass: "seg-cache",
+      value: footprint.cacheCreationTokens,
+    },
+  ];
+}
+
+/**
+ * Token and cost view. Nothing here is priced: a dollar figure appears only when the run recorded
+ * one, because a cost computed from a price list is a guess wearing a measurement's clothes.
+ */
 export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
   node,
   dataset,
@@ -41,168 +96,115 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
   const [copied, setCopied] = useState(false);
   const [highPrecision, setHighPrecision] = useState(false);
 
-  const tokens = useMemo<ExtractedNodeTokens>(() => extractNodeTokenFootprint(node), [node]);
+  const footprint = useMemo(() => readTokenFootprint(node), [node]);
+  const telemetry = useMemo(() => readTelemetry(node), [node]);
+  const slices = useMemo(() => tokenSlices(footprint), [footprint]);
 
-  // Graph-level context
   const graphAnalytics = useMemo(() => {
-    if (!dataset || !dataset.nodes || dataset.nodes.length === 0) return null;
-    let totalGraphCost = 0;
-    let totalGraphTokens = 0;
-    const nodeCosts: { id: string; cost: number }[] = [];
+    const nodes = dataset?.nodes ?? [];
+    if (nodes.length === 0) return null;
 
-    for (const n of dataset.nodes) {
-      const ext = extractNodeTokenFootprint(n);
-      totalGraphCost += ext.costUsd;
-      totalGraphTokens += ext.totalTokens;
-      nodeCosts.push({ id: n.id, cost: ext.costUsd });
+    let totalTokens = 0;
+    let tokenReporters = 0;
+    let totalCost = 0;
+    let costReporters = 0;
+    const costs: Array<{ id: string; cost: number }> = [];
+
+    for (const candidate of nodes) {
+      const other = readTokenFootprint(candidate);
+      if (other.totalTokens !== undefined) {
+        totalTokens += other.totalTokens;
+        tokenReporters += 1;
+      }
+      if (other.costUsd !== undefined) {
+        totalCost += other.costUsd;
+        costReporters += 1;
+        costs.push({ id: candidate.id, cost: other.costUsd });
+      }
     }
 
-    nodeCosts.sort((a, b) => b.cost - a.cost);
-    const rank = nodeCosts.findIndex((item) => item.id === node.id) + 1;
+    costs.sort((left, right) => right.cost - left.cost);
+    const rank = costs.findIndex((entry) => entry.id === node.id) + 1;
 
     return {
-      totalGraphCost,
-      totalGraphTokens,
+      totalTokens,
+      tokenReporters,
+      totalCost,
+      costReporters,
       rank: rank > 0 ? rank : null,
-      totalNodes: dataset.nodes.length,
-      costSharePercent: totalGraphCost > 0 ? (tokens.costUsd / totalGraphCost) * 100 : 0,
-      tokenSharePercent: totalGraphTokens > 0 ? (tokens.totalTokens / totalGraphTokens) * 100 : 0,
+      totalNodes: nodes.length,
+      tokenSharePercent:
+        totalTokens > 0 && footprint.totalTokens !== undefined
+          ? (footprint.totalTokens / totalTokens) * 100
+          : null,
+      costSharePercent:
+        totalCost > 0 && footprint.costUsd !== undefined
+          ? (footprint.costUsd / totalCost) * 100
+          : null,
     };
-  }, [dataset, node.id, tokens.costUsd, tokens.totalTokens]);
+  }, [dataset, node.id, footprint.totalTokens, footprint.costUsd]);
 
-  const currentPricing = TIER_PRICING[tokens.tier] ?? TIER_PRICING.m;
+  // A round nobody recorded is not a round of zero: the producer writes these counters explicitly,
+  // so their absence means the run never reported them and the view has to say exactly that.
+  const repairRounds = useMemo<number | undefined>(() => {
+    const fromMetadata = node.metadata?.repairRounds;
+    if (typeof fromMetadata === "number") return fromMetadata;
+    return typeof node.metrics?.repairRounds === "number" ? node.metrics.repairRounds : undefined;
+  }, [node]);
 
-  const costBreakdown = useMemo(() => {
-    const promptCost = (tokens.promptTokens * currentPricing.promptUsdPer1M) / 1_000_000;
-    const completionCost =
-      (tokens.completionTokens * currentPricing.completionUsdPer1M) / 1_000_000;
-    const reasoningCost = (tokens.reasoningTokens * currentPricing.reasoningUsdPer1M) / 1_000_000;
-    const cacheWriteCost =
-      (tokens.cacheCreationTokens * currentPricing.cacheWriteUsdPer1M) / 1_000_000;
-    const cacheReadCost = (tokens.cacheReadTokens * currentPricing.cacheReadUsdPer1M) / 1_000_000;
-
-    const discountPerToken =
-      Math.max(0, currentPricing.promptUsdPer1M - currentPricing.cacheReadUsdPer1M) / 1_000_000;
-    const cacheSavingsUsd = tokens.cacheReadTokens * discountPerToken;
-
-    const totalInputCandidate = tokens.promptTokens + tokens.cacheReadTokens;
-    const cacheHitRatePercent =
-      totalInputCandidate > 0 ? (tokens.cacheReadTokens / totalInputCandidate) * 100 : 0;
-
-    const costPer1kTokens =
-      tokens.totalTokens > 0 ? (tokens.costUsd / tokens.totalTokens) * 1000 : 0;
-
-    return {
-      promptCost,
-      completionCost,
-      reasoningCost,
-      cacheWriteCost,
-      cacheReadCost,
-      cacheSavingsUsd,
-      cacheHitRatePercent,
-      costPer1kTokens,
-    };
-  }, [tokens, currentPricing]);
-
-  // Model Tier Comparison simulation for this node
-  const tierComparisons = useMemo(() => {
-    return Object.entries(TIER_PRICING).map(([tierKey, pricing]) => {
-      const simulatedCost =
-        (tokens.promptTokens * pricing.promptUsdPer1M +
-          tokens.completionTokens * pricing.completionUsdPer1M +
-          tokens.reasoningTokens * pricing.reasoningUsdPer1M +
-          tokens.cacheCreationTokens * pricing.cacheWriteUsdPer1M +
-          tokens.cacheReadTokens * pricing.cacheReadUsdPer1M) /
-        1_000_000;
-
-      const isCurrentTier = tierKey === tokens.tier;
-      const deltaUsd = simulatedCost - tokens.costUsd;
-      const deltaPercent = tokens.costUsd > 0 ? (deltaUsd / tokens.costUsd) * 100 : 0;
-
-      return {
-        tier: tierKey,
-        label: pricing.label,
-        tierName: pricing.tierName,
-        description: pricing.description,
-        simulatedCost,
-        isCurrentTier,
-        deltaUsd,
-        deltaPercent,
-      };
-    });
-  }, [tokens]);
-
-  const retries = typeof node.metrics?.retries === "number" ? node.metrics.retries : 0;
-  const repairRounds =
-    typeof node.metrics?.repairRounds === "number"
-      ? node.metrics.repairRounds
-      : typeof (node.metadata?.repairRounds as number | undefined) === "number"
-        ? (node.metadata!.repairRounds as number)
-        : 0;
-
-  const reasoningEffort =
-    (node.metadata?.hostAgent as { reasoningEffort?: string } | undefined)?.reasoningEffort ??
-    (node.metadata?.reasoningEffort as string | undefined);
-  const thinkingLevel =
-    (node.metadata?.hostAgent as { thinkingLevel?: string } | undefined)?.thinkingLevel ??
-    (node.metadata?.thinkingLevel as string | undefined);
+  const probeRounds = useMemo<number | undefined>(() => {
+    const value = node.metadata?.probeRounds;
+    return typeof value === "number" ? value : undefined;
+  }, [node]);
 
   const handleCopySummary = useCallback(async () => {
-    const summaryLines = [
-      `Node Cost & Token Footprint: ${node.name} (${node.id})`,
-      `Model: ${tokens.model} (Tier: ${tokens.tier.toUpperCase()})`,
-      `Total Cost: ${formatDetailedUsd(tokens.costUsd, true)}`,
-      `Total Tokens: ${tokens.totalTokens.toLocaleString()} (${formatTokens(tokens.totalTokens)})`,
-      `  - Input / Prompt: ${tokens.promptTokens.toLocaleString()}`,
-      `  - Output / Gen: ${tokens.completionTokens.toLocaleString()}`,
-      `  - Reasoning / Thinking: ${tokens.reasoningTokens.toLocaleString()}`,
-      `  - Cache Read: ${tokens.cacheReadTokens.toLocaleString()}`,
-      `  - Cache Write: ${tokens.cacheCreationTokens.toLocaleString()}`,
-      `Cache Hit Rate: ${costBreakdown.cacheHitRatePercent.toFixed(1)}%`,
-      `Cache Savings: ${formatDetailedUsd(costBreakdown.cacheSavingsUsd, true)}`,
-      `Cost / 1k Tokens: $${costBreakdown.costPer1kTokens.toFixed(4)}`,
+    const lines = [
+      `Node Token Footprint: ${node.name} (${node.id})`,
+      `Model: ${telemetry.model?.value ?? "unknown"}`,
+      `Tier: ${telemetry.modelTier?.value ?? "unknown"}`,
+      `Cost: ${footprint.costUsd === undefined ? "not recorded" : formatDetailedUsd(footprint.costUsd, true)}`,
+      `Total Tokens: ${footprint.totalTokens === undefined ? "unknown" : footprint.totalTokens.toLocaleString()}${footprint.isEstimated ? " (estimated)" : ""}`,
     ];
-
-    if (graphAnalytics) {
-      summaryLines.push(
-        `Graph Share: ${graphAnalytics.costSharePercent.toFixed(1)}% of total cost, ${graphAnalytics.tokenSharePercent.toFixed(1)}% of total tokens (Rank #${graphAnalytics.rank} of ${graphAnalytics.totalNodes})`,
+    for (const slice of slices) {
+      lines.push(
+        `  - ${slice.label}: ${slice.value === undefined ? "unknown" : slice.value.toLocaleString()}`,
       );
     }
+    const success = await copyToClipboard(lines.join("\n"));
+    if (!success) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [node.name, node.id, telemetry, footprint, slices]);
 
-    const success = await copyToClipboard(summaryLines.join("\n"));
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [node.name, node.id, tokens, costBreakdown, graphAnalytics]);
-
-  const totalToks = tokens.totalTokens;
-  const promptPct = totalToks > 0 ? (tokens.promptTokens / totalToks) * 100 : 0;
-  const completionPct = totalToks > 0 ? (tokens.completionTokens / totalToks) * 100 : 0;
-  const reasoningPct = totalToks > 0 ? (tokens.reasoningTokens / totalToks) * 100 : 0;
-  const cachePct =
-    totalToks > 0 ? ((tokens.cacheCreationTokens + tokens.cacheReadTokens) / totalToks) * 100 : 0;
+  const totalForBar = slices.reduce((sum, slice) => sum + (slice.value ?? 0), 0);
 
   return (
     <div className="drawer-tab-content cost-tab-content" data-testid="cost-tab">
-      {/* Node Cost Overview Header Card */}
       <div className="cost-overview-header" data-testid="cost-overview-header">
         <div className="cost-header-main">
           <div className="cost-hero-value-group">
-            <span className="cost-hero-label">Node Execution Cost &bull; {node.name}</span>
+            <span className="cost-hero-label">Recorded Cost &bull; {node.name}</span>
             <div className="cost-hero-amount-row">
               <span className="cost-hero-amount" data-testid="node-cost-usd">
-                {formatDetailedUsd(tokens.costUsd, highPrecision)}
+                {footprint.costUsd === undefined ? (
+                  <span className="cost-not-recorded" data-testid="cost-not-recorded">
+                    no cost recorded
+                  </span>
+                ) : (
+                  formatDetailedUsd(footprint.costUsd, highPrecision)
+                )}
               </span>
-              <button
-                type="button"
-                className="cost-precision-toggle"
-                onClick={() => setHighPrecision((prev) => !prev)}
-                title="Toggle precision decimals"
-                aria-label="Toggle currency precision"
-              >
-                {highPrecision ? "4-dec" : "2-dec"}
-              </button>
+              {footprint.costUsd !== undefined ? (
+                <button
+                  type="button"
+                  className="cost-precision-toggle"
+                  onClick={() => setHighPrecision((prev) => !prev)}
+                  title="Toggle precision decimals"
+                  aria-label="Toggle currency precision"
+                >
+                  {highPrecision ? "4-dec" : "2-dec"}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -211,8 +213,8 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
               type="button"
               className="cost-copy-btn"
               onClick={handleCopySummary}
-              title="Copy cost breakdown to clipboard"
-              aria-label="Copy cost summary"
+              title="Copy token footprint to clipboard"
+              aria-label="Copy token summary"
               data-testid="copy-node-cost-btn"
             >
               {copied ? <IconCheck size={14} color="#10b981" /> : <IconCopy size={14} />}
@@ -224,264 +226,148 @@ export const CostTab: FC<CostTabProps> = React.memo(function CostTab({
         <div className="cost-header-meta-chips">
           <div className="cost-meta-chip">
             <span className="chip-label">Model:</span>
-            <span className="chip-value" title={tokens.model}>
-              {tokens.model}
-            </span>
+            {telemetry.model ? (
+              <span className="chip-value" title={telemetry.model.value}>
+                {telemetry.model.value}
+              </span>
+            ) : (
+              <UnknownValue what="Model" />
+            )}
+            {telemetry.model ? (
+              <EvidenceChip
+                evidenceClass={telemetry.model.evidenceClass}
+                isEstimated={telemetry.model.isEstimated}
+              />
+            ) : null}
           </div>
 
           <div className="cost-meta-chip">
             <span className="chip-label">Tier:</span>
-            <span className={`model-tier-chip tier-${tokens.tier}`}>
-              {tokens.tier.toUpperCase()}
-            </span>
+            {telemetry.modelTier ? (
+              <span className={`model-tier-chip tier-${telemetry.modelTier.value.toLowerCase()}`}>
+                {telemetry.modelTier.value.toUpperCase()}
+              </span>
+            ) : (
+              <UnknownValue what="Tier" />
+            )}
           </div>
 
           <div className="cost-meta-chip">
             <span className="chip-label">Tokens:</span>
             <span className="chip-value" data-testid="node-total-tokens">
-              {formatTokens(tokens.totalTokens)}
+              {footprint.totalTokens === undefined ? (
+                <UnknownValue what="Token count" />
+              ) : (
+                formatTokens(footprint.totalTokens)
+              )}
             </span>
+            {footprint.totalTokens !== undefined ? (
+              <EvidenceChip
+                evidenceClass={footprint.evidenceClass}
+                isEstimated={footprint.isEstimated}
+              />
+            ) : null}
           </div>
 
-          {typeof graphAnalytics?.rank === "number" ? (
+          {graphAnalytics?.tokenSharePercent !== null &&
+          graphAnalytics?.tokenSharePercent !== undefined ? (
             <div className="cost-meta-chip">
-              <span className="chip-label">Graph Cost Rank:</span>
-              <span className="chip-value text-accent">
-                {`#${graphAnalytics.rank} of ${graphAnalytics.totalNodes}`}
+              <span className="chip-label">Token Share:</span>
+              <span className="chip-value">
+                {`${graphAnalytics.tokenSharePercent.toFixed(1)}% of ${graphAnalytics.tokenReporters} reporting nodes`}
               </span>
             </div>
           ) : null}
 
-          {graphAnalytics ? (
+          {graphAnalytics?.rank !== null && graphAnalytics?.rank !== undefined ? (
             <div className="cost-meta-chip">
-              <span className="chip-label">Graph Share:</span>
-              <span className="chip-value">{`${graphAnalytics.costSharePercent.toFixed(1)}%`}</span>
+              <span className="chip-label">Cost Rank:</span>
+              <span className="chip-value text-accent">
+                {`#${graphAnalytics.rank} of ${graphAnalytics.costReporters} nodes reporting cost`}
+              </span>
             </div>
           ) : null}
         </div>
       </div>
 
-      {/* Section 1: Granular Token Breakdown */}
-      <DrawerSection title="Token Footprint Breakdown" count={tokens.totalTokens}>
-        {/* Segmented Distribution Bar */}
-        <div
-          className="cost-distribution-track"
-          title={`Input: ${promptPct.toFixed(1)}%, Output: ${completionPct.toFixed(1)}%, Reasoning: ${reasoningPct.toFixed(1)}%, Cache: ${cachePct.toFixed(1)}%`}
-        >
-          {promptPct > 0 && (
-            <div className="cost-bar-seg seg-prompt" style={{ width: `${promptPct}%` }} />
-          )}
-          {completionPct > 0 && (
-            <div className="cost-bar-seg seg-completion" style={{ width: `${completionPct}%` }} />
-          )}
-          {reasoningPct > 0 && (
-            <div className="cost-bar-seg seg-reasoning" style={{ width: `${reasoningPct}%` }} />
-          )}
-          {cachePct > 0 && (
-            <div className="cost-bar-seg seg-cache" style={{ width: `${cachePct}%` }} />
-          )}
+      <DrawerSection title="Token Footprint Breakdown">
+        {totalForBar > 0 ? (
+          <div className="cost-distribution-track">
+            {slices
+              .filter((slice) => (slice.value ?? 0) > 0)
+              .map((slice) => (
+                <div
+                  key={slice.key}
+                  className={`cost-bar-seg ${slice.segmentClass}`}
+                  style={{ width: `${((slice.value ?? 0) / totalForBar) * 100}%` }}
+                />
+              ))}
+          </div>
+        ) : null}
+
+        <div className="drawer-metric-grid cost-metrics-grid">
+          {slices.map((slice) => (
+            <div key={slice.key} className="drawer-metric" data-testid={slice.testId}>
+              <div className="cost-metric-label-row">
+                <span className={`token-dot ${slice.dotClass}`} />
+                <span className="drawer-metric-label">{slice.label}</span>
+              </div>
+              <span className="drawer-metric-value">
+                {slice.value === undefined ? (
+                  <UnknownValue what={slice.label} />
+                ) : (
+                  slice.value.toLocaleString()
+                )}
+              </span>
+              <span className="cost-metric-subtext">
+                {slice.value === undefined
+                  ? "never reported"
+                  : `${formatTokens(slice.value)}${totalForBar > 0 ? ` (${((slice.value / totalForBar) * 100).toFixed(1)}%)` : ""}`}
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* Token Metric Grid */}
-        <div className="drawer-metric-grid cost-metrics-grid">
-          <div className="drawer-metric" data-testid="metric-prompt-tokens">
-            <div className="cost-metric-label-row">
-              <span className="token-dot dot-prompt" />
-              <span className="drawer-metric-label">Input / Prompt</span>
-            </div>
-            <span className="drawer-metric-value">{tokens.promptTokens.toLocaleString()}</span>
-            <span className="cost-metric-subtext">
-              {formatTokens(tokens.promptTokens)} ({promptPct.toFixed(1)}%)
-            </span>
-          </div>
+        {footprint.isEstimated ? (
+          <p className="cost-estimate-banner" data-testid="cost-estimate-banner">
+            These counts are an estimate the run derived, not a host-reported measurement.
+          </p>
+        ) : null}
+      </DrawerSection>
 
-          <div className="drawer-metric" data-testid="metric-completion-tokens">
+      <DrawerSection title="Rounds Recorded">
+        <div className="drawer-metric-grid">
+          <div className="drawer-metric" data-testid="metric-probe-rounds">
             <div className="cost-metric-label-row">
-              <span className="token-dot dot-completion" />
-              <span className="drawer-metric-label">Output / Gen</span>
-            </div>
-            <span className="drawer-metric-value">{tokens.completionTokens.toLocaleString()}</span>
-            <span className="cost-metric-subtext">
-              {formatTokens(tokens.completionTokens)} ({completionPct.toFixed(1)}%)
-            </span>
-          </div>
-
-          <div
-            className={`drawer-metric ${tokens.reasoningTokens > 0 ? "drawer-metric--thinking" : ""}`}
-            data-testid="metric-reasoning-tokens"
-          >
-            <div className="cost-metric-label-row">
-              <span className="token-dot dot-reasoning" />
-              <span className="drawer-metric-label">Reasoning</span>
-            </div>
-            <span className="drawer-metric-value">{tokens.reasoningTokens.toLocaleString()}</span>
-            <span className="cost-metric-subtext">
-              {tokens.reasoningTokens > 0
-                ? `${formatTokens(tokens.reasoningTokens)} (${reasoningPct.toFixed(1)}%)`
-                : "None"}
-            </span>
-          </div>
-
-          <div className="drawer-metric" data-testid="metric-cache-read-tokens">
-            <div className="cost-metric-label-row">
-              <span className="token-dot dot-cache" />
-              <span className="drawer-metric-label">Cache Read (Hit)</span>
-            </div>
-            <span className="drawer-metric-value">{tokens.cacheReadTokens.toLocaleString()}</span>
-            <span className="cost-metric-subtext">{formatTokens(tokens.cacheReadTokens)}</span>
-          </div>
-
-          <div className="drawer-metric" data-testid="metric-cache-write-tokens">
-            <div className="cost-metric-label-row">
-              <span className="token-dot dot-cache-write" />
-              <span className="drawer-metric-label">Cache Creation</span>
+              <IconSearch size={11} />
+              <span className="drawer-metric-label">Probe Rounds</span>
             </div>
             <span className="drawer-metric-value">
-              {tokens.cacheCreationTokens.toLocaleString()}
+              {probeRounds === undefined ? <UnknownValue what="Probe rounds" /> : probeRounds}
             </span>
-            <span className="cost-metric-subtext">{formatTokens(tokens.cacheCreationTokens)}</span>
-          </div>
-        </div>
-
-        {(reasoningEffort || thinkingLevel) && (
-          <div className="cost-thinking-info-banner">
-            <IconSparkles size={14} className="thinking-icon" />
-            <span>
-              Thinking Config: <strong>{thinkingLevel || reasoningEffort}</strong> reasoning effort
+            <span className="cost-metric-subtext">
+              {probeRounds === undefined
+                ? "never recorded for this node"
+                : "proof demanded, no defect asserted"}
             </span>
           </div>
-        )}
-      </DrawerSection>
-
-      {/* Section 2: Financial Analytics & Efficiency */}
-      <DrawerSection title="Financial Analytics & Cost Drivers">
-        <div className="cost-analytics-cards">
-          <div className="cost-detail-card">
-            <span className="cost-detail-title">Cost Composition</span>
-            <div className="cost-detail-table">
-              <div className="cost-table-row">
-                <span className="cost-row-label">Input / Prompt</span>
-                <span className="cost-row-val">
-                  {formatDetailedUsd(costBreakdown.promptCost, highPrecision)}
-                </span>
-              </div>
-              <div className="cost-table-row">
-                <span className="cost-row-label">Output / Completion</span>
-                <span className="cost-row-val">
-                  {formatDetailedUsd(costBreakdown.completionCost, highPrecision)}
-                </span>
-              </div>
-              {tokens.reasoningTokens > 0 && (
-                <div className="cost-table-row">
-                  <span className="cost-row-label">Reasoning / Thinking</span>
-                  <span className="cost-row-val">
-                    {formatDetailedUsd(costBreakdown.reasoningCost, highPrecision)}
-                  </span>
-                </div>
-              )}
-              {tokens.cacheCreationTokens > 0 && (
-                <div className="cost-table-row">
-                  <span className="cost-row-label">Cache Creation</span>
-                  <span className="cost-row-val">
-                    {formatDetailedUsd(costBreakdown.cacheWriteCost, highPrecision)}
-                  </span>
-                </div>
-              )}
-              {tokens.cacheReadTokens > 0 && (
-                <div className="cost-table-row">
-                  <span className="cost-row-label">Cache Read</span>
-                  <span className="cost-row-val">
-                    {formatDetailedUsd(costBreakdown.cacheReadCost, highPrecision)}
-                  </span>
-                </div>
-              )}
+          <div
+            className={`drawer-metric ${repairRounds !== undefined && repairRounds > 0 ? "drawer-metric--warn" : ""}`}
+            data-testid="metric-repair-rounds"
+          >
+            <div className="cost-metric-label-row">
+              <IconAlertTriangle size={11} />
+              <span className="drawer-metric-label">Repair Rounds</span>
             </div>
+            <span className="drawer-metric-value">
+              {repairRounds === undefined ? <UnknownValue what="Repair rounds" /> : repairRounds}
+            </span>
+            <span className="cost-metric-subtext">
+              {repairRounds === undefined
+                ? "never recorded for this node"
+                : "defects sent back for repair"}
+            </span>
           </div>
-
-          <div className="cost-detail-card">
-            <span className="cost-detail-title">Efficiency & Savings</span>
-            <div className="cost-detail-table">
-              <div className="cost-table-row">
-                <span className="cost-row-label">Cache Hit Rate</span>
-                <span className="cost-row-val" data-testid="node-cache-hit-rate">
-                  {costBreakdown.cacheHitRatePercent.toFixed(1)}%
-                </span>
-              </div>
-              <div className="cost-table-row">
-                <span className="cost-row-label">Cache Savings</span>
-                <span className="cost-row-val text-emerald" data-testid="node-cache-savings">
-                  {formatDetailedUsd(costBreakdown.cacheSavingsUsd, highPrecision)}
-                </span>
-              </div>
-              <div className="cost-table-row">
-                <span className="cost-row-label">Cost per 1k Tokens</span>
-                <span className="cost-row-val">${costBreakdown.costPer1kTokens.toFixed(4)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {(retries > 0 || repairRounds > 0) && (
-          <div className="cost-repair-impact-card" data-testid="cost-repair-impact">
-            <div className="repair-impact-header">
-              <IconRefresh size={14} className="repair-icon" />
-              <span className="repair-title">Repair & Retry Multiplier</span>
-            </div>
-            <p className="repair-desc">
-              This node underwent {repairRounds > 0 ? `${repairRounds} repair rounds` : ""}
-              {repairRounds > 0 && retries > 0 ? " and " : ""}
-              {retries > 0 ? `${retries} retries` : ""}, multiplying token consumption by
-              approximately <strong>{(1 + repairRounds + retries).toFixed(1)}x</strong>.
-            </p>
-          </div>
-        )}
-      </DrawerSection>
-
-      {/* Section 3: Model Tier Cost Comparison for this Node */}
-      <DrawerSection title="Model Tier Cost Comparison">
-        <p className="tier-comparison-explainer">
-          Estimated cost if this node&apos;s exact payload was processed by alternative model tiers:
-        </p>
-
-        <div className="tier-comparison-grid" data-testid="tier-comparison-grid">
-          {tierComparisons.map((item) => {
-            const isCheaper = item.deltaUsd < 0;
-            return (
-              <div
-                key={item.tier}
-                className={`tier-comp-card tier-${item.tier} ${item.isCurrentTier ? "is-current-tier" : ""}`}
-                data-testid={`tier-comparison-card-${item.tier}`}
-              >
-                <div className="tier-comp-header">
-                  <div className="tier-badge-wrap">
-                    <span className={`model-tier-chip tier-${item.tier}`}>{item.tierName}</span>
-                    <span className="tier-comp-name">{item.label}</span>
-                  </div>
-                  {item.isCurrentTier && (
-                    <span className="current-tier-tag" data-testid="current-tier-tag">
-                      Current
-                    </span>
-                  )}
-                </div>
-
-                <div className="tier-comp-price-row">
-                  <span className="tier-comp-price">
-                    {formatDetailedUsd(item.simulatedCost, highPrecision)}
-                  </span>
-                  {!item.isCurrentTier && (
-                    <span
-                      className={`tier-comp-delta ${isCheaper ? "delta-cheaper" : "delta-costlier"}`}
-                    >
-                      {isCheaper ? "" : "+"}
-                      {item.deltaPercent.toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-
-                <p className="tier-comp-desc">{item.description}</p>
-              </div>
-            );
-          })}
         </div>
       </DrawerSection>
     </div>

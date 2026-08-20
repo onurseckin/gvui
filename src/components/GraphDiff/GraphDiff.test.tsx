@@ -70,7 +70,7 @@ const sampleBaselineDataset: GraphDataset = {
       name: "Dispatcher Node",
       kind: "orchestrator",
       status: "success",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
       metrics: {
         durationMs: 1500,
         tokensIn: 2000,
@@ -91,7 +91,7 @@ const sampleBaselineDataset: GraphDataset = {
       name: "Worker 1 Agent",
       kind: "agent",
       status: "error",
-      model: "claude-3-haiku",
+      telemetry: { model: { value: "claude-3-haiku", evidence_class: "host_reported" } },
       metrics: {
         durationMs: 4500,
         tokensIn: 5000,
@@ -159,7 +159,9 @@ const sampleComparisonDataset: GraphDataset = {
       name: "Dispatcher Node V2", // Modified name
       kind: "orchestrator",
       status: "success",
-      model: "claude-3-5-sonnet-20241022", // Modified model
+      telemetry: {
+        model: { value: "claude-3-5-sonnet-20241022", evidence_class: "host_reported" },
+      }, // Modified model
       metrics: {
         durationMs: 1200, // Faster duration
         tokensIn: 1800,
@@ -180,7 +182,7 @@ const sampleComparisonDataset: GraphDataset = {
       name: "Worker 1 Agent",
       kind: "agent",
       status: "success", // Status repaired from error to success
-      model: "claude-3-5-sonnet", // Upgraded model
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } }, // Upgraded model
       metrics: {
         durationMs: 3000, // Faster
         tokensIn: 4000,
@@ -507,8 +509,16 @@ describe("GVUI Graph Diff Pure Engine & Utilities", () => {
     expect(findingsDiff.find((f) => f.id === "f2")?.status).toBe("regressed");
 
     const nodeProps = compareNodeProperties(
-      { id: "n1", name: "Node 1", model: "gpt-4o" },
-      { id: "n1", name: "Node 1 Updated", model: "claude-3-5-sonnet" },
+      {
+        id: "n1",
+        name: "Node 1",
+        telemetry: { model: { value: "gpt-4o", evidence_class: "host_reported" } },
+      },
+      {
+        id: "n1",
+        name: "Node 1 Updated",
+        telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
+      },
     );
     expect(nodeProps.find((p) => p.field === "name")?.isDifferent).toBe(true);
     expect(nodeProps.find((p) => p.field === "model")?.isDifferent).toBe(true);

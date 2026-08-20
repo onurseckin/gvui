@@ -24,7 +24,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       kind: "orchestrator",
       status: "success",
       step: 1,
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
       metrics: {
         tokensIn: 2000,
         tokensOut: 500,
@@ -43,7 +43,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       kind: "agent",
       status: "success",
       step: 2,
-      model: "gpt-4o",
+      telemetry: { model: { value: "gpt-4o", evidence_class: "host_reported" } },
       metrics: {
         tokensIn: 5000,
         tokensOut: 2000,
@@ -81,7 +81,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       kind: "agent",
       status: "success",
       step: 2,
-      model: "gemini-2.0-flash",
+      telemetry: { model: { value: "gemini-2.0-flash", evidence_class: "host_reported" } },
       tier: "s",
       metrics: {
         tokensIn: 1000,
@@ -100,7 +100,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       kind: "critic",
       status: "error",
       step: 3,
-      model: "claude-3-haiku",
+      telemetry: { model: { value: "claude-3-haiku", evidence_class: "host_reported" } },
       tier: "xs",
       metrics: {
         tokensIn: 3000,
@@ -262,9 +262,9 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       const reasoningRole = tokenDistribution.byRole.find((r) => r.role === "reasoning");
       expect(reasoningRole?.tokens).toBe(1000);
 
-      // Verify tier simulation
-      expect(tokenDistribution.byTier.length).toBe(4);
-      expect(tokenDistribution.cacheSavingsUsd).toBeGreaterThan(0);
+      // Only tiers the host actually reported show up, and only recorded dollars are summed
+      expect(tokenDistribution.byTier.map((t) => t.tier)).toEqual(["xs", "s"]);
+      expect(tokenDistribution.totalCostUsd).toBeCloseTo(0.07, 5);
     });
 
     it("computes accurate Repair Cycle Histograms", () => {
@@ -348,7 +348,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       });
       expect(tokens1.promptTokens).toBe(100);
       expect(tokens1.completionTokens).toBe(50);
-      expect(tokens1.costUsd).toBeGreaterThan(0);
+      expect(tokens1.costUsd).toBeUndefined();
 
       const tokens2 = extractNodeTokens({
         id: "2",
@@ -372,14 +372,20 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       ).toBe(2);
     });
 
-    it("resolveNodeTier categorizes standard and custom models into tiers", () => {
-      expect(resolveNodeTier({ id: "1", name: "1", model: "claude-3-haiku" })).toBe("xs");
-      expect(resolveNodeTier({ id: "2", name: "2", model: "gemini-2.0-flash" })).toBe("s");
-      expect(resolveNodeTier({ id: "3", name: "3", model: "claude-3-5-sonnet" })).toBe("m");
-      expect(resolveNodeTier({ id: "4", name: "4", model: "openai-o1" })).toBe("l");
-      expect(resolveNodeTier({ id: "5", name: "5", model: "custom-local-model" })).toBe(
+    it("resolveNodeTier reports only the tier a host recorded", () => {
+      expect(
+        resolveNodeTier({
+          id: "1",
+          name: "1",
+          telemetry: { modelTier: { value: "l", evidence_class: "host_reported" } },
+        }),
+      ).toBe("l");
+      expect(resolveNodeTier({ id: "2", name: "2", tier: "xs" })).toBe("xs");
+      expect(resolveNodeTier({ id: "3", name: "3", hostAgent: { tier: "M" } })).toBe("m");
+      expect(resolveNodeTier({ id: "4", name: "4", model: "some-large-model" })).toBe(
         "unspecified",
       );
+      expect(resolveNodeTier({ id: "5", name: "5" })).toBe("unspecified");
     });
 
     it("categorizeError accurately maps error messages to taxonomy keys", () => {
@@ -652,7 +658,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       const metrics = computeAnalyticsMetrics(weirdDataset);
       expect(metrics.totalNodes).toBe(2);
       expect(Number.isFinite(metrics.runVelocity.totalWallClockMs)).toBe(true);
-      expect(Number.isFinite(metrics.tokenDistribution.totalCostUsd)).toBe(true);
+      expect(metrics.tokenDistribution.totalCostUsd).toBeCloseTo(1250.75, 2);
     });
 
     it("handles highly cyclic graphs without infinite recursion in critical path", () => {
@@ -791,7 +797,7 @@ describe("Analytics Dashboard & Telemetry Store", () => {
       expect(tokens.reasoningTokens).toBe(0);
       expect(tokens.cacheReadTokens).toBe(0);
       expect(tokens.totalTokens).toBe(0);
-      expect(tokens.costUsd).toBe(0);
+      expect(tokens.costUsd).toBeUndefined();
     });
 
     it("finding-task-01-stress-tab-switching-and-filter-resets: full lifecycle across all 7 dashboard tabs", () => {

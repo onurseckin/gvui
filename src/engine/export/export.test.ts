@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../../types/graphData";
+import { EDGE_KINDS } from "../../types/graphData";
+import { describeEdgeKind } from "../../primitives/edges/GraphEdge/edgeKinds";
 import { exportPositionedGraphToSvg, exportGraphToSvg, getEmbeddedSvgStyles } from "./svgExporter";
 import { computePngDimensions, derivePngFilename, exportGraphAsPng } from "./pngExporter";
 import { exportGraphToMermaid, sanitizeMermaidId, sanitizeMermaidText } from "./mermaidExporter";
@@ -458,5 +460,59 @@ describe("Adversarial Robustness & Gauntlet Verification", () => {
     // Ensure raw unescaped pipe did not split label
     expect(mermaid).not.toContain('|""|');
     expect(mermaid).not.toContain("| |");
+  });
+});
+
+describe("SVG export edge-kind marker coverage", () => {
+  it("defines a marker for every kind resolveEdgeStyle can point an edge at", () => {
+    const dataset: GraphDataset = {
+      id: "kind-coverage",
+      title: "Kind coverage",
+      nodes: [
+        ...EDGE_KINDS.map((kind, i) => ({ id: `n${i}`, name: kind })),
+        { id: "t", name: "t" },
+      ],
+      edges: EDGE_KINDS.map((kind, i) => ({
+        id: `e${i}`,
+        source: `n${i}`,
+        target: "t",
+        kind,
+      })),
+    };
+
+    const svg = exportGraphToSvg(dataset, {});
+    const referenced = new Set(
+      [...svg.matchAll(/url\(#(gvui-arrow-[a-z]+)\)/g)].map((match) => match[1]),
+    );
+    const defined = new Set(
+      [...svg.matchAll(/<marker id="(gvui-arrow-[a-z]+)"/g)].map((match) => match[1]),
+    );
+
+    expect(referenced.size).toBe(EDGE_KINDS.length);
+    for (const id of referenced) {
+      expect(defined.has(id)).toBe(true);
+    }
+  });
+
+  it("defines a marker for a kind outside the preset table instead of borrowing another one", () => {
+    // Parsed exactly the way a real dataset arrives, so the unfamiliar kind is a genuine untyped
+    // string rather than a cast the compiler was told to trust.
+    const dataset = JSON.parse(
+      JSON.stringify({
+        id: "unknown-kind",
+        title: "Unknown kind",
+        nodes: [
+          { id: "a", name: "a" },
+          { id: "b", name: "b" },
+        ],
+        edges: [{ id: "e", source: "a", target: "b", kind: "not-a-kind" }],
+      }),
+    ) as GraphDataset;
+
+    const svg = exportGraphToSvg(dataset, {});
+    expect(svg).toContain('id="gvui-arrow-not-a-kind"');
+    expect(svg).toContain("url(#gvui-arrow-not-a-kind)");
+    expect(svg).not.toContain("url(#gvui-arrow-sequence)");
+    expect(svg).toContain(describeEdgeKind("not-a-kind").stroke);
   });
 });

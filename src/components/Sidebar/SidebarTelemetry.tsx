@@ -1,221 +1,123 @@
 import type { FC } from "react";
 import React, { useMemo } from "react";
-import type { GraphDataset, GraphNodeData, TokenUsageDetail } from "../../types/graphData";
+import type { GraphDataset } from "../../types/graphData";
+import { formatCost, formatDuration } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import {
-  formatCost,
-  formatDuration,
-  formatTokens,
-} from "../../primitives/nodes/NodeCard/nodeCardModel";
+  aggregateRecordedCost,
+  aggregateRecordedDuration,
+  readSections,
+  UNKNOWN_LABEL,
+} from "../../state/graphSchema";
+import { SidebarAccordion } from "./SidebarAccordion";
 
 export interface SidebarTelemetryProps {
   dataset: GraphDataset | null;
   defaultExpanded?: boolean;
 }
 
-function resolveNodeTokens(node: GraphNodeData): number {
-  const metrics = node.metrics;
-  const meta = node.metadata;
-
-  // 1. Direct tokensIn + tokensOut on metrics
-  let inOutSum = 0;
-  let hasInOut = false;
-  if (typeof metrics?.tokensIn === "number") {
-    inOutSum += metrics.tokensIn;
-    hasInOut = true;
-  }
-  if (typeof metrics?.tokensOut === "number") {
-    inOutSum += metrics.tokensOut;
-    hasInOut = true;
-  }
-  if (hasInOut) return inOutSum;
-
-  // 2. TokenUsageDetail on metrics.tokens or meta.tokens
-  const tokenObj = (metrics?.tokens ?? meta?.tokens) as TokenUsageDetail | undefined;
-  if (tokenObj) {
-    if (typeof tokenObj.totalTokens === "number") {
-      return tokenObj.totalTokens;
-    }
-    let detailSum = 0;
-    let hasDetail = false;
-    if (typeof tokenObj.promptTokens === "number") {
-      detailSum += tokenObj.promptTokens;
-      hasDetail = true;
-    }
-    if (typeof tokenObj.completionTokens === "number") {
-      detailSum += tokenObj.completionTokens;
-      hasDetail = true;
-    }
-    if (typeof tokenObj.reasoningTokens === "number") {
-      detailSum += tokenObj.reasoningTokens;
-      hasDetail = true;
-    }
-    if (hasDetail) return detailSum;
-  }
-
-  // 3. Fallback on metadata direct properties
-  if (typeof meta?.tokensIn === "number" || typeof meta?.tokensOut === "number") {
-    let sum = 0;
-    if (typeof meta?.tokensIn === "number") sum += meta.tokensIn;
-    if (typeof meta?.tokensOut === "number") sum += meta.tokensOut;
-    return sum;
-  }
-
-  return 0;
+interface RunShape {
+  nodesCount: number;
+  edgesCount: number;
+  regionsCount: number;
+  durationMs: number | undefined;
+  durationNodes: number;
+  costUsd: number | undefined;
+  costNodes: number;
 }
 
+function describeRun(dataset: GraphDataset | null): RunShape | null {
+  if (!dataset || !dataset.nodes || dataset.nodes.length === 0) return null;
+
+  const duration = aggregateRecordedDuration(dataset);
+  const cost = aggregateRecordedCost(dataset);
+
+  return {
+    nodesCount: dataset.nodes.length,
+    edgesCount: dataset.edges?.length ?? 0,
+    regionsCount: readSections(dataset).length,
+    durationMs: duration?.total,
+    durationNodes: duration?.reportingNodes ?? 0,
+    costUsd: cost?.total,
+    costNodes: cost?.reportingNodes ?? 0,
+  };
+}
+
+/**
+ * The shape of the run at a glance. Duration and cost are summed only over the nodes that recorded
+ * one; a run that recorded neither shows "unknown" rather than a zero that reads like a measurement.
+ */
 export const SidebarTelemetry: FC<SidebarTelemetryProps> = React.memo(function SidebarTelemetry({
   dataset,
   defaultExpanded = true,
 }) {
-  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+  const run = useMemo(() => describeRun(dataset), [dataset]);
 
-  const telemetry = useMemo(() => {
-    if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
-      return null;
-    }
-
-    let totalTokens = 0;
-    let totalCost = 0;
-    let totalDurationMs = 0;
-    let totalRetries = 0;
-    let totalRepairRounds = 0;
-
-    for (const node of dataset.nodes) {
-      totalTokens += resolveNodeTokens(node);
-
-      const metrics = node.metrics;
-      const meta = node.metadata;
-
-      if (typeof metrics?.costUsd === "number") {
-        totalCost += metrics.costUsd;
-      } else if (typeof meta?.costUsd === "number") {
-        totalCost += meta.costUsd;
-      }
-
-      if (typeof metrics?.durationMs === "number") {
-        totalDurationMs += metrics.durationMs;
-      } else if (typeof meta?.durationMs === "number") {
-        totalDurationMs += meta.durationMs;
-      } else if (typeof meta?.timing?.wallDurationMs === "number") {
-        totalDurationMs += meta.timing.wallDurationMs;
-      } else if (typeof meta?.timingBreakdown?.wallDurationMs === "number") {
-        totalDurationMs += meta.timingBreakdown.wallDurationMs;
-      }
-
-      if (typeof metrics?.retries === "number") {
-        totalRetries += metrics.retries;
-      }
-
-      if (typeof metrics?.repairRounds === "number") {
-        totalRepairRounds += metrics.repairRounds;
-      } else if (typeof meta?.repairRounds === "number") {
-        totalRepairRounds += meta.repairRounds;
-      }
-    }
-
-    return {
-      nodesCount: dataset.nodes.length,
-      edgesCount: dataset.edges ? dataset.edges.length : 0,
-      totalTokens,
-      totalCost,
-      totalDurationMs,
-      totalRetries,
-      totalRepairRounds,
-    };
-  }, [dataset]);
-
-  if (!telemetry) {
+  if (!run) {
     return (
       <div className="sidebar-section" data-testid="sidebar-telemetry">
         <div className="sidebar-section-header">
-          <h4 className="sidebar-section-title">Graph Telemetry</h4>
+          <h4 className="sidebar-section-title">Run Shape</h4>
         </div>
-        <p className="sidebar-empty-state">No graph telemetry available</p>
+        <p className="sidebar-empty-state">No graph loaded</p>
       </div>
     );
   }
 
   return (
-    <div className="sidebar-section" data-testid="sidebar-telemetry">
-      <div
-        className="sidebar-section-header sidebar-accordion-header"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        data-testid="sidebar-telemetry-header"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setIsExpanded((prev) => !prev);
-          }
-        }}
-      >
-        <div className="sidebar-section-header-left">
-          <svg
-            viewBox="0 0 24 24"
-            width="12"
-            height="12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-          <h4 className="sidebar-section-title">Graph Telemetry</h4>
+    <SidebarAccordion
+      testId="sidebar-telemetry"
+      title="Run Shape"
+      badge={`${run.nodesCount} nodes • ${run.edgesCount} edges`}
+      defaultExpanded={defaultExpanded}
+    >
+      <div className="sidebar-telemetry-grid">
+        <div className="telemetry-card">
+          <span className="telemetry-label">Nodes</span>
+          <span className="telemetry-value" data-testid="telemetry-nodes-count">
+            {run.nodesCount}
+          </span>
         </div>
-        <span className="sidebar-section-badge">
-          {telemetry.nodesCount} nodes • {telemetry.edgesCount} edges
-        </span>
+        <div className="telemetry-card">
+          <span className="telemetry-label">Edges</span>
+          <span className="telemetry-value" data-testid="telemetry-edges-count">
+            {run.edgesCount}
+          </span>
+        </div>
+        <div className="telemetry-card">
+          <span className="telemetry-label">Regions</span>
+          <span className="telemetry-value" data-testid="telemetry-regions-count">
+            {run.regionsCount}
+          </span>
+        </div>
+        <div className={`telemetry-card ${run.durationMs === undefined ? "is-unknown" : ""}`}>
+          <span className="telemetry-label">Duration</span>
+          <span className="telemetry-value" data-testid="telemetry-duration">
+            {run.durationMs === undefined ? UNKNOWN_LABEL : formatDuration(run.durationMs)}
+          </span>
+          {run.durationMs === undefined ? null : (
+            <span className="telemetry-coverage" data-testid="telemetry-duration-coverage">
+              {run.durationNodes}/{run.nodesCount} nodes
+            </span>
+          )}
+        </div>
+        <div className={`telemetry-card ${run.costUsd === undefined ? "is-unknown" : ""}`}>
+          <span className="telemetry-label">Recorded cost</span>
+          <span className="telemetry-value" data-testid="telemetry-cost">
+            {run.costUsd === undefined ? UNKNOWN_LABEL : formatCost(run.costUsd)}
+          </span>
+          {run.costUsd === undefined ? null : (
+            <span className="telemetry-coverage" data-testid="telemetry-cost-coverage">
+              {run.costNodes}/{run.nodesCount} nodes
+            </span>
+          )}
+        </div>
       </div>
-
-      {isExpanded && (
-        <div className="sidebar-telemetry-grid">
-          <div className="telemetry-card">
-            <span className="telemetry-label">Nodes</span>
-            <span className="telemetry-value" data-testid="telemetry-nodes-count">
-              {telemetry.nodesCount}
-            </span>
-          </div>
-          <div className="telemetry-card">
-            <span className="telemetry-label">Edges</span>
-            <span className="telemetry-value" data-testid="telemetry-edges-count">
-              {telemetry.edgesCount}
-            </span>
-          </div>
-          <div className="telemetry-card">
-            <span className="telemetry-label">Duration</span>
-            <span className="telemetry-value" data-testid="telemetry-duration">
-              {formatDuration(telemetry.totalDurationMs)}
-            </span>
-          </div>
-          <div className="telemetry-card">
-            <span className="telemetry-label">Tokens</span>
-            <span className="telemetry-value" data-testid="telemetry-tokens">
-              {formatTokens(telemetry.totalTokens)}
-            </span>
-          </div>
-          <div className="telemetry-card">
-            <span className="telemetry-label">Cost</span>
-            <span className="telemetry-value" data-testid="telemetry-cost">
-              {formatCost(telemetry.totalCost)}
-            </span>
-          </div>
-          {telemetry.totalRetries > 0 || telemetry.totalRepairRounds > 0 ? (
-            <div className="telemetry-card">
-              <span className="telemetry-label">Retries</span>
-              <span className="telemetry-value" data-testid="telemetry-retries">
-                {telemetry.totalRetries + telemetry.totalRepairRounds}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
+      {run.costUsd === undefined ? (
+        <p className="sidebar-note" data-testid="telemetry-cost-note">
+          No node recorded a cost. Nothing here is priced from a rate card.
+        </p>
+      ) : null}
+    </SidebarAccordion>
   );
 });
 

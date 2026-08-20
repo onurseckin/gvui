@@ -11,7 +11,7 @@ import { Sidebar } from "./components/Sidebar";
 import { GraphCanvas } from "./engine/GraphCanvas";
 import { useGraphFilesStore } from "./state/useGraphFilesStore";
 import { useCurrentFile, useGraphStore } from "./state/useGraphStore";
-import type { GraphDataset } from "./types/graphData";
+import { normalizeGraphDataset, toGraphDataset, validateGraphDataset } from "./state/graphSchema";
 import { Button } from "./ui";
 import { generateDatasetSignature, loadStoredViewport } from "./utils/fileStorage";
 import "./index.css";
@@ -36,7 +36,16 @@ export const AppContent: FC = () => {
       const filename = fileId.endsWith(".json") ? fileId : `${fileId}.json`;
       const res = await fetch(`/data/graphs/${filename}`);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      const data = (await res.json()) as GraphDataset;
+
+      // Validated and normalised once, here, so every render site downstream reads one shape and
+      // no component has to re-derive a node's provenance for itself.
+      const validation = validateGraphDataset((await res.json()) as unknown);
+      if (validation.dataset === undefined) {
+        throw new Error(`${filename} does not match the GraphDataset contract:
+${validation.errors.join("\n")}`);
+      }
+      for (const warning of validation.warnings) console.warn(warning);
+      const data = toGraphDataset(normalizeGraphDataset(validation.dataset));
 
       const signature = generateDatasetSignature(data);
       const stored = loadStoredViewport(fileId, signature);

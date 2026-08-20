@@ -52,7 +52,7 @@ const mockDataset: GraphDataset = {
       name: "Orchestrator Leader",
       kind: "orchestrator",
       status: "success",
-      model: "claude-3-7-sonnet",
+      telemetry: { model: { value: "claude-3-7-sonnet", evidence_class: "host_reported" } },
       tier: "l",
       step: 1,
       metrics: {
@@ -69,7 +69,7 @@ const mockDataset: GraphDataset = {
       name: "Worker Agent Alpha",
       kind: "agent",
       status: "error",
-      model: "gpt-4o",
+      telemetry: { model: { value: "gpt-4o", evidence_class: "host_reported" } },
       tier: "m",
       step: 2,
       metrics: {

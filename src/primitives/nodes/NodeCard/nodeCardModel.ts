@@ -9,6 +9,7 @@
  * Pure data only, no JSX: `nodeTemplate.ts` runs inside the layout pipeline, which has no React.
  */
 import type { FileRef, GraphNodeData } from "../../../types/graphData";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 
 /**
  * Chip caps. A card is a fixed box in a laid-out graph, so an unbounded chip list would either
@@ -123,12 +124,11 @@ export function selectDescription(node: GraphNodeData): string[] {
 }
 
 /**
- * The header's model chip. Deliberately just `model` and not `harnessModel`: the header is the
- * card's tightest row, and two model names in it push the title out of the box. The harness model
- * is reference detail and lives in the drawer.
+ * The header's model chip: the reported model name and nothing else. The header is the card's
+ * tightest row, so the tier, the evidence class and the token counts stay in the drawer.
  */
 export function selectModelChip(node: GraphNodeData): string[] {
-  const trimmed = node.model?.trim();
+  const trimmed = node.telemetry?.model?.value?.trim();
   return trimmed ? [trimmed] : [];
 }
 
@@ -160,6 +160,11 @@ export function formatCost(usd: number): string {
   if (usd >= 1) return `$${usd.toFixed(2)}`;
   if (usd >= 0.01) return `$${usd.toFixed(3)}`;
   return `$${usd.toFixed(4)}`;
+}
+
+/** Dollars the run actually recorded. An absent figure says so instead of showing $0. */
+export function formatRecordedCost(usd: number | undefined): string {
+  return usd === undefined ? UNKNOWN_LABEL : formatCost(usd);
 }
 
 /**

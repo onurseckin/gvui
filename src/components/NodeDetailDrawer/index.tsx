@@ -4,25 +4,42 @@ import {
   IconFiles,
   IconHierarchy2,
   IconInfoCircle,
+  IconListDetails,
   IconPhoto,
   IconShieldSearch,
+  IconStatusChange,
   IconTerminal,
+  IconTool,
   IconX,
 } from "@tabler/icons-react";
 import type { CSSProperties, FC } from "react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { describeNodeKind, describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
 import { useGraphStore } from "../../state/useGraphStore";
 import type { GraphNodeData, IoPort } from "../../types/graphData";
+import { collectGenericNodeFields, describeOpenIdentity, describeOpenStatus } from "../OpenSchema";
+import { EvidenceChip, UnknownValue } from "./EvidenceChip";
+import {
+  nodeCarriesAgent,
+  readAssets,
+  readBrowserTests,
+  readScripts,
+  readStateTransitions,
+  readTelemetry,
+  readTokenFootprint,
+  readTools,
+} from "./nodeSchema";
 import { edgeToPort } from "./streamUtils";
 import { AssetsTab } from "./tabs/AssetsTab";
-import { CommandsTab } from "./tabs/CommandsTab";
 import { CostTab } from "./tabs/CostTab";
 import { DependenciesTab } from "./tabs/DependenciesTab";
 import { DiffsTab } from "./tabs/DiffsTab";
 import { FindingsTab } from "./tabs/FindingsTab";
 import { OverviewTab } from "./tabs/OverviewTab";
+import { PropertiesTab } from "./tabs/PropertiesTab";
 import { RawProvenanceTab } from "./tabs/RawProvenanceTab";
+import { ScriptsTab } from "./tabs/ScriptsTab";
+import { StateMachineTab } from "./tabs/StateMachineTab";
+import { ToolsTab } from "./tabs/ToolsTab";
 import "./NodeDetailDrawer.css";
 
 type TabId =
@@ -32,13 +49,17 @@ type TabId =
   | "assets"
   | "files"
   | "diffs"
-  | "commands"
+  | "scripts"
+  | "tools"
+  | "state-machine"
   | "findings"
+  | "properties"
   | "provenance";
 
 /**
- * Node detail inspection drawer providing rich metadata, execution metrics,
- * stream accordions, touched files, executions, reviews, media assets, and raw provenance.
+ * The node inspector. Its tabs follow what the selected node actually carries: a purpose-built view
+ * appears only when this dataset has something behind it, and whatever the drawer has no dedicated
+ * view for still arrives under Properties rather than being dropped.
  */
 export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
@@ -89,25 +110,37 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
 
   if (!node) return null;
 
-  const kind = describeNodeKind(node);
-  const status = describeNodeStatus(node);
-  const IconComp = kind.IconComponent;
+  const identity = describeOpenIdentity(node);
+  const status = describeOpenStatus(node);
+  const IconComp = identity.IconComponent;
 
-  const assetsCount =
-    (node.mediaAssets?.length ?? 0) +
-    (node.screenshots?.length ?? 0) +
-    ((node.metadata?.mediaAssets as unknown[])?.length ?? 0) +
-    ((node.metadata?.screenshots as unknown[])?.length ?? 0) +
-    ((node.metadata?.assets as unknown[])?.length ?? 0) +
-    ((node.metadata?.playwrightMetadata?.screenshots as unknown[])?.length ?? 0);
+  const assetsCount = readAssets(node).length;
+  const browserRunsCount = readBrowserTests(node).length;
+  const scriptsCount = readScripts(node).length;
+  const toolsCount = readTools(node).length;
+  const transitionsCount = readStateTransitions(node).length;
+  const telemetry = readTelemetry(node);
+  const carriesAgent = nodeCarriesAgent(node);
 
   const filesCount =
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
-  const commandsCount = (node.metadata?.commands as unknown[])?.length ?? 0;
   const findingsCount = (node.metadata?.findings as unknown[])?.length ?? 0;
   const dependenciesCount = inputs.length + outputs.length;
   const hasRepairOrCritic =
     ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
+
+  // A tab earns its place only when this node has something behind it, so a dataset that speaks a
+  // different vocabulary is never handed a row of views built for a schema it does not use.
+  const footprint = readTokenFootprint(node);
+  const hasCostContent =
+    footprint.inputTokens !== undefined ||
+    footprint.outputTokens !== undefined ||
+    footprint.reasoningTokens !== undefined ||
+    footprint.cacheReadTokens !== undefined ||
+    footprint.cacheCreationTokens !== undefined ||
+    footprint.totalTokens !== undefined ||
+    footprint.costUsd !== undefined;
+  const genericFields = collectGenericNodeFields(node);
 
   const tabs = [
     {
@@ -122,21 +155,21 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       label: "Cost & Tokens",
       icon: IconCoins,
       count: 0,
-      visible: true,
+      visible: hasCostContent,
     },
     {
       id: "dependencies" as TabId,
       label: "Dependencies & Impact",
       icon: IconHierarchy2,
       count: dependenciesCount,
-      visible: true,
+      visible: dependenciesCount > 0,
     },
     {
       id: "assets" as TabId,
       label: "Assets & Media",
       icon: IconPhoto,
-      count: assetsCount,
-      visible: assetsCount > 0 || Boolean(node.metadata?.playwrightMetadata),
+      count: assetsCount + browserRunsCount,
+      visible: assetsCount > 0 || browserRunsCount > 0,
     },
     {
       id: "files" as TabId,
@@ -146,11 +179,25 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       visible: filesCount > 0,
     },
     {
-      id: "commands" as TabId,
-      label: "Executions",
+      id: "scripts" as TabId,
+      label: "Scripts",
       icon: IconTerminal,
-      count: commandsCount,
-      visible: commandsCount > 0,
+      count: scriptsCount,
+      visible: scriptsCount > 0,
+    },
+    {
+      id: "tools" as TabId,
+      label: "Tools",
+      icon: IconTool,
+      count: toolsCount,
+      visible: toolsCount > 0,
+    },
+    {
+      id: "state-machine" as TabId,
+      label: "State Machine",
+      icon: IconStatusChange,
+      count: transitionsCount,
+      visible: transitionsCount > 0,
     },
     {
       id: "findings" as TabId,
@@ -158,6 +205,13 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       icon: IconShieldSearch,
       count: findingsCount,
       visible: findingsCount > 0 || hasRepairOrCritic,
+    },
+    {
+      id: "properties" as TabId,
+      label: "Properties",
+      icon: IconListDetails,
+      count: genericFields.total,
+      visible: genericFields.total > 0,
     },
     {
       id: "provenance" as TabId,
@@ -169,17 +223,19 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
   ];
 
   const visibleTabs = tabs.filter((t) => t.visible);
-  const currentTabId = visibleTabs.some((t) => t.id === activeTab) ? activeTab : "overview";
+  const currentTabId = visibleTabs.some((t) => t.id === activeTab)
+    ? activeTab
+    : (visibleTabs[0]?.id ?? "overview");
 
   return (
     <aside className="node-drawer" role="complementary" aria-label={`Details for ${node.name}`}>
       <header
         className="drawer-header"
-        style={{ "--node-kind-accent": kind.accent } as CSSProperties}
+        style={{ "--node-kind-accent": identity.accent } as CSSProperties}
       >
         <div className="drawer-header-top">
-          <span className="drawer-kind-icon" style={{ color: kind.accent }}>
-            <IconComp size={16} color={kind.accent} />
+          <span className="drawer-kind-icon" style={{ color: identity.accent }}>
+            <IconComp size={16} color={identity.accent} />
           </span>
           <h2 className="drawer-title">{node.name}</h2>
           <button
@@ -193,16 +249,44 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
           </button>
         </div>
         <div className="drawer-header-meta">
-          <span className="drawer-kind-label">{kind.label}</span>
-          <span className="drawer-status-pill" style={{ color: status.color }}>
+          <span
+            className={`drawer-kind-label ${identity.recognized ? "" : "is-custom"}`}
+            data-testid="drawer-kind-label"
+            title={
+              identity.recognized
+                ? undefined
+                : identity.raw === undefined
+                  ? "this node declared neither a kind nor a role"
+                  : `${identity.raw} — this dataset's own vocabulary`
+            }
+          >
+            {identity.label}
+          </span>
+          <span
+            className={`drawer-status-pill ${status.recorded ? "" : "is-unknown"}`}
+            data-testid="drawer-status-pill"
+            style={{ color: status.color }}
+            title={status.recorded ? undefined : "no status was recorded for this node"}
+          >
             {status.label}
           </span>
           {node.step !== undefined ? (
             <span className="drawer-step-chip">Step {node.step}</span>
           ) : null}
-          {node.model ? <span className="drawer-model">{node.model}</span> : null}
-          {node.harnessModel ? (
-            <span className="drawer-model drawer-model--harness">harness: {node.harnessModel}</span>
+          {carriesAgent ? (
+            <span className="drawer-model">
+              {telemetry.model ? (
+                <>
+                  {telemetry.model.value}
+                  <EvidenceChip
+                    evidenceClass={telemetry.model.evidenceClass}
+                    isEstimated={telemetry.model.isEstimated}
+                  />
+                </>
+              ) : (
+                <UnknownValue what="Model" />
+              )}
+            </span>
           ) : null}
           <code className="drawer-id">{node.id}</code>
         </div>
@@ -216,6 +300,7 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
               key={tab.id}
               type="button"
               className={`drawer-tab ${currentTabId === tab.id ? "is-active" : ""}`}
+              data-testid={`drawer-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
             >
               <TabIcon size={14} />
@@ -245,8 +330,11 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
         )}
         {currentTabId === "assets" && <AssetsTab node={node} />}
         {(currentTabId === "files" || currentTabId === "diffs") && <DiffsTab node={node} />}
-        {currentTabId === "commands" && <CommandsTab node={node} />}
+        {currentTabId === "scripts" && <ScriptsTab node={node} />}
+        {currentTabId === "tools" && <ToolsTab node={node} />}
+        {currentTabId === "state-machine" && <StateMachineTab node={node} />}
         {currentTabId === "findings" && <FindingsTab node={node} />}
+        {currentTabId === "properties" && <PropertiesTab node={node} />}
         {currentTabId === "provenance" && <RawProvenanceTab node={node} />}
       </div>
     </aside>

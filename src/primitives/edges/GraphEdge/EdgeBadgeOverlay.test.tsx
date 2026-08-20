@@ -10,6 +10,7 @@ import {
   resolveEdgeDisplayText,
   sanitizeStepBadge,
 } from "./EdgeBadgeOverlay";
+import { EDGE_KIND_DESCRIPTORS } from "./edgeKinds";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -351,17 +352,22 @@ describe("EdgeBadgeOverlay Semantic Types", () => {
     expect(html).toContain("#06b6d4");
   });
 
-  it("propagates sourceAccentColor via CSS variable and style", () => {
+  it("propagates the edge's own accent via CSS variable and style", () => {
     const html = renderToString(
       <EdgeBadgeOverlay
         x={100}
         y={100}
         kind="sequence"
         label="Accent Handoff"
-        sourceAccentColor="#8b5cf6"
+        accentColor="#8b5cf6"
       />,
     );
-    expect(html).toContain("--edge-source-accent:#8b5cf6");
+    expect(html).toContain("--edge-kind-stroke:#8b5cf6");
+  });
+
+  it("falls back to the kind accent so a badge never borrows a node colour", () => {
+    const html = renderToString(<EdgeBadgeOverlay x={100} y={100} kind="probe" label="prove it" />);
+    expect(html).toContain("--edge-kind-stroke:#38bdf8");
   });
 
   it("renders with centered flex typography and text-align center", () => {
@@ -717,48 +723,27 @@ describe("Extreme Label Length & Complex Boundary Handling", () => {
   });
 });
 
-describe("All 7 Semantic Edge Kinds & Centered Typography Audit", () => {
-  const allKinds = [
-    {
-      kind: "spawn" as const,
-      expectedClass: "kind-spawn",
-      label: "Spawn Worker",
-      color: "#06b6d4",
-    },
-    {
-      kind: "sequence" as const,
-      expectedClass: "kind-sequence",
-      label: "Sequence Step",
-      color: "#3f3f46",
-    },
-    { kind: "data" as const, expectedClass: "kind-data", label: "Data Artifact", color: "#6366f1" },
-    {
-      kind: "dependency" as const,
-      expectedClass: "kind-dependency",
-      label: "Dependency Requirement",
-      color: "#64748b",
-    },
-    {
-      kind: "loop" as const,
-      expectedClass: "kind-loop",
-      label: "Rejection Cycle",
-      color: "#f43f5e",
-    },
-    {
-      kind: "gate" as const,
-      expectedClass: "kind-gate",
-      label: "Validation Gate",
-      color: "#10b981",
-    },
-    {
-      kind: "critic" as const,
-      expectedClass: "kind-critic",
-      label: "Signoff Critic",
-      color: "#eab308",
-    },
-  ];
+describe("Semantic Edge Kinds & Centered Typography Audit", () => {
+  const allKinds = (
+    [
+      "spawn",
+      "sequence",
+      "data",
+      "dependency",
+      "loop",
+      "gate",
+      "critic",
+      "probe",
+      "pushback",
+    ] as const
+  ).map((kind) => ({
+    kind,
+    expectedClass: `kind-${kind}`,
+    label: EDGE_KIND_DESCRIPTORS[kind].label,
+    color: EDGE_KIND_DESCRIPTORS[kind].accent,
+  }));
 
-  it("renders all 7 semantic kinds in SVG mode with centered layout and balanced padding", () => {
+  it("renders each semantic kind in SVG mode with centered layout and balanced padding", () => {
     for (const item of allKinds) {
       const html = renderToString(
         <EdgeBadgeOverlay x={120} y={80} kind={item.kind} label={item.label} />,
@@ -773,7 +758,7 @@ describe("All 7 Semantic Edge Kinds & Centered Typography Audit", () => {
     }
   });
 
-  it("renders all 7 semantic kinds in Native HTML mode with centered layout and balanced padding", () => {
+  it("renders each semantic kind in Native HTML mode with centered layout and balanced padding", () => {
     for (const item of allKinds) {
       const html = renderToString(
         <EdgeBadgeOverlay x={120} y={80} kind={item.kind} label={item.label} renderMode="html" />,
@@ -788,15 +773,28 @@ describe("All 7 Semantic Edge Kinds & Centered Typography Audit", () => {
     }
   });
 
-  it("verifies all 7 semantic kinds and variant colors in EdgeBadgeOverlay.css", () => {
+  it("stamps each kind's colours onto the badge from the descriptor table", () => {
+    for (const item of allKinds) {
+      const html = renderToString(
+        <EdgeBadgeOverlay x={120} y={80} kind={item.kind} label={item.label} />,
+      );
+      expect(html).toContain(`--edge-kind-stroke:${item.color}`);
+      expect(html).toContain(`--edge-kind-text:${EDGE_KIND_DESCRIPTORS[item.kind].badgeTextColor}`);
+    }
+  });
+
+  it("takes its colours from the descriptor properties rather than a per-kind block", () => {
     const css = readFileSync(new URL("./EdgeBadgeOverlay.css", import.meta.url).pathname, "utf-8");
 
+    expect(css).toContain("--edge-kind-stroke");
+    expect(css).toContain("--edge-kind-text");
+    expect(css).toContain("--edge-kind-badge-bg");
+    expect(css).toContain("--edge-kind-badge-border");
     for (const item of allKinds) {
-      expect(css).toContain(`kind-${item.kind}`);
-      expect(css).toContain(item.color);
+      expect(css).not.toContain(`.edge-badge-group.${item.expectedClass}`);
     }
 
-    // Check typography centering & zero whitespace gap properties
+    // Typography centering & zero whitespace gap properties still live here.
     expect(css).toContain("justify-content: center");
     expect(css).toContain("text-align: center");
     expect(css).toContain("padding: 0 8px");
@@ -884,5 +882,25 @@ describe("High-Traffic & Bundle Badge Rendering", () => {
     );
     expect(html).toContain("high-traffic");
     expect(html).toContain("cycle");
+  });
+});
+
+describe("A declared kind outranks isCycle in the badge label", () => {
+  it("labels a declared probe back-edge PROBE, not Feedback Loop", () => {
+    const html = renderToString(<EdgeBadgeOverlay x={150} y={100} kind="probe" isCycle />);
+    expect(html).toContain(EDGE_KIND_DESCRIPTORS.probe.label);
+    expect(html).not.toContain("Feedback Loop");
+    expect(html).not.toContain("variant-loop");
+  });
+
+  it("labels a declared pushback back-edge PUSHBACK, not Feedback Loop", () => {
+    const html = renderToString(<EdgeBadgeOverlay x={150} y={100} kind="pushback" isCycle />);
+    expect(html).toContain(EDGE_KIND_DESCRIPTORS.pushback.label);
+    expect(html).not.toContain("Feedback Loop");
+  });
+
+  it("still names a back-edge that declared no kind at all", () => {
+    const html = renderToString(<EdgeBadgeOverlay x={150} y={100} isCycle />);
+    expect(html).toContain("Feedback Loop");
   });
 });

@@ -2,14 +2,15 @@ import type { CSSProperties, FC, KeyboardEvent, MouseEvent } from "react";
 import { memo, useMemo } from "react";
 import {
   describeEdgeKind,
+  edgeKindStyleVars,
   MAX_BADGE_WIDTH,
+  resolveEdgeAccent,
   resolveEdgeDisplayText,
   resolveEdgeKind,
   resolveSafeBadgePlacement as primitiveResolveSafeBadgePlacement,
   sanitizeStepBadge,
 } from "../../primitives/edges/GraphEdge";
 import type { SafeBadgePlacement } from "../../primitives/edges/GraphEdge";
-import { describeNodeKind } from "../../primitives/nodes/NodeCard/nodeKinds";
 import type { PositionedEdge, PositionedNode } from "../../types/graphData";
 
 export type { SafeBadgePlacement };
@@ -76,7 +77,6 @@ export interface GraphBadgeLayerProps {
   hiddenNodeIds: Set<string>;
   selectedNodeId: string | null;
   positionedNodes?: PositionedNode[];
-  nodeAccentMap?: Map<string, string>;
   onSelectEdge?: (edgeId: string, sourceNodeId?: string) => void;
 }
 
@@ -84,21 +84,8 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
   positionedEdges,
   hiddenNodeIds,
   selectedNodeId,
-  positionedNodes,
-  nodeAccentMap: propNodeAccentMap,
   onSelectEdge,
 }) {
-  const nodeAccentMap = useMemo(() => {
-    if (propNodeAccentMap) return propNodeAccentMap;
-    const map = new Map<string, string>();
-    if (positionedNodes) {
-      for (const node of positionedNodes) {
-        map.set(node.id, describeNodeKind(node).accent);
-      }
-    }
-    return map;
-  }, [propNodeAccentMap, positionedNodes]);
-
   const badges = useMemo(() => {
     return positionedEdges
       .map((edge) => {
@@ -146,12 +133,11 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
           return null;
         }
 
-        const displayText = resolveEdgeDisplayText(
-          titleText,
-          descriptor.label,
-          Boolean(edge.isCycle),
-        );
-        const variant = edge.isCycle
+        // A back-edge only names itself "Feedback Loop" when the dataset declared no kind of its
+        // own, so a declared probe or pushback keeps its own label and badge variant.
+        const cycleDecidesLabel = Boolean(edge.isCycle) && !edge.kind;
+        const displayText = resolveEdgeDisplayText(titleText, descriptor.label, cycleDecidesLabel);
+        const variant = cycleDecidesLabel
           ? "loop"
           : (edge.container?.variant ?? edge.badge?.variant ?? descriptor.badgeVariant);
 
@@ -191,7 +177,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
         const showLeaderLine = isOutside && !hasLeaderPoints && anchorPoint !== undefined;
 
         const isEdgeSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
-        const sourceAccentColor = nodeAccentMap.get(edge.source);
+        const edgeAccent = resolveEdgeAccent(edge);
 
         return {
           edge,
@@ -209,7 +195,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
           detailText,
           effectiveHighTraffic,
           isEdgeSelected,
-          sourceAccentColor,
+          edgeAccent,
           showLeaderPath,
           showLeaderLine,
           leaderPoints,
@@ -217,7 +203,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
         };
       })
       .filter((b): b is NonNullable<typeof b> => b !== null);
-  }, [positionedEdges, hiddenNodeIds, selectedNodeId, nodeAccentMap]);
+  }, [positionedEdges, hiddenNodeIds, selectedNodeId]);
 
   const hasLeaderLines = badges.some((b) => b.showLeaderPath || b.showLeaderLine);
 
@@ -252,7 +238,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
                 <path
                   key={`leader-path-${b.edge.id}`}
                   d={d}
-                  stroke={b.sourceAccentColor || b.descriptor.accent || "#38bdf8"}
+                  stroke={b.edgeAccent}
                   strokeWidth="1"
                   strokeDasharray="3,3"
                   fill="none"
@@ -267,7 +253,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
                   y1={b.anchorPoint.y}
                   x2={b.renderX}
                   y2={b.renderY}
-                  stroke={b.sourceAccentColor || b.descriptor.accent || "#38bdf8"}
+                  stroke={b.edgeAccent}
                   strokeWidth="1"
                   strokeDasharray="3,3"
                 />
@@ -279,10 +265,7 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
       )}
       {badges.map((b) => {
         const isInteractive = Boolean(onSelectEdge || b.edge.badge?.clickable);
-        const glowColor =
-          b.edge.traffic?.glowColor ??
-          b.sourceAccentColor ??
-          (b.effectiveHighTraffic ? "#06b6d4" : undefined);
+        const glowColor = b.edge.traffic?.glowColor ?? b.edgeAccent;
 
         const badgeStyle: CSSProperties = {
           position: "absolute",
@@ -292,10 +275,8 @@ export const GraphBadgeLayer: FC<GraphBadgeLayerProps> = memo(function GraphBadg
           width: `${b.width}px`,
           height: `${b.height}px`,
           cursor: isInteractive ? "pointer" : "default",
-          ...(b.sourceAccentColor
-            ? ({ "--edge-source-accent": b.sourceAccentColor } as CSSProperties)
-            : {}),
-          ...(glowColor ? { boxShadow: `0 0 8px ${glowColor}` } : {}),
+          ...edgeKindStyleVars(b.descriptor, b.edgeAccent),
+          boxShadow: `0 0 8px ${glowColor}`,
         };
 
         const badgeClassName = [

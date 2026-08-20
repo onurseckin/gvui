@@ -1,6 +1,7 @@
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback } from "react";
 import type { GraphNodeData } from "../../../types/graphData";
+import { selectModelChip } from "./nodeCardModel";
 import { describeNodeKind, resolveModelTier } from "./nodeKinds";
 
 export interface NodeCardHeaderProps {
@@ -32,6 +33,7 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
 
     const kind = describeNodeKind(node);
     const tier = resolveModelTier(node);
+    const [model] = selectModelChip(node);
     const IconComp = kind.IconComponent;
 
     return (
@@ -53,14 +55,12 @@ export const NodeCardHeader: FC<NodeCardHeaderProps> = memo(
               {node.badge.text}
             </span>
           ) : null}
-          {node.model ? (
+          {model ? (
             <span
               className={`node-card-model-chip ${tier ? `tier-${tier}` : ""}`.trim()}
-              title={
-                node.harnessModel ? `${node.model} · harness: ${node.harnessModel}` : node.model
-              }
+              title={model}
             >
-              {node.model}
+              {model}
             </span>
           ) : null}
           <button

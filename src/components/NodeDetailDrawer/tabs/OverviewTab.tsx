@@ -4,6 +4,7 @@ import {
   IconClock,
   IconCoins,
   IconCpu,
+  IconGitBranch,
   IconRobot,
   IconSparkles,
 } from "@tabler/icons-react";
@@ -15,7 +16,9 @@ import type {
   IoPort,
 } from "../../../types/graphData";
 import { DrawerSection } from "../DrawerSection";
+import { EvidencedField, UnknownValue } from "../EvidenceChip";
 import { IoStreamItem } from "../IoStreamItem";
+import { nodeCarriesAgent, readBranchContext, readRole, readTelemetry } from "../nodeSchema";
 import { formatBytes, formatCost, formatDuration, formatTokens } from "../streamUtils";
 import { SubagentLineageTree } from "./SubagentLineageTree";
 
@@ -76,11 +79,9 @@ interface OverviewTabProps {
 }
 
 /**
- * Merged "Overview & I/O" tab component presenting high-level metadata,
- * humanized execution verification status, structured execution telemetry metrics
- * (Tokens In/Out, Cognitive Tokens, Duration & Memory Footprint breakdown,
- * Cost USD, Repair Rounds), Host Agent card with tier, thinking level, and repair attempt badges,
- * subagent lineage & hierarchical execution call tree, and expandable stream accordions.
+ * Merged "Overview & I/O" tab: purpose, recorded execution metrics, the agent telemetry card with
+ * every field carrying its provenance, the branch sub-task a sub-agent owns, the node's own
+ * subagent lineage, and the expandable stream accordions.
  */
 export const OverviewTab: FC<OverviewTabProps> = ({
   node,
@@ -150,27 +151,11 @@ export const OverviewTab: FC<OverviewTabProps> = ({
     repairRounds > 0 ||
     hasCommands;
 
-  // Host agent attribution
-  const hostAgent = node.hostAgent ?? metadata?.hostAgent;
-  const hostTool = hostAgent?.tool ?? hostAgent?.name ?? metadata?.leaseAgent;
-  const hostModel = hostAgent?.model ?? node.model ?? node.harnessModel ?? metadata?.hostModel;
-  const hostTier = hostAgent?.tier ?? node.tier;
-  const thinkingLevel =
-    hostAgent?.thinkingLevel ??
-    hostAgent?.reasoningEffort ??
-    metadata?.thinkingLevel ??
-    metadata?.reasoningEffort ??
-    (node as { thinkingLevel?: string })?.thinkingLevel ??
-    (node as { reasoningEffort?: string })?.reasoningEffort;
-
-  const hasHostCard = Boolean(
-    hostTool ||
-    hostModel ||
-    hostTier ||
-    thinkingLevel ||
-    typeof cognitiveTokens === "number" ||
-    repairRounds > 0,
-  );
+  // Per-agent telemetry, canonical first. A field nobody reported renders as an explicit unknown.
+  const telemetry = readTelemetry(node);
+  const role = readRole(node);
+  const hostTool = telemetry.host ?? metadata?.leaseAgent;
+  const branch = readBranchContext(node, dataset);
 
   const contextRows: Array<{ key: string; value: string }> = [];
   if (node.context?.repoPath) {
@@ -298,7 +283,7 @@ export const OverviewTab: FC<OverviewTabProps> = ({
         </DrawerSection>
       )}
 
-      {hasHostCard && (
+      {nodeCarriesAgent(node) ? (
         <DrawerSection title="Host Agent Attribution">
           <div className="drawer-host-card">
             <div className="drawer-host-header">
@@ -307,21 +292,32 @@ export const OverviewTab: FC<OverviewTabProps> = ({
               </span>
               <div className="drawer-host-info">
                 <div className="drawer-host-name-row">
-                  <span className="drawer-host-name">{hostTool || "Host Agent"}</span>
-                  {hostTier && (
-                    <span className={`drawer-tier-pill tier-${String(hostTier).toLowerCase()}`}>
-                      {`Tier ${String(hostTier).toUpperCase()}`}
+                  <span className="drawer-host-name">
+                    {hostTool ?? <UnknownValue what="Host" />}
+                  </span>
+                  {role ? <span className="drawer-role-pill">{role}</span> : null}
+                  {telemetry.agentId ? (
+                    <code className="drawer-agent-id">{telemetry.agentId}</code>
+                  ) : null}
+                  {telemetry.grantStatus ? (
+                    <span className="drawer-grant-status">{`grant: ${telemetry.grantStatus}`}</span>
+                  ) : null}
+                  {telemetry.modelTier ? (
+                    <span
+                      className={`drawer-tier-pill tier-${telemetry.modelTier.value.toLowerCase()}`}
+                    >
+                      {`Tier ${telemetry.modelTier.value.toUpperCase()}`}
                     </span>
-                  )}
-                  {thinkingLevel && (
+                  ) : null}
+                  {telemetry.thinkingLevel ? (
                     <span className="drawer-effort-pill">
                       <IconSparkles
                         size={11}
                         style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }}
                       />
-                      {`Thinking Level: ${thinkingLevel}`}
+                      {`Thinking Level: ${telemetry.thinkingLevel.value}`}
                     </span>
-                  )}
+                  ) : null}
                   {typeof cognitiveTokens === "number" && (
                     <span
                       className="drawer-effort-pill"
@@ -355,17 +351,88 @@ export const OverviewTab: FC<OverviewTabProps> = ({
                     </span>
                   )}
                 </div>
-                {hostModel && (
-                  <div className="drawer-host-model-row">
-                    <span className="drawer-host-label">Model:</span>
-                    <code className="drawer-host-model">{hostModel}</code>
-                  </div>
-                )}
+
+                <div className="drawer-telemetry-fields" data-testid="telemetry-fields">
+                  <EvidencedField label="Model" field={telemetry.model} />
+                  <EvidencedField label="Tier" field={telemetry.modelTier} />
+                  <EvidencedField label="Thinking Level" field={telemetry.thinkingLevel} />
+                  <EvidencedField
+                    label="Tokens In"
+                    field={telemetry.tokensIn}
+                    format={(value) => formatTokens(Number(value))}
+                  />
+                  <EvidencedField
+                    label="Tokens Out"
+                    field={telemetry.tokensOut}
+                    format={(value) => formatTokens(Number(value))}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </DrawerSection>
-      )}
+      ) : null}
+
+      {branch ? (
+        <DrawerSection title="Branch Sub-task">
+          <div className="drawer-branch-card" data-testid="branch-context">
+            <div className="drawer-branch-head">
+              <IconGitBranch size={14} />
+              <span className="drawer-branch-title">
+                {branch.sectionTitle ?? `Branch ${branch.branchId ?? ""}`.trim()}
+              </span>
+              {branch.subTaskStatus ? (
+                <span className="drawer-branch-status">{branch.subTaskStatus}</span>
+              ) : null}
+            </div>
+
+            <ul className="drawer-kv-list">
+              <li className="drawer-kv-row">
+                <span className="drawer-kv-key">Sub-task owned</span>
+                <span className="drawer-kv-value">
+                  {branch.subTaskId ? `${branch.subTaskId} — ${node.name}` : node.name}
+                </span>
+              </li>
+              <li className="drawer-kv-row">
+                <span className="drawer-kv-key">Branch reason</span>
+                <span className="drawer-kv-value" data-testid="branch-reason">
+                  {branch.reason ?? <UnknownValue what="Branch reason" />}
+                </span>
+              </li>
+              <li className="drawer-kv-row">
+                <span className="drawer-kv-key">Parent task</span>
+                <span className="drawer-kv-value">
+                  {branch.parentTaskId ?? <UnknownValue what="Parent task" />}
+                </span>
+              </li>
+              {branch.depth !== undefined ? (
+                <li className="drawer-kv-row">
+                  <span className="drawer-kv-key">Branch depth</span>
+                  <span className="drawer-kv-value">{branch.depth}</span>
+                </li>
+              ) : null}
+              {branch.gate ? (
+                <li className="drawer-kv-row">
+                  <span className="drawer-kv-key">Gate</span>
+                  <span className="drawer-kv-value">{branch.gate}</span>
+                </li>
+              ) : null}
+            </ul>
+
+            {branch.writeScope && branch.writeScope.length > 0 ? (
+              <div className="drawer-chip-wrap">
+                {branch.writeScope.map((scope) => (
+                  <span key={scope} className="drawer-chip">
+                    {scope}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {branch.summary ? <p className="drawer-prose">{branch.summary}</p> : null}
+          </div>
+        </DrawerSection>
+      ) : null}
 
       <SubagentLineageTree node={node} dataset={dataset} onSelectNode={onSelectNode} />
 
@@ -396,18 +463,6 @@ export const OverviewTab: FC<OverviewTabProps> = ({
                 direction="out"
                 onSelectNode={onSelectNode}
               />
-            ))}
-          </div>
-        </DrawerSection>
-      ) : null}
-
-      {node.tools && node.tools.length > 0 ? (
-        <DrawerSection title="Tools" count={node.tools.length}>
-          <div className="drawer-chip-wrap">
-            {node.tools.map((tool, index) => (
-              <span key={`${tool.name}-${index}`} className="drawer-chip">
-                {tool.name}
-              </span>
             ))}
           </div>
         </DrawerSection>

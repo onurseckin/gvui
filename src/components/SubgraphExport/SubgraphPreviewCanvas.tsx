@@ -1,4 +1,5 @@
 import React, { useId, useMemo } from "react";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 import type { PositionedNode } from "../../types/graphData";
 import type { SubgraphPreviewCanvasProps } from "./types";
 
@@ -319,7 +320,7 @@ export const SubgraphPreviewCanvas: React.FC<SubgraphPreviewCanvasProps> = ({
                 textAnchor="middle"
                 fontFamily="sans-serif"
               >
-                {box.kind || "agent"}
+                {box.kind || UNKNOWN_LABEL}
               </text>
               {/* Node Name */}
               <text

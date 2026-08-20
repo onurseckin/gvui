@@ -1,5 +1,6 @@
 import type { PositionedEdge, PositionedNode } from "../../types/graphData";
 import { MacroExecutor } from "./macroExecutor";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 import type {
   BatchElementTarget,
   BatchErrorPolicy,
@@ -83,8 +84,8 @@ export class BatchProcessor {
           ...baseVariables,
           elementId: element.id,
           elementName: element.name ?? element.id,
-          elementKind: element.kind ?? "default",
-          elementStatus: element.status ?? "pending",
+          elementKind: element.kind ?? UNKNOWN_LABEL,
+          elementStatus: element.status ?? UNKNOWN_LABEL,
           targetId: element.id,
           nodeId: element.id,
           nodeName: element.name ?? element.id,

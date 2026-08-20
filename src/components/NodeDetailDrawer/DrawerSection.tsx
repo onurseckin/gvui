@@ -31,7 +31,7 @@ const PAYLOAD_LABELS: Readonly<Record<string, string>> = Object.freeze({
 });
 
 /**
- * Compact row renderer for legacy or auxiliary list views.
+ * Compact row renderer for auxiliary list views.
  */
 export const IoRow: FC<{
   port: IoPort;

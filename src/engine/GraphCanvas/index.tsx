@@ -7,6 +7,7 @@ import { generateDatasetSignature, saveStoredViewport } from "../../utils/fileSt
 import { buildEdgePath } from "../layout/custom/edgePath";
 import { GraphBadgeLayer } from "./GraphBadgeLayer";
 import "./GraphCanvas.css";
+import { GraphGroupingLayer } from "./GraphGroupingLayer";
 import { GraphHtmlLayer } from "./GraphHtmlLayer";
 import { GraphSvgLayer } from "./GraphSvgLayer";
 import { useLayoutComputation } from "./useLayoutComputation";
@@ -95,14 +96,6 @@ export const GraphCanvas: FC = () => {
     return hidden;
   }, [collapsedNodeIds, positionedEdges]);
 
-  const nodeAccentMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const node of positionedNodes) {
-      map.set(node.id, describeNodeKind(node).accent);
-    }
-    return map;
-  }, [positionedNodes]);
-
   const handleSelectEdge = useCallback(
     (_edgeId: string, sourceNodeId?: string) => {
       if (sourceNodeId) {
@@ -141,13 +134,20 @@ export const GraphCanvas: FC = () => {
     >
       {isCalculating && <LoadingOverlay />}
       <div className="graph-transform-stage" style={transformStyle}>
+        <GraphGroupingLayer
+          positionedNodes={positionedNodes}
+          hiddenNodeIds={hiddenNodeIds}
+          sections={dataset?.sections}
+          selectedNodeId={selectedNodeId}
+          zoomLevel={zoomLevel}
+          onSelectNode={handleSelectNode}
+        />
         <GraphSvgLayer
           styledEdges={styledEdges}
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
           selectedNodeAccent={selectedNodeAccent}
           positionedNodes={positionedNodes}
-          nodeAccentMap={nodeAccentMap}
           onSelectEdge={handleSelectEdge}
         />
         <GraphHtmlLayer
@@ -168,7 +168,6 @@ export const GraphCanvas: FC = () => {
           hiddenNodeIds={hiddenNodeIds}
           selectedNodeId={selectedNodeId}
           positionedNodes={positionedNodes}
-          nodeAccentMap={nodeAccentMap}
           onSelectEdge={handleSelectEdge}
         />
       </div>

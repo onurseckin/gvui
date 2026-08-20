@@ -81,7 +81,7 @@ export function computeBlastRadiusMatrix(
     maxDepth: number;
     terminalsAffected: number;
     cascadeTree: FailureCascadeNode[];
-    costAtRisk: number;
+    costAtRisk: number | undefined;
   } {
     const visited = new Map<string, number>(); // id -> depth
     const queue: Array<{ id: string; depth: number }> = [{ id: startId, depth: 0 }];
@@ -90,7 +90,9 @@ export function computeBlastRadiusMatrix(
     const cascadeTree: FailureCascadeNode[] = [];
     let maxDepth = 0;
     let terminalsAffected = 0;
-    let costAtRisk = Number(nodeMap.get(startId)?.metrics?.costUsd ?? 0);
+    // Recorded dollars only, so an unpriced cascade puts no dollar figure at risk.
+    const startCost = nodeMap.get(startId)?.metrics?.costUsd;
+    let costAtRisk: number | undefined = typeof startCost === "number" ? startCost : undefined;
 
     while (queue.length > 0) {
       const current = queue.shift();
@@ -113,8 +115,8 @@ export function computeBlastRadiusMatrix(
           }
 
           const childNode = nodeMap.get(childId);
-          const childCost = Number(childNode?.metrics?.costUsd ?? 0);
-          costAtRisk += childCost;
+          const childCost = childNode?.metrics?.costUsd;
+          if (typeof childCost === "number") costAtRisk = (costAtRisk ?? 0) + childCost;
 
           cascadeTree.push({
             nodeId: childId,
@@ -227,7 +229,8 @@ export function computeBlastRadiusMatrix(
       riskLevel,
       isOnCriticalPath,
       cascadeTree: impact.cascadeTree,
-      estimatedCostAtRiskUsd: Math.round(impact.costAtRisk * 10000) / 10000,
+      estimatedCostAtRiskUsd:
+        impact.costAtRisk === undefined ? undefined : Math.round(impact.costAtRisk * 10000) / 10000,
       remediationRecommendation,
     });
   }
@@ -263,7 +266,8 @@ export function simulateNodeFailure(
   affectedNodes: string[];
   cascadeDepth: number;
   terminalsAffected: string[];
-  totalCostAtRisk: number;
+  /** Recorded dollars on the affected nodes. Absent when none of them reported a cost. */
+  totalCostAtRisk?: number;
 } {
   const matrix = computeBlastRadiusMatrix(dataset);
   const item = matrix.items.find((it) => it.nodeId === failedNodeId);
@@ -273,7 +277,6 @@ export function simulateNodeFailure(
       affectedNodes: [],
       cascadeDepth: 0,
       terminalsAffected: [],
-      totalCostAtRisk: 0,
     };
   }
 

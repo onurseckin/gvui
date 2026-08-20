@@ -1,0 +1,82 @@
+{
+  "id": "future-bakery-line",
+  "title": "Bakery line, exported by a producer this renderer has never met",
+  "directed": true,
+  "schemaVersion": 12,
+  "producedBy": {
+    "tool": "bakery-exporter",
+    "release": "2029.4.1",
+    "flags": ["wide", "annotated"]
+  },
+  "futureBlock": {
+    "calibration": {
+      "ovens": [
+        { "id": "oven-a", "profile": { "curve": [180, 210, 195], "notes": "steam at minute two" } }
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "n-order",
+      "name": "Morning order",
+      "kind": "customer-order",
+      "metadata": { "role": "front-of-house", "takenBy": "Sema" },
+      "tools": [null, { "name": "till" }],
+      "badges": ["urgent", { "label": "First of the day" }],
+      "moodRing": "teal",
+      "provenanceOfTheDough": { "mill": { "name": "Kepez", "grind": { "coarseness": 4 } } }
+    },
+    {
+      "id": "n-dough",
+      "name": "Mix and knead",
+      "kind": "mixing-stage",
+      "metadata": { "role": "back-of-house" },
+      "assets": "photos/dough.jpg",
+      "step": "second"
+    },
+    {
+      "id": "n-proof",
+      "name": "Bulk proof",
+      "kind": "resting-stage",
+      "metadata": null,
+      "stateTransitions": "nobody wrote any down"
+    },
+    { "id": "n-bake", "kind": "oven-stage" },
+    { "id": "n-cool", "name": 1400, "kind": 7, "status": ["cooling"] },
+    {
+      "id": "n-deliver",
+      "name": "Load the van",
+      "kind": "logistics-stage",
+      "metadata": { "role": "driver" },
+      "routeHints": {
+        "stops": [{ "district": "Moda", "window": { "from": "07:10", "to": "07:40" } }]
+      }
+    },
+    { "name": "Ghost mixer", "kind": "mixing-stage" },
+    { "id": "n-dough", "name": "Mix and knead, said twice", "kind": "mixing-stage" }
+  ],
+  "edges": [
+    {
+      "id": "e-order-dough",
+      "source": "n-order",
+      "target": "n-dough",
+      "kind": "feeds",
+      "exchanges": [null, { "id": "x-1" }]
+    },
+    { "id": "e-dough-proof", "source": "n-dough", "target": "n-proof", "kind": "feeds" },
+    { "id": "e-proof-bake", "source": "n-proof", "target": "n-bake", "kind": "feeds" },
+    { "id": "e-bake-cool", "source": "n-bake", "target": "n-cool", "kind": "feeds", "label": [] },
+    { "id": "e-cool-deliver", "source": "n-cool", "target": "n-deliver", "kind": "feeds" },
+    { "id": "e-ghost", "source": "n-deliver", "target": "n-nightshift", "kind": "feeds" },
+    { "source": "n-order", "target": "n-deliver", "kind": "promises" }
+  ],
+  "sections": [
+    {
+      "id": "sec-kitchen",
+      "kind": "room",
+      "title": "Kitchen",
+      "nodeIds": ["n-dough", "n-proof", "n-bake", "n-nightshift"]
+    },
+    { "id": "sec-front", "kind": "room", "title": "Front", "nodeIds": ["n-order", "n-deliver"] }
+  ]
+}

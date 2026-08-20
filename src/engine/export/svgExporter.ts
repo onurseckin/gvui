@@ -14,7 +14,7 @@ import {
 } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import {
   EDGE_KIND_DESCRIPTORS,
-  type SemanticEdgeKind,
+  describeEdgeKind,
 } from "../../primitives/edges/GraphEdge/edgeKinds";
 import { computeGraphBounds } from "../../utils/pngExporter";
 
@@ -177,26 +177,33 @@ export function getEmbeddedSvgStyles(
   `.trim();
 }
 
-/**
- * Builds SVG arrow marker definitions in `<defs>` for various edge kinds and themes.
- */
-function buildMarkerDefs(): string {
-  const markers = [
-    { id: "gvui-arrow-default", color: "#64748b" },
-    { id: "gvui-arrow-spawn", color: "#06b6d4" },
-    { id: "gvui-arrow-sequence", color: "#3b82f6" },
-    { id: "gvui-arrow-data", color: "#8b5cf6" },
-    { id: "gvui-arrow-dependency", color: "#94a3b8" },
-    { id: "gvui-arrow-loop", color: "#f59e0b" },
-    { id: "gvui-arrow-gate", color: "#10b981" },
-    { id: "gvui-arrow-critic", color: "#ec4899" },
-  ];
+/** An id fragment an SVG document will accept, whatever characters the kind was spelled with. */
+function markerIdFor(kind: string): string {
+  return `gvui-arrow-${kind.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+}
 
-  return markers
+/**
+ * Builds SVG arrow marker definitions in `<defs>`: one per preset edge kind, plus one for every
+ * other kind the dataset actually uses. Generated rather than listed by hand, because
+ * `resolveEdgeStyle` points every edge at its own marker and a hand-written list silently drops the
+ * arrowhead off any kind it forgot. An exported file is standalone, so a marker it references but
+ * never defines would leave that edge headless in every viewer.
+ */
+function buildMarkerDefs(edges: readonly PositionedEdge[]): string {
+  const markers = new Map<string, string>([["gvui-arrow-default", "#64748b"]]);
+  for (const descriptor of Object.values(EDGE_KIND_DESCRIPTORS)) {
+    markers.set(markerIdFor(descriptor.kind), descriptor.stroke);
+  }
+  for (const edge of edges) {
+    const descriptor = describeEdgeKind(edge);
+    markers.set(markerIdFor(descriptor.kind), descriptor.stroke);
+  }
+
+  return [...markers.entries()]
     .map(
-      (m) => `
-    <marker id="${m.id}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
-      <path d="M 0 0 L 8 4 L 0 8 z" fill="${m.color}" />
+      ([id, color]) => `
+    <marker id="${id}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="${color}" />
     </marker>`,
     )
     .join("");
@@ -211,23 +218,15 @@ function resolveEdgeStyle(edge: PositionedEdge): {
   strokeDasharray?: string;
   markerEnd: string;
 } {
-  const semanticKind = (edge.kind ?? "sequence") as SemanticEdgeKind;
-  const descriptor = EDGE_KIND_DESCRIPTORS[semanticKind];
-
-  if (descriptor) {
-    const markerId = `gvui-arrow-${descriptor.kind}`;
-    return {
-      stroke: descriptor.stroke,
-      strokeWidth: descriptor.strokeWidth,
-      strokeDasharray: descriptor.strokeDasharray,
-      markerEnd: `url(#${markerId})`,
-    };
-  }
+  // describeEdgeKind, not a cast: a kind with no preset resolves through the same table the canvas
+  // uses and keeps its own treatment instead of borrowing another kind's.
+  const descriptor = describeEdgeKind(edge);
 
   return {
-    stroke: "#64748b",
-    strokeWidth: 1.5,
-    markerEnd: "url(#gvui-arrow-default)",
+    stroke: descriptor.stroke,
+    strokeWidth: descriptor.strokeWidth,
+    strokeDasharray: descriptor.strokeDasharray,
+    markerEnd: `url(#${markerIdFor(descriptor.kind)})`,
   };
 }
 
@@ -436,7 +435,7 @@ export function exportPositionedGraphToSvg(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${width} ${height}" width="${width}" height="${height}" class="gvui-svg-root">
   <defs>
-    ${buildMarkerDefs()}
+    ${buildMarkerDefs(edges)}
     ${styleSheet ? `<style>\n${styleSheet}\n  </style>` : ""}
   </defs>
   ${titleElement}

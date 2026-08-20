@@ -21,16 +21,16 @@ Built with **React 19**, **TypeScript**, and a custom **Rust / WebAssembly (WASM
 │               React 19 Host UI           │              Developer Tooling              │
 │  ┌─────────────────────────────────────┐ │  ┌───────────────────────────────────────┐  │
 │  │ Interactive Graph Canvas            │ │  │ 280-Run Layout Audit Framework        │  │
-│  │  - SVG/Canvas Pan & Zoom Engine     │ │  │ Playwright Visual Capture Engine      │  │
-│  │  - Polymorphic Node Archetype Cards │ │  │ CLI Long-Running Capsule Importer     │  │
-│  │  - Smart Edge Badges & Polylines    │ │  │ Multi-Format Graph Exporter (SVG/PNG) │  │
+│  │   - 19 semantic edge kinds + markers│ │  │ Playwright Visual Capture Engine      │  │
+│  │   - 9 role archetypes on node cards │ │  │ Contract-Checked Capsule Importer     │  │
+│  │   - Branch sections carry a reason  │ │  │ Multi-Format Exporter (SVG/PNG/SQL)   │  │
 │  └─────────────────────────────────────┘ │  └───────────────────────────────────────┘  │
 │  ┌─────────────────────────────────────┐ │  ┌───────────────────────────────────────┐  │
-│  │ Polymorphic Node Detail Drawer      │ │  │ In-Browser SQLite Caching (sql.js)    │  │
-│  │  - Token Distribution & Cost ($USD) │ │  │  - Deterministic Hash Indexing        │  │
-│  │  - Subagent Lineage & Impact Graph  │ │  │  - LRU Quota Eviction & Persistence   │  │
-│  │  - Error Inspector & Stack Parser   │ │  │  - Zero-Copy Memory Transport         │  │
-│  │  - Code Diffs & Command Executions  │ │  │                                       │  │
+│  │ Node Detail Drawer - 10 tabs        │ │  │ Browser-Local Layout Cache            │  │
+│  │   - Scripts, Tools, State Machine   │ │  │   - Deterministic dataset signature   │  │
+│  │   - Evidence-classed telemetry      │ │  │   - LRU eviction on quota exhaustion  │  │
+│  │   - Findings resolve to node.assets │ │  │   - localStorage JSON persistence     │  │
+│  │   - Recorded cost only, never priced│ │  │                                       │  │
 │  └─────────────────────────────────────┘ │  └───────────────────────────────────────┘  │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
                                            │
@@ -58,16 +58,18 @@ Built with **React 19**, **TypeScript**, and a custom **Rust / WebAssembly (WASM
 
 ## ✨ Key Capabilities & Feature Matrix
 
-| Feature Subsystem             | Technical Implementation                                | Key Guarantees                                                                        |
-| :---------------------------- | :------------------------------------------------------ | :------------------------------------------------------------------------------------ |
-| **Rust WASM Layout Engine**   | 11-Phase forward-flow pipeline (`crates/gvui/`)         | Median runtime $< 1.5\text{ ms}$; zero backtracking.                                  |
-| **Dual Layout Modes**         | `layered` (Sugiyama hierarchy) & `radial` (orbital BFS) | Orthogonal `direction` support (`top-down`, `bottom-up`, `left-right`, `right-left`). |
-| **Quality Invariants**        | 8 Hard zero-tolerance gates enforced in CI              | 0 node overlaps, 0 edge penetrations, 0 badge collisions, 0 collinear overlaps.       |
-| **Deterministic Hashes**      | Strict node ID sort keys & platform-agnostic floats     | Byte-identical coordinates across distinct worker processes and browser runs.         |
-| **SQLite Layout Caching**     | WebAssembly SQLite (`sql.js`) with IndexedDB fallback   | Instant viewport hydration; automatic LRU eviction policy.                            |
-| **Node Detail Drawer**        | 10 Context-aware diagnostic inspection tabs             | Real-time token breakdown, cost modeling, subagent trees, and stack traces.           |
-| **Multi-Format Export**       | SVG, PNG (2x/4x), Mermaid, SQL DDL, and standalone HTML | Fully portable, offline-viewable standalone bundles.                                  |
-| **Visual Ingestion Pipeline** | Playwright multi-viewport headless regression suite     | Automated screenshot capture matrix across 4 standard viewports.                      |
+| Feature Subsystem              | Technical Implementation                                | Key Guarantees                                                                           |
+| :----------------------------- | :------------------------------------------------------ | :--------------------------------------------------------------------------------------- |
+| **Rust WASM Layout Engine**    | 11-Phase forward-flow pipeline (`crates/gvui/`)         | Median runtime $< 1.5\text{ ms}$; zero backtracking.                                     |
+| **Dual Layout Modes**          | `layered` (Sugiyama hierarchy) & `radial` (orbital BFS) | Orthogonal `direction` support (`top-down`, `bottom-up`, `left-right`, `right-left`).    |
+| **Quality Invariants**         | 8 Hard zero-tolerance gates enforced in CI              | 0 node overlaps, 0 edge penetrations, 0 badge collisions, 0 collinear overlaps.          |
+| **Deterministic Hashes**       | Strict node ID sort keys & platform-agnostic floats     | Byte-identical coordinates across distinct worker processes and browser runs.            |
+| **Browser-Local Layout Cache** | Dataset-signature keyed rows in `localStorage`          | Instant re-hydration of a layout already computed; LRU eviction on quota exhaustion.     |
+| **Graph Vocabulary**           | 19 edge kinds, 9 role archetypes, branch sections       | `probe` and `pushback` never render alike; an unknown member warns instead of failing.   |
+| **Node Detail Drawer**         | 10 evidence-classed inspection tabs                     | Scripts, tools and state machine from the record; an unreported value renders `unknown`. |
+| **Capsule Import**             | Contract validation plus one-pass legacy normalisation  | Every problem reported at once; nothing the capsule did not record is filled in.         |
+| **Multi-Format Export**        | SVG, PNG (2x/4x), Mermaid, SQL DDL, and standalone HTML | Fully portable, offline-viewable standalone bundles.                                     |
+| **Visual Ingestion Pipeline**  | Playwright multi-viewport headless regression suite     | Automated screenshot capture matrix across 4 standard viewports.                         |
 
 ---
 
@@ -145,5 +147,5 @@ For in-depth architectural guides, mathematical specifications, and phase walkth
 - **[Concepts](./docs/concepts/README.md)**: [Sugiyama Framework](./docs/concepts/sugiyama-framework.md) · [Node Measurement](./docs/concepts/node-measurement.md) · [Determinism](./docs/concepts/determinism.md) · [Quality Model](./docs/concepts/quality-model.md) · [Computational Complexity](./docs/concepts/computational-complexity.md)
 - **[Engine Pipeline](./docs/engine/README.md)**: [01 Foundations](./docs/engine/01-foundations.md) · [02 The Pipeline](./docs/engine/02-the-pipeline.md) · [03 Ingest & Measurement](./docs/engine/03-ingest-and-measurement.md) · [04 Structure](./docs/engine/04-structure.md) · [05 Rank Assignment](./docs/engine/05-rank-assignment.md) · [06 Layering & Labels](./docs/engine/06-layering-and-labels.md) · [07 Crossing Minimization](./docs/engine/07-crossing-minimization.md) · [08 Routing Demand](./docs/engine/08-routing-demand.md) · [09 Coordinate Assignment](./docs/engine/09-coordinate-assignment.md) · [10 Edge Routing](./docs/engine/10-edge-routing.md) · [11 Emit & Quality](./docs/engine/11-emit-and-quality.md)
 - **[Layout Modes](./docs/modes/README.md)**: [Layered Mode](./docs/modes/01-layered.md) · [Radial Mode](./docs/modes/02-radial.md)
-- **[Core Features](./docs/features/README.md)**: [SQLite Caching](./docs/features/sqlite-caching.md) · [Node Detail Drawer](./docs/features/detail-drawer.md) · [Graph Export](./docs/features/graph-export.md)
+- **[Core Features](./docs/features/README.md)**: [Graph Vocabulary](./docs/features/graph-vocabulary.md) · [Node Detail Drawer](./docs/features/detail-drawer.md) · [Graph Export](./docs/features/graph-export.md) · [Layout Caching](./docs/features/layout-caching.md)
 - **[Developer Tooling](./docs/tooling/README.md)**: [Layout Audit](./docs/tooling/layout-audit.md) · [Screenshot Pipeline](./docs/tooling/screenshot-pipeline.md) · [Capsule Import](./docs/tooling/capsule-import.md)

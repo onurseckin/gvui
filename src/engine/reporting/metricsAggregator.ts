@@ -9,6 +9,12 @@ import type {
   TokenAttribution,
 } from "./types";
 import { computeBlastRadiusMatrix } from "./blastRadiusEngine";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
+
+/** Folds a possibly-absent recorded cost into a running total that stays absent until one lands. */
+function addRecordedCost(total: number | undefined, cost: number | undefined): number | undefined {
+  return cost === undefined ? total : (total ?? 0) + cost;
+}
 
 /**
  * Extracts all audit findings from nodes and their metadata.
@@ -208,7 +214,6 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
       promptTokens: 0,
       completionTokens: 0,
       reasoningTokens: 0,
-      totalCostUsd: 0,
       totalRetries: 0,
       totalRepairRounds: 0,
       recoveryEfficiency: 100,
@@ -229,7 +234,8 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
   let promptTokens = 0;
   let completionTokens = 0;
   let reasoningTokens = 0;
-  let totalCostUsd = 0;
+  // Recorded dollars only; stays undefined when the run reported none.
+  let totalCostUsd: number | undefined;
   let totalRetries = 0;
   let totalRepairRounds = 0;
   let recoveredCount = 0;
@@ -277,12 +283,14 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
     const tIn = Number(node.metrics?.tokensIn ?? node.metrics?.tokens?.promptTokens ?? 0);
     const tOut = Number(node.metrics?.tokensOut ?? node.metrics?.tokens?.completionTokens ?? 0);
     const tReasoning = Number(node.metrics?.tokens?.reasoningTokens ?? 0);
-    const nodeCost = Number(node.metrics?.costUsd ?? 0);
+    const nodeCost = node.metrics?.costUsd;
 
     if (Number.isFinite(tIn)) promptTokens += tIn;
     if (Number.isFinite(tOut)) completionTokens += tOut;
     if (Number.isFinite(tReasoning)) reasoningTokens += tReasoning;
-    if (Number.isFinite(nodeCost)) totalCostUsd += nodeCost;
+    if (typeof nodeCost === "number" && Number.isFinite(nodeCost)) {
+      totalCostUsd = (totalCostUsd ?? 0) + nodeCost;
+    }
   }
 
   const totalTokens = promptTokens + completionTokens + reasoningTokens;
@@ -362,7 +370,7 @@ export function aggregateKpiScorecard(dataset: GraphDataset | null | undefined):
     promptTokens,
     completionTokens,
     reasoningTokens,
-    totalCostUsd: Number.isFinite(totalCostUsd) ? Math.round(totalCostUsd * 10000) / 10000 : 0,
+    totalCostUsd: totalCostUsd === undefined ? undefined : Math.round(totalCostUsd * 10000) / 10000,
     totalRetries,
     totalRepairRounds,
     recoveryEfficiency,
@@ -380,7 +388,6 @@ export function aggregateTokenAttribution(
   if (!dataset || !Array.isArray(dataset.nodes) || dataset.nodes.length === 0) {
     return {
       totalTokens: 0,
-      totalCostUsd: 0,
       byNode: [],
       byModel: [],
       byTier: [],
@@ -405,7 +412,8 @@ export function aggregateTokenAttribution(
   }
 
   let totalTokens = 0;
-  let totalCostUsd = 0;
+  // Recorded dollars only; stays undefined when the run reported none.
+  let totalCostUsd: number | undefined;
 
   const rawNodeDetails: Array<{
     nodeId: string;
@@ -417,15 +425,15 @@ export function aggregateTokenAttribution(
     tokensOut: number;
     reasoningTokens: number;
     totalTokens: number;
-    costUsd: number;
+    costUsd?: number;
     durationMs: number;
   }> = [];
 
-  const modelMap = new Map<string, { tokens: number; costUsd: number; nodeCount: number }>();
-  const tierMap = new Map<string, { tokens: number; costUsd: number; nodeCount: number }>();
+  const modelMap = new Map<string, { tokens: number; costUsd?: number; nodeCount: number }>();
+  const tierMap = new Map<string, { tokens: number; costUsd?: number; nodeCount: number }>();
   const sectionMap = new Map<
     string,
-    { title: string; tokens: number; costUsd: number; nodeCount: number }
+    { title: string; tokens: number; costUsd?: number; nodeCount: number }
   >();
 
   for (const node of dataset.nodes) {
@@ -439,16 +447,20 @@ export function aggregateTokenAttribution(
       Number(node.metrics?.tokens?.totalTokens ?? 0),
       tokensIn + tokensOut + reasoningTokens,
     );
-    const costUsd = Number(node.metrics?.costUsd ?? 0);
+    const rawCost = node.metrics?.costUsd;
+    const costUsd = typeof rawCost === "number" && Number.isFinite(rawCost) ? rawCost : undefined;
     const durationMs = Number(node.metrics?.durationMs ?? node.metadata?.durationMs ?? 0);
 
     totalTokens += nodeTotalTokens;
-    totalCostUsd += costUsd;
+    if (costUsd !== undefined) totalCostUsd = (totalCostUsd ?? 0) + costUsd;
 
-    const modelName = String(
-      node.model || node.harnessModel || node.hostAgent?.model || "standard-model",
-    );
-    const tierName = String(node.tier || node.hostAgent?.tier || "m").toUpperCase();
+    // Neither a model name nor a tier is ever invented here: a node the host said nothing about
+    // is grouped under "unknown" rather than under a plausible-looking vendor default.
+    const reportedModel =
+      node.telemetry?.model?.value || node.model || node.harnessModel || node.hostAgent?.model;
+    const modelName = reportedModel ? String(reportedModel) : UNKNOWN_LABEL;
+    const reportedTier = node.telemetry?.modelTier?.value || node.tier || node.hostAgent?.tier;
+    const tierName = reportedTier ? String(reportedTier).toUpperCase() : UNKNOWN_LABEL;
 
     const secInfo = nodeToSectionMap.get(node.id) ?? { id: "ungrouped", title: "General Pipeline" };
 
@@ -467,18 +479,18 @@ export function aggregateTokenAttribution(
     });
 
     // Model group
-    const mPrev = modelMap.get(modelName) ?? { tokens: 0, costUsd: 0, nodeCount: 0 };
+    const mPrev = modelMap.get(modelName) ?? { tokens: 0, nodeCount: 0 };
     modelMap.set(modelName, {
       tokens: mPrev.tokens + nodeTotalTokens,
-      costUsd: mPrev.costUsd + costUsd,
+      costUsd: addRecordedCost(mPrev.costUsd, costUsd),
       nodeCount: mPrev.nodeCount + 1,
     });
 
     // Tier group
-    const tPrev = tierMap.get(tierName) ?? { tokens: 0, costUsd: 0, nodeCount: 0 };
+    const tPrev = tierMap.get(tierName) ?? { tokens: 0, nodeCount: 0 };
     tierMap.set(tierName, {
       tokens: tPrev.tokens + nodeTotalTokens,
-      costUsd: tPrev.costUsd + costUsd,
+      costUsd: addRecordedCost(tPrev.costUsd, costUsd),
       nodeCount: tPrev.nodeCount + 1,
     });
 
@@ -486,13 +498,12 @@ export function aggregateTokenAttribution(
     const sPrev = sectionMap.get(secInfo.id) ?? {
       title: secInfo.title,
       tokens: 0,
-      costUsd: 0,
       nodeCount: 0,
     };
     sectionMap.set(secInfo.id, {
       title: secInfo.title,
       tokens: sPrev.tokens + nodeTotalTokens,
-      costUsd: sPrev.costUsd + costUsd,
+      costUsd: addRecordedCost(sPrev.costUsd, costUsd),
       nodeCount: sPrev.nodeCount + 1,
     });
   }
@@ -503,16 +514,19 @@ export function aggregateTokenAttribution(
       ...item,
       tokenPercentage:
         totalTokens > 0 ? Math.round((item.totalTokens / totalTokens) * 1000) / 10 : 0,
-      costPercentage: totalCostUsd > 0 ? Math.round((item.costUsd / totalCostUsd) * 1000) / 10 : 0,
+      costPercentage:
+        totalCostUsd !== undefined && totalCostUsd > 0
+          ? Math.round(((item.costUsd ?? 0) / totalCostUsd) * 1000) / 10
+          : undefined,
     }))
-    .sort((a, b) => b.totalTokens - a.totalTokens || b.costUsd - a.costUsd);
+    .sort((a, b) => b.totalTokens - a.totalTokens || (b.costUsd ?? 0) - (a.costUsd ?? 0));
 
   // Format category breakdowns
   const byModel: CategoryTokenBreakdown[] = Array.from(modelMap.entries())
     .map(([category, data]) => ({
       category,
       tokens: data.tokens,
-      costUsd: Math.round(data.costUsd * 10000) / 10000,
+      costUsd: data.costUsd === undefined ? undefined : Math.round(data.costUsd * 10000) / 10000,
       nodeCount: data.nodeCount,
       percentage: totalTokens > 0 ? Math.round((data.tokens / totalTokens) * 1000) / 10 : 0,
     }))
@@ -522,7 +536,7 @@ export function aggregateTokenAttribution(
     .map(([category, data]) => ({
       category,
       tokens: data.tokens,
-      costUsd: Math.round(data.costUsd * 10000) / 10000,
+      costUsd: data.costUsd === undefined ? undefined : Math.round(data.costUsd * 10000) / 10000,
       nodeCount: data.nodeCount,
       percentage: totalTokens > 0 ? Math.round((data.tokens / totalTokens) * 1000) / 10 : 0,
     }))
@@ -532,7 +546,7 @@ export function aggregateTokenAttribution(
     .map(([, data]) => ({
       category: data.title,
       tokens: data.tokens,
-      costUsd: Math.round(data.costUsd * 10000) / 10000,
+      costUsd: data.costUsd === undefined ? undefined : Math.round(data.costUsd * 10000) / 10000,
       nodeCount: data.nodeCount,
       percentage: totalTokens > 0 ? Math.round((data.tokens / totalTokens) * 1000) / 10 : 0,
     }))
@@ -540,7 +554,7 @@ export function aggregateTokenAttribution(
 
   return {
     totalTokens,
-    totalCostUsd: Math.round(totalCostUsd * 10000) / 10000,
+    totalCostUsd: totalCostUsd === undefined ? undefined : Math.round(totalCostUsd * 10000) / 10000,
     byNode,
     byModel,
     byTier,

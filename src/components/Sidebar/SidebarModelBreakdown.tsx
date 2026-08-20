@@ -1,7 +1,14 @@
 import type { FC } from "react";
 import React, { useMemo } from "react";
 import type { GraphDataset, GraphNodeData } from "../../types/graphData";
-import { resolveModelTier } from "../../primitives/nodes/NodeCard/nodeKinds";
+import {
+  readNodeTelemetry,
+  UNKNOWN_LABEL,
+  weakestEvidence,
+  type EvidenceClass,
+} from "../../state/graphSchema";
+import { SidebarAccordion } from "./SidebarAccordion";
+import { EvidenceChip } from "./EvidenceChip";
 
 export interface SidebarModelBreakdownProps {
   dataset: GraphDataset | null;
@@ -9,147 +16,116 @@ export interface SidebarModelBreakdownProps {
 }
 
 interface ModelItem {
-  model: string;
+  key: string;
+  model: string | undefined;
+  tier: string | undefined;
   count: number;
-  tier?: string;
+  evidence: EvidenceClass;
+  isEstimated: boolean;
 }
 
-function resolveNodeModel(node: GraphNodeData): { name: string; tier?: string } {
-  const directModel = node.model?.trim();
-  if (directModel) {
-    return { name: directModel, tier: resolveModelTier(node) };
+/**
+ * The producer omits a model it never observed, so a node with no model is grouped under an explicit
+ * unknown bucket. It is deliberately not a model name: "we were never told" has to be readable as
+ * something other than a measurement.
+ */
+function buildModelItems(nodes: readonly GraphNodeData[]): ModelItem[] {
+  const buckets = new Map<
+    string,
+    { model?: string; tier?: string; count: number; classes: EvidenceClass[]; estimated: boolean }
+  >();
+
+  for (const node of nodes) {
+    const telemetry = readNodeTelemetry(node);
+    const model = telemetry.model?.value;
+    const key = model ?? UNKNOWN_LABEL;
+    const bucket = buckets.get(key) ?? { count: 0, classes: [], estimated: false };
+
+    bucket.count += 1;
+    if (model !== undefined) bucket.model = model;
+    if (bucket.tier === undefined && telemetry.modelTier !== undefined) {
+      bucket.tier = telemetry.modelTier.value;
+    }
+    if (telemetry.model !== undefined) {
+      bucket.classes.push(telemetry.model.evidence_class);
+      bucket.estimated = bucket.estimated || telemetry.model.is_estimated === true;
+    }
+    buckets.set(key, bucket);
   }
 
-  const harnessModel = node.harnessModel?.trim();
-  if (harnessModel) {
-    return { name: harnessModel, tier: resolveModelTier({ ...node, model: harnessModel }) };
+  const items: ModelItem[] = [];
+  for (const [key, bucket] of buckets.entries()) {
+    items.push({
+      key,
+      model: bucket.model,
+      tier: bucket.tier,
+      count: bucket.count,
+      evidence: weakestEvidence(bucket.classes) ?? "unknown",
+      isEstimated: bucket.estimated,
+    });
   }
 
-  const metaModel = (node.metadata?.model as string | undefined)?.trim();
-  if (metaModel) {
-    return { name: metaModel, tier: resolveModelTier({ ...node, model: metaModel }) };
-  }
-
-  const hostAgentModel =
-    (node.metadata?.hostAgent as { model?: string } | undefined)?.model?.trim() ??
-    (node.hostAgent as { model?: string } | undefined)?.model?.trim();
-  if (hostAgentModel) {
-    return { name: hostAgentModel, tier: resolveModelTier({ ...node, model: hostAgentModel }) };
-  }
-
-  return { name: "Unspecified" };
+  return items.sort((a, b) => {
+    if (a.model === undefined && b.model !== undefined) return 1;
+    if (b.model === undefined && a.model !== undefined) return -1;
+    return b.count - a.count || (a.model ?? "").localeCompare(b.model ?? "");
+  });
 }
 
 export const SidebarModelBreakdown: FC<SidebarModelBreakdownProps> = React.memo(
   function SidebarModelBreakdown({ dataset, defaultExpanded = true }) {
-    const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+    const items = useMemo(() => buildModelItems(dataset?.nodes ?? []), [dataset]);
 
-    const models = useMemo(() => {
-      if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
-        return [];
-      }
+    const knownCount = items.filter((item) => item.model !== undefined).length;
 
-      const countMap = new Map<string, number>();
-      const tierMap = new Map<string, string | undefined>();
-
-      for (const node of dataset.nodes) {
-        const { name, tier } = resolveNodeModel(node);
-        countMap.set(name, (countMap.get(name) ?? 0) + 1);
-        if (tier && !tierMap.has(name)) {
-          tierMap.set(name, tier);
-        }
-      }
-
-      const items: ModelItem[] = [];
-      for (const [model, count] of countMap.entries()) {
-        items.push({
-          model,
-          count,
-          tier: tierMap.get(model),
-        });
-      }
-
-      return items.sort((a, b) => {
-        // Place Unspecified at the end if counts are equal, else sort by count descending
-        if (a.model === "Unspecified" && b.model !== "Unspecified") return 1;
-        if (b.model === "Unspecified" && a.model !== "Unspecified") return -1;
-        return b.count - a.count || a.model.localeCompare(b.model);
-      });
-    }, [dataset]);
-
-    if (models.length === 0) {
+    if (items.length === 0) {
       return (
         <div className="sidebar-section" data-testid="sidebar-model-breakdown">
           <div className="sidebar-section-header">
-            <h4 className="sidebar-section-title">Model Breakdown</h4>
+            <h4 className="sidebar-section-title">Model Attribution</h4>
           </div>
-          <p className="sidebar-empty-state">No model telemetry available</p>
+          <p className="sidebar-empty-state">No nodes to attribute</p>
         </div>
       );
     }
 
     return (
-      <div className="sidebar-section" data-testid="sidebar-model-breakdown">
-        <div
-          className="sidebar-section-header sidebar-accordion-header"
-          onClick={() => setIsExpanded((prev) => !prev)}
-          role="button"
-          tabIndex={0}
-          aria-expanded={isExpanded}
-          data-testid="sidebar-model-breakdown-header"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setIsExpanded((prev) => !prev);
-            }
-          }}
-        >
-          <div className="sidebar-section-header-left">
-            <svg
-              viewBox="0 0 24 24"
-              width="12"
-              height="12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
-              aria-hidden="true"
+      <SidebarAccordion
+        testId="sidebar-model-breakdown"
+        title="Model Attribution"
+        badge={`${knownCount} ${knownCount === 1 ? "model" : "models"}`}
+        defaultExpanded={defaultExpanded}
+      >
+        <div className="sidebar-model-list">
+          {items.map((item) => (
+            <div
+              key={item.key}
+              className={`sidebar-model-item ${item.model === undefined ? "is-unknown" : ""}`}
+              data-testid={`model-item-${item.key}`}
             >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-            <h4 className="sidebar-section-title">Model Breakdown</h4>
-          </div>
-          <span className="sidebar-section-badge">
-            {models.length} {models.length === 1 ? "model" : "models"}
-          </span>
-        </div>
-
-        {isExpanded && (
-          <div className="sidebar-model-list">
-            {models.map((item) => (
-              <div
-                key={item.model}
-                className="sidebar-model-item"
-                data-testid={`model-item-${item.model}`}
-              >
-                <div className="model-info">
-                  <span className="model-name" title={item.model}>
-                    {item.model}
-                  </span>
-                  {item.tier ? (
-                    <span className={`model-tier-chip tier-${item.tier}`}>{item.tier}</span>
-                  ) : null}
-                </div>
-                <span className="model-count-badge" data-testid={`model-count-${item.model}`}>
-                  {item.count}
+              <div className="model-info">
+                <span className="model-name" title={item.model ?? UNKNOWN_LABEL}>
+                  {item.model ?? UNKNOWN_LABEL}
                 </span>
+                {item.tier ? (
+                  <span className={`model-tier-chip tier-${item.tier}`}>{item.tier}</span>
+                ) : null}
+                {item.model === undefined ? null : (
+                  <EvidenceChip evidence={item.evidence} isEstimated={item.isEstimated} />
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <span className="model-count-badge" data-testid={`model-count-${item.key}`}>
+                {item.count}
+              </span>
+            </div>
+          ))}
+        </div>
+        {knownCount === 0 ? (
+          <p className="sidebar-note" data-testid="model-breakdown-note">
+            No node reported a model. The run never recorded one — this is not an empty measurement.
+          </p>
+        ) : null}
+      </SidebarAccordion>
     );
   },
 );

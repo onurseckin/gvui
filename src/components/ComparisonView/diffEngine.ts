@@ -201,8 +201,8 @@ export function getNodeCostUsd(node: GraphNodeData | null | undefined): number {
 
 export function getNodeModel(node: GraphNodeData | null | undefined): string {
   if (!node) return "";
-  if (node.model) return node.model;
-  if (node.harnessModel) return node.harnessModel;
+  const reported = node.telemetry?.model?.value;
+  if (typeof reported === "string" && reported.length > 0) return reported;
   if (typeof node.hostAgent?.model === "string") return node.hostAgent.model;
   if (typeof node.metadata?.hostAgent?.model === "string") return node.metadata.hostAgent.model;
   return "";

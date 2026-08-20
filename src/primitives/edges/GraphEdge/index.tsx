@@ -5,7 +5,12 @@ import type { PositionedEdge } from "../../../types/graphData";
 
 import { EdgeBadgeOverlay } from "./EdgeBadgeOverlay";
 import { resolveSafeBadgePlacement } from "./collision";
-import { resolveEdgeKind } from "./edgeKinds";
+import {
+  describeEdgeKind,
+  edgeKindStyleVars,
+  resolveEdgeAccent,
+  resolveEdgeKind,
+} from "./edgeKinds";
 import "./GraphEdge.css";
 
 export type { CollisionOptions, CollisionResolutionResult, SafeBadgePlacement } from "./collision";
@@ -35,44 +40,26 @@ export {
   DEFAULT_EDGE_KIND,
   describeEdgeKind,
   EDGE_KIND_DESCRIPTORS,
+  edgeKindStyleVars,
   getEdgeIconComponent,
+  resolveEdgeAccent,
   resolveEdgeKind,
 } from "./edgeKinds";
 
+/**
+ * Picks the arrowhead for an edge. Interaction state wins, then the edge's own kind — the source
+ * node never gets a say, because an arrowhead that matches the departing node tells you where the
+ * edge came from instead of what it means.
+ */
 export function resolveEdgeMarkerId(params: {
   isSelected?: boolean;
   isHighlighted?: boolean;
-  sourceAccentColor?: string;
   kind?: string;
   isCycle?: boolean;
 }): string {
   if (params.isSelected) return "edge-arrowhead-selected";
   if (params.isHighlighted) return "edge-arrowhead-highlighted";
-
-  if (params.sourceAccentColor) {
-    const norm = params.sourceAccentColor.toLowerCase();
-    if (norm === "#8b5cf6") return "edge-arrowhead-prompt";
-    if (norm === "#3b82f6") return "edge-arrowhead-planner";
-    if (norm === "#06b6d4") return "edge-arrowhead-worker";
-    if (norm === "#10b981") return "edge-arrowhead-gate";
-    if (norm === "#818cf8") return "edge-arrowhead-critic";
-    if (norm === "#f43f5e") return "edge-arrowhead-loop";
-    if (norm === "#6366f1") return "edge-arrowhead-data";
-    if (norm === "#64748b") return "edge-arrowhead-dependency";
-    if (norm === "#94a3b8" || norm === "#71717a" || norm === "#3f3f46")
-      return "edge-arrowhead-default";
-  }
-
-  if (params.isCycle) return "edge-arrowhead-loop";
-  if (params.kind === "spawn" || params.kind === "dispatch") return "edge-arrowhead-spawn";
-  if (params.kind === "data" || params.kind === "handoff") return "edge-arrowhead-data";
-  if (params.kind === "dependency") return "edge-arrowhead-dependency";
-  if (params.kind === "loop" || params.kind === "pushback") return "edge-arrowhead-loop";
-  if (params.kind === "gate" || params.kind === "validation") return "edge-arrowhead-gate";
-  if (params.kind === "critic" || params.kind === "signoff") return "edge-arrowhead-critic";
-  if (params.kind === "sequence") return "edge-arrowhead-sequence";
-
-  return "edge-arrowhead-sequence";
+  return describeEdgeKind({ kind: params.kind, isCycle: params.isCycle }).markerId;
 }
 
 export interface GraphEdgeProps {
@@ -86,7 +73,11 @@ export interface GraphEdgeProps {
   isHighlighted?: boolean;
   renderBadge?: boolean;
   showPorts?: boolean;
-  sourceAccentColor?: string;
+  /**
+   * The edge's own accent. Defaults to the kind accent; callers pass one only to honour a
+   * dataset-supplied `edge.accent`. Never a node's colour.
+   */
+  accentColor?: string;
   onClick?: (edgeId: string) => void;
 }
 
@@ -102,7 +93,7 @@ const areGraphEdgePropsEqual = (prevProps: GraphEdgeProps, nextProps: GraphEdgeP
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.renderBadge === nextProps.renderBadge &&
     prevProps.showPorts === nextProps.showPorts &&
-    prevProps.sourceAccentColor === nextProps.sourceAccentColor &&
+    prevProps.accentColor === nextProps.accentColor &&
     prevProps.onClick === nextProps.onClick
   );
 };
@@ -119,7 +110,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     isHighlighted = false,
     renderBadge = true,
     showPorts = false,
-    sourceAccentColor,
+    accentColor,
     onClick,
   }) => {
     let dPath = edge.path || "";
@@ -168,6 +159,8 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
     );
 
     const semanticKind = resolveEdgeKind(edge);
+    const descriptor = describeEdgeKind(semanticKind);
+    const edgeAccent = accentColor ?? resolveEdgeAccent(edge);
     const isHighlightedEdge = Boolean(
       isHighlighted || (edge as { isHighlighted?: boolean }).isHighlighted,
     );
@@ -179,21 +172,17 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
       edge.traffic?.status === "congested",
     );
 
-    const glowColor =
-      edge.traffic?.glowColor ?? sourceAccentColor ?? (isHighTraffic ? "#06b6d4" : undefined);
+    const glowColor = edge.traffic?.glowColor ?? edgeAccent;
 
     const markerName = resolveEdgeMarkerId({
       isSelected,
       isHighlighted: isHighlightedEdge,
-      sourceAccentColor,
       kind: edge.kind,
       isCycle: Boolean(edge.isCycle),
     });
     const markerId = `url(#${markerName})`;
 
-    const edgeGroupStyle: CSSProperties | undefined = sourceAccentColor
-      ? ({ "--edge-source-accent": sourceAccentColor } as CSSProperties)
-      : undefined;
+    const edgeGroupStyle: CSSProperties = edgeKindStyleVars(descriptor, edgeAccent);
 
     const ariaLabel = isInteractive
       ? edge.label
@@ -209,6 +198,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
       isHighlightedEdge && "is-highlighted",
       isHovered && "is-hovered",
       isInteractive && "is-clickable",
+      descriptor.reverseAnimated && "reverse-flow",
     ]
       .filter(Boolean)
       .join(" ");
@@ -220,6 +210,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
       isHighlightedEdge && "is-highlighted",
       isHovered && "is-hovered",
       (edge.isCycle || semanticKind === "loop") && "cycle",
+      descriptor.reverseAnimated && "reverse-flow",
       isHighTraffic && "high-traffic",
     ]
       .filter(Boolean)
@@ -248,7 +239,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
           <path
             d={dPath}
             className="edge-glow-backdrop"
-            stroke={glowColor || "#06b6d4"}
+            stroke={glowColor}
             vectorEffect="non-scaling-stroke"
             shapeRendering="geometricPrecision"
             textRendering="geometricPrecision"
@@ -267,7 +258,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             cx={edge.sharedAnchor.x}
             cy={edge.sharedAnchor.y}
             r={4}
-            fill={glowColor || "#38bdf8"}
+            fill={glowColor}
             className="shared-anchor-junction"
           />
         )}
@@ -307,7 +298,7 @@ export const GraphEdge: FC<GraphEdgeProps> = memo(
             traffic={edge.traffic}
             isHighTraffic={isHighTraffic}
             bundleCount={edge.bundleCount}
-            sourceAccentColor={sourceAccentColor}
+            accentColor={edgeAccent}
             onClick={isInteractive ? handleEdgeClick : undefined}
           />
         )}

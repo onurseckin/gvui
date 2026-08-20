@@ -13,6 +13,7 @@ import type { FC } from "react";
 import { memo, useState } from "react";
 import { describeEdgeKind, resolveEdgeKind } from "../../../primitives/edges/GraphEdge/edgeKinds";
 import { formatTokens } from "../../../primitives/nodes/NodeCard/nodeCardModel";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import type { GraphEdgeData } from "../../../types/graphData";
 
 export interface EdgeOverviewTabProps {
@@ -139,8 +140,8 @@ export const EdgeOverviewTab: FC<EdgeOverviewTabProps> = memo(function EdgeOverv
           </div>
           <div className="edge-handoff-card">
             <div className="edge-handoff-header">
-              <span className={`edge-handoff-kind-chip kind-${handoff.kind || "data"}`}>
-                {handoff.kind || "data"}
+              <span className={`edge-handoff-kind-chip kind-${handoff.kind || UNKNOWN_LABEL}`}>
+                {handoff.kind || UNKNOWN_LABEL}
               </span>
               {handoff.summary && <span className="edge-handoff-summary">{handoff.summary}</span>}
             </div>

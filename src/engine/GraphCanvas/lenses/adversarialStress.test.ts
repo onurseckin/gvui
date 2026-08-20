@@ -15,6 +15,7 @@ import {
 import { buildAdjacencyGraph, calculateCriticalPath } from "./criticalPathLens";
 import { evaluateCanvasLens } from "./lensEvaluator";
 import { calculateNodeRisk, evaluateRiskLens } from "./riskLens";
+import { evaluateHeatmapLens } from "./heatmapLens";
 import { extractNodeTokenDetail } from "./tokenLens";
 import type { ColorStop } from "./types";
 
@@ -337,7 +338,7 @@ describe("Adversarial Stress & Boundary Resilience Tests", () => {
     });
   });
 
-  describe("4. Token Lens Stress Testing & Tier Pricing Fallbacks", () => {
+  describe("4. Token Lens Stress Testing", () => {
     it("handles zero token nodes with instant duration", () => {
       const zeroNode: PositionedNode = {
         id: "zero",
@@ -354,12 +355,11 @@ describe("Adversarial Stress & Boundary Resilience Tests", () => {
 
       const detail = extractNodeTokenDetail(zeroNode);
       expect(detail.totalTokens).toBe(0);
-      expect(detail.costUsd).toBe(0);
-      expect(Number.isNaN(detail.costIntensity)).toBe(false);
-      expect(detail.costIntensity).toBe(0);
+      expect(detail.costUsd).toBeUndefined();
+      expect(detail.costIntensity).toBeUndefined();
     });
 
-    it("handles unknown model tiers with fallback pricing", () => {
+    it("reports an unreported tier as unknown and carries no cost", () => {
       const unknownNode: PositionedNode = {
         id: "unk",
         name: "Custom Agent",
@@ -375,7 +375,50 @@ describe("Adversarial Stress & Boundary Resilience Tests", () => {
 
       const detail = extractNodeTokenDetail(unknownNode);
       expect(detail.tier).toBe("unknown");
-      expect(detail.costUsd).toBeGreaterThan(0);
+      expect(detail.costUsd).toBeUndefined();
+    });
+
+    it("surfaces a recorded cost untouched", () => {
+      const pricedNode: PositionedNode = {
+        id: "priced",
+        name: "Priced Agent",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50,
+        metrics: {
+          tokens: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+          costUsd: 0.0421,
+          durationMs: 2000,
+        },
+      };
+
+      const detail = extractNodeTokenDetail(pricedNode);
+      expect(detail.costUsd).toBe(0.0421);
+      expect(detail.costIntensity).toBeCloseTo(21.05, 2);
+    });
+
+    it("labels an unreported kind and status as unknown rather than guessing agent/completed", () => {
+      const bareNode: PositionedNode = {
+        id: "bare",
+        name: "Bare Node",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50,
+        metrics: { durationMs: 1200 },
+      };
+
+      const result = evaluateHeatmapLens(
+        [bareNode],
+        [],
+        useCanvasLensStore.getState().configs.heatmap,
+      );
+
+      const subtitle = result.nodeOverlays.get("bare")!.tooltipContent.subtitle;
+      expect(subtitle).toContain("Kind: unknown");
+      expect(subtitle).toContain("Status: unknown");
+      expect(subtitle).not.toContain("completed");
     });
   });
 

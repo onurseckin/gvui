@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
-import type { SemanticEdgeKind } from "../../primitives/edges/GraphEdge/edgeKinds";
+import { EDGE_KIND_DESCRIPTORS } from "../../primitives/edges/GraphEdge/edgeKinds";
+import { EDGE_KINDS } from "../../types/graphData";
 import type { EdgeTrafficExchange, GraphEdgeData } from "../../types/graphData";
 import { EdgeDetailDrawer } from "./index";
 import { EdgeOverviewTab } from "./tabs/OverviewTab";
@@ -463,30 +464,35 @@ describe("EdgeDetailDrawer & Traffic Chronology Inspector", () => {
     expect(chronologyHtml.includes("Evaluated branch guard: tests passing")).toBe(true);
   });
 
-  test("renders all 7 distinct semantic kinds in EdgeDetailDrawer with appropriate kind badges and colors", () => {
-    const kinds: Array<{ kind: SemanticEdgeKind; label: string; accent: string }> = [
-      { kind: "spawn", label: "SPAWN / DISPATCH", accent: "#06b6d4" },
-      { kind: "sequence", label: "SEQUENCE", accent: "#3f3f46" },
-      { kind: "data", label: "DATA HANDOFF", accent: "#6366f1" },
-      { kind: "dependency", label: "DEPENDENCY", accent: "#64748b" },
-      { kind: "loop", label: "LOOP / PUSHBACK", accent: "#f43f5e" },
-      { kind: "gate", label: "VALIDATION GATE", accent: "#10b981" },
-      { kind: "critic", label: "CRITIC SIGNOFF", accent: "#eab308" },
-    ];
-
-    for (const item of kinds) {
+  test("renders every declared semantic kind with its own badge label and accent", () => {
+    for (const kind of EDGE_KINDS) {
+      const descriptor = EDGE_KIND_DESCRIPTORS[kind];
       const edge: GraphEdgeData = {
-        id: `edge-${item.kind}`,
+        id: `edge-${kind}`,
         source: "node-a",
         target: "node-b",
-        kind: item.kind,
+        kind,
       };
 
       const html = renderToString(<EdgeDetailDrawer edge={edge} />);
-      expect(html.includes(`kind-${item.kind}`)).toBe(true);
-      expect(html.includes(item.label)).toBe(true);
-      expect(html.includes(`--edge-kind-accent:${item.accent}`)).toBe(true);
+      expect(html.includes(`kind-${kind}`)).toBe(true);
+      expect(html.includes(descriptor.label)).toBe(true);
+      expect(html.includes(`--edge-kind-accent:${descriptor.accent}`)).toBe(true);
     }
+  });
+
+  test("shows a probe as an informational demand and a pushback as a defect", () => {
+    const probeHtml = renderToString(
+      <EdgeDetailDrawer edge={{ id: "e-probe", source: "a", target: "b", kind: "probe" }} />,
+    );
+    const pushbackHtml = renderToString(
+      <EdgeDetailDrawer edge={{ id: "e-pushback", source: "a", target: "b", kind: "pushback" }} />,
+    );
+
+    expect(probeHtml.includes("--edge-kind-accent:#38bdf8")).toBe(true);
+    expect(pushbackHtml.includes("--edge-kind-accent:#f43f5e")).toBe(true);
+    expect(probeHtml.includes("PROBE")).toBe(true);
+    expect(pushbackHtml.includes("PUSHBACK")).toBe(true);
   });
 
   test("handles interactive node jumping via onNavigateNode callback", async () => {
@@ -564,19 +570,20 @@ describe("EdgeDetailDrawer & Traffic Chronology Inspector", () => {
     expect(closed).toBe(true);
   });
 
-  test("finding-02-edge-badge-stress: gracefully handles unknown edge kinds and defaults to sequence", () => {
+  test("finding-02-edge-badge-stress: renders an edge kind it has never seen as itself", () => {
     const unknownKindEdge: GraphEdgeData = {
       id: "edge-unknown-1",
       source: "node-1",
       target: "node-2",
-      kind: "unknown_custom_pipeline" as unknown as GraphEdgeData["kind"],
+      kind: "unknown_custom_pipeline",
       label: "Custom Flow",
     };
 
     const html = renderToString(<EdgeDetailDrawer edge={unknownKindEdge} />);
     expect(html.includes("Custom Flow")).toBe(true);
-    expect(html.includes("kind-sequence")).toBe(true);
-    expect(html.includes("SEQUENCE")).toBe(true);
+    expect(html.includes("UNKNOWN CUSTOM PIPELINE")).toBe(true);
+    // The kind is this dataset's own, so it must not be dressed up as a relationship gvui knows.
+    expect(html.includes("SEQUENCE")).toBe(false);
   });
 
   test("finding-02-edge-badge-stress: handles zero-traffic edges and empty telemetry cleanly", () => {

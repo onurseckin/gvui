@@ -20,7 +20,8 @@ export interface KpiScorecard {
   promptTokens: number;
   completionTokens: number;
   reasoningTokens: number;
-  totalCostUsd: number;
+  /** Sum of the recorded costs. Absent when the run recorded no dollars at all. */
+  totalCostUsd?: number;
   totalRetries: number;
   totalRepairRounds: number;
   recoveryEfficiency: number; // 0 - 100 percentage
@@ -38,23 +39,27 @@ export interface NodeTokenDetail {
   tokensOut: number;
   reasoningTokens: number;
   totalTokens: number;
-  costUsd: number;
+  /** Recorded dollars only, absent when this node reported none. */
+  costUsd?: number;
   durationMs: number;
   tokenPercentage: number;
-  costPercentage: number;
+  /** Absent whenever the run has no recorded cost to take a share of. */
+  costPercentage?: number;
 }
 
 export interface CategoryTokenBreakdown {
   category: string;
   tokens: number;
-  costUsd: number;
+  /** Sum of the recorded costs in this category. Absent when none of its nodes reported one. */
+  costUsd?: number;
   nodeCount: number;
   percentage: number;
 }
 
 export interface TokenAttribution {
   totalTokens: number;
-  totalCostUsd: number;
+  /** Sum of the recorded costs. Absent when the run recorded no dollars at all. */
+  totalCostUsd?: number;
   byNode: NodeTokenDetail[];
   byModel: CategoryTokenBreakdown[];
   byTier: CategoryTokenBreakdown[];
@@ -84,7 +89,8 @@ export interface NodeBlastImpact {
   riskLevel: RiskLevel;
   isOnCriticalPath: boolean;
   cascadeTree: FailureCascadeNode[];
-  estimatedCostAtRiskUsd: number;
+  /** Recorded dollars on the affected nodes. Absent when none of them reported a cost. */
+  estimatedCostAtRiskUsd?: number;
   remediationRecommendation: string;
 }
 

@@ -50,7 +50,7 @@ const mockNodes: PositionedNode[] = [
     hostAgent: {
       name: "CoordinatorAgent",
       role: "orchestrator",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
     },
     provenance: {
       actorId: "gvui-coord-01",
@@ -77,7 +77,7 @@ const mockNodes: PositionedNode[] = [
     hostAgent: {
       name: "ImplementerAgent",
       role: "implementer",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
     },
     provenance: {
       actorId: "gvui-impl-t04",
@@ -104,7 +104,7 @@ const mockNodes: PositionedNode[] = [
     hostAgent: {
       name: "ValidatorAgent",
       role: "validator",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
     },
     provenance: {
       actorId: "gvui-val-01",

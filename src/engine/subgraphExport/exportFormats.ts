@@ -1,5 +1,6 @@
 import type { GraphDataset, GraphNodeData, NodeKind, NodeStatus } from "../../types/graphData";
 import { serializeBookmarkPack } from "./bundlePack";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 import type { BookmarkPackBundle, ExportConfig, ExportResult, ExtractedSubgraph } from "./types";
 
 /**
@@ -576,8 +577,8 @@ export function exportToMarkdownReport(
             : "-";
         const desc = node.description ? node.description.replace(/\|/g, "\\|") : "-";
         lines.push(
-          `| \`${node.id}\` | **${node.name || node.id}** | \`${node.kind || "agent"}\` | \`${
-            node.status || "pending"
+          `| \`${node.id}\` | **${node.name || node.id}** | \`${node.kind || UNKNOWN_LABEL}\` | \`${
+            node.status || UNKNOWN_LABEL
           }\` | ${dur} | ${tok} | ${desc} |`,
         );
       }

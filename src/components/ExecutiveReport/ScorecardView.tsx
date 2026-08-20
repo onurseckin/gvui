@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import type { KpiScorecard } from "../../engine/reporting/types";
+import { formatUsd } from "../../engine/reporting/formatters";
 
 export interface ScorecardViewProps {
   kpi: KpiScorecard;
@@ -12,13 +13,6 @@ function formatDuration(ms: number): string {
   const mins = Math.floor(ms / 60000);
   const secs = Math.round((ms % 60000) / 1000);
   return `${mins}m ${secs}s`;
-}
-
-function formatUsd(cost: number): string {
-  if (cost < 0.01 && cost > 0) {
-    return `$${cost.toFixed(4)}`;
-  }
-  return `$${cost.toFixed(2)}`;
 }
 
 export const ScorecardView: FC<ScorecardViewProps> = ({ kpi }) => {

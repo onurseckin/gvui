@@ -7,7 +7,12 @@ import type {
   EdgeKind,
   EdgeTrafficDetail,
 } from "../../../types/graphData";
-import { describeEdgeKind, resolveEdgeKind } from "./edgeKinds";
+import {
+  describeEdgeKind,
+  edgeKindStyleVars,
+  resolveEdgeAccent,
+  resolveEdgeKind,
+} from "./edgeKinds";
 import "./EdgeBadgeOverlay.css";
 
 export const MAX_BADGE_WIDTH = 280;
@@ -30,7 +35,8 @@ export interface EdgeBadgeOverlayProps {
   traffic?: EdgeTrafficDetail;
   isHighTraffic?: boolean;
   bundleCount?: number;
-  sourceAccentColor?: string;
+  /** The edge's own accent; defaults to the kind accent. Never a node's colour. */
+  accentColor?: string;
   renderMode?: "svg" | "html";
   asHtml?: boolean;
   onClick?: (e: MouseEvent<HTMLElement | SVGGElement>) => void;
@@ -145,7 +151,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   traffic,
   isHighTraffic = false,
   bundleCount,
-  sourceAccentColor,
+  accentColor,
   renderMode = "svg",
   asHtml = false,
   onClick,
@@ -191,7 +197,10 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
 
   if (!rawTitle?.trim() && !effectiveStep && !isCycle && !kind && !hasTraffic) return null;
 
-  let displayText = resolveEdgeDisplayText(rawTitle, descriptor.label, isCycle);
+  // `isCycle` only names the badge when the dataset declared no kind, mirroring resolveEdgeKind.
+  // A declared probe that happens to be a back-edge must not be labelled "Feedback Loop".
+  const cycleDecidesLabel = isCycle && !kind;
+  let displayText = resolveEdgeDisplayText(rawTitle, descriptor.label, cycleDecidesLabel);
 
   // Clean redundant step prefix from displayText if effectiveStep is already set on the badge
   if (displayText && effectiveStep) {
@@ -201,7 +210,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
   }
 
   // Variant determination
-  const variant = isCycle
+  const variant = cycleDecidesLabel
     ? "loop"
     : (container?.variant ?? badge?.variant ?? descriptor.badgeVariant);
 
@@ -245,15 +254,15 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
           .trim()
       : "";
 
-  const glowColor =
-    traffic?.glowColor ?? sourceAccentColor ?? (effectiveHighTraffic ? "#06b6d4" : undefined);
+  const edgeAccent = accentColor ?? resolveEdgeAccent({ kind, isCycle });
+  const glowColor = traffic?.glowColor ?? edgeAccent;
   const glowStyle = glowColor
     ? { filter: `drop-shadow(0 0 6px ${glowColor})`, stroke: glowColor }
     : undefined;
 
   const groupStyle: CSSProperties = {
     cursor: isInteractive ? "pointer" : "default",
-    ...(sourceAccentColor ? { "--edge-source-accent": sourceAccentColor } : {}),
+    ...edgeKindStyleVars(descriptor, edgeAccent),
   };
 
   const groupClassName = [
@@ -396,7 +405,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
       {showLeaderPath && (
         <path
           d={leaderSvgPath}
-          stroke={sourceAccentColor || descriptor.accent || "#38bdf8"}
+          stroke={edgeAccent}
           strokeWidth="1"
           strokeDasharray="3,3"
           fill="none"
@@ -408,7 +417,7 @@ export const EdgeBadgeOverlay: FC<EdgeBadgeOverlayProps> = memo(function EdgeBad
           y1={anchorPoint.y - renderY}
           x2={0}
           y2={0}
-          stroke={sourceAccentColor || descriptor.accent || "#38bdf8"}
+          stroke={edgeAccent}
           strokeWidth="1"
           strokeDasharray="3,3"
         />

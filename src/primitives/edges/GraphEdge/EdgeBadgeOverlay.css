@@ -4,7 +4,7 @@
   cursor: pointer;
   user-select: none;
   outline: none;
-  --current-edge-stroke: var(--edge-source-accent, var(--edge-kind-stroke, #3f3f46));
+  --current-edge-stroke: var(--edge-kind-stroke, #3f3f46);
 }
 
 .edge-badge-group:focus-visible {
@@ -20,8 +20,11 @@
 }
 
 .edge-badge-rect {
-  fill: color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%);
-  stroke: var(--current-edge-stroke, rgba(255, 255, 255, 0.15));
+  fill: var(
+    --edge-kind-badge-bg,
+    color-mix(in srgb, var(--current-edge-stroke, #0d0d10) 12%, #0d0d10 88%)
+  );
+  stroke: var(--edge-kind-badge-border, var(--current-edge-stroke, rgba(255, 255, 255, 0.15)));
   stroke-width: 1.5px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.85));
   transition:
@@ -30,51 +33,10 @@
     filter 0.2s ease;
 }
 
-/* Badge Semantic Kinds */
-.edge-badge-group.kind-spawn,
-.edge-badge-group.variant-cyan,
-.edge-badge-group.variant-spawn {
-  --edge-kind-stroke: #06b6d4;
-}
-
-.edge-badge-group.kind-sequence,
-.edge-badge-group.variant-neutral,
-.edge-badge-group.variant-sequence {
-  --edge-kind-stroke: #3f3f46;
-}
-
-.edge-badge-group.kind-data,
-.edge-badge-group.variant-indigo,
-.edge-badge-group.variant-data {
-  --edge-kind-stroke: #6366f1;
-}
-
-.edge-badge-group.kind-dependency,
-.edge-badge-group.variant-slate,
-.edge-badge-group.variant-dependency {
-  --edge-kind-stroke: #64748b;
-}
-
-.edge-badge-group.kind-loop,
-.edge-badge-group.cycle,
-.edge-badge-group.variant-loop,
-.edge-badge-group.variant-error {
-  --edge-kind-stroke: #f43f5e;
-}
-
-.edge-badge-group.kind-gate,
-.edge-badge-group.variant-emerald,
-.edge-badge-group.variant-gate,
-.edge-badge-group.variant-success {
-  --edge-kind-stroke: #10b981;
-}
-
-.edge-badge-group.kind-critic,
-.edge-badge-group.variant-critic,
-.edge-badge-group.variant-amber,
-.edge-badge-group.variant-warning {
-  --edge-kind-stroke: #eab308;
-}
+/*
+ * No per-kind blocks: EdgeBadgeOverlay stamps --edge-kind-* inline from EDGE_KIND_DESCRIPTORS, so a
+ * new kind arrives fully styled without a second palette living here to drift out of step.
+ */
 
 /* Badge Typography & Centered Alignment */
 .edge-badge-inner {
@@ -91,7 +53,7 @@
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--edge-text-color, #f4f4f5);
+  color: var(--edge-kind-text, #f4f4f5);
   user-select: none;
   letter-spacing: 0.02em;
   min-width: 0;

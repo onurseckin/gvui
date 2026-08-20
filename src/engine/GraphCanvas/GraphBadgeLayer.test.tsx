@@ -662,11 +662,12 @@ describe("GraphBadgeLayer Native HTML Rendering & Anti-Smear", () => {
     renderer?.unmount();
   });
 
-  it("propagates sourceAccentColor from positionedNodes to HTML badge element", () => {
+  it("colours the HTML badge from the edge's own kind, never from the source node", () => {
     const edge: PositionedEdge = {
       id: "accent-edge",
       source: "prompt-node",
       target: "worker-node",
+      kind: "pushback",
       path: "M 50 50 L 200 200",
       label: "Prompt Input",
       labelX: 150,
@@ -708,8 +709,8 @@ describe("GraphBadgeLayer Native HTML Rendering & Anti-Smear", () => {
         el.props.className.includes("graph-edge-badge-html"),
     );
     expect(badgeElement).toBeDefined();
-    // Input node kind accent is #8b5cf6
-    expect(badgeElement?.props.style?.["--edge-source-accent"]).toBe("#8b5cf6");
+    // The input node's accent is #8b5cf6; a pushback edge must still read as a pushback.
+    expect(badgeElement?.props.style?.["--edge-kind-stroke"]).toBe("#f43f5e");
     renderer?.unmount();
   });
 
@@ -1136,7 +1137,7 @@ describe("GraphBadgeLayer GPU Hardware Acceleration & DOM Layer Separation", () 
 });
 
 describe("GraphSvgLayer Component & Edge Styling", () => {
-  it("propagates sourceAccentColor to GraphEdge and wires onSelectEdge", () => {
+  it("gives each edge its own accent and wires onSelectEdge", () => {
     let selectedEdgeId: string | null = null;
     let selectedSourceNode: string | null = null;
 
@@ -1144,6 +1145,7 @@ describe("GraphSvgLayer Component & Edge Styling", () => {
       id: "svg-edge-1",
       source: "gate-node",
       target: "worker-node",
+      kind: "probe",
       path: "M 0 0 L 100 100",
     };
 
@@ -1184,8 +1186,8 @@ describe("GraphSvgLayer Component & Edge Styling", () => {
         typeof el.props.className === "string" && el.props.className.includes("graph-edge-group"),
     );
     expect(edgeGroup).toBeDefined();
-    // Gate node kind accent is #10b981
-    expect(edgeGroup?.props.style?.["--edge-source-accent"]).toBe("#10b981");
+    // The gate node's accent is #10b981; the probe edge keeps its own informational cyan.
+    expect(edgeGroup?.props.style?.["--edge-kind-stroke"]).toBe("#38bdf8");
 
     act(() => {
       edgeGroup?.props.onClick({ stopPropagation: () => {} });
@@ -1193,6 +1195,41 @@ describe("GraphSvgLayer Component & Edge Styling", () => {
 
     expect(selectedEdgeId).toBe("svg-edge-1");
     expect(selectedSourceNode).toBe("gate-node");
+    renderer?.unmount();
+  });
+
+  it("does not let two edges leaving the same node share a colour when their meanings differ", () => {
+    const edges: PositionedEdge[] = [
+      { id: "e-signoff", source: "gate-node", target: "a", kind: "signoff", path: "M 0 0 L 10 10" },
+      {
+        id: "e-pushback",
+        source: "gate-node",
+        target: "b",
+        kind: "pushback",
+        path: "M 0 0 L 20 20",
+      },
+    ];
+
+    let renderer: ReactTestRenderer | undefined;
+    silenceReactTestRendererDeprecationWarning(() => {
+      act(() => {
+        renderer = create(
+          createElement(GraphSvgLayer, {
+            styledEdges: edges,
+            hiddenNodeIds: new Set<string>(),
+            selectedNodeId: null,
+          }),
+        );
+      });
+    });
+
+    const groups = renderer?.root.findAll(
+      (el) =>
+        typeof el.props.className === "string" && el.props.className.includes("graph-edge-group"),
+    );
+    expect(groups).toHaveLength(2);
+    const accents = groups?.map((g) => g.props.style?.["--edge-kind-stroke"]);
+    expect(accents).toEqual(["#eab308", "#f43f5e"]);
     renderer?.unmount();
   });
 });

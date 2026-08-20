@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { memo, useCallback } from "react";
 import { NodeCard } from "../../primitives/nodes/NodeCard";
+import { matchesFilterCategory, type FilterCategory } from "../../state/graphFilters";
 import type { PositionedNode } from "../../types/graphData";
 
 export interface GraphHtmlLayerProps {
@@ -12,7 +13,7 @@ export interface GraphHtmlLayerProps {
   selectedStep: number | null;
   selectedSteps?: Set<number>;
   searchQuery: string;
-  activeFilter: string;
+  activeFilter: FilterCategory;
   onSelectNode: (id: string) => void;
   onToggleCollapse: (id: string) => void;
 }
@@ -50,53 +51,9 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
         return false;
       }
 
-      if (activeFilter === "orchestrators") {
-        const isOrchestrator =
-          node.kind === "orchestrator" ||
-          node.type === "orchestrator" ||
-          node.metadata?.role === "orchestrator";
-        if (!isOrchestrator) return false;
-      } else if (activeFilter === "implementers") {
-        const isImplementer =
-          node.kind === "agent" ||
-          node.type === "agent" ||
-          node.type === "worker" ||
-          node.metadata?.role === "implementer" ||
-          node.metadata?.role === "worker";
-        if (!isImplementer) return false;
-      } else if (activeFilter === "validators") {
-        const isValidator =
-          node.kind === "gate" ||
-          node.type === "gate" ||
-          node.type === "validator" ||
-          node.metadata?.role === "validator";
-        if (!isValidator) return false;
-      } else if (activeFilter === "critics") {
-        const isCritic =
-          node.kind === "critic" || node.type === "critic" || node.metadata?.role === "critic";
-        if (!isCritic) return false;
-      } else if (activeFilter === "errors" || activeFilter === "error") {
-        const statusBadge = node.badges?.find((b) => b.variant);
-        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-        const isError =
-          statusBadge?.variant === "error" ||
-          statusStr.includes("error") ||
-          statusStr.includes("fail") ||
-          node.status === "error";
-        if (!isError) return false;
-      } else if (activeFilter === "success") {
-        const statusBadge = node.badges?.find((b) => b.variant);
-        const statusStr = String(node.metadata?.status ?? "").toLowerCase();
-        const isSuccess =
-          statusBadge?.variant === "success" ||
-          statusStr.includes("complete") ||
-          statusStr.includes("success") ||
-          node.status === "success";
-        if (!isSuccess) return false;
-      } else if (activeFilter === "tools") {
-        const isTool = node.kind === "tool" || (Boolean(node.tools) && node.tools!.length > 0);
-        if (!isTool) return false;
-      }
+      // One predicate for both the sidebar counts and the canvas dimming, so a chip can never
+      // report a population the canvas does not highlight.
+      if (!matchesFilterCategory(node, activeFilter)) return false;
 
       const q = searchQuery.trim();
       if (!q) return true;
@@ -126,11 +83,12 @@ export const GraphHtmlLayer: FC<GraphHtmlLayerProps> = memo(function GraphHtmlLa
       const typeMatch = matchesText(node.type);
       const kindMatch = matchesText(node.kind);
       const descMatch = matchesText(node.description);
-      const modelMatch = matchesText(node.model);
+      const modelMatch = matchesText(node.telemetry?.model?.value);
       const stepMatch = matchesText(node.stepLabel);
       const badgeMatch =
         matchesText(node.badge?.text) || Boolean(node.badges?.some((b) => matchesText(b.label)));
       const roleMatch =
+        matchesText(node.telemetry?.role ? String(node.telemetry.role) : undefined) ||
         matchesText(node.metadata?.role ? String(node.metadata.role) : undefined) ||
         matchesText(node.metadata?.leaseAgent ? String(node.metadata.leaseAgent) : undefined) ||
         matchesText(node.hostAgent?.role ? String(node.hostAgent.role) : undefined) ||

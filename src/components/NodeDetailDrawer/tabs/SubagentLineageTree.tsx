@@ -14,8 +14,11 @@ import {
 } from "@tabler/icons-react";
 import type { FC, MouseEvent } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { stableAccent } from "../../../primitives/vocabulary";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
 import { useGraphStore } from "../../../state/useGraphStore";
 import type { GraphDataset, GraphNodeData } from "../../../types/graphData";
+import { readRawKind, readRawRole } from "../../OpenSchema";
 import { DrawerSection } from "../DrawerSection";
 import { formatDuration, formatTokens } from "../streamUtils";
 
@@ -97,6 +100,13 @@ export interface StatusDescriptor {
   animated: boolean;
 }
 
+/** The same accent at a lower alpha, for the badge fill and border. */
+function translucent(accent: string, alpha: number): string {
+  const channels = accent.match(/^hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)$/);
+  if (!channels) return accent;
+  return `hsla(${channels[1]}, ${channels[2]}%, ${channels[3]}%, ${alpha})`;
+}
+
 /**
  * Normalizes an agent role into a standardized descriptor with label, styling tokens, and role archetype.
  */
@@ -109,7 +119,6 @@ export function normalizeRole(role?: unknown): RoleDescriptor {
     r === "orchestrator" ||
     r === "lead" ||
     r === "parent" ||
-    r === "planner" ||
     r === "meta-orchestrator"
   ) {
     return {
@@ -176,12 +185,28 @@ export function normalizeRole(role?: unknown): RoleDescriptor {
       roleType: "subagent",
     };
   }
+  // A role with no preset keeps its own name and its own accent, generated from that name by the
+  // same hash the canvas uses, so one unfamiliar role is told apart from another instead of every
+  // foreign vocabulary collapsing into a single grey badge. An absent role is shown as UNKNOWN,
+  // never as a neutral-looking "AGENT" that reads like a fact, and absence keeps the neutral grey
+  // so nothing that was never recorded wears a generated colour.
+  if (r.length === 0) {
+    return {
+      label: UNKNOWN_LABEL.toUpperCase(),
+      badgeClass: "drawer-role-badge drawer-role-badge--other",
+      color: "#a1a1aa",
+      bg: "rgba(161, 161, 170, 0.12)",
+      border: "rgba(161, 161, 170, 0.25)",
+      roleType: "other",
+    };
+  }
+  const accent = stableAccent(r);
   return {
-    label: role ? String(role).toUpperCase() : "AGENT",
+    label: String(role).toUpperCase(),
     badgeClass: "drawer-role-badge drawer-role-badge--other",
-    color: "#a1a1aa",
-    bg: "rgba(161, 161, 170, 0.12)",
-    border: "rgba(161, 161, 170, 0.25)",
+    color: accent,
+    bg: translucent(accent, 0.15),
+    border: translucent(accent, 0.35),
     roleType: "other",
   };
 }
@@ -274,7 +299,7 @@ export function describeLineageStatus(status?: unknown): StatusDescriptor {
       };
     default:
       return {
-        label: status ? String(status).toUpperCase() : "READY",
+        label: status ? String(status).toUpperCase() : UNKNOWN_LABEL.toUpperCase(),
         statusClass: "drawer-lineage-status is-neutral",
         color: "#d4d4d8",
         bg: "rgba(255, 255, 255, 0.06)",
@@ -298,11 +323,11 @@ function normalizeRawNode(raw: unknown, defaultDepth = 0): SubagentLineageNode |
       `agent-${Math.random().toString(36).slice(2, 7)}`,
   );
   const name = String(obj.name ?? obj.label ?? obj.title ?? obj.id ?? "Subagent");
-  const role = (obj.role ??
-    obj.kind ??
-    obj.agentRole ??
-    (obj.children ? "coordinator" : "subagent")) as AgentRole;
-  const status = (obj.status ?? obj.state ?? "pending") as SubagentStatus;
+  // Whatever the record says, and nothing more: having children is not evidence of a coordinator.
+  const rawRole = obj.role ?? obj.kind ?? obj.agentRole;
+  const role = rawRole === undefined ? undefined : (rawRole as AgentRole);
+  const rawStatus = obj.status ?? obj.state;
+  const status = rawStatus === undefined ? undefined : (rawStatus as SubagentStatus);
   const model = obj.model ? String(obj.model) : undefined;
   const tier = obj.tier ? String(obj.tier) : undefined;
   const depth = typeof obj.depth === "number" ? obj.depth : defaultDepth;
@@ -365,13 +390,31 @@ function normalizeRawNode(raw: unknown, defaultDepth = 0): SubagentLineageNode |
 }
 
 /**
- * Traverses graph dataset starting from the given node to build an execution call tree.
+ * The edge kinds that actually express delegation. Sequence, data, handoff and validation edges
+ * describe where work travelled, not who dispatched whom, so they are never lineage.
+ */
+const DELEGATION_EDGE_KINDS: ReadonlySet<string> = new Set(["spawn", "dispatch", "branch"]);
+
+/**
+ * The role the run granted this node's agent, from the ledger telemetry or the producer's metadata
+ * fallback. Neither the edge that reached the node nor its number of children is evidence of a role,
+ * so a node the producer never labelled stays unknown.
+ */
+function recordedRole(node: GraphNodeData): AgentRole | undefined {
+  return readRawRole(node) ?? readRawKind(node);
+}
+
+/**
+ * Builds the call tree from the node's own delegation edges. Following any other edge is what made
+ * a node with no lineage of its own render every other node in the run as its children.
  */
 function buildTreeFromDataset(node: GraphNodeData, dataset: GraphDataset): SubagentLineageNode {
   const visited = new Set<string>([node.id]);
 
   function buildSubtree(currentNode: GraphNodeData, currentDepth: number): SubagentLineageNode {
-    const outgoingEdges = dataset.edges.filter((e) => e.source === currentNode.id);
+    const outgoingEdges = dataset.edges.filter(
+      (e) => e.source === currentNode.id && DELEGATION_EDGE_KINDS.has(String(e.kind)),
+    );
     const children: SubagentLineageNode[] = [];
 
     for (const edge of outgoingEdges) {
@@ -384,13 +427,7 @@ function buildTreeFromDataset(node: GraphNodeData, dataset: GraphDataset): Subag
       const targetSubtree = buildSubtree(targetNode, currentDepth + 1);
       children.push({
         ...targetSubtree,
-        role:
-          targetNode.kind ??
-          (edge.kind === "spawn"
-            ? "subagent"
-            : edge.kind === "validation"
-              ? "validator"
-              : "subagent"),
+        role: recordedRole(targetNode),
       });
     }
 
@@ -402,11 +439,11 @@ function buildTreeFromDataset(node: GraphNodeData, dataset: GraphDataset): Subag
       id: currentNode.id,
       nodeId: currentNode.id,
       name: currentNode.name,
-      role: currentNode.kind ?? (children.length > 0 ? "coordinator" : "subagent"),
-      status: currentNode.status ?? "pending",
+      role: recordedRole(currentNode),
+      status: currentNode.status,
       depth: currentDepth,
-      model: currentNode.model,
-      tier: currentNode.tier,
+      model: currentNode.telemetry?.model?.value,
+      tier: currentNode.telemetry?.modelTier?.value,
       durationMs: duration,
       tokens: typeof tokens === "number" ? tokens : undefined,
       costUsd: currentNode.metrics?.costUsd,
@@ -422,7 +459,8 @@ function buildTreeFromDataset(node: GraphNodeData, dataset: GraphDataset): Subag
 }
 
 /**
- * Extracts and synthesizes the full subagent lineage tree from node metadata, provenance, or graph dataset.
+ * The node's own lineage: recorded metadata first, then the delegation edges it is the source of,
+ * then its chain of custody. A node that delegated to nobody has an empty lineage, not the run.
  */
 export function extractLineageTree(
   node: GraphNodeData,
@@ -456,9 +494,11 @@ export function extractLineageTree(
     }
   }
 
-  // 2. Graph dataset edges & nodes traversal
+  // 2. The node's own delegation edges
   if (dataset && dataset.nodes && dataset.edges) {
-    const hasOutgoing = dataset.edges.some((e) => e.source === node.id);
+    const hasOutgoing = dataset.edges.some(
+      (e) => e.source === node.id && DELEGATION_EDGE_KINDS.has(String(e.kind)),
+    );
     if (hasOutgoing) {
       const tree = buildTreeFromDataset(node, dataset);
       if (tree.children && tree.children.length > 0) {
@@ -478,8 +518,10 @@ export function extractLineageTree(
     if (validRecords.length > 0) {
       const children: SubagentLineageNode[] = validRecords.map((r, idx) => {
         const actorId = String(r.actorId ?? r.actor ?? r.agent ?? `worker-${idx + 1}`);
-        const role = String(r.role ?? (actorId.includes("val") ? "validator" : "implementer"));
-        const status = String(r.status ?? "satisfied");
+        // Only the role the custody record carries. An agent id is a name, not evidence of the
+        // capability contract the run granted, so an unrecorded role stays unknown.
+        const role = r.role === undefined ? undefined : String(r.role);
+        const status = r.status === undefined ? undefined : String(r.status);
         const leaseToken = r.leaseToken ? String(r.leaseToken) : undefined;
         return {
           id: `custody-${actorId}-${idx}`,
@@ -498,10 +540,10 @@ export function extractLineageTree(
           id: node.id,
           nodeId: node.id,
           name: node.name,
-          role: node.kind ?? "coordinator",
-          status: node.status ?? "success",
+          role: recordedRole(node),
+          status: node.status,
           depth: 0,
-          model: node.model,
+          model: node.telemetry?.model?.value,
           children,
         },
       ];

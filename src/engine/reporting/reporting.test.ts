@@ -10,6 +10,7 @@ import {
 import { computeBlastRadiusMatrix, simulateNodeFailure } from "./blastRadiusEngine";
 import {
   escapeHtml,
+  formatUsd,
   generateExecutiveReportHtml,
   generateExecutiveReportJson,
   generateExecutiveReportMarkdown,
@@ -220,6 +221,30 @@ describe("Executive Reporting Engine Test Suite", () => {
       expect(kpi.totalDurationMs).toBe(16350);
       expect(kpi.healthScore).toBeLessThan(100);
       expect(kpi.healthScore).toBeGreaterThan(0);
+    });
+
+    it("carries no dollars and no model or tier guess when the run recorded none", () => {
+      const unpriced: GraphDataset = {
+        id: "unpriced",
+        title: "Unpriced Run",
+        nodes: [
+          { id: "a", name: "A", status: "success", metrics: { tokensIn: 100, tokensOut: 50 } },
+          { id: "b", name: "B", status: "success", metrics: { tokensIn: 200, tokensOut: 80 } },
+        ],
+        edges: [],
+      };
+
+      const kpi = aggregateKpiScorecard(unpriced);
+      expect(kpi.totalCostUsd).toBeUndefined();
+      expect(formatUsd(kpi.totalCostUsd)).toBe("unknown");
+
+      const attribution = aggregateTokenAttribution(unpriced);
+      expect(attribution.totalCostUsd).toBeUndefined();
+      expect(attribution.byNode[0].costUsd).toBeUndefined();
+      expect(attribution.byNode[0].costPercentage).toBeUndefined();
+      expect(attribution.byModel.map((m) => m.category)).toEqual(["unknown"]);
+      expect(attribution.byTier.map((t) => t.category)).toEqual(["unknown"]);
+      expect(attribution.byModel[0].costUsd).toBeUndefined();
     });
 
     it("accurately computes token attribution by node, model, tier, and section", () => {

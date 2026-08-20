@@ -311,3 +311,36 @@ describe("getEdgeCompositeBadgeText", () => {
     expect(text).toBeNull();
   });
 });
+
+describe("badge measurement matches what the renderer draws for a back-edge", () => {
+  it("measures a declared probe back-edge as PROBE, not CYCLE", () => {
+    expect(
+      getEdgeCompositeBadgeText({
+        id: "e",
+        source: "a",
+        target: "b",
+        kind: "probe",
+        isCycle: true,
+      }),
+    ).toBe("PROBE");
+  });
+
+  it("does not reserve room for a CYCLE prefix the renderer strips", () => {
+    expect(
+      getEdgeCompositeBadgeText({
+        id: "e",
+        source: "a",
+        target: "b",
+        kind: "loop",
+        isCycle: true,
+        container: { title: "Validator Pushback (Round 1)" },
+      }),
+    ).toBe("Validator Pushback (Round 1)");
+  });
+
+  it("still names a back-edge that declared no kind", () => {
+    expect(getEdgeCompositeBadgeText({ id: "e", source: "a", target: "b", isCycle: true })).toBe(
+      "CYCLE",
+    );
+  });
+});

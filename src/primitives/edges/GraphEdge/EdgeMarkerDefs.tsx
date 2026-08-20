@@ -1,6 +1,63 @@
 import type { FC } from "react";
 import { memo } from "react";
 
+import {
+  EDGE_KIND_DESCRIPTORS,
+  GENERATED_EDGE_MARKER_ID,
+  type EdgeKindDescriptor,
+} from "./edgeKinds";
+
+/**
+ * Arrowhead geometry per silhouette. `hollow` is drawn as an outline so a probe's arrowhead reads
+ * as an open question, and `terminal` carries a stop bar so a signoff reads as a full stop.
+ */
+function renderMarkerPath(descriptor: EdgeKindDescriptor) {
+  switch (descriptor.markerShape) {
+    case "hollow":
+      return (
+        <path
+          d="M 1 1.5 L 9 5 L 1 8.5 z"
+          fill="none"
+          stroke={descriptor.accent}
+          strokeWidth="1.6"
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      );
+    case "terminal":
+      return (
+        <path
+          d="M 0 1 L 7 5 L 0 9 z M 8 0.5 L 10 0.5 L 10 9.5 L 8 9.5 z"
+          fill={descriptor.accent}
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      );
+    case "heavy":
+      return (
+        <path
+          d="M 0 0 L 10 5 L 0 10 L 2.5 5 z"
+          fill={descriptor.accent}
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      );
+    default:
+      return (
+        <path
+          d="M 0 1 L 10 5 L 0 9 z"
+          fill={descriptor.accent}
+          vectorEffect="non-scaling-stroke"
+          shapeRendering="geometricPrecision"
+          textRendering="geometricPrecision"
+        />
+      );
+  }
+}
+
 export interface EdgeMarkerDefsProps {
   idPrefix?: string;
 }
@@ -155,7 +212,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
         />
       </marker>
 
-      {/* 6. Worker / Agent / Spawn Source Node Archetype Marker (#06b6d4) */}
+      {/* 6. Worker / Agent Source Node Archetype Marker (#06b6d4) */}
       <marker
         id={getMarkerId("edge-arrowhead-worker")}
         viewBox="0 0 10 10"
@@ -196,109 +253,7 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
         />
       </marker>
 
-      <marker
-        id={getMarkerId("edge-arrowhead-spawn")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6.5"
-        markerHeight="6.5"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#06b6d4"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
-
-      {/* 7. Gate / Validation Source Node Archetype Marker (#10b981) */}
-      <marker
-        id={getMarkerId("edge-arrowhead-gate")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6.5"
-        markerHeight="6.5"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#10b981"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
-
-      <marker
-        id={getMarkerId("edge-arrowhead-validation")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6.5"
-        markerHeight="6.5"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#10b981"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
-
-      {/* 8. Critic / Signoff Source Node Archetype Marker (#818cf8) */}
-      <marker
-        id={getMarkerId("edge-arrowhead-critic")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6.5"
-        markerHeight="6.5"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#818cf8"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
-
-      {/* 9. Loop / Pushback / Cycle Source Node Archetype Marker (#f43f5e) */}
-      <marker
-        id={getMarkerId("edge-arrowhead-loop")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="7"
-        markerHeight="7"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#f43f5e"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
-
+      {/* Cycle marker, referenced by the exported standalone SVG rather than by a descriptor. */}
       <marker
         id={getMarkerId("edge-arrowhead-cycle")}
         viewBox="0 0 10 10"
@@ -319,9 +274,12 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
         />
       </marker>
 
-      {/* 10. Semantic Data Handoff Marker (#6366f1) */}
+      {/*
+        The arrowhead for a kind with no preset. `context-stroke` takes the edge's own stroke, which
+        is that kind's generated accent, so one marker serves every unfamiliar vocabulary.
+      */}
       <marker
-        id={getMarkerId("edge-arrowhead-data")}
+        id={getMarkerId(GENERATED_EDGE_MARKER_ID)}
         viewBox="0 0 10 10"
         refX="8"
         refY="5"
@@ -333,54 +291,33 @@ export const EdgeMarkerDefs: FC<EdgeMarkerDefsProps> = memo(({ idPrefix = "" }) 
       >
         <path
           d="M 0 1 L 10 5 L 0 9 z"
-          fill="#6366f1"
+          fill="context-stroke"
           vectorEffect="non-scaling-stroke"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
         />
       </marker>
 
-      {/* 11. Semantic Dependency Marker (#64748b) */}
-      <marker
-        id={getMarkerId("edge-arrowhead-dependency")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6"
-        markerHeight="6"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#64748b"
-          vectorEffect="non-scaling-stroke"
+      {/*
+        One marker per preset edge kind, generated from EDGE_KIND_DESCRIPTORS so a kind can never
+        be added to the table without also getting an arrowhead.
+      */}
+      {Object.values(EDGE_KIND_DESCRIPTORS).map((descriptor) => (
+        <marker
+          key={descriptor.markerId}
+          id={getMarkerId(descriptor.markerId)}
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth={descriptor.markerShape === "heavy" ? 7 : 6.5}
+          markerHeight={descriptor.markerShape === "heavy" ? 7 : 6.5}
+          orient="auto-start-reverse"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
-        />
-      </marker>
-
-      {/* 12. Semantic Sequence Marker (#94a3b8) */}
-      <marker
-        id={getMarkerId("edge-arrowhead-sequence")}
-        viewBox="0 0 10 10"
-        refX="8"
-        refY="5"
-        markerWidth="6"
-        markerHeight="6"
-        orient="auto-start-reverse"
-        shapeRendering="geometricPrecision"
-        textRendering="geometricPrecision"
-      >
-        <path
-          d="M 0 1 L 10 5 L 0 9 z"
-          fill="#94a3b8"
-          vectorEffect="non-scaling-stroke"
-          shapeRendering="geometricPrecision"
-          textRendering="geometricPrecision"
-        />
-      </marker>
+        >
+          {renderMarkerPath(descriptor)}
+        </marker>
+      ))}
 
       {/* Port and Flow Markers */}
       <marker

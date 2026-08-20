@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import type { FC, ReactNode } from "react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 import type { FileMode, FileRef } from "../../types/graphData";
 import { copyToClipboard } from "./streamUtils";
 
@@ -176,7 +177,7 @@ export const DiffViewer: FC<DiffViewerProps> = memo(function DiffViewer({
 }) {
   const filePath = rawPath ?? file?.path ?? "unknown-file";
   const diffContent = rawDiff ?? file?.diff ?? "";
-  const mode = rawMode ?? file?.mode ?? "write";
+  const mode = rawMode ?? file?.mode ?? UNKNOWN_LABEL;
   const lineRange = rawLines ?? file?.lines;
 
   const [internalExpanded, setInternalExpanded] = useState<boolean>(defaultExpanded);

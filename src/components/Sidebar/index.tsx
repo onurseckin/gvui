@@ -1,22 +1,38 @@
 import type { FC } from "react";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useGraphFilesStore } from "../../state/useGraphFilesStore";
-import { useGraphStore, type FilterCategory } from "../../state/useGraphStore";
+import { useGraphStore } from "../../state/useGraphStore";
+import type { FilterCategory } from "../../state/graphFilters";
 import { Button } from "../../ui";
+import { describeDatasetFacets } from "./datasetFacets";
 import { SidebarFileList } from "./SidebarFileList";
 import { SidebarFilterControls } from "./SidebarFilterControls";
 import { SidebarModelBreakdown } from "./SidebarModelBreakdown";
+import { SidebarNodeProperties } from "./SidebarNodeProperties";
 import { SidebarNodeStatus } from "./SidebarNodeStatus";
+import { SidebarReviewRounds } from "./SidebarReviewRounds";
+import { SidebarRoleBreakdown } from "./SidebarRoleBreakdown";
+import { SidebarSectionBreakdown } from "./SidebarSectionBreakdown";
 import { SidebarTelemetry } from "./SidebarTelemetry";
+import { SidebarVocabulary } from "./SidebarVocabulary";
 import { TokenFootprintBreakdown } from "./TokenFootprintBreakdown";
 import "./Sidebar.css";
 
+export { describeDatasetFacets } from "./datasetFacets";
+export type { DatasetFacets } from "./datasetFacets";
+export { EvidenceChip } from "./EvidenceChip";
+export { SidebarAccordion } from "./SidebarAccordion";
 export { SidebarFileList } from "./SidebarFileList";
 export { SidebarFilterControls } from "./SidebarFilterControls";
 export { SidebarModelBreakdown } from "./SidebarModelBreakdown";
+export { SidebarNodeProperties } from "./SidebarNodeProperties";
 export { SidebarNodeStatus } from "./SidebarNodeStatus";
+export { SidebarReviewRounds } from "./SidebarReviewRounds";
+export { SidebarRoleBreakdown } from "./SidebarRoleBreakdown";
+export { SidebarSectionBreakdown } from "./SidebarSectionBreakdown";
 export { SidebarTelemetry } from "./SidebarTelemetry";
+export { SidebarVocabulary } from "./SidebarVocabulary";
 export { TokenFootprintBreakdown } from "./TokenFootprintBreakdown";
 
 export interface SidebarProps {
@@ -34,6 +50,11 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
   const dataset = useGraphStore((state) => state.dataset);
   const activeFilter = useGraphStore((state) => state.activeFilter);
   const setActiveFilter = useGraphStore((state) => state.setActiveFilter);
+
+  // Each purpose-built breakdown is rendered only when this dataset has something behind it, so a
+  // graph that uses none of the orchestration vocabulary reads as itself instead of as a run with
+  // everything missing.
+  const facets = useMemo(() => describeDatasetFacets(dataset), [dataset]);
 
   const files = useGraphFilesStore((state) => state.files);
   const isRefreshing = useGraphFilesStore((state) => state.isRefreshing);
@@ -79,11 +100,21 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
 
         <SidebarTelemetry dataset={dataset} />
 
-        <TokenFootprintBreakdown dataset={dataset} />
+        <SidebarVocabulary dataset={dataset} />
+
+        {facets.hasRoles ? <SidebarRoleBreakdown dataset={dataset} /> : null}
+
+        {facets.hasRegions ? <SidebarSectionBreakdown dataset={dataset} /> : null}
+
+        {facets.hasReviewActivity ? <SidebarReviewRounds dataset={dataset} /> : null}
 
         <SidebarNodeStatus dataset={dataset} />
 
-        <SidebarModelBreakdown dataset={dataset} />
+        {facets.hasTokens ? <TokenFootprintBreakdown dataset={dataset} /> : null}
+
+        {facets.hasModels ? <SidebarModelBreakdown dataset={dataset} /> : null}
+
+        {facets.hasGenericFields ? <SidebarNodeProperties dataset={dataset} /> : null}
 
         <SidebarFilterControls
           dataset={dataset}

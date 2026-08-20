@@ -47,7 +47,7 @@ const mockDatasetA: GraphDataset = {
       name: "Dispatcher",
       kind: "orchestrator",
       status: "success",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
       metrics: {
         durationMs: 2000,
         tokensIn: 1000,
@@ -61,7 +61,7 @@ const mockDatasetA: GraphDataset = {
       name: "Implementer Agent",
       kind: "agent",
       status: "error",
-      model: "claude-3-haiku",
+      telemetry: { model: { value: "claude-3-haiku", evidence_class: "host_reported" } },
       metrics: {
         durationMs: 5000,
         tokensIn: 4000,
@@ -118,7 +118,7 @@ const mockDatasetB: GraphDataset = {
       name: "Dispatcher",
       kind: "orchestrator",
       status: "success",
-      model: "claude-3-5-sonnet",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
       metrics: {
         durationMs: 1500, // Faster (-500ms)
         tokensIn: 1000,
@@ -132,7 +132,7 @@ const mockDatasetB: GraphDataset = {
       name: "Implementer Agent",
       kind: "agent",
       status: "success", // Fixed!
-      model: "claude-3-5-sonnet", // Upgraded model
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } }, // Upgraded model
       metrics: {
         durationMs: 2500, // Faster (-2500ms)
         tokensIn: 2000, // Reduced tokens

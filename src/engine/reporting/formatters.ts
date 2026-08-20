@@ -1,4 +1,5 @@
 import type { ExecutiveReportConfig, ExecutiveReportData, RiskLevel } from "./types";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 
 /**
  * Escapes HTML characters to prevent XSS injection in generated reports.
@@ -23,7 +24,9 @@ function formatNumber(num: number): string {
 /**
  * Formats USD currency.
  */
-function formatUsd(cost: number): string {
+/** Recorded dollars. An absent figure says so rather than rendering a confident $0.00. */
+export function formatUsd(cost: number | undefined): string {
+  if (cost === undefined) return UNKNOWN_LABEL;
   if (cost < 0.01 && cost > 0) {
     return `$${cost.toFixed(4)}`;
   }
@@ -582,8 +585,8 @@ export function generateExecutiveReportHtml(
                       (item) => `
               <tr>
                 <td><strong>${escapeHtml(item.nodeName)}</strong><br><small style="color: var(--text-muted);">${escapeHtml(item.nodeId)}</small></td>
-                <td>${escapeHtml(item.kind || "generic")}</td>
-                <td>${escapeHtml(item.status || "pending")}</td>
+                <td>${escapeHtml(item.kind || UNKNOWN_LABEL)}</td>
+                <td>${escapeHtml(item.status || UNKNOWN_LABEL)}</td>
                 <td>${item.directDownstreamCount} direct &rarr; ${item.transitiveDownstreamCount} total</td>
                 <td>${item.maxCascadeDepth} hops</td>
                 <td><strong>${item.blastRadiusScore}</strong>/100</td>
@@ -793,7 +796,7 @@ export function generateExecutiveReportMarkdown(
     const topItems = blastRadius.items.slice(0, 15);
     for (const item of topItems) {
       lines.push(
-        `| \`${item.nodeId}\` | ${item.nodeName} | ${item.kind || "generic"} | ${item.directDownstreamCount} / ${item.transitiveDownstreamCount} | ${item.maxCascadeDepth} | ${item.blastRadiusScore}/100 | **${item.riskLevel.toUpperCase()}** | ${formatUsd(item.estimatedCostAtRiskUsd)} | ${item.remediationRecommendation} |`,
+        `| \`${item.nodeId}\` | ${item.nodeName} | ${item.kind || UNKNOWN_LABEL} | ${item.directDownstreamCount} / ${item.transitiveDownstreamCount} | ${item.maxCascadeDepth} | ${item.blastRadiusScore}/100 | **${item.riskLevel.toUpperCase()}** | ${formatUsd(item.estimatedCostAtRiskUsd)} | ${item.remediationRecommendation} |`,
       );
     }
     lines.push("");

@@ -200,7 +200,7 @@ Related reading:
   complexity, and the quality model, treated independently of any one phase.
 - [Modes](../modes/README.md) — the layered engine's four `direction` values, and
   [radial](../modes/02-radial.md), the one engine that is not this pipeline.
-- [Features](../features/README.md) — SQLite caching, Detail Drawer tabs, Graph Export.
+- [Features](../features/README.md) — Graph vocabulary, Detail Drawer tabs, layout caching, Graph Export.
 - [Tooling](../tooling/README.md) — Screenshot ingestion, CLI capsule import, Layout audit harness.
 
 ---

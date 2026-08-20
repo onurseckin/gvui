@@ -22,20 +22,25 @@ mock.module("@tanstack/react-router", () => ({
 
 import { useGraphFilesStore } from "../../state/useGraphFilesStore";
 import { useGraphStore } from "../../state/useGraphStore";
-import type { GraphDataset, GraphNodeData } from "../../types/graphData";
+import type { GraphDataset } from "../../types/graphData";
 import {
   Sidebar,
   SidebarFileList,
   SidebarFilterControls,
   SidebarModelBreakdown,
   SidebarNodeStatus,
+  SidebarReviewRounds,
+  SidebarRoleBreakdown,
+  SidebarSectionBreakdown,
   SidebarTelemetry,
   TokenFootprintBreakdown,
 } from "./index";
+import * as tokenFootprintModule from "./TokenFootprintBreakdown";
 import { calculateGraphTokenFootprint, extractNodeTokenFootprint } from "./TokenFootprintBreakdown";
 
 describe("Sidebar Component & Subcomponents", () => {
-  const sampleDataset: GraphDataset = {
+  /** A capsule exported before the evidence spine: real values, no recorded provenance. */
+  const sparseDataset: GraphDataset = {
     id: "test-graph-1",
     title: "Test Orchestration Graph",
     nodes: [
@@ -44,42 +49,24 @@ describe("Sidebar Component & Subcomponents", () => {
         name: "Dispatcher",
         kind: "orchestrator",
         status: "success",
-        model: "claude-3-5-sonnet",
-        metrics: {
-          tokensIn: 1200,
-          tokensOut: 800,
-          costUsd: 0.015,
-          durationMs: 2500,
-          retries: 0,
-        },
+        telemetry: { model: { value: "model-alpha", evidence_class: "host_reported" } },
+        metrics: { tokensIn: 1200, tokensOut: 800, costUsd: 0.015, durationMs: 2500, retries: 0 },
       },
       {
         id: "node-2",
         name: "Worker Agent 1",
         kind: "agent",
         status: "running",
-        model: "claude-3-haiku",
-        metrics: {
-          tokensIn: 3000,
-          tokensOut: 1500,
-          costUsd: 0.008,
-          durationMs: 4200,
-          retries: 1,
-        },
+        hostAgent: { model: "model-beta" },
+        metrics: { tokensIn: 3000, tokensOut: 1500, costUsd: 0.008, durationMs: 4200, retries: 1 },
       },
       {
         id: "node-3",
         name: "Worker Agent 2",
         kind: "agent",
         status: "error",
-        model: "claude-3-5-sonnet",
-        metrics: {
-          tokensIn: 500,
-          tokensOut: 200,
-          costUsd: 0.003,
-          durationMs: 1100,
-          retries: 2,
-        },
+        telemetry: { model: { value: "model-alpha", evidence_class: "host_reported" } },
+        metrics: { tokensIn: 500, tokensOut: 200, costUsd: 0.003, durationMs: 1100, retries: 2 },
       },
       {
         id: "node-4",
@@ -87,16 +74,9 @@ describe("Sidebar Component & Subcomponents", () => {
         kind: "tool",
         status: "success",
         tools: [{ name: "bash_exec" }],
-        metrics: {
-          durationMs: 800,
-        },
+        metrics: { durationMs: 800 },
       },
-      {
-        id: "node-5",
-        name: "Validator Gate",
-        kind: "gate",
-        status: "pending",
-      },
+      { id: "node-5", name: "Validator Gate", kind: "gate", status: "pending" },
     ],
     edges: [
       { id: "e1-2", source: "node-1", target: "node-2" },
@@ -106,14 +86,134 @@ describe("Sidebar Component & Subcomponents", () => {
     ],
   };
 
+  /** A capsule from the current producer: declared roles, evidence classes, a branch region. */
+  const contractDataset: GraphDataset = {
+    id: "contract-graph",
+    title: "Contract Graph",
+    sections: [
+      {
+        id: "sec-branch-1",
+        title: "Branch B-1",
+        nodeIds: ["sub-1"],
+        reason: "docs and code touched different scopes",
+        parentNodeId: "impl-1",
+        status: "collected",
+      },
+    ],
+    nodes: [
+      {
+        id: "coord-1",
+        name: "Coordinator",
+        kind: "orchestrator",
+        status: "success",
+        telemetry: {
+          role: "coordinator",
+          model: { value: "claude-opus-4", evidence_class: "host_reported" },
+        },
+      },
+      {
+        id: "impl-1",
+        name: "Implementer",
+        kind: "agent",
+        status: "success",
+        telemetry: {
+          role: "implementer",
+          model: { value: "claude-sonnet-4", evidence_class: "host_reported" },
+          modelTier: { value: "m", evidence_class: "host_reported" },
+          tokensIn: { value: 1000, evidence_class: "host_reported" },
+          tokensOut: { value: 400, evidence_class: "host_reported" },
+        },
+        stateTransitions: [
+          {
+            at: "2026-08-18T10:00:00.000Z",
+            actor: "validator-1",
+            from: "submitted",
+            to: "validating",
+            reason: "adversarial probe",
+            attempt: 1,
+            evidence_class: "harness_observed",
+            verdict: "probe",
+            round: 1,
+            findingClass: "probe_demand",
+            findingCount: 1,
+          },
+          {
+            at: "2026-08-18T10:05:00.000Z",
+            actor: "validator-1",
+            from: "validating",
+            to: "changes_requested",
+            reason: "defect found",
+            attempt: 2,
+            evidence_class: "harness_observed",
+            verdict: "reject",
+            round: 1,
+            findingClass: "defect",
+            findingCount: 1,
+          },
+        ],
+        metadata: {
+          findings: [
+            {
+              id: "F-1",
+              severity: "important",
+              observation: "prove the migration is reversible",
+              status: "open",
+              class: "probe_demand",
+            },
+            {
+              id: "F-2",
+              severity: "critical",
+              observation: "null deref on empty input",
+              status: "open",
+              class: "defect",
+            },
+          ],
+        },
+      },
+      {
+        id: "val-1",
+        name: "Validator",
+        kind: "agent",
+        status: "success",
+        telemetry: { role: "validator" },
+      },
+      {
+        id: "rep-1",
+        name: "Repairer",
+        kind: "agent",
+        status: "success",
+        telemetry: { role: "repairer" },
+      },
+      {
+        id: "critic-1",
+        name: "Critic",
+        kind: "critic",
+        status: "success",
+        telemetry: { role: "completeness-critic" },
+      },
+      {
+        id: "sub-1",
+        name: "Sub implementer",
+        kind: "agent",
+        status: "success",
+        sectionId: "sec-branch-1",
+        telemetry: {
+          role: "sub-implementer",
+          tokensIn: { value: 50, evidence_class: "derived", is_estimated: true },
+        },
+      },
+    ],
+    edges: [
+      { id: "e-probe", source: "val-1", target: "impl-1", kind: "probe" },
+      { id: "e-push", source: "val-1", target: "impl-1", kind: "pushback" },
+      { id: "e-branch", source: "impl-1", target: "sub-1", kind: "branch" },
+    ],
+  };
+
   beforeEach(() => {
     lastNavigatedArgs = null;
     act(() => {
-      useGraphStore.setState({
-        dataset: null,
-        currentFile: "sample.json",
-        activeFilter: "all",
-      });
+      useGraphStore.setState({ dataset: null, currentFile: "sample.json", activeFilter: "all" });
       useGraphFilesStore.setState({
         files: ["graph-1.json", "graph-2.json", "graph-3.json"],
         isRefreshing: false,
@@ -124,146 +224,67 @@ describe("Sidebar Component & Subcomponents", () => {
 
   afterEach(() => {
     act(() => {
-      useGraphStore.setState({
-        dataset: null,
-        currentFile: "",
-        activeFilter: "all",
-      });
+      useGraphStore.setState({ dataset: null, currentFile: "", activeFilter: "all" });
     });
   });
 
   describe("SidebarTelemetry", () => {
-    it("renders complete graph telemetry when dataset is provided", () => {
+    it("summarises the run shape and sums only recorded duration and cost", () => {
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<SidebarTelemetry dataset={sampleDataset} />);
+        renderer = create(<SidebarTelemetry dataset={sparseDataset} />);
       });
 
       const root = renderer!.root;
-      const telemetrySection = root.findByProps({ "data-testid": "sidebar-telemetry" });
-      expect(telemetrySection).toBeDefined();
-
-      const nodesCount = root.findByProps({ "data-testid": "telemetry-nodes-count" });
-      expect(nodesCount.children).toEqual(["5"]);
-
-      const edgesCount = root.findByProps({ "data-testid": "telemetry-edges-count" });
-      expect(edgesCount.children).toEqual(["4"]);
-
-      const duration = root.findByProps({ "data-testid": "telemetry-duration" });
-      expect(duration.children).toEqual(["8.6s"]); // 2500 + 4200 + 1100 + 800 = 8600ms -> 8.6s
-
-      const tokens = root.findByProps({ "data-testid": "telemetry-tokens" });
-      expect(tokens.children).toEqual(["7.2k"]); // 2000 + 4500 + 700 = 7200 -> 7.2k
-
-      const cost = root.findByProps({ "data-testid": "telemetry-cost" });
-      expect(cost.children).toEqual(["$0.026"]); // 0.015 + 0.008 + 0.003 = 0.026
-
-      const retries = root.findByProps({ "data-testid": "telemetry-retries" });
-      expect(retries.children).toEqual(["3"]); // 0 + 1 + 2 = 3
+      expect(root.findByProps({ "data-testid": "telemetry-nodes-count" }).children).toEqual(["5"]);
+      expect(root.findByProps({ "data-testid": "telemetry-edges-count" }).children).toEqual(["4"]);
+      expect(root.findByProps({ "data-testid": "telemetry-regions-count" }).children).toEqual([
+        "0",
+      ]);
+      // 2500 + 4200 + 1100 + 800 = 8600ms, over the four nodes that recorded one.
+      expect(root.findByProps({ "data-testid": "telemetry-duration" }).children).toEqual(["8.6s"]);
+      expect(root.findByProps({ "data-testid": "telemetry-duration-coverage" }).children).toEqual([
+        "4",
+        "/",
+        "5",
+        " nodes",
+      ]);
+      expect(root.findByProps({ "data-testid": "telemetry-cost" }).children).toEqual(["$0.026"]);
     });
 
-    it("renders empty state message when dataset is null or has no nodes", () => {
+    it("renders unknown, not zero, when nothing recorded a duration or a cost", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarTelemetry dataset={contractDataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "telemetry-duration" }).children).toEqual([
+        "unknown",
+      ]);
+      expect(root.findByProps({ "data-testid": "telemetry-cost" }).children).toEqual(["unknown"]);
+      expect(root.findByProps({ "data-testid": "telemetry-cost-note" })).toBeDefined();
+      expect(root.findAllByProps({ "data-testid": "telemetry-cost-coverage" }).length).toBe(0);
+    });
+
+    it("counts the branch regions the run recorded", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarTelemetry dataset={contractDataset} />);
+      });
+      expect(
+        renderer!.root.findByProps({ "data-testid": "telemetry-regions-count" }).children,
+      ).toEqual(["1"]);
+    });
+
+    it("renders empty state when no graph is loaded", () => {
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(<SidebarTelemetry dataset={null} />);
       });
-
-      const root = renderer!.root;
-      const emptyState = root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState.children).toEqual(["No graph telemetry available"]);
-
-      act(() => {
-        renderer = create(
-          <SidebarTelemetry dataset={{ id: "empty", title: "Empty", nodes: [], edges: [] }} />,
-        );
-      });
-      const emptyState2 = renderer!.root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState2.children).toEqual(["No graph telemetry available"]);
-    });
-
-    it("handles nodes with metadata fallback duration and repair rounds", () => {
-      const datasetWithMetadata: GraphDataset = {
-        id: "meta-graph",
-        title: "Metadata Graph",
-        nodes: [
-          {
-            id: "n1",
-            name: "Meta Node",
-            metadata: {
-              durationMs: 3500,
-              repairRounds: 2,
-            },
-          },
-        ],
-        edges: [],
-      };
-
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(<SidebarTelemetry dataset={datasetWithMetadata} />);
-      });
-
-      const root = renderer!.root;
-      const duration = root.findByProps({ "data-testid": "telemetry-duration" });
-      expect(duration.children).toEqual(["3.5s"]);
-
-      const retries = root.findByProps({ "data-testid": "telemetry-retries" });
-      expect(retries.children).toEqual(["2"]);
-    });
-
-    it("aggregates promptTokens + completionTokens from metrics.tokens and metadata.tokens", () => {
-      const datasetWithDetailedTokens: GraphDataset = {
-        id: "token-fallback-graph",
-        title: "Token Fallback Graph",
-        nodes: [
-          {
-            id: "n1",
-            name: "Node with metrics token object",
-            metrics: {
-              tokens: {
-                promptTokens: 2500,
-                completionTokens: 1500,
-                reasoningTokens: 500,
-              },
-              costUsd: 0.012,
-            },
-          },
-          {
-            id: "n2",
-            name: "Node with metadata token object",
-            metadata: {
-              tokens: {
-                promptTokens: 800,
-                completionTokens: 200,
-              },
-              tokensIn: 0,
-              tokensOut: 0,
-            },
-          },
-          {
-            id: "n3",
-            name: "Node with metadata direct tokens",
-            metadata: {
-              tokensIn: 300,
-              tokensOut: 200,
-            },
-          },
-        ],
-        edges: [],
-      };
-
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(<SidebarTelemetry dataset={datasetWithDetailedTokens} />);
-      });
-
-      const root = renderer!.root;
-      const tokens = root.findByProps({ "data-testid": "telemetry-tokens" });
-      // n1: 2500 + 1500 + 500 = 4500
-      // n2: 800 + 200 = 1000
-      // n3: 300 + 200 = 500
-      // total: 6000 -> 6.0k
-      expect(tokens.children).toEqual(["6.0k"]);
+      expect(renderer!.root.findByProps({ className: "sidebar-empty-state" }).children).toEqual([
+        "No graph loaded",
+      ]);
     });
   });
 
@@ -271,140 +292,291 @@ describe("Sidebar Component & Subcomponents", () => {
     it("renders active node counts broken down by status", () => {
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<SidebarNodeStatus dataset={sampleDataset} />);
+        renderer = create(<SidebarNodeStatus dataset={sparseDataset} />);
       });
 
       const root = renderer!.root;
-      const statusSection = root.findByProps({ "data-testid": "sidebar-node-status" });
-      expect(statusSection).toBeDefined();
-
-      const successCount = root.findByProps({ "data-testid": "status-count-success" });
-      expect(successCount.children).toEqual(["2"]); // Dispatcher, CLI Tool
-
-      const runningCount = root.findByProps({ "data-testid": "status-count-running" });
-      expect(runningCount.children).toEqual(["1"]); // Worker Agent 1
-
-      const errorCount = root.findByProps({ "data-testid": "status-count-error" });
-      expect(errorCount.children).toEqual(["1"]); // Worker Agent 2
-
-      const pendingCount = root.findByProps({ "data-testid": "status-count-pending" });
-      expect(pendingCount.children).toEqual(["1"]); // Validator Gate
+      expect(root.findByProps({ "data-testid": "status-count-success" }).children).toEqual(["2"]);
+      expect(root.findByProps({ "data-testid": "status-count-running" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "status-count-error" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "status-count-pending" }).children).toEqual(["1"]);
     });
 
-    it("renders empty state when dataset is null or has no nodes", () => {
+    it("buckets a node with no recorded status as unknown, never as pending", () => {
+      const dataset: GraphDataset = {
+        id: "no-status",
+        title: "No Status",
+        nodes: [
+          { id: "a", name: "Recorded", kind: "agent", status: "success" },
+          { id: "b", name: "Never recorded", kind: "agent" },
+          { id: "c", name: "Also never recorded", kind: "agent" },
+        ],
+        edges: [],
+      };
+
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarNodeStatus dataset={dataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "status-count-unknown" }).children).toEqual(["2"]);
+      // Pending is a lifecycle claim; absence is a claim about our records. They never merge.
+      expect(root.findAllByProps({ "data-testid": "status-count-pending" }).length).toBe(0);
+      expect(root.findByProps({ "data-testid": "status-item-unknown" }).props.className).toContain(
+        "is-unknown",
+      );
+    });
+
+    it("renders empty state when dataset is null", () => {
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(<SidebarNodeStatus dataset={null} />);
       });
-
-      const root = renderer!.root;
-      const emptyState = root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState.children).toEqual(["No active nodes"]);
-    });
-
-    it("handles skipped and cached statuses correctly", () => {
-      const variedDataset: GraphDataset = {
-        id: "varied",
-        title: "Varied",
-        nodes: [
-          { id: "s1", name: "Skipped", status: "skipped" },
-          { id: "c1", name: "Cached 1", status: "cached" },
-          { id: "c2", name: "Cached 2", status: "cached" },
-        ],
-        edges: [],
-      };
-
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(<SidebarNodeStatus dataset={variedDataset} />);
-      });
-
-      const root = renderer!.root;
-      const skippedCount = root.findByProps({ "data-testid": "status-count-skipped" });
-      expect(skippedCount.children).toEqual(["1"]);
-
-      const cachedCount = root.findByProps({ "data-testid": "status-count-cached" });
-      expect(cachedCount.children).toEqual(["2"]);
+      expect(renderer!.root.findByProps({ className: "sidebar-empty-state" }).children).toEqual([
+        "No active nodes",
+      ]);
     });
   });
 
   describe("SidebarModelBreakdown", () => {
-    it("aggregates node counts by model name, accounts for Unspecified nodes so total equals nodes count", () => {
+    it("groups a node whose model was never reported under an explicit unknown", () => {
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<SidebarModelBreakdown dataset={sampleDataset} />);
+        renderer = create(<SidebarModelBreakdown dataset={sparseDataset} />);
       });
 
       const root = renderer!.root;
-      const modelSection = root.findByProps({ "data-testid": "sidebar-model-breakdown" });
-      expect(modelSection).toBeDefined();
+      expect(root.findByProps({ "data-testid": "model-count-model-alpha" }).children).toEqual([
+        "2",
+      ]);
+      expect(root.findByProps({ "data-testid": "model-count-model-beta" }).children).toEqual(["1"]);
 
-      const sonnetCount = root.findByProps({ "data-testid": "model-count-claude-3-5-sonnet" });
-      expect(sonnetCount.children).toEqual(["2"]);
+      // The CLI tool and the gate reported no model at all.
+      const unknownCount = root.findByProps({ "data-testid": "model-count-unknown" });
+      expect(unknownCount.children).toEqual(["2"]);
 
-      const haikuCount = root.findByProps({ "data-testid": "model-count-claude-3-haiku" });
-      expect(haikuCount.children).toEqual(["1"]);
-
-      const unspecifiedCount = root.findByProps({ "data-testid": "model-count-Unspecified" });
-      expect(unspecifiedCount.children).toEqual(["2"]); // CLI Tool and Validator Gate
-
-      const sonnetItem = root.findByProps({ "data-testid": "model-item-claude-3-5-sonnet" });
-      const tierChip = sonnetItem.findByProps({ className: "model-tier-chip tier-m" });
-      expect(tierChip.children).toEqual(["m"]);
+      const unknownItem = root.findByProps({ "data-testid": "model-item-unknown" });
+      expect(unknownItem.props.className).toContain("is-unknown");
+      expect(root.findAllByProps({ "data-testid": "model-item-Unspecified" }).length).toBe(0);
     });
 
-    it("resolves model from harnessModel, metadata.model, and hostAgent fallback", () => {
-      const fallbackDataset: GraphDataset = {
-        id: "fallback-models",
-        title: "Fallback Models",
-        nodes: [
-          { id: "n1", name: "Harness Model Node", harnessModel: "claude-3-opus" },
-          { id: "n2", name: "Metadata Model Node", metadata: { model: "gpt-4o" } },
-          {
-            id: "n3",
-            name: "Host Agent Node",
-            hostAgent: { model: "claude-3-5-sonnet" },
-          },
-        ],
+    it("labels a model with no stated provenance as unverified and a host-reported one as host-reported", () => {
+      let sparseRenderer: ReactTestRenderer;
+      act(() => {
+        sparseRenderer = create(<SidebarModelBreakdown dataset={sparseDataset} />);
+      });
+      const sparseItem = sparseRenderer!.root.findByProps({
+        "data-testid": "model-item-model-beta",
+      });
+      expect(sparseItem.findByProps({ "data-testid": "evidence-chip-unknown" }).children).toEqual([
+        "unverified",
+      ]);
+
+      let contractRenderer: ReactTestRenderer;
+      act(() => {
+        contractRenderer = create(<SidebarModelBreakdown dataset={contractDataset} />);
+      });
+      const contractItem = contractRenderer!.root.findByProps({
+        "data-testid": "model-item-claude-sonnet-4",
+      });
+      expect(
+        contractItem.findByProps({ "data-testid": "evidence-chip-host_reported" }).children,
+      ).toEqual(["host-reported"]);
+      expect(contractItem.findByProps({ className: "model-tier-chip tier-m" }).children).toEqual([
+        "m",
+      ]);
+    });
+
+    it("says so when no node reported a model at all", () => {
+      const noModels: GraphDataset = {
+        id: "no-models",
+        title: "No Models",
+        nodes: [{ id: "n1", name: "Node 1", kind: "agent" }],
         edges: [],
       };
 
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<SidebarModelBreakdown dataset={fallbackDataset} />);
+        renderer = create(<SidebarModelBreakdown dataset={noModels} />);
       });
 
       const root = renderer!.root;
-      const opusCount = root.findByProps({ "data-testid": "model-count-claude-3-opus" });
-      expect(opusCount.children).toEqual(["1"]);
-
-      const gpt4oCount = root.findByProps({ "data-testid": "model-count-gpt-4o" });
-      expect(gpt4oCount.children).toEqual(["1"]);
-
-      const sonnetCount = root.findByProps({ "data-testid": "model-count-claude-3-5-sonnet" });
-      expect(sonnetCount.children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "model-count-unknown" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "model-breakdown-note" })).toBeDefined();
     });
+  });
 
-    it("renders empty state when dataset is null or has 0 nodes", () => {
+  describe("SidebarRoleBreakdown", () => {
+    it("groups declared roles into the realigned role vocabulary", () => {
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<SidebarModelBreakdown dataset={null} />);
+        renderer = create(<SidebarRoleBreakdown dataset={contractDataset} />);
       });
 
       const root = renderer!.root;
-      const emptyState = root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState.children).toEqual(["No model telemetry available"]);
+      expect(root.findByProps({ "data-testid": "role-group-count-coordination" }).children).toEqual(
+        ["1"],
+      );
+      expect(root.findByProps({ "data-testid": "role-group-count-implementer" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-group-count-validator" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-group-count-repairer" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-group-count-critic" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-group-count-sub-agent" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-chip-sub-implementer" })).toBeDefined();
+      // Every role was declared, so nothing is flagged as inferred.
+      expect(root.findAllByProps({ "data-testid": "role-group-derived-implementer" }).length).toBe(
+        0,
+      );
+    });
+
+    it("flags roles inferred from the node kind and buckets roleless nodes as unknown", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarRoleBreakdown dataset={sparseDataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "role-group-count-implementer" }).children).toEqual([
+        "2",
+      ]);
+      expect(root.findByProps({ "data-testid": "role-group-derived-implementer" })).toBeDefined();
+      // The CLI tool node carries no role and no role-bearing kind.
+      expect(root.findByProps({ "data-testid": "role-group-count-unknown" }).children).toEqual([
+        "1",
+      ]);
+    });
+  });
+
+  describe("SidebarSectionBreakdown", () => {
+    it("lists each branch region with its recorded reason and status", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarSectionBreakdown dataset={contractDataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "region-count-sec-branch-1" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "region-reason-sec-branch-1" }).children).toEqual([
+        "docs and code touched different scopes",
+      ]);
+      expect(root.findByProps({ "data-testid": "section-ungrouped-note" })).toBeDefined();
+    });
+
+    it("says the reason is unknown rather than inventing one for a region that owes one", () => {
+      const reasonless: GraphDataset = {
+        ...contractDataset,
+        sections: [{ id: "sec-x", title: "Region X", nodeIds: ["sub-1"], parentNodeId: "impl-1" }],
+      };
+
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarSectionBreakdown dataset={reasonless} />);
+      });
+
+      expect(renderer!.root.findByProps({ "data-testid": "region-reason-sec-x" }).children).toEqual(
+        ["Reason unknown — the run recorded none."],
+      );
+    });
+
+    it("asks no reason of a region that is a plain grouping", () => {
+      const grouping: GraphDataset = {
+        ...contractDataset,
+        sections: [
+          {
+            id: "sec-theme",
+            title: "Water in, water out",
+            description: "Everything about supply and demand",
+            nodeIds: ["sub-1"],
+          },
+        ],
+      };
+
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarSectionBreakdown dataset={grouping} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findAllByProps({ "data-testid": "region-reason-sec-theme" }).length).toBe(0);
+      expect(root.findByProps({ "data-testid": "region-description-sec-theme" }).children).toEqual([
+        "Everything about supply and demand",
+      ]);
+    });
+
+    it("renders an empty state when the run recorded no regions", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarSectionBreakdown dataset={sparseDataset} />);
+      });
+      expect(
+        renderer!.root.findByProps({ "data-testid": "section-breakdown-empty" }),
+      ).toBeDefined();
+    });
+  });
+
+  describe("SidebarReviewRounds", () => {
+    it("counts probe rounds apart from pushback rounds", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarReviewRounds dataset={contractDataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "review-probe-rounds" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "review-pushback-rounds" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "review-card-probe" }).props.className).toContain(
+        "review-probe",
+      );
+      expect(root.findByProps({ "data-testid": "review-card-pushback" }).props.className).toContain(
+        "review-pushback",
+      );
+    });
+
+    it("separates proof demands from asserted defects", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarReviewRounds dataset={contractDataset} />);
+      });
+
+      const root = renderer!.root;
+      expect(
+        root.findByProps({ "data-testid": "review-probe-detail" }).children.join(""),
+      ).toContain("1 proof demand");
+      expect(
+        root.findByProps({ "data-testid": "review-pushback-detail" }).children.join(""),
+      ).toContain("1 defect");
+    });
+
+    it("renders an empty state when no review activity was recorded", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarReviewRounds dataset={sparseDataset} />);
+      });
+      expect(renderer!.root.findByProps({ "data-testid": "review-rounds-empty" })).toBeDefined();
     });
   });
 
   describe("SidebarFilterControls", () => {
-    it("renders compact filter chips with accurate counts and triggers callback on click", () => {
+    it("renders the realigned role chips with accurate counts", () => {
       let selectedFilter = "";
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(
           <SidebarFilterControls
-            dataset={sampleDataset}
+            dataset={contractDataset}
             activeFilter="all"
             onFilterChange={(f) => {
               selectedFilter = f;
@@ -414,50 +586,50 @@ describe("Sidebar Component & Subcomponents", () => {
       });
 
       const root = renderer!.root;
-      const allCount = root.findByProps({ "data-testid": "filter-count-all" });
-      expect(allCount.children).toEqual(["5"]);
+      expect(root.findByProps({ "data-testid": "filter-count-all" }).children).toEqual(["6"]);
+      expect(root.findByProps({ "data-testid": "filter-count-coordination" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "filter-count-implementers" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "filter-count-repairers" }).children).toEqual(["1"]);
+      expect(root.findByProps({ "data-testid": "filter-count-sub-agents" }).children).toEqual([
+        "1",
+      ]);
+      expect(root.findByProps({ "data-testid": "filter-count-critics" }).children).toEqual(["1"]);
 
-      const orchCount = root.findByProps({ "data-testid": "filter-count-orchestrators" });
-      expect(orchCount.children).toEqual(["1"]);
-
-      const implCount = root.findByProps({ "data-testid": "filter-count-implementers" });
-      expect(implCount.children).toEqual(["2"]);
-
-      const valCount = root.findByProps({ "data-testid": "filter-count-validators" });
-      expect(valCount.children).toEqual(["1"]);
-
-      const criticsCount = root.findByProps({ "data-testid": "filter-count-critics" });
-      expect(criticsCount.children).toEqual(["0"]);
-
-      const errorCount = root.findByProps({ "data-testid": "filter-count-errors" });
-      expect(errorCount.children).toEqual(["1"]);
-
-      const successCount = root.findByProps({ "data-testid": "filter-count-success" });
-      expect(successCount.children).toEqual(["2"]);
-
-      const toolsCount = root.findByProps({ "data-testid": "filter-count-tools" });
-      expect(toolsCount.children).toEqual(["1"]);
-
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
       act(() => {
-        errorBtn.props.onClick();
+        root.findByProps({ "data-testid": "filter-btn-repairers" }).props.onClick();
       });
-      expect(selectedFilter).toBe("errors");
-
-      const orchBtn = root.findByProps({ "data-testid": "filter-btn-orchestrators" });
-      act(() => {
-        orchBtn.props.onClick();
-      });
-      expect(selectedFilter).toBe("orchestrators");
+      expect(selectedFilter).toBe("repairers");
     });
 
-    it("toggles active filter back to 'all' when clicking already-active filter button", () => {
+    it("treats the orchestrators spelling as the coordination chip", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <SidebarFilterControls
+            dataset={contractDataset}
+            activeFilter="orchestrators"
+            onFilterChange={() => {}}
+          />,
+        );
+      });
+
+      const coordinationBtn = renderer!.root.findByProps({
+        "data-testid": "filter-btn-coordination",
+      });
+      expect(coordinationBtn.props["aria-pressed"]).toBe(true);
+    });
+
+    it("toggles an active filter back to all", () => {
       let selectedFilter = "errors";
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(
           <SidebarFilterControls
-            dataset={sampleDataset}
+            dataset={sparseDataset}
             activeFilter="errors"
             onFilterChange={(f) => {
               selectedFilter = f;
@@ -466,46 +638,20 @@ describe("Sidebar Component & Subcomponents", () => {
         );
       });
 
-      const root = renderer!.root;
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
+      const errorBtn = renderer!.root.findByProps({ "data-testid": "filter-btn-errors" });
       expect(errorBtn.props["aria-pressed"]).toBe(true);
-
       act(() => {
         errorBtn.props.onClick();
       });
-      // Toggle should reset to 'all'
       expect(selectedFilter).toBe("all");
     });
 
-    it("keeps filter as 'all' when clicking 'all' while already active", () => {
-      let selectedFilter = "all";
+    it("marks the active filter with aria-pressed and the active class", () => {
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(
           <SidebarFilterControls
-            dataset={sampleDataset}
-            activeFilter="all"
-            onFilterChange={(f) => {
-              selectedFilter = f;
-            }}
-          />,
-        );
-      });
-
-      const root = renderer!.root;
-      const allBtn = root.findByProps({ "data-testid": "filter-btn-all" });
-      act(() => {
-        allBtn.props.onClick();
-      });
-      expect(selectedFilter).toBe("all");
-    });
-
-    it("marks active filter button with aria-pressed=true and active class", () => {
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(
-          <SidebarFilterControls
-            dataset={sampleDataset}
+            dataset={sparseDataset}
             activeFilter="success"
             onFilterChange={() => {}}
           />,
@@ -532,7 +678,7 @@ describe("Sidebar Component & Subcomponents", () => {
           <SidebarFileList
             files={["pipeline.json", "crawler.json"]}
             currentFile="pipeline.json"
-            dataset={sampleDataset}
+            dataset={sparseDataset}
             onSelectFile={(f) => {
               selectedFile = f;
             }}
@@ -541,8 +687,7 @@ describe("Sidebar Component & Subcomponents", () => {
       });
 
       const root = renderer!.root;
-      const filesCount = root.findByProps({ "data-testid": "sidebar-files-count" });
-      expect(filesCount.children).toEqual(["2"]);
+      expect(root.findByProps({ "data-testid": "sidebar-files-count" }).children).toEqual(["2"]);
 
       const item1 = root.findByProps({ "data-testid": "file-item-pipeline.json" });
       expect(item1.props.className).toContain("active");
@@ -577,33 +722,25 @@ describe("Sidebar Component & Subcomponents", () => {
       const searchInput = root.findByProps({ "data-testid": "sidebar-file-search-input" });
       expect(searchInput).toBeDefined();
 
-      // Search for beta
       act(() => {
         searchInput.props.onChange({ target: { value: "beta" } });
       });
 
       expect(root.findByProps({ "data-testid": "file-item-beta-worker.json" })).toBeDefined();
       expect(root.findAllByProps({ "data-testid": "file-item-alpha-run.json" }).length).toBe(0);
+      expect(root.findByProps({ "data-testid": "sidebar-files-count" }).children).toEqual(["1"]);
 
-      const countBadge = root.findByProps({ "data-testid": "sidebar-files-count" });
-      expect(countBadge.children).toEqual(["1"]);
-
-      // Clear search
-      const clearBtn = root.findByProps({ "data-testid": "sidebar-file-search-clear" });
       act(() => {
-        clearBtn.props.onClick();
+        root.findByProps({ "data-testid": "sidebar-file-search-clear" }).props.onClick();
       });
 
       expect(root.findByProps({ "data-testid": "file-item-alpha-run.json" })).toBeDefined();
-      expect(root.findByProps({ "data-testid": "file-item-beta-worker.json" })).toBeDefined();
       expect(root.findByProps({ "data-testid": "file-item-gamma-audit.json" })).toBeDefined();
 
-      // No match search
       act(() => {
         searchInput.props.onChange({ target: { value: "non-existent" } });
       });
-      const emptySearch = root.findByProps({ "data-testid": "sidebar-file-empty-search" });
-      expect(emptySearch).toBeDefined();
+      expect(root.findByProps({ "data-testid": "sidebar-file-empty-search" })).toBeDefined();
     });
 
     it("renders empty state message when files list is empty", () => {
@@ -611,74 +748,57 @@ describe("Sidebar Component & Subcomponents", () => {
       act(() => {
         renderer = create(<SidebarFileList files={[]} currentFile="" onSelectFile={() => {}} />);
       });
-
-      const root = renderer!.root;
-      const emptyState = root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState.children[0]).toContain("No graph files yet");
+      expect(
+        renderer!.root.findByProps({ className: "sidebar-empty-state" }).children[0],
+      ).toContain("No graph files yet");
     });
   });
 
   describe("Sidebar Collapsible Accordions", () => {
-    it("supports collapsing and expanding telemetry, node status, model breakdown, and token footprint", () => {
+    it("collapses and expands every breakdown through the shared accordion", () => {
       let renderer: ReactTestRenderer;
       act(() => {
         renderer = create(
           <div>
-            <SidebarTelemetry dataset={sampleDataset} />
-            <SidebarNodeStatus dataset={sampleDataset} />
-            <SidebarModelBreakdown dataset={sampleDataset} />
-            <TokenFootprintBreakdown dataset={sampleDataset} />
+            <SidebarTelemetry dataset={contractDataset} />
+            <SidebarRoleBreakdown dataset={contractDataset} />
+            <SidebarSectionBreakdown dataset={contractDataset} />
+            <SidebarReviewRounds dataset={contractDataset} />
+            <SidebarModelBreakdown dataset={contractDataset} />
+            <TokenFootprintBreakdown dataset={contractDataset} />
           </div>,
         );
       });
 
       const root = renderer!.root;
+      const cases: readonly [string, string][] = [
+        ["sidebar-telemetry-header", "telemetry-nodes-count"],
+        ["sidebar-role-breakdown-header", "role-group-count-implementer"],
+        ["sidebar-section-breakdown-header", "region-count-sec-branch-1"],
+        ["sidebar-review-rounds-header", "review-probe-rounds"],
+        ["sidebar-model-breakdown-header", "model-item-claude-sonnet-4"],
+        ["token-footprint-breakdown-header", "token-footprint-coverage"],
+      ];
 
-      // Telemetry accordion
-      const telemetryHeader = root.findByProps({ "data-testid": "sidebar-telemetry-header" });
-      expect(root.findByProps({ "data-testid": "telemetry-nodes-count" })).toBeDefined();
-      act(() => {
-        telemetryHeader.props.onClick();
-      });
-      expect(root.findAllByProps({ "data-testid": "telemetry-nodes-count" }).length).toBe(0);
-      act(() => {
-        telemetryHeader.props.onClick();
-      });
-      expect(root.findByProps({ "data-testid": "telemetry-nodes-count" })).toBeDefined();
-
-      // Node status accordion
-      const nodeStatusHeader = root.findByProps({ "data-testid": "sidebar-node-status-header" });
-      expect(root.findByProps({ "data-testid": "status-item-running" })).toBeDefined();
-      act(() => {
-        nodeStatusHeader.props.onClick();
-      });
-      expect(root.findAllByProps({ "data-testid": "status-item-running" }).length).toBe(0);
-
-      // Model breakdown accordion
-      const modelHeader = root.findByProps({ "data-testid": "sidebar-model-breakdown-header" });
-      expect(root.findByProps({ "data-testid": "model-item-claude-3-5-sonnet" })).toBeDefined();
-      act(() => {
-        modelHeader.props.onClick();
-      });
-      expect(root.findAllByProps({ "data-testid": "model-item-claude-3-5-sonnet" }).length).toBe(0);
-
-      // Token footprint accordion
-      const tokenHeader = root.findByProps({ "data-testid": "token-footprint-header" });
-      expect(root.findByProps({ "data-testid": "token-footprint-total-cost" })).toBeDefined();
-      act(() => {
-        tokenHeader.props.onClick();
-      });
-      expect(root.findAllByProps({ "data-testid": "token-footprint-total-cost" }).length).toBe(0);
+      for (const [headerId, bodyId] of cases) {
+        const header = root.findByProps({ "data-testid": headerId });
+        expect(root.findByProps({ "data-testid": bodyId })).toBeDefined();
+        act(() => {
+          header.props.onClick();
+        });
+        expect(root.findAllByProps({ "data-testid": bodyId }).length).toBe(0);
+        act(() => {
+          header.props.onClick();
+        });
+        expect(root.findByProps({ "data-testid": bodyId })).toBeDefined();
+      }
     });
   });
 
   describe("Sidebar Full Integration", () => {
-    it("renders all sections together with store state and supports filter toggle reset", () => {
+    it("renders every graph-level section together and drives the store filter", () => {
       act(() => {
-        useGraphStore.setState({
-          dataset: sampleDataset,
-          activeFilter: "tools",
-        });
+        useGraphStore.setState({ dataset: contractDataset, activeFilter: "tools" });
       });
 
       let selectedSample = "";
@@ -700,40 +820,31 @@ describe("Sidebar Component & Subcomponents", () => {
       });
 
       const root = renderer!.root;
-      const aside = root.findByProps({ "data-testid": "sidebar" });
-      expect(aside).toBeDefined();
+      expect(root.findByProps({ "data-testid": "sidebar" })).toBeDefined();
+      for (const testId of [
+        "sidebar-files",
+        "sidebar-telemetry",
+        "sidebar-role-breakdown",
+        "sidebar-section-breakdown",
+        "sidebar-review-rounds",
+        "sidebar-node-status",
+        "token-footprint-breakdown",
+        "sidebar-model-breakdown",
+      ]) {
+        expect(root.findByProps({ "data-testid": testId })).toBeDefined();
+      }
 
-      // Files list exists
-      const filesSection = root.findByProps({ "data-testid": "sidebar-files" });
-      expect(filesSection).toBeDefined();
+      expect(root.findByProps({ "data-testid": "filter-btn-tools" }).props["aria-pressed"]).toBe(
+        true,
+      );
 
-      // Telemetry exists
-      const telemetrySection = root.findByProps({ "data-testid": "sidebar-telemetry" });
-      expect(telemetrySection).toBeDefined();
-
-      // Status exists
-      const statusSection = root.findByProps({ "data-testid": "sidebar-node-status" });
-      expect(statusSection).toBeDefined();
-
-      // Models exists
-      const modelsSection = root.findByProps({ "data-testid": "sidebar-model-breakdown" });
-      expect(modelsSection).toBeDefined();
-
-      // Filters exist and reflect tools active
-      const toolsBtn = root.findByProps({ "data-testid": "filter-btn-tools" });
-      expect(toolsBtn.props["aria-pressed"]).toBe(true);
-
-      // Switching filter updates store
-      const errorBtn = root.findByProps({ "data-testid": "filter-btn-errors" });
       act(() => {
-        errorBtn.props.onClick();
+        root.findByProps({ "data-testid": "filter-btn-validators" }).props.onClick();
       });
-      expect(useGraphStore.getState().activeFilter).toBe("errors");
+      expect(useGraphStore.getState().activeFilter).toBe("validators");
 
-      // Selecting file triggers callback and router navigate
-      const file2Btn = root.findByProps({ "data-testid": "file-item-graph-2.json" });
       act(() => {
-        file2Btn.props.onClick();
+        root.findByProps({ "data-testid": "file-item-graph-2.json" }).props.onClick();
       });
       expect(selectedSample).toBe("graph-2.json");
       expect(lastNavigatedArgs).toEqual({
@@ -741,10 +852,8 @@ describe("Sidebar Component & Subcomponents", () => {
         params: { fileId: "graph-2.json" },
       });
 
-      // Settings button
-      const settingsBtn = root.findByProps({ title: "Developer Settings & Graph Testing" });
       act(() => {
-        settingsBtn.props.onClick();
+        root.findByProps({ title: "Developer Settings & Graph Testing" }).props.onClick();
       });
       expect(settingsOpened).toBe(true);
       expect(lastNavigatedArgs).toEqual({ to: "/testing" });
@@ -752,9 +861,7 @@ describe("Sidebar Component & Subcomponents", () => {
 
     it("displays refresh error banner when refresh error occurs", () => {
       act(() => {
-        useGraphFilesStore.setState({
-          error: "Failed to fetch graph directory listing",
-        });
+        useGraphFilesStore.setState({ error: "Failed to fetch graph directory listing" });
       });
 
       let renderer: ReactTestRenderer;
@@ -762,399 +869,113 @@ describe("Sidebar Component & Subcomponents", () => {
         renderer = create(<Sidebar currentFile="sample.json" onSelectSample={() => {}} />);
       });
 
-      const root = renderer!.root;
-      const errorBanner = root.findByProps({ className: "sidebar-refresh-error" });
-      expect(errorBanner.children).toEqual(["Failed to fetch graph directory listing"]);
+      expect(renderer!.root.findByProps({ className: "sidebar-refresh-error" }).children).toEqual([
+        "Failed to fetch graph directory listing",
+      ]);
     });
   });
 
-  describe("TokenFootprintBreakdown Component & Analytics Engine", () => {
-    const detailedDataset: GraphDataset = {
-      id: "cost-graph-1",
-      title: "Cost & Token Test Graph",
-      nodes: [
-        {
-          id: "node-lead",
-          name: "Lead Orchestrator",
-          kind: "orchestrator",
-          status: "success",
-          model: "claude-3-opus",
-          tier: "l",
-          metrics: {
-            tokens: {
-              promptTokens: 10000,
-              completionTokens: 2000,
-              reasoningTokens: 1500,
-              cacheCreationTokens: 5000,
-              cacheReadTokens: 8000,
-              totalTokens: 13500,
-            },
-            costUsd: 0.35,
-          },
-        },
-        {
-          id: "node-worker",
-          name: "Implementation Agent",
-          kind: "agent",
-          status: "running",
-          model: "claude-3-5-sonnet",
-          tier: "m",
-          metrics: {
-            tokensIn: 5000,
-            tokensOut: 1500,
-            costUsd: 0.045,
-          },
-          metadata: {
-            tokens: {
-              reasoningTokens: 800,
-              cacheReadTokens: 3000,
-            },
-          },
-        },
-        {
-          id: "node-fast",
-          name: "Quick Triage Agent",
-          kind: "agent",
-          status: "success",
-          model: "claude-3-haiku",
-          tier: "s",
-          metrics: {
-            tokensIn: 2000,
-            tokensOut: 500,
-            costUsd: 0.002,
-          },
-        },
-        {
-          id: "node-mini",
-          name: "Micro Router",
-          kind: "router",
-          status: "success",
-          model: "flash-lite",
-          tier: "xs",
-          metrics: {
-            tokensIn: 1000,
-            tokensOut: 200,
-            costUsd: 0.0003,
-          },
-        },
-      ],
-      edges: [
-        { id: "e1", source: "node-lead", target: "node-worker" },
-        { id: "e2", source: "node-worker", target: "node-fast" },
-      ],
-    };
-
-    it("extractNodeTokenFootprint accurately extracts tokens, costs, and tiers from diverse node shapes", () => {
-      const leadExtracted = extractNodeTokenFootprint(detailedDataset.nodes[0]);
-      expect(leadExtracted.promptTokens).toBe(10000);
-      expect(leadExtracted.completionTokens).toBe(2000);
-      expect(leadExtracted.reasoningTokens).toBe(1500);
-      expect(leadExtracted.cacheCreationTokens).toBe(5000);
-      expect(leadExtracted.cacheReadTokens).toBe(8000);
-      expect(leadExtracted.totalTokens).toBe(13500);
-      expect(leadExtracted.costUsd).toBe(0.35);
-      expect(leadExtracted.tier).toBe("l");
-      expect(leadExtracted.model).toBe("claude-3-opus");
-
-      // Node with direct tokensIn/Out and metadata reasoning fallback
-      const workerExtracted = extractNodeTokenFootprint(detailedDataset.nodes[1]);
-      expect(workerExtracted.promptTokens).toBe(5000);
-      expect(workerExtracted.completionTokens).toBe(1500);
-      expect(workerExtracted.reasoningTokens).toBe(800);
-      expect(workerExtracted.cacheReadTokens).toBe(3000);
-      expect(workerExtracted.tier).toBe("m");
-
-      // Node with 0 costUsd and tokens estimates cost using tier pricing
-      const unpricedNode: GraphNodeData = {
-        id: "unpriced",
-        name: "Unpriced Node",
-        model: "claude-3-5-sonnet",
-        tier: "m",
-        metrics: {
-          tokensIn: 1_000_000,
-          tokensOut: 100_000,
-        },
-      };
-      const unpricedExtracted = extractNodeTokenFootprint(unpricedNode);
-      // Tier M: 1M prompt * $3 + 100k comp * $15 = $3.00 + $1.50 = $4.50
-      expect(unpricedExtracted.costUsd).toBeCloseTo(4.5, 2);
+  describe("TokenFootprintBreakdown", () => {
+    it("exports no pricing table, so no dollar figure can be synthesised", () => {
+      expect(Object.keys(tokenFootprintModule)).not.toContain("TIER_PRICING");
     });
 
-    it("calculateGraphTokenFootprint computes aggregated metrics, cache savings, and tier simulations", () => {
-      const analytics = calculateGraphTokenFootprint(detailedDataset);
+    it("extracts only reported counts and never prices an unpriced node", () => {
+      const reported = extractNodeTokenFootprint(contractDataset.nodes[1]!);
+      expect(reported.reported).toBe(true);
+      expect(reported.promptTokens).toBe(1000);
+      expect(reported.completionTokens).toBe(400);
+      expect(reported.costRecorded).toBe(false);
+      expect(reported.costUsd).toBe(0);
+      expect(reported.model).toBe("claude-sonnet-4");
+      expect(reported.evidence).toBe("host_reported");
+
+      const silent = extractNodeTokenFootprint(contractDataset.nodes[2]!);
+      expect(silent.reported).toBe(false);
+      expect(silent.totalTokens).toBe(0);
+      expect(silent.model).toBeUndefined();
+    });
+
+    it("aggregates over reporting nodes only and carries the weakest evidence class", () => {
+      const analytics = calculateGraphTokenFootprint(contractDataset);
       expect(analytics).not.toBeNull();
-      if (!analytics) return;
-
-      expect(analytics.nodesCount).toBe(4);
-      expect(analytics.totalPromptTokens).toBe(18000);
-      expect(analytics.totalCompletionTokens).toBe(4200);
-      expect(analytics.totalReasoningTokens).toBe(2300);
-      expect(analytics.totalCacheReadTokens).toBe(11000);
-      expect(analytics.totalCacheCreationTokens).toBe(5000);
-      expect(analytics.totalCostUsd).toBeCloseTo(0.3973, 4);
-
-      // Cache hit rate: 11000 / (18000 + 11000) = 11000 / 29000 ~ 37.9%
-      expect(analytics.cacheHitRatePercent).toBeGreaterThan(30);
-      expect(analytics.cacheHitRatePercent).toBeLessThan(50);
-      expect(analytics.cacheCostSavingsUsd).toBeGreaterThan(0);
-
-      // Tier breakdown includes XS, S, M, L
-      expect(analytics.tierBreakdown.length).toBe(4);
-      const tierL = analytics.tierBreakdown.find((t) => t.tier === "l");
-      expect(tierL).toBeDefined();
-      expect(tierL?.nodeCount).toBe(1);
-      expect(tierL?.costUsd).toBe(0.35);
-
-      // Tier simulations
-      expect(analytics.tierSimulations.length).toBe(4);
-      const simXS = analytics.tierSimulations.find((s) => s.tier === "xs");
-      const simL = analytics.tierSimulations.find((s) => s.tier === "l");
-      expect(simXS).toBeDefined();
-      expect(simL).toBeDefined();
-      // Running all on XS should be much cheaper than running on L
-      expect(simXS!.simulatedCostUsd).toBeLessThan(simL!.simulatedCostUsd);
+      expect(analytics!.nodesCount).toBe(6);
+      expect(analytics!.reportingNodes).toBe(2);
+      expect(analytics!.totalTokens).toBe(1450);
+      expect(analytics!.recordedCostUsd).toBeUndefined();
+      // host_reported for the implementer, derived for the estimated sub-agent: the weaker wins.
+      expect(analytics!.evidence).toBe("derived");
+      expect(analytics!.hasEstimates).toBe(true);
     });
 
-    it("calculateGraphTokenFootprint returns null for empty or null dataset", () => {
+    it("splits the token total across the role groups that reported usage", () => {
+      const analytics = calculateGraphTokenFootprint(contractDataset);
+      const shares = analytics!.roleShares;
+      expect(shares.map((entry) => entry.group)).toEqual(["implementer", "sub-agent"]);
+      expect(shares[0]!.totalTokens).toBe(1400);
+      expect(shares[1]!.totalTokens).toBe(50);
+    });
+
+    it("sums a recorded cost and leaves it absent when nothing recorded one", () => {
+      expect(calculateGraphTokenFootprint(sparseDataset)!.recordedCostUsd).toBeCloseTo(0.026, 6);
+      expect(calculateGraphTokenFootprint(contractDataset)!.recordedCostUsd).toBeUndefined();
       expect(calculateGraphTokenFootprint(null)).toBeNull();
-      expect(
-        calculateGraphTokenFootprint({ id: "empty", title: "Empty", nodes: [], edges: [] }),
-      ).toBeNull();
     });
 
-    it("TokenFootprintBreakdown renders empty state when dataset is null", () => {
+    it("renders unknown for cost and flags the aggregate as estimated", () => {
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<TokenFootprintBreakdown dataset={null} />);
+        renderer = create(<TokenFootprintBreakdown dataset={contractDataset} />);
       });
 
       const root = renderer!.root;
-      const section = root.findByProps({ "data-testid": "token-footprint-breakdown" });
-      expect(section).toBeDefined();
-      const emptyState = root.findByProps({ className: "sidebar-empty-state" });
-      expect(emptyState.children).toEqual(["No token or financial analytics available"]);
+      expect(root.findByProps({ "data-testid": "token-footprint-total-cost" }).children).toEqual([
+        "unknown",
+      ]);
+      expect(root.findByProps({ "data-testid": "token-footprint-coverage" }).children).toEqual([
+        "2",
+        " of ",
+        "6",
+        " nodes reported usage",
+      ]);
+      expect(root.findByProps({ "data-testid": "evidence-chip-derived" }).children).toEqual([
+        "derived · estimated",
+      ]);
     });
 
-    it("TokenFootprintBreakdown renders summary cards and switches views (Tokens, Tiers, Cache, Compare)", () => {
-      let selectedTier: string | null = null;
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(
-          <TokenFootprintBreakdown
-            dataset={detailedDataset}
-            onFilterTier={(t) => {
-              selectedTier = t;
-            }}
-          />,
-        );
-      });
-
-      const root = renderer!.root;
-
-      // Summary Cards
-      const costCard = root.findByProps({ "data-testid": "token-footprint-total-cost" });
-      expect(costCard.children.join("")).toContain("$0.39");
-
-      const tokensCard = root.findByProps({ "data-testid": "token-footprint-total-tokens" });
-      expect(tokensCard.children.join("")).toBeDefined();
-
-      // View 1: Tokens (Default)
-      const tokenPanel = root.findByProps({ "data-testid": "token-view-tokens" });
-      expect(tokenPanel).toBeDefined();
-      const inputTokens = root.findByProps({ "data-testid": "token-footprint-input-tokens" });
-      expect(inputTokens.children.join("")).toContain("18k");
-      const reasoningTokens = root.findByProps({
-        "data-testid": "token-footprint-reasoning-tokens",
-      });
-      expect(reasoningTokens.children.join("")).toContain("2.3k");
-
-      // Switch to View 2: Tiers
-      const tiersTab = root.findByProps({ "data-testid": "token-view-tab-tiers" });
-      act(() => {
-        tiersTab.props.onClick();
-      });
-      const tiersPanel = root.findByProps({ "data-testid": "token-view-tiers" });
-      expect(tiersPanel).toBeDefined();
-      const tierLRow = root.findByProps({ "data-testid": "tier-row-l" });
-      expect(tierLRow).toBeDefined();
-
-      // Click on tier row triggers callback
-      act(() => {
-        tierLRow.props.onClick();
-      });
-      expect(selectedTier).toBe("l");
-
-      // Switch to View 3: Cache
-      const cacheTab = root.findByProps({ "data-testid": "token-view-tab-cache" });
-      act(() => {
-        cacheTab.props.onClick();
-      });
-      const cachePanel = root.findByProps({ "data-testid": "token-view-cache" });
-      expect(cachePanel).toBeDefined();
-      const cacheHitRate = root.findByProps({ "data-testid": "token-footprint-cache-hit-rate" });
-      expect(cacheHitRate.children.join("")).toContain("%");
-      const cacheSavings = root.findByProps({ "data-testid": "token-footprint-cache-savings" });
-      expect(cacheSavings.children.join("")).toContain("$");
-
-      // Switch to View 4: Simulation (Compare)
-      const simTab = root.findByProps({ "data-testid": "token-view-tab-simulation" });
-      act(() => {
-        simTab.props.onClick();
-      });
-      const simPanel = root.findByProps({ "data-testid": "token-view-simulation" });
-      expect(simPanel).toBeDefined();
-      const simXSRow = root.findByProps({ "data-testid": "sim-tier-xs" });
-      expect(simXSRow).toBeDefined();
-      const simLRow = root.findByProps({ "data-testid": "sim-tier-l" });
-      expect(simLRow).toBeDefined();
-    });
-
-    it("TokenFootprintBreakdown copies summary to clipboard with interactive feedback", async () => {
-      let written = "";
-      const originalNav = globalThis.navigator;
-      Object.defineProperty(globalThis, "navigator", {
-        value: {
-          clipboard: {
-            writeText: (text: string) => {
-              written = text;
-              return Promise.resolve();
-            },
-          },
-        },
-        configurable: true,
-        writable: true,
-      });
-
-      let renderer: ReactTestRenderer;
-      act(() => {
-        renderer = create(<TokenFootprintBreakdown dataset={detailedDataset} />);
-      });
-
-      const root = renderer!.root;
-      const copyBtn = root.findByProps({ "data-testid": "copy-token-summary-btn" });
-      expect(copyBtn).toBeDefined();
-
-      await act(async () => {
-        await copyBtn.props.onClick();
-      });
-
-      expect(written).toContain("Graph Cost & Token Footprint Summary");
-      expect(written).toContain("Total Cost:");
-      const updatedBtn = root.findByProps({ "data-testid": "copy-token-summary-btn" });
-      const span = updatedBtn.findByType("span");
-      expect(span.props.children).toBe("Copied");
-
-      Object.defineProperty(globalThis, "navigator", {
-        value: originalNav,
-        configurable: true,
-        writable: true,
-      });
-    });
-
-    it("finding-03-stress-token-footprint: robust handling of zero tokens, NaN, negative values, and extreme numbers", () => {
-      const zeroDataset: GraphDataset = {
-        id: "zero-run",
-        title: "Zero Run",
-        nodes: [
-          {
-            id: "z1",
-            name: "Zero Node 1",
-            metrics: { tokensIn: 0, tokensOut: 0, costUsd: 0 },
-          },
-          {
-            id: "z2",
-            name: "Zero Node 2",
-            metrics: {},
-            metadata: {},
-          },
-        ],
+    it("says the run has no token data instead of showing a confident zero", () => {
+      const tokenless: GraphDataset = {
+        id: "tokenless",
+        title: "Tokenless",
+        nodes: [{ id: "n1", name: "Node 1", kind: "agent" }],
         edges: [],
       };
 
-      const analytics = calculateGraphTokenFootprint(zeroDataset);
-      expect(analytics).not.toBeNull();
-      expect(analytics!.totalTokens).toBe(0);
-      expect(analytics!.totalCostUsd).toBe(0);
-      expect(analytics!.cacheHitRatePercent).toBe(0);
-      expect(analytics!.cacheCostSavingsUsd).toBe(0);
-
       let renderer: ReactTestRenderer;
       act(() => {
-        renderer = create(<TokenFootprintBreakdown dataset={zeroDataset} />);
+        renderer = create(<TokenFootprintBreakdown dataset={tokenless} />);
       });
-      const json = JSON.stringify(renderer!.toJSON());
-      expect(json).not.toContain("NaN");
-      expect(json).toContain("$0.00");
+
+      const root = renderer!.root;
+      const message = root.findByProps({ "data-testid": "token-footprint-unreported" });
+      expect(message.children.join("")).toContain("not zero tokens");
+      expect(root.findAllByProps({ "data-testid": "token-footprint-total-cost" }).length).toBe(0);
     });
 
-    it("finding-03-adversarial-verification: verifies cache savings calculation and multi-level reasoning token fallbacks", () => {
-      // Test multi-level reasoning token telemetry fallbacks
-      const nodeWithHostThinking: GraphNodeData = {
-        id: "think-node-1",
-        name: "Thinking Agent",
-        model: "claude-3-opus",
-        tier: "l",
-        metadata: {
-          hostAgent: {
-            thinkingTokens: 4500,
-            model: "claude-3-opus",
-          },
-        },
-      };
-      const extracted1 = extractNodeTokenFootprint(nodeWithHostThinking);
-      expect(extracted1.reasoningTokens).toBe(4500);
+    it("totals counts that stated no provenance, labelled as unverified", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<TokenFootprintBreakdown dataset={sparseDataset} />);
+      });
 
-      const nodeWithCognitiveTokens: GraphNodeData = {
-        id: "cog-node-2",
-        name: "Cognitive Agent",
-        metadata: {
-          cognitiveTokens: 3200,
-        },
-      };
-      const extracted2 = extractNodeTokenFootprint(nodeWithCognitiveTokens);
-      expect(extracted2.reasoningTokens).toBe(3200);
-
-      const nodeWithDirectThinking: GraphNodeData = {
-        id: "think-node-3",
-        name: "Direct Thinking Agent",
-        metrics: {
-          tokens: {
-            thinkingTokens: 8800,
-            promptTokens: 10000,
-            completionTokens: 2000,
-          },
-        },
-      };
-      const extracted3 = extractNodeTokenFootprint(nodeWithDirectThinking);
-      expect(extracted3.reasoningTokens).toBe(8800);
-
-      // Verify precise cache savings calculation
-      const cacheDataset: GraphDataset = {
-        id: "cache-verify-graph",
-        title: "Cache Verification",
-        nodes: [
-          {
-            id: "cn1",
-            name: "Cache Heavy Worker",
-            tier: "m",
-            metrics: {
-              tokens: {
-                promptTokens: 100_000,
-                cacheReadTokens: 400_000,
-                cacheCreationTokens: 50_000,
-                completionTokens: 20_000,
-              },
-            },
-          },
-        ],
-        edges: [],
-      };
-      const cacheAnalytics = calculateGraphTokenFootprint(cacheDataset);
-      expect(cacheAnalytics).not.toBeNull();
-      // Cache hit rate: 400,000 / (100,000 + 400,000) = 80.0%
-      expect(cacheAnalytics!.cacheHitRatePercent).toBe(80);
-      // Tier M: Prompt $3.00/1M, Cache Read $0.30/1M -> Savings = $2.70/1M * 400,000 = $1.08
-      expect(Math.abs(cacheAnalytics!.cacheCostSavingsUsd - 1.08) < 0.001).toBe(true);
+      const root = renderer!.root;
+      expect(root.findByProps({ "data-testid": "token-footprint-input-tokens" }).children).toEqual([
+        "4.7k",
+      ]);
+      expect(root.findByProps({ "data-testid": "token-footprint-total-cost" }).children).toEqual([
+        "$0.026",
+      ]);
+      expect(root.findByProps({ "data-testid": "evidence-chip-unknown" })).toBeDefined();
     });
   });
 });

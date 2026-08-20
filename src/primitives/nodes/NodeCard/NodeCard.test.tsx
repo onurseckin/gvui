@@ -72,11 +72,30 @@ describe("NodeCard archetypes and kind descriptors", () => {
     expect(desc.label).toBe("JOIN");
   });
 
-  test("resolves model tiers accurately", () => {
-    expect(resolveModelTier({ id: "1", name: "1", model: "claude-3-opus" })).toBe("l");
-    expect(resolveModelTier({ id: "2", name: "2", model: "claude-3-5-sonnet" })).toBe("m");
-    expect(resolveModelTier({ id: "3", name: "3", model: "claude-3-haiku" })).toBe("s");
-    expect(resolveModelTier({ id: "4", name: "4" })).toBe(undefined);
+  test("reports only the model tier a host recorded", () => {
+    expect(
+      resolveModelTier({
+        id: "1",
+        name: "1",
+        telemetry: { modelTier: { value: "l", evidence_class: "host_reported" } },
+      }),
+    ).toBe("l");
+    expect(resolveModelTier({ id: "3", name: "3", hostAgent: { tier: "s" } })).toBe("s");
+    expect(
+      resolveModelTier({
+        id: "4",
+        name: "4",
+        telemetry: { model: { value: "some-large-model", evidence_class: "host_reported" } },
+      }),
+    ).toBe(undefined);
+    expect(
+      resolveModelTier({
+        id: "5",
+        name: "5",
+        telemetry: { modelTier: { value: "unknown", evidence_class: "unknown" } },
+      }),
+    ).toBe(undefined);
+    expect(resolveModelTier({ id: "6", name: "6" })).toBe(undefined);
   });
 
   test("describes node status indicators", () => {
@@ -139,8 +158,7 @@ describe("NodeCardHeader redesign", () => {
       type: "worker",
       step: 5,
       badge: { text: "IN_PROGRESS", variant: "warning" },
-      model: "claude-3-5-sonnet",
-      harnessModel: "anthropic-claude",
+      telemetry: { model: { value: "claude-3-5-sonnet", evidence_class: "host_reported" } },
     };
 
     let renderer: ReturnType<typeof create>;
@@ -168,8 +186,9 @@ describe("NodeCardHeader redesign", () => {
     });
     expect(badgeChip.children).toEqual(["IN_PROGRESS"]);
 
+    // No tier was reported for this node, so the chip carries no tier styling to imply one.
     const modelChip = headerAside.findByProps({
-      className: "node-card-model-chip tier-m",
+      className: "node-card-model-chip",
     });
     expect(modelChip.children).toEqual(["claude-3-5-sonnet"]);
 
@@ -440,8 +459,9 @@ describe("Narrow viewport (200px) multi-chip header stress testing", () => {
       type: "coordinator-v2",
       step: 99,
       badge: { text: "CRITICAL_PATH", variant: "warning" },
-      model: "claude-3-5-sonnet-20260620",
-      harnessModel: "harness-runner-extended",
+      telemetry: {
+        model: { value: "claude-3-5-sonnet-20260620", evidence_class: "host_reported" },
+      },
       x: 0,
       y: 0,
       width: 200,
@@ -483,7 +503,7 @@ describe("Narrow viewport (200px) multi-chip header stress testing", () => {
     expect(badgeChip.children).toEqual(["CRITICAL_PATH"]);
 
     const modelChip = headerAside.findByProps({
-      className: "node-card-model-chip tier-m",
+      className: "node-card-model-chip",
     });
     expect(modelChip.children).toEqual(["claude-3-5-sonnet-20260620"]);
 

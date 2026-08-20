@@ -3,12 +3,13 @@ import {
   IconChevronUp,
   IconDots,
   IconFolder,
+  IconGitBranch,
   IconGripHorizontal,
   IconLock,
   IconLockOpen,
 } from "@tabler/icons-react";
 import type { CSSProperties, FC, MouseEvent as ReactMouseEvent } from "react";
-import { memo, useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   GROUP_THEME_PALETTES,
   computeGroupBounds,
@@ -18,12 +19,15 @@ import {
   type GroupBounds,
 } from "../../components/CanvasGrouping";
 import { useGraphStore } from "../../state/useGraphStore";
-import type { PositionedNode } from "../../types/graphData";
+import type { GraphSection, PositionedNode } from "../../types/graphData";
+import { computeSectionDepths, describeSectionType, sectionStartsCollapsed } from "./sectionKinds";
 import "../../components/CanvasGrouping/CanvasGrouping.css";
 
 export interface GraphGroupingLayerProps {
   positionedNodes: PositionedNode[];
   hiddenNodeIds?: Set<string>;
+  /** Dataset regions — a branch excursion is one of these. Rendered read-only beside user groups. */
+  sections?: GraphSection[];
   selectedNodeId?: string | null;
   zoomLevel?: number;
   onSelectGroup?: (groupId: string) => void;
@@ -33,6 +37,55 @@ export interface GraphGroupingLayerProps {
 export interface ResolvedGroupRenderData {
   group: CanvasGroup;
   bounds: GroupBounds;
+  /** Why the region exists. For a branch region this is the recorded branch reason. */
+  reason?: string;
+  /** Dataset regions are structure, not user annotation: they cannot be dragged or edited. */
+  isSection: boolean;
+  /** How deeply the region is nested, shown in its header. Only dataset regions have one. */
+  depth?: number;
+  /** The region type's accent, generated when the type has no preset. */
+  accent?: string;
+}
+
+/**
+ * Colours a section by its recorded status so an abandoned excursion does not look like a collected
+ * one. An unrecorded status stays neutral rather than borrowing a success colour.
+ */
+function sectionPalette(status?: string): CanvasGroup["color"] {
+  switch (status) {
+    case "collected":
+      return "purple";
+    case "collecting":
+    case "open":
+      return "cyan";
+    case "abandoned":
+      return "rose";
+    default:
+      return "slate";
+  }
+}
+
+/** The layer's id for a dataset region, namespaced so it can never collide with a user group. */
+export function sectionGroupId(sectionId: string): string {
+  return `section:${sectionId}`;
+}
+
+/**
+ * Projects a dataset section onto the group shape the layer already knows how to draw. The section
+ * is locked, so none of the drag/edit affordances apply to it — collapsing is the one thing the
+ * reader may do to it, and that state lives in this layer rather than in the user-group store.
+ */
+function sectionAsGroup(section: GraphSection, isCollapsed: boolean): CanvasGroup {
+  return {
+    id: sectionGroupId(section.id),
+    label: section.title,
+    description: section.description,
+    color: sectionPalette(section.status),
+    memberNodeIds: section.nodeIds,
+    isCollapsed,
+    isLocked: true,
+    shapeMode: "box",
+  };
 }
 
 /**
@@ -42,6 +95,7 @@ export interface ResolvedGroupRenderData {
 export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function GraphGroupingLayer({
   positionedNodes,
   hiddenNodeIds,
+  sections,
   selectedNodeId: _selectedNodeId,
   zoomLevel = 1,
   onSelectGroup,
@@ -56,6 +110,18 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
   const toggleGroupLock = useCanvasGroupingStore((s) => s.toggleGroupLock);
   const setDraggingGroup = useCanvasGroupingStore((s) => s.setDraggingGroup);
 
+  // Reader overrides for dataset regions, keyed by section group id. A region the reader has opened
+  // stays open, and one they have folded stays folded, whatever its depth says by default.
+  const [sectionCollapseOverrides, setSectionCollapseOverrides] = useState<
+    Readonly<Record<string, boolean>>
+  >({});
+
+  const toggleSectionCollapse = useCallback((groupId: string, isCollapsed: boolean) => {
+    setSectionCollapseOverrides((current) => ({ ...current, [groupId]: !isCollapsed }));
+  }, []);
+
+  const sectionDepths = useMemo(() => computeSectionDepths(sections ?? []), [sections]);
+
   // Map positioned nodes for fast O(1) lookups
   const nodesMap = useMemo(() => {
     const map = new Map<string, PositionedNode>();
@@ -65,19 +131,48 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
     return map;
   }, [positionedNodes]);
 
-  // Compute bounds and geometry for all visible groups
+  // Compute bounds and geometry for all visible regions: dataset sections first, then user groups,
+  // so a user group drawn over a branch region sits on top of it.
   const resolvedGroups = useMemo(() => {
-    if (!isLayerVisible || groups.length === 0) return [];
+    if (!isLayerVisible) return [];
 
     const result: ResolvedGroupRenderData[] = [];
+    for (const section of sections ?? []) {
+      if (section.nodeIds.length === 0) continue;
+      const depth = sectionDepths.get(section.id) ?? 1;
+      const groupId = sectionGroupId(section.id);
+      const isCollapsed =
+        sectionCollapseOverrides[groupId] ?? sectionStartsCollapsed(section, depth);
+      const group = sectionAsGroup(section, isCollapsed);
+      const bounds = computeGroupBounds(group, nodesMap, hiddenNodeIds);
+      if (bounds) {
+        const descriptor = describeSectionType(section.type);
+        result.push({
+          group,
+          bounds,
+          reason: section.reason,
+          isSection: true,
+          depth,
+          ...(descriptor === undefined ? {} : { accent: descriptor.accent }),
+        });
+      }
+    }
     for (const group of groups) {
       const bounds = computeGroupBounds(group, nodesMap, hiddenNodeIds);
       if (bounds) {
-        result.push({ group, bounds });
+        result.push({ group, bounds, isSection: false });
       }
     }
     return result;
-  }, [isLayerVisible, groups, nodesMap, hiddenNodeIds]);
+  }, [
+    isLayerVisible,
+    sections,
+    sectionDepths,
+    sectionCollapseOverrides,
+    groups,
+    nodesMap,
+    hiddenNodeIds,
+  ]);
 
   // Drag interaction tracking ref
   const dragRef = useRef<{
@@ -189,14 +284,16 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
           ))}
         </defs>
 
-        {resolvedGroups.map(({ group, bounds }) => {
+        {resolvedGroups.map(({ group, bounds, isSection, accent }) => {
           if (group.isCollapsed) return null;
           const theme = GROUP_THEME_PALETTES[group.color] ?? GROUP_THEME_PALETTES.blue;
           const isSelected = selectedGroupId === group.id;
+          const edgeColor = accent ?? (isSelected ? theme.accent : theme.border);
 
           const pathClass = [
             "group-boundary-path",
             group.isLocked ? "is-locked" : "is-draggable",
+            isSection ? "is-section" : "",
             isSelected ? "is-selected" : "",
           ]
             .filter(Boolean)
@@ -207,11 +304,11 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
               key={`group-path-${group.id}`}
               d={bounds.svgPath}
               fill={theme.bg}
-              stroke={isSelected ? theme.accent : theme.border}
+              stroke={edgeColor}
               strokeWidth={isSelected ? 2 : 1.5}
               filter={isSelected ? `url(#glow-${theme.id})` : undefined}
               className={pathClass}
-              onMouseDown={(e) => handleStartDrag(e, group)}
+              onMouseDown={isSection ? undefined : (e) => handleStartDrag(e, group)}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedGroupId(group.id);
@@ -223,9 +320,11 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
       </svg>
 
       {/* HTML Headers and Collapsed Summary Pills */}
-      {resolvedGroups.map(({ group, bounds }) => {
+      {resolvedGroups.map(({ group, bounds, reason, isSection, depth, accent }) => {
         const theme = GROUP_THEME_PALETTES[group.color] ?? GROUP_THEME_PALETTES.blue;
         const isSelected = selectedGroupId === group.id;
+        const dotColor = accent ?? theme.accent;
+        const depthLabel = depth === undefined ? undefined : `Depth ${depth}`;
 
         if (group.isCollapsed) {
           // Collapsed Summary Pill
@@ -234,10 +333,14 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
 
           const pillStyle: CSSProperties = {
             transform: `translate3d(${pillX}px, ${pillY}px, 0) translate(-50%, -50%)`,
-            borderColor: isSelected ? theme.accent : theme.border,
+            borderColor: accent ?? (isSelected ? theme.accent : theme.border),
           };
 
-          const pillClass = ["group-collapsed-pill", isSelected ? "is-selected" : ""]
+          const pillClass = [
+            "group-collapsed-pill",
+            isSection ? "is-section" : "",
+            isSelected ? "is-selected" : "",
+          ]
             .filter(Boolean)
             .join(" ");
 
@@ -252,8 +355,18 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
                 if (onSelectGroup) onSelectGroup(group.id);
               }}
             >
-              <div className="group-header-color-dot" style={{ backgroundColor: theme.accent }} />
+              <div className="group-header-color-dot" style={{ backgroundColor: dotColor }} />
               <span className="group-collapsed-label">{group.label}</span>
+              {depthLabel ? (
+                <span className="group-header-depth" title={depthLabel}>
+                  {depthLabel}
+                </span>
+              ) : null}
+              {reason ? (
+                <span className="group-header-reason" title={reason}>
+                  {reason}
+                </span>
+              ) : null}
               <span
                 className="group-collapsed-count"
                 style={{
@@ -268,7 +381,8 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
                 className="group-expand-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleGroupCollapse(group.id);
+                  if (isSection) toggleSectionCollapse(group.id, true);
+                  else toggleGroupCollapse(group.id);
                 }}
                 title="Expand Group"
                 aria-label="Expand Group"
@@ -291,6 +405,7 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
         const headerClass = [
           "group-region-header-container",
           group.isLocked ? "is-locked" : "",
+          isSection ? "is-section" : "",
           isSelected ? "is-selected" : "",
         ]
           .filter(Boolean)
@@ -301,23 +416,29 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
             key={`group-header-${group.id}`}
             className={headerClass}
             style={headerStyle}
-            onMouseDown={(e) => handleStartDrag(e, group)}
+            onMouseDown={isSection ? undefined : (e) => handleStartDrag(e, group)}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedGroupId(group.id);
               if (onSelectGroup) onSelectGroup(group.id);
             }}
           >
-            <div
-              className="group-header-handle"
-              title={group.isLocked ? "Group is locked" : "Drag to move group"}
-            >
-              <IconGripHorizontal size={14} />
-            </div>
+            {!isSection && (
+              <div
+                className="group-header-handle"
+                title={group.isLocked ? "Group is locked" : "Drag to move group"}
+              >
+                <IconGripHorizontal size={14} />
+              </div>
+            )}
 
-            <div className="group-header-color-dot" style={{ backgroundColor: theme.accent }} />
+            <div className="group-header-color-dot" style={{ backgroundColor: dotColor }} />
 
-            <IconFolder size={14} style={{ color: theme.headerText }} />
+            {isSection ? (
+              <IconGitBranch size={14} style={{ color: theme.headerText }} />
+            ) : (
+              <IconFolder size={14} style={{ color: theme.headerText }} />
+            )}
 
             <span className="group-header-title">{group.label}</span>
 
@@ -331,46 +452,80 @@ export const GraphGroupingLayer: FC<GraphGroupingLayerProps> = memo(function Gra
               {bounds.nodeCount}
             </span>
 
-            <div className="group-header-actions">
-              <button
-                type="button"
-                className="group-header-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleGroupLock(group.id);
-                }}
-                title={group.isLocked ? "Unlock Group Position" : "Lock Group Position"}
-                aria-label={group.isLocked ? "Unlock Group" : "Lock Group"}
-              >
-                {group.isLocked ? <IconLock size={13} /> : <IconLockOpen size={13} />}
-              </button>
+            {/* Depth says how far into a subdivision the reader has walked. */}
+            {depthLabel ? (
+              <span className="group-header-depth" title={depthLabel}>
+                {depthLabel}
+              </span>
+            ) : null}
 
-              <button
-                type="button"
-                className="group-header-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleGroupCollapse(group.id);
-                }}
-                title="Collapse Group into Summary Pill"
-                aria-label="Collapse Group"
-              >
-                <IconChevronUp size={14} />
-              </button>
+            {/* The recorded reason is the whole point of a branch region: why we went down here. */}
+            {reason ? (
+              <span className="group-header-reason" title={reason}>
+                {reason}
+              </span>
+            ) : null}
 
-              <button
-                type="button"
-                className="group-header-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveEditingGroupId(group.id);
-                }}
-                title="Edit Group"
-                aria-label="Edit Group"
-              >
-                <IconDots size={14} />
-              </button>
-            </div>
+            {/* Folding is the one thing a reader may do to a dataset region; editing it is not. */}
+            {isSection && (
+              <div className="group-section-actions">
+                <button
+                  type="button"
+                  className="group-header-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSectionCollapse(group.id, false);
+                  }}
+                  title="Collapse Region into Summary Pill"
+                  aria-label="Collapse Region"
+                >
+                  <IconChevronUp size={14} />
+                </button>
+              </div>
+            )}
+
+            {!isSection && (
+              <div className="group-header-actions">
+                <button
+                  type="button"
+                  className="group-header-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleGroupLock(group.id);
+                  }}
+                  title={group.isLocked ? "Unlock Group Position" : "Lock Group Position"}
+                  aria-label={group.isLocked ? "Unlock Group" : "Lock Group"}
+                >
+                  {group.isLocked ? <IconLock size={13} /> : <IconLockOpen size={13} />}
+                </button>
+
+                <button
+                  type="button"
+                  className="group-header-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleGroupCollapse(group.id);
+                  }}
+                  title="Collapse Group into Summary Pill"
+                  aria-label="Collapse Group"
+                >
+                  <IconChevronUp size={14} />
+                </button>
+
+                <button
+                  type="button"
+                  className="group-header-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveEditingGroupId(group.id);
+                  }}
+                  title="Edit Group"
+                  aria-label="Edit Group"
+                >
+                  <IconDots size={14} />
+                </button>
+              </div>
+            )}
           </div>
         );
       })}

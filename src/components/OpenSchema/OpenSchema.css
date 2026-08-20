@@ -1,0 +1,178 @@
+/* The generic layer: how a field this UI has never seen is presented. */
+
+.open-field-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.open-field-list .open-field-list {
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-card, #27272a);
+  gap: 6px;
+}
+
+.open-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.open-field-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.open-field-key {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary, #a1a1aa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-field-shape {
+  font-size: 10px;
+  color: var(--text-tertiary, #71717a);
+  border: 1px solid var(--border-card, #27272a);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.open-field-value {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-primary, #e4e4e7);
+}
+
+.open-value {
+  word-break: break-word;
+}
+
+.open-value--number,
+.open-value--boolean {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.open-value--empty,
+.open-value--collapsed {
+  font-style: italic;
+  color: var(--text-tertiary, #71717a);
+}
+
+.open-value--url {
+  color: var(--accent-info, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.open-value--block {
+  margin: 0;
+  padding: 6px 8px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.45;
+  background: var(--bg-elevated, #18181b);
+  border: 1px solid var(--border-card, #27272a);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.open-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.open-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border-card, #27272a);
+  border-radius: 999px;
+  background: var(--bg-elevated, #18181b);
+}
+
+.open-value-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.open-value-list-item {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.open-value-index {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 16px;
+  min-width: 16px;
+  text-align: center;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-elevated, #18181b);
+  border: 1px solid var(--border-card, #27272a);
+  color: var(--text-tertiary, #71717a);
+}
+
+/* Vocabulary chips for kinds, roles and edge kinds with no preset treatment. */
+.open-vocab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.open-vocab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-card, #27272a);
+  background: var(--bg-elevated, #18181b);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.open-vocab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.open-vocab-count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary, #71717a);
+}
+
+.open-vocab-chip.is-custom .open-vocab-label {
+  font-style: italic;
+}
+
+/* A member the dataset never declared: neutral, and never italicised as one of its own words. */
+.open-vocab-chip.is-unrecorded .open-vocab-label {
+  color: var(--text-tertiary, #71717a);
+}

@@ -32,7 +32,9 @@ export function getEdgeCompositeBadgeText(edge: GraphDataset["edges"][number]): 
       : undefined;
 
   let title: string | undefined = rawTitle;
-  if (edge.isCycle) {
+  // Measurement has to reserve room for the text the renderer will actually draw. The renderer
+  // strips a leading CYCLE prefix and honours a declared kind over `isCycle`, so this does too.
+  if (edge.isCycle && !edge.kind) {
     title = rawTitle?.trim() ? `CYCLE (${rawTitle.trim()})` : "CYCLE";
   } else if (!title && edge.kind) {
     title = descriptor.label;

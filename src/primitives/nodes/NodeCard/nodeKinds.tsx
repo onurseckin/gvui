@@ -1,12 +1,19 @@
 import type { ComponentType, ReactNode } from "react";
 import {
   IconAlertCircle,
+  IconArrowBackUp,
+  IconGitBranch,
+  IconHammer,
+  IconListCheck,
+  IconMicroscope,
+  IconTool,
   IconAlertTriangle,
   IconArrowRight,
   IconArrowsExchange,
   IconBan,
   IconBinary,
   IconCheck,
+  IconCircleDotted,
   IconClock,
   IconCode,
   IconFileText,
@@ -27,7 +34,16 @@ import {
   IconTerminal2,
   IconX,
 } from "@tabler/icons-react";
-import type { GraphNodeData, NodeKind, NodeStatus } from "../../../types/graphData";
+import {
+  NODE_ROLES,
+  type GraphNodeData,
+  type KnownNodeRole,
+  type NodeKind,
+  type NodeRole,
+  type NodeStatus,
+} from "../../../types/graphData";
+import { UNKNOWN_LABEL } from "../../../state/graphSchema";
+import { hasPreset, readVocabularyMember, stableAccent, vocabularyLabel } from "../../vocabulary";
 
 export interface NodeKindDescriptor {
   label: string;
@@ -41,6 +57,10 @@ export interface NodeKindDescriptor {
   }>;
 }
 
+/**
+ * The preset kind treatments. A dataset that uses none of these is not a broken dataset: every
+ * member outside the table gets a generated treatment of the same shape.
+ */
 export const NODE_KIND_DESCRIPTORS: Readonly<Record<NodeKind, NodeKindDescriptor>> = Object.freeze({
   input: {
     label: "USER PROMPT",
@@ -100,12 +120,150 @@ export const NODE_KIND_DESCRIPTORS: Readonly<Record<NodeKind, NodeKindDescriptor
 
 export const DEFAULT_NODE_KIND: NodeKind = "agent";
 
-export function resolveNodeKind(node: Pick<GraphNodeData, "kind">): NodeKind {
-  return node.kind && node.kind in NODE_KIND_DESCRIPTORS ? node.kind : DEFAULT_NODE_KIND;
+/**
+ * The archetype a node draws itself as: its kind, refined by the role its agent held. Kind alone
+ * cannot separate an implementer from the validator that reviewed it — both are `kind: "agent"` —
+ * so the role decides whenever the run recorded one.
+ */
+export interface NodeArchetypeDescriptor extends NodeKindDescriptor {
+  role?: NodeRole;
 }
 
-export function describeNodeKind(node: Pick<GraphNodeData, "kind">): NodeKindDescriptor {
-  return NODE_KIND_DESCRIPTORS[resolveNodeKind(node)];
+/**
+ * The preset role treatments — the nine roles the orchestration producer speaks. This is a preset
+ * table, not the schema: a foreign dataset may extend it, replace it, or name no roles at all.
+ */
+export const NODE_ROLE_DESCRIPTORS: Readonly<Record<NodeRole, NodeArchetypeDescriptor>> =
+  Object.freeze({
+    coordinator: {
+      role: "coordinator",
+      label: "COORDINATOR",
+      accent: "#3b82f6",
+      icon: <IconHierarchy2 size={14} />,
+      IconComponent: IconHierarchy2,
+    },
+    planner: {
+      role: "planner",
+      label: "PLANNER",
+      accent: "#60a5fa",
+      icon: <IconListCheck size={14} />,
+      IconComponent: IconListCheck,
+    },
+    implementer: {
+      role: "implementer",
+      label: "IMPLEMENTER",
+      accent: "#06b6d4",
+      icon: <IconHammer size={14} />,
+      IconComponent: IconHammer,
+    },
+    validator: {
+      role: "validator",
+      label: "VALIDATOR",
+      accent: "#10b981",
+      icon: <IconShieldCheck size={14} />,
+      IconComponent: IconShieldCheck,
+    },
+    repairer: {
+      role: "repairer",
+      label: "REPAIRER",
+      accent: "#f59e0b",
+      icon: <IconTool size={14} />,
+      IconComponent: IconTool,
+    },
+    "completeness-critic": {
+      role: "completeness-critic",
+      label: "COMPLETENESS CRITIC",
+      accent: "#818cf8",
+      icon: <IconScale size={14} />,
+      IconComponent: IconScale,
+    },
+    "sub-implementer": {
+      role: "sub-implementer",
+      label: "SUB-IMPLEMENTER",
+      accent: "#22d3ee",
+      icon: <IconGitBranch size={14} />,
+      IconComponent: IconGitBranch,
+    },
+    "sub-validator": {
+      role: "sub-validator",
+      label: "SUB-VALIDATOR",
+      accent: "#34d399",
+      icon: <IconShieldSearch size={14} />,
+      IconComponent: IconShieldSearch,
+    },
+    "sub-investigator": {
+      role: "sub-investigator",
+      label: "SUB-INVESTIGATOR",
+      accent: "#d946ef",
+      icon: <IconMicroscope size={14} />,
+      IconComponent: IconMicroscope,
+    },
+  });
+
+const NODE_ROLE_SET = new Set<string>(NODE_ROLES);
+
+/** True for the nine roles the preset table covers. Every other string is still a valid role. */
+export function isKnownNodeRole(value: unknown): value is KnownNodeRole {
+  return typeof value === "string" && NODE_ROLE_SET.has(value);
+}
+
+/**
+ * The kind the node declared, verbatim. Reporting a kind the table has never seen as `agent` would
+ * be a fabrication, so only a node that declared nothing at all gets the default.
+ */
+export function resolveNodeKind(node: Pick<GraphNodeData, "kind">): NodeKind {
+  return readVocabularyMember(node.kind) ?? DEFAULT_NODE_KIND;
+}
+
+/**
+ * The role the node declared, verbatim, from `telemetry.role` or the producer's metadata. A role
+ * outside the preset table is still that node's role and keeps its own name.
+ */
+export function resolveNodeRole(
+  node: Pick<GraphNodeData, "telemetry" | "metadata">,
+): NodeRole | undefined {
+  return readVocabularyMember(node.telemetry?.role) ?? readVocabularyMember(node.metadata?.role);
+}
+
+/**
+ * The treatment for a member with no preset: its own name as the label, an accent derived from that
+ * name so it is stable and distinguishable, and a neutral silhouette that claims nothing.
+ */
+function generatedArchetype(member: string, role?: NodeRole): NodeArchetypeDescriptor {
+  return {
+    ...(role === undefined ? {} : { role }),
+    label: vocabularyLabel(member),
+    accent: stableAccent(member),
+    icon: <IconCircleDotted size={14} />,
+    IconComponent: IconCircleDotted,
+  };
+}
+
+/**
+ * The archetype a node draws itself as. A declared role wins over the kind because it is the more
+ * specific statement about the node; either one may be a member this renderer has never seen, and
+ * then the treatment is generated from the member's own name.
+ */
+export function describeNodeArchetype(
+  node: Pick<GraphNodeData, "kind" | "telemetry" | "metadata">,
+): NodeArchetypeDescriptor {
+  const role = resolveNodeRole(node);
+  if (role !== undefined) {
+    return hasPreset(NODE_ROLE_DESCRIPTORS, role)
+      ? NODE_ROLE_DESCRIPTORS[role]
+      : generatedArchetype(role, role);
+  }
+  const kind = resolveNodeKind(node);
+  return hasPreset(NODE_KIND_DESCRIPTORS, kind)
+    ? NODE_KIND_DESCRIPTORS[kind]
+    : generatedArchetype(kind);
+}
+
+/** The canvas-wide entry point; the descriptor it returns is the archetype, not the bare kind. */
+export function describeNodeKind(
+  node: Pick<GraphNodeData, "kind" | "telemetry" | "metadata">,
+): NodeArchetypeDescriptor {
+  return describeNodeArchetype(node);
 }
 
 export interface NodeStatusDescriptor {
@@ -134,10 +292,19 @@ const LEGACY_BADGE_STATUS: Readonly<Record<string, NodeStatus>> = Object.freeze(
   gray: "skipped",
 });
 
+/**
+ * The lifecycle the node declared, verbatim. Status is an open vocabulary on the same terms as kind
+ * and role: a state this renderer ships no preset for is still the truth about that node, and
+ * redrawing it as `pending` would tell the reader something the dataset never said. Only a node
+ * that declared no status at all falls through to what its badge or metadata recorded.
+ */
 export function resolveNodeStatus(node: GraphNodeData): NodeStatus {
-  if (node.status && node.status in NODE_STATUS_DESCRIPTORS) return node.status;
+  const declared = readVocabularyMember(node.status);
+  if (declared !== undefined) return declared;
   const badgeVariant = node.badges?.find((badge) => badge.variant)?.variant;
-  if (badgeVariant && badgeVariant in LEGACY_BADGE_STATUS) return LEGACY_BADGE_STATUS[badgeVariant];
+  if (badgeVariant && hasPreset(LEGACY_BADGE_STATUS, badgeVariant)) {
+    return LEGACY_BADGE_STATUS[badgeVariant];
+  }
   const raw = String(node.metadata?.status ?? "").toLowerCase();
   if (raw.includes("complete") || raw.includes("success") || raw.includes("done")) return "success";
   if (raw.includes("error") || raw.includes("fail")) return "error";
@@ -148,8 +315,25 @@ export function resolveNodeStatus(node: GraphNodeData): NodeStatus {
   return "pending";
 }
 
+/**
+ * The treatment for a lifecycle with no preset: the state's own name in the same register as the
+ * preset labels, an accent generated from that name so it is stable and told apart from its
+ * neighbours, and a silhouette that claims nothing about what the state means.
+ */
+function generatedStatusDescriptor(status: NodeStatus): NodeStatusDescriptor {
+  const words = vocabularyLabel(status).split(" ");
+  return {
+    label: words.map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(" "),
+    color: stableAccent(status),
+    IconComponent: IconCircleDotted,
+  };
+}
+
 export function describeNodeStatus(node: GraphNodeData): NodeStatusDescriptor {
-  return NODE_STATUS_DESCRIPTORS[resolveNodeStatus(node)];
+  const status = resolveNodeStatus(node);
+  return hasPreset(NODE_STATUS_DESCRIPTORS, status)
+    ? NODE_STATUS_DESCRIPTORS[status]
+    : generatedStatusDescriptor(status);
 }
 
 export const MODEL_TIER_LABELS: Readonly<Record<string, string>> = Object.freeze({
@@ -159,14 +343,16 @@ export const MODEL_TIER_LABELS: Readonly<Record<string, string>> = Object.freeze
   l: "L",
 });
 
+/**
+ * Host-reported tier only. Deriving one from a model name would hardcode vendor names and render a
+ * guess in the same chip as a measurement, so an unreported tier stays absent.
+ */
 export function resolveModelTier(node: GraphNodeData): string | undefined {
-  if (node.tier) return node.tier;
-  const model = node.model?.toLowerCase() ?? "";
-  if (!model) return undefined;
-  if (model.includes("opus")) return "l";
-  if (model.includes("sonnet")) return "m";
-  if (model.includes("haiku")) return "s";
-  return undefined;
+  const reported = node.telemetry?.modelTier?.value ?? node.hostAgent?.tier;
+  if (typeof reported !== "string") return undefined;
+  const trimmed = reported.trim();
+  if (trimmed.length === 0 || trimmed === UNKNOWN_LABEL) return undefined;
+  return trimmed;
 }
 
 const TABLER_ICON_REGISTRY: Record<
@@ -199,9 +385,16 @@ const TABLER_ICON_REGISTRY: Record<
   IconShieldSearch,
   IconBinary,
   IconCheck,
+  IconCircleDotted,
   IconX,
   IconClock,
   IconLoader2,
+  IconArrowBackUp,
+  IconGitBranch,
+  IconHammer,
+  IconListCheck,
+  IconMicroscope,
+  IconTool,
 };
 
 export function getTablerIconComponent(name?: string) {

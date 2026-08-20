@@ -15,8 +15,8 @@ import type { GraphDataset } from "../../types/graphData";
 import { useGraphStore } from "../../state/useGraphStore";
 import { useAnalyticsStore } from "../../store/useAnalyticsStore";
 import {
-  formatCost,
   formatDuration,
+  formatRecordedCost,
   formatTokens,
 } from "../../primitives/nodes/NodeCard/nodeCardModel";
 import { RunVelocityCard } from "./RunVelocityCard";
@@ -71,7 +71,7 @@ export const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({
       `Total Tasks: ${metrics.totalNodes} (${metrics.completedNodes} completed, ${metrics.successRate.toFixed(1)}% success)`,
       `Wall Clock: ${formatDuration(metrics.runVelocity.totalWallClockMs)} | Cognitive Think: ${formatDuration(metrics.runVelocity.totalCognitiveMs)}`,
       `Run Velocity: ${metrics.runVelocity.nodesPerMinute.toFixed(1)} nodes/min | Peak Concurrency: ${metrics.concurrency.peakConcurrency}`,
-      `Total Tokens: ${formatTokens(metrics.tokenDistribution.totalTokens)} | Cost: ${formatCost(metrics.tokenDistribution.totalCostUsd)}`,
+      `Total Tokens: ${formatTokens(metrics.tokenDistribution.totalTokens)} | Recorded Cost: ${formatRecordedCost(metrics.tokenDistribution.totalCostUsd)}`,
       `Repair Cycles: ${metrics.repairCycles.totalRepairs} (1st-pass rate: ${metrics.repairCycles.firstPassSuccessRate.toFixed(1)}%)`,
       `Critical Path: ${formatDuration(metrics.criticalPath.totalCriticalPathDurationMs)} (${metrics.criticalPath.pathNodes.length} nodes)`,
       `Failure Taxonomy: ${metrics.errorTaxonomy.totalErrors} issues across ${metrics.errorTaxonomy.errorNodeCount} nodes`,
@@ -160,7 +160,7 @@ export const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({
             {formatTokens(metrics.tokenDistribution.totalTokens)}
           </div>
           <div className="analytics-kpi-subtext">
-            Est Cost: {formatCost(metrics.tokenDistribution.totalCostUsd)}
+            Recorded Cost: {formatRecordedCost(metrics.tokenDistribution.totalCostUsd)}
           </div>
         </div>
 

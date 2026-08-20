@@ -26,6 +26,7 @@ import type { FindingDetail, GraphNodeData } from "../../../types/graphData";
 import { DiffViewer } from "../DiffViewer";
 import { DrawerSection } from "../DrawerSection";
 import { LightboxDialog } from "../LightboxDialog";
+import { readAssets, resolveAssetIds } from "../nodeSchema";
 import { copyToClipboard, normalizeAssetUrl } from "../streamUtils";
 
 export interface StackFrame {
@@ -2341,7 +2342,16 @@ export const ErrorInspector: FC<ErrorInspectorProps> = memo(function ErrorInspec
   const findings = useMemo<PushbackFindingItem[]>(() => {
     if (controlledFindings) return controlledFindings;
     if (!node) return [];
-    return (node.metadata?.findings ?? []) as PushbackFindingItem[];
+    const declared = (node.metadata?.findings ?? []) as PushbackFindingItem[];
+    const owned = readAssets(node);
+    // A finding references its evidence by id now; the asset object itself lives on the node.
+    return declared.map((finding) => {
+      const ids = Array.isArray(finding.screenshotAssetIds)
+        ? finding.screenshotAssetIds.filter((id): id is string => typeof id === "string")
+        : undefined;
+      const { resolved } = resolveAssetIds(ids, owned);
+      return resolved.length > 0 ? { ...finding, screenshots: resolved } : finding;
+    });
   }, [controlledFindings, node]);
 
   const errors = useMemo<StructuredError[]>(() => {

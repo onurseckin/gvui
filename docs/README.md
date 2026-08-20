@@ -41,13 +41,13 @@ Every phase in the pipeline produces a result that is mathematically correct by 
 
 ## 🗺️ Master Navigation Matrix
 
-| Documentation Section                   | Scope & Core Topics                                                                                                                         |
-| :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| **[`engine/`](./engine/README.md)**     | **11-Phase Layout Engine**: Rust WASM implementation, mathematical foundations, rank assignment, Brandes-Köpf coordinates, channel routing. |
-| **[`modes/`](./modes/README.md)**       | **Layout Modes**: Hierarchical `layered` mode, concentric orbital `radial` mode, and orthogonal `direction` transformations.                |
-| **[`concepts/`](./concepts/README.md)** | **Foundational Concepts**: Sugiyama decomposition, headless node measurement, determinism invariants, complexity, and quality models.       |
-| **[`features/`](./features/README.md)** | **Application Subsystems**: In-browser SQLite layout caching (`sql.js`), 10-tab Node Detail Drawer, and multi-format export (SVG/PNG/SQL).  |
-| **[`tooling/`](./tooling/README.md)**   | **Developer Tooling & Audits**: 280-run layout audit gate, Playwright visual capture pipeline, and CLI capsule import tools.                |
+| Documentation Section                   | Scope & Core Topics                                                                                                                                   |
+| :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[`engine/`](./engine/README.md)**     | **11-Phase Layout Engine**: Rust WASM implementation, mathematical foundations, rank assignment, Brandes-Köpf coordinates, channel routing.           |
+| **[`modes/`](./modes/README.md)**       | **Layout Modes**: Hierarchical `layered` mode, concentric orbital `radial` mode, and orthogonal `direction` transformations.                          |
+| **[`concepts/`](./concepts/README.md)** | **Foundational Concepts**: Sugiyama decomposition, headless node measurement, determinism invariants, complexity, and quality models.                 |
+| **[`features/`](./features/README.md)** | **Application Subsystems**: the graph vocabulary, the 10-tab Node Detail Drawer, browser-local layout caching, and multi-format export (SVG/PNG/SQL). |
+| **[`tooling/`](./tooling/README.md)**   | **Developer Tooling & Audits**: 280-run layout audit gate, Playwright visual capture pipeline, and CLI capsule import tools.                          |
 
 ---
 
@@ -83,15 +83,16 @@ Every phase in the pipeline produces a result that is mathematically correct by 
 
 ### 4. Core Features (`docs/features/`)
 
-- [In-Browser SQLite Caching](./features/sqlite-caching.md) — Multi-tier layout cache via WebAssembly SQLite (`sql.js`), schema, and LRU eviction.
-- [Node Detail Drawer](./features/detail-drawer.md) — Comprehensive reference for all 10 diagnostic tabs (Overview, Cost, Lineage, Errors, Diffs).
+- [Graph Vocabulary](./features/graph-vocabulary.md) — The 19 edge kinds, the 9 role archetypes, branch sections, and how a run reads on the canvas.
+- [Layout Caching](./features/layout-caching.md) — Signature-keyed layout cache in `localStorage`, its single table, and quota-driven LRU eviction.
+- [Node Detail Drawer](./features/detail-drawer.md) — All 10 diagnostic tabs, the evidence chips they carry, and what an absent value renders as.
 - [Graph Export Pipeline](./features/graph-export.md) — Standalone SVG, PNG, Mermaid, multi-dialect SQL (SQLite/Postgres/MySQL), and offline HTML bundles.
 
 ### 5. Developer Tooling (`docs/tooling/`)
 
 - [Layout Audit Framework](./tooling/layout-audit.md) — 280-run matrix regression test asserting 8 zero-tolerance geometric invariants.
 - [Screenshot Ingestion Pipeline](./tooling/screenshot-pipeline.md) — Playwright visual capture across 4 standard viewports.
-- [CLI Capsule Import](./tooling/capsule-import.md) — Direct ingestion of long-running task capsules (`summary/graph.json` or `state.json`).
+- [CLI Capsule Import](./tooling/capsule-import.md) — Contract-validated ingestion of run capsules (`summary/graph.json` or the `state.json` fallback).
 
 ---
 
@@ -116,6 +117,6 @@ Measured on standard commodity hardware in native `--release` and WebAssembly ac
 2. **Modifying Edge Routing or Coordinate Alignment?**
    - Read [Engine: 08 Routing Demand](./engine/08-routing-demand.md) → [Engine: 09 Coordinate Assignment](./engine/09-coordinate-assignment.md) → [Engine: 10 Edge Routing](./engine/10-edge-routing.md).
 3. **Working on UI Telemetry or Exporters?**
-   - Read [Features: Node Detail Drawer](./features/detail-drawer.md) → [Features: Graph Export](./features/graph-export.md) → [Features: SQLite Caching](./features/sqlite-caching.md).
+   - Read [Features: Node Detail Drawer](./features/detail-drawer.md) → [Features: Graph Export](./features/graph-export.md) → [Features: Layout Caching](./features/layout-caching.md).
 4. **Verifying Correctness and Invariants?**
    - Read [Concepts: Quality Model](./concepts/quality-model.md) → [Tooling: Layout Audit](./tooling/layout-audit.md).

@@ -300,10 +300,12 @@ export const useStreamingStore = create<StreamingStore>((set, get) => {
           if (p.type === "node_status" && p.payload && typeof p.payload === "object") {
             const payload = p.payload as Partial<NodeStatusPayload>;
             const nodeId = payload.nodeId ?? p.nodeId;
-            if (nodeId) {
+            // A packet that names no status says nothing about the node, so nothing is projected:
+            // guessing "running" here would put a live state on screen the stream never reported.
+            if (nodeId && payload.status) {
               nextNodeStatusMap[nodeId] = {
                 nodeId,
-                status: payload.status ?? "running",
+                status: payload.status,
                 progress: payload.progress,
                 message: payload.message,
                 durationMs: payload.durationMs,

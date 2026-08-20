@@ -20,6 +20,7 @@ import {
   resolveNodeKind,
   resolveNodeStatus,
 } from "../primitives/nodes/NodeCard/nodeKinds";
+import { hasPreset } from "../primitives/vocabulary";
 import type { LayoutMode } from "../state/useGraphStore";
 import type {
   FileMode,
@@ -60,6 +61,14 @@ function escapeHtml(str: string): string {
  * Typed by the schema unions on purpose: adding a `NodeKind` or a `FileMode` breaks this build
  * until its glyph exists here too.
  */
+/**
+ * The glyph for a kind this renderer ships no preset for. Node kind is an open vocabulary, so a
+ * lookup miss is a normal case: the export draws an unclassified silhouette rather than borrowing
+ * another kind's glyph, and never interpolates a missing entry into the exported SVG.
+ */
+const GENERATED_KIND_ICON_MARKUP =
+  '<circle cx="12" cy="12" r="9" stroke-dasharray="2 3" /><circle cx="12" cy="12" r="2.5" />';
+
 const KIND_ICON_MARKUP: Readonly<Record<NodeKind, string>> = Object.freeze({
   orchestrator:
     '<circle cx="12" cy="5" r="2.5" /><circle cx="5" cy="19" r="2.5" /><circle cx="19" cy="19" r="2.5" /><path d="M12 7.5v3.5M12 11H5v5.5M12 11h7v5.5" />',
@@ -129,7 +138,11 @@ function generateNodeHeaderHtml(node: GraphNodeData): string {
 
   const dotClass = `node-card-status-dot${status.animated ? " is-animated" : ""}`;
   const statusDot = `<span class="${dotClass}" style="color: ${status.color};" title="Status: ${escapeHtml(status.label)}"></span>`;
-  const kindIcon = renderIcon(KIND_ICON_MARKUP[resolveNodeKind(node)], {
+  const kindKey = resolveNodeKind(node);
+  const kindMarkup = hasPreset(KIND_ICON_MARKUP, kindKey)
+    ? KIND_ICON_MARKUP[kindKey]
+    : GENERATED_KIND_ICON_MARKUP;
+  const kindIcon = renderIcon(kindMarkup, {
     className: "node-card-kind-icon",
     size: 14,
     stroke: kind.accent,
@@ -146,9 +159,8 @@ function generateNodeHeaderHtml(node: GraphNodeData): string {
     ? `<span class="node-card-badge-chip variant-${node.badge.variant ?? "info"}">${escapeHtml(node.badge.text)}</span>`
     : "";
 
-  const modelTitle = node.harnessModel ? `${model} · harness: ${node.harnessModel}` : (model ?? "");
   const modelChip = model
-    ? `<span class="node-card-model-chip${tier ? ` tier-${tier}` : ""}" title="${escapeHtml(modelTitle)}">${escapeHtml(model)}</span>`
+    ? `<span class="node-card-model-chip${tier ? ` tier-${tier}` : ""}" title="${escapeHtml(model)}">${escapeHtml(model)}</span>`
     : "";
   // A span, not a button: the export is a static snapshot, so the chevron is here for visual parity
   // with the canvas and must not look or behave like something the reader can press.

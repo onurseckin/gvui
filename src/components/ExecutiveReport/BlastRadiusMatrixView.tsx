@@ -1,17 +1,12 @@
 import React, { useMemo, useState } from "react";
 import type { FC } from "react";
 import type { BlastRadiusMatrix, NodeBlastImpact, RiskLevel } from "../../engine/reporting/types";
+import { formatUsd } from "../../engine/reporting/formatters";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
 
 export interface BlastRadiusMatrixViewProps {
   matrix: BlastRadiusMatrix;
   theme?: "dark" | "light";
-}
-
-function formatUsd(cost: number): string {
-  if (cost < 0.01 && cost > 0) {
-    return `$${cost.toFixed(4)}`;
-  }
-  return `$${cost.toFixed(2)}`;
 }
 
 export const BlastRadiusMatrixView: FC<BlastRadiusMatrixViewProps> = ({ matrix }) => {
@@ -162,8 +157,8 @@ export const BlastRadiusMatrixView: FC<BlastRadiusMatrixViewProps> = ({ matrix }
                           {item.nodeId}
                         </div>
                       </td>
-                      <td>{item.kind || "node"}</td>
-                      <td>{item.status || "pending"}</td>
+                      <td>{item.kind || UNKNOWN_LABEL}</td>
+                      <td>{item.status || UNKNOWN_LABEL}</td>
                       <td>
                         {item.directDownstreamCount} direct &rarr; {item.transitiveDownstreamCount}{" "}
                         total

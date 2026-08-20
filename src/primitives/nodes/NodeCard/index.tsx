@@ -11,7 +11,7 @@ import { NodeCardMetrics } from "./NodeCardMetrics";
 import { NodeCardMiniChips } from "./NodeCardMiniChips";
 import { NodeCardTitle } from "./NodeCardTitle";
 import { NodeCardTools } from "./NodeCardTools";
-import { describeNodeKind, resolveNodeStatus } from "./nodeKinds";
+import { describeNodeKind, resolveNodeKind, resolveNodeRole, resolveNodeStatus } from "./nodeKinds";
 
 export type { NodeCardProps, NodeStatusVariant } from "./NodeCard.types";
 export { NodeCardHeader } from "./NodeCardHeader";
@@ -63,10 +63,14 @@ export const NodeCard: FC<NodeCardProps> = memo(
 
     const kind = describeNodeKind(node);
     const status = resolveNodeStatus(node);
+    const role = resolveNodeRole(node);
 
     const cardClasses = [
       "node-card",
-      `kind-${node.kind ?? "agent"}`,
+      // resolveNodeKind, not a second spelling of the default: the class the card carries has to be
+      // the kind the card was drawn as, or a stylesheet and a silhouette can disagree.
+      `kind-${resolveNodeKind(node)}`,
+      role ? `role-${role}` : "",
       `status-${status}`,
       isSelected ? "selected" : "",
       isFiltered ? "filtered" : "",

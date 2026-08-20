@@ -168,8 +168,8 @@ export const FlamegraphDetailDrawer: React.FC<FlamegraphDetailDrawerProps> = ({
               <span className="value highlight">{formatTokens(span.tokens.totalTokens)}</span>
             </div>
             <div className="grid-item">
-              <label>Estimated Cost</label>
-              <span className="value">{formatCostUsd(span.costUsd ?? 0)}</span>
+              <label>Recorded Cost</label>
+              <span className="value">{formatCostUsd(span.costUsd)}</span>
             </div>
             <div className="grid-item">
               <label>Input (Prompt)</label>

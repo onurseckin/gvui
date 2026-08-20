@@ -10,64 +10,6 @@ import type {
 } from "../types/graphData";
 
 // ============================================================================
-// Model & Tier Pricing Definitions
-// ============================================================================
-
-export interface ModelTierPricing {
-  promptUsdPer1M: number;
-  completionUsdPer1M: number;
-  reasoningUsdPer1M: number;
-  cacheWriteUsdPer1M: number;
-  cacheReadUsdPer1M: number;
-  label: string;
-  tierName: string;
-  description: string;
-}
-
-export const ANALYTICS_TIER_PRICING: Readonly<Record<string, ModelTierPricing>> = Object.freeze({
-  xs: {
-    tierName: "XS",
-    label: "Tier XS (Ultra-Light)",
-    description: "Gemini 1.5/2.0 Flash-Lite, Claude 3 Haiku",
-    promptUsdPer1M: 0.15,
-    completionUsdPer1M: 0.6,
-    reasoningUsdPer1M: 0.6,
-    cacheWriteUsdPer1M: 0.1875,
-    cacheReadUsdPer1M: 0.0375,
-  },
-  s: {
-    tierName: "S",
-    label: "Tier S (Balanced)",
-    description: "Gemini 2.0 Flash, GPT-4o-mini, Claude 3.5 Haiku",
-    promptUsdPer1M: 0.5,
-    completionUsdPer1M: 1.5,
-    reasoningUsdPer1M: 1.5,
-    cacheWriteUsdPer1M: 0.625,
-    cacheReadUsdPer1M: 0.125,
-  },
-  m: {
-    tierName: "M",
-    label: "Tier M (Advanced)",
-    description: "Claude 3.5 Sonnet, GPT-4o, Gemini 1.5 Pro",
-    promptUsdPer1M: 3.0,
-    completionUsdPer1M: 15.0,
-    reasoningUsdPer1M: 15.0,
-    cacheWriteUsdPer1M: 3.75,
-    cacheReadUsdPer1M: 0.3,
-  },
-  l: {
-    tierName: "L",
-    label: "Tier L (Frontier / Reasoning)",
-    description: "Claude 3 Opus, OpenAI o1/o3, Gemini 2.0 Pro",
-    promptUsdPer1M: 15.0,
-    completionUsdPer1M: 75.0,
-    reasoningUsdPer1M: 75.0,
-    cacheWriteUsdPer1M: 18.75,
-    cacheReadUsdPer1M: 1.5,
-  },
-});
-
-// ============================================================================
 // Core Analytics Types
 // ============================================================================
 
@@ -77,7 +19,8 @@ export interface PhaseVelocityMetric {
   nodeCount: number;
   durationMs: number;
   tokens: number;
-  costUsd: number;
+  /** Sum of the recorded costs in this phase. Absent when no node in it recorded one. */
+  costUsd?: number;
   velocityNodesPerMin: number;
   hasErrors: boolean;
 }
@@ -129,9 +72,11 @@ export interface ModelTokenBreakdown {
   cacheCreationTokens: number;
   cacheReadTokens: number;
   totalTokens: number;
-  costUsd: number;
+  /** Sum of the recorded costs for this model. Absent when none of its nodes recorded one. */
+  costUsd?: number;
   percentageOfTokens: number;
-  percentageOfCost: number;
+  /** Absent whenever the run has no recorded cost to take a share of. */
+  percentageOfCost?: number;
 }
 
 export interface RoleTokenBreakdown {
@@ -139,17 +84,14 @@ export interface RoleTokenBreakdown {
   label: string;
   tokens: number;
   percentage: number;
-  costUsd: number;
 }
 
-export interface TierSimulationMetric {
+export interface TierTokenBreakdown {
   tier: "xs" | "s" | "m" | "l";
-  tierName: string;
-  label: string;
   nodeCount: number;
   tokens: number;
-  actualCostUsd: number;
-  simulatedCostUsd: number;
+  /** Sum of the recorded costs on this tier's nodes. Absent when none recorded one. */
+  costUsd?: number;
 }
 
 export interface TokenDistributionMetrics {
@@ -159,12 +101,13 @@ export interface TokenDistributionMetrics {
   totalCacheCreationTokens: number;
   totalCacheReadTokens: number;
   totalTokens: number;
-  totalCostUsd: number;
-  cacheSavingsUsd: number;
+  /** Recorded dollars only, summed. Absent when the run carries no cost at all. */
+  totalCostUsd?: number;
   cacheEfficiencyPercent: number; // cacheRead / (cacheRead + prompt) * 100
   byModel: ModelTokenBreakdown[];
   byRole: RoleTokenBreakdown[];
-  byTier: TierSimulationMetric[];
+  /** Only tiers the host actually reported. A tier is never inferred from a model name. */
+  byTier: TierTokenBreakdown[];
 }
 
 export interface RepairHistogramBin {
@@ -290,50 +233,25 @@ export function safeNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+/**
+ * Host-reported tier only. Inferring one from a model name would hardcode vendor names and hand
+ * back a guess that renders identically to a measurement, so an unreported tier stays unspecified.
+ */
 export function resolveNodeTier(node: GraphNodeData): "xs" | "s" | "m" | "l" | "unspecified" {
-  if (node.tier && ["xs", "s", "m", "l"].includes(node.tier.toLowerCase())) {
-    return node.tier.toLowerCase() as "xs" | "s" | "m" | "l";
-  }
-  const hostTier = node.hostAgent?.tier;
-  if (typeof hostTier === "string" && ["xs", "s", "m", "l"].includes(hostTier.toLowerCase())) {
-    return hostTier.toLowerCase() as "xs" | "s" | "m" | "l";
-  }
-  const modelName = (node.model ?? node.harnessModel ?? node.hostAgent?.model ?? "").toLowerCase();
-  if (
-    modelName.includes("flash-lite") ||
-    modelName.includes("haiku") ||
-    modelName.includes("small")
-  ) {
-    return "xs";
-  }
-  if (
-    modelName.includes("flash") ||
-    modelName.includes("mini") ||
-    modelName.includes("gpt-3.5") ||
-    modelName.includes("gemini-2.0-flash")
-  ) {
-    return "s";
-  }
-  if (
-    modelName.includes("sonnet") ||
-    modelName.includes("gpt-4o") ||
-    modelName.includes("pro") ||
-    modelName.includes("claude-3-5")
-  ) {
-    return "m";
-  }
-  if (
-    modelName.includes("opus") ||
-    modelName.includes("o1") ||
-    modelName.includes("o3") ||
-    modelName.includes("max")
-  ) {
-    return "l";
+  const candidates = [node.telemetry?.modelTier?.value, node.tier, node.hostAgent?.tier];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const normalized = candidate.toLowerCase();
+    if (normalized === "xs" || normalized === "s" || normalized === "m" || normalized === "l") {
+      return normalized;
+    }
   }
   return "unspecified";
 }
 
 export function extractNodeModel(node: GraphNodeData): string {
+  const reported = node.telemetry?.model?.value;
+  if (typeof reported === "string" && reported.trim().length > 0) return reported.trim();
   if (typeof node.model === "string" && node.model.trim().length > 0) return node.model.trim();
   if (typeof node.harnessModel === "string" && node.harnessModel.trim().length > 0) {
     return node.harnessModel.trim();
@@ -355,7 +273,8 @@ export interface ExtractedTokens {
   cacheCreationTokens: number;
   cacheReadTokens: number;
   totalTokens: number;
-  costUsd: number;
+  /** Recorded dollars only. Absent when the node carries no cost figure. */
+  costUsd?: number;
 }
 
 export function extractNodeTokens(node: GraphNodeData): ExtractedTokens {
@@ -392,23 +311,9 @@ export function extractNodeTokens(node: GraphNodeData): ExtractedTokens {
     totalTokens = Math.max(totalTokens, safeNumber(rawTotal));
   }
 
-  let costUsd = 0;
+  // Recorded dollars only: this codebase holds no rate card, so tokens never become money here.
   const rawCost = metrics?.costUsd ?? (meta as Record<string, unknown> | undefined)?.costUsd;
-  if (rawCost !== undefined) {
-    costUsd = Math.max(0, safeNumber(rawCost));
-  } else {
-    const tier = resolveNodeTier(node);
-    const pricing =
-      tier !== "unspecified" ? ANALYTICS_TIER_PRICING[tier] : ANALYTICS_TIER_PRICING.m;
-    if (pricing) {
-      costUsd =
-        (promptTokens * pricing.promptUsdPer1M) / 1_000_000 +
-        (completionTokens * pricing.completionUsdPer1M) / 1_000_000 +
-        (reasoningTokens * pricing.reasoningUsdPer1M) / 1_000_000 +
-        (cacheCreationTokens * pricing.cacheWriteUsdPer1M) / 1_000_000 +
-        (cacheReadTokens * pricing.cacheReadUsdPer1M) / 1_000_000;
-    }
-  }
+  const costUsd = rawCost === undefined ? undefined : Math.max(0, safeNumber(rawCost));
 
   return {
     promptTokens,
@@ -630,8 +535,6 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
       totalCacheCreationTokens: 0,
       totalCacheReadTokens: 0,
       totalTokens: 0,
-      totalCostUsd: 0,
-      cacheSavingsUsd: 0,
       cacheEfficiencyPercent: 0,
       byModel: [],
       byRole: [],
@@ -894,13 +797,13 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
     const stepNodes = stepMap.get(step)!;
     const stepDuration = Math.max(...stepNodes.map((n) => extractNodeDuration(n)), 0);
     let stepTokens = 0;
-    let stepCost = 0;
+    let stepCost: number | undefined;
     let stepHasErrors = false;
 
     for (const n of stepNodes) {
       const tok = extractNodeTokens(n);
       stepTokens += tok.totalTokens;
-      stepCost += tok.costUsd;
+      if (tok.costUsd !== undefined) stepCost = (stepCost ?? 0) + tok.costUsd;
       if (n.status === "error") stepHasErrors = true;
     }
 
@@ -1012,7 +915,8 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
   let totalReasoningTokens = 0;
   let totalCacheCreationTokens = 0;
   let totalCacheReadTokens = 0;
-  let totalCostUsd = 0;
+  // Stays undefined until a node reports dollars, so an unpriced run totals to nothing at all.
+  let totalCostUsd: number | undefined;
 
   const modelMap = new Map<
     string,
@@ -1026,18 +930,14 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
       cacheCreationTokens: number;
       cacheReadTokens: number;
       totalTokens: number;
-      costUsd: number;
+      costUsd?: number;
     }
   >();
 
   const tierMap = new Map<
     "xs" | "s" | "m" | "l",
-    { nodeCount: number; tokens: number; actualCost: number }
+    { nodeCount: number; tokens: number; costUsd?: number }
   >();
-  tierMap.set("xs", { nodeCount: 0, tokens: 0, actualCost: 0 });
-  tierMap.set("s", { nodeCount: 0, tokens: 0, actualCost: 0 });
-  tierMap.set("m", { nodeCount: 0, tokens: 0, actualCost: 0 });
-  tierMap.set("l", { nodeCount: 0, tokens: 0, actualCost: 0 });
 
   for (const node of nodes) {
     const tok = extractNodeTokens(node);
@@ -1046,7 +946,7 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
     totalReasoningTokens += tok.reasoningTokens;
     totalCacheCreationTokens += tok.cacheCreationTokens;
     totalCacheReadTokens += tok.cacheReadTokens;
-    totalCostUsd += tok.costUsd;
+    if (tok.costUsd !== undefined) totalCostUsd = (totalCostUsd ?? 0) + tok.costUsd;
 
     const modelName = extractNodeModel(node);
     const tier = resolveNodeTier(node);
@@ -1062,7 +962,6 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
         cacheCreationTokens: 0,
         cacheReadTokens: 0,
         totalTokens: 0,
-        costUsd: 0,
       });
     }
 
@@ -1074,13 +973,14 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
     entry.cacheCreationTokens += tok.cacheCreationTokens;
     entry.cacheReadTokens += tok.cacheReadTokens;
     entry.totalTokens += tok.totalTokens;
-    entry.costUsd += tok.costUsd;
+    if (tok.costUsd !== undefined) entry.costUsd = (entry.costUsd ?? 0) + tok.costUsd;
 
-    if (tier !== "unspecified" && tierMap.has(tier)) {
-      const t = tierMap.get(tier)!;
+    if (tier !== "unspecified") {
+      const t = tierMap.get(tier) ?? { nodeCount: 0, tokens: 0 };
       t.nodeCount++;
       t.tokens += tok.totalTokens;
-      t.actualCost += tok.costUsd;
+      if (tok.costUsd !== undefined) t.costUsd = (t.costUsd ?? 0) + tok.costUsd;
+      tierMap.set(tier, t);
     }
   }
 
@@ -1093,7 +993,10 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
     .map((m) => ({
       ...m,
       percentageOfTokens: grandTotalTokens > 0 ? (m.totalTokens / grandTotalTokens) * 100 : 0,
-      percentageOfCost: totalCostUsd > 0 ? (m.costUsd / totalCostUsd) * 100 : 0,
+      percentageOfCost:
+        totalCostUsd !== undefined && totalCostUsd > 0
+          ? ((m.costUsd ?? 0) / totalCostUsd) * 100
+          : undefined,
     }))
     .sort((a, b) => b.totalTokens - a.totalTokens);
 
@@ -1103,65 +1006,37 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
       label: "Prompt (Input)",
       tokens: totalPromptTokens,
       percentage: grandTotalTokens > 0 ? (totalPromptTokens / grandTotalTokens) * 100 : 0,
-      costUsd: (totalPromptTokens * ANALYTICS_TIER_PRICING.m.promptUsdPer1M) / 1_000_000,
     },
     {
       role: "completion",
       label: "Completion (Output)",
       tokens: totalCompletionTokens,
       percentage: grandTotalTokens > 0 ? (totalCompletionTokens / grandTotalTokens) * 100 : 0,
-      costUsd: (totalCompletionTokens * ANALYTICS_TIER_PRICING.m.completionUsdPer1M) / 1_000_000,
     },
     {
       role: "reasoning",
       label: "Reasoning (Thinking)",
       tokens: totalReasoningTokens,
       percentage: grandTotalTokens > 0 ? (totalReasoningTokens / grandTotalTokens) * 100 : 0,
-      costUsd: (totalReasoningTokens * ANALYTICS_TIER_PRICING.m.reasoningUsdPer1M) / 1_000_000,
     },
     {
       role: "cacheWrite",
       label: "Cache Creation (Write)",
       tokens: totalCacheCreationTokens,
       percentage: grandTotalTokens > 0 ? (totalCacheCreationTokens / grandTotalTokens) * 100 : 0,
-      costUsd: (totalCacheCreationTokens * ANALYTICS_TIER_PRICING.m.cacheWriteUsdPer1M) / 1_000_000,
     },
     {
       role: "cacheRead",
       label: "Cache Read",
       tokens: totalCacheReadTokens,
       percentage: grandTotalTokens > 0 ? (totalCacheReadTokens / grandTotalTokens) * 100 : 0,
-      costUsd: (totalCacheReadTokens * ANALYTICS_TIER_PRICING.m.cacheReadUsdPer1M) / 1_000_000,
     },
   ];
 
-  const byTier: TierSimulationMetric[] = (["xs", "s", "m", "l"] as const).map((tierKey) => {
-    const info = ANALYTICS_TIER_PRICING[tierKey];
-    const data = tierMap.get(tierKey)!;
-    const simulatedCost =
-      (totalPromptTokens * info.promptUsdPer1M) / 1_000_000 +
-      (totalCompletionTokens * info.completionUsdPer1M) / 1_000_000 +
-      (totalReasoningTokens * info.reasoningUsdPer1M) / 1_000_000 +
-      (totalCacheCreationTokens * info.cacheWriteUsdPer1M) / 1_000_000 +
-      (totalCacheReadTokens * info.cacheReadUsdPer1M) / 1_000_000;
+  const byTier: TierTokenBreakdown[] = (["xs", "s", "m", "l"] as const)
+    .map((tierKey) => ({ tier: tierKey, ...(tierMap.get(tierKey) ?? { nodeCount: 0, tokens: 0 }) }))
+    .filter((entry) => entry.nodeCount > 0);
 
-    return {
-      tier: tierKey,
-      tierName: info.tierName,
-      label: info.label,
-      nodeCount: data.nodeCount,
-      tokens: data.tokens,
-      actualCostUsd: data.actualCost,
-      simulatedCostUsd: simulatedCost,
-    };
-  });
-
-  const standardPromptPricePer1M = ANALYTICS_TIER_PRICING.m.promptUsdPer1M;
-  const cacheReadPricePer1M = ANALYTICS_TIER_PRICING.m.cacheReadUsdPer1M;
-  const cacheSavingsUsd = Math.max(
-    0,
-    (totalCacheReadTokens * (standardPromptPricePer1M - cacheReadPricePer1M)) / 1_000_000,
-  );
   const cacheEfficiencyPercent =
     totalPromptTokens + totalCacheReadTokens > 0
       ? (totalCacheReadTokens / (totalPromptTokens + totalCacheReadTokens)) * 100
@@ -1458,7 +1333,6 @@ export function computeAnalyticsMetrics(dataset: GraphDataset | null): Analytics
       totalCacheReadTokens,
       totalTokens: grandTotalTokens,
       totalCostUsd,
-      cacheSavingsUsd,
       cacheEfficiencyPercent,
       byModel,
       byRole,

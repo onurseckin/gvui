@@ -53,7 +53,8 @@ export interface FlamegraphNode {
   duration: number;
   selfTime: number;
   tokens: TokenMetrics;
-  costUsd: number;
+  /** Recorded dollars only. Absent when the span carried no cost. */
+  costUsd?: number;
   depth: number;
   xPct: number;
   widthPct: number;
@@ -69,7 +70,8 @@ export interface AgentMetricBreakdown {
   spanCount: number;
   durationMs: number;
   tokens: TokenMetrics;
-  costUsd: number;
+  /** Sum of this agent's recorded costs. Absent when none of its spans recorded one. */
+  costUsd?: number;
 }
 
 export interface FlamegraphMetrics {
@@ -79,7 +81,8 @@ export interface FlamegraphMetrics {
   minStartTime: number;
   maxEndTime: number;
   totalTokens: TokenMetrics;
-  totalCostUsd: number;
+  /** Sum of the recorded span costs. Absent when the profile carries no cost at all. */
+  totalCostUsd?: number;
   maxDepth: number;
   concurrencyPeak: number;
   latencyP50: number;

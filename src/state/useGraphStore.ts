@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { GraphDataset, PositionedEdge, PositionedNode } from "../types/graphData";
+import type { FilterCategory } from "./graphFilters";
 import {
   DEFAULT_CUSTOM_LAYOUT_CONFIG,
   type CustomLayoutConfig,
@@ -37,16 +38,7 @@ export function directionFromLegacyLayoutMode(mode: string): Direction | null {
   return LEGACY_MODE_DIRECTION_MAP.get(mode) ?? null;
 }
 
-export type FilterCategory =
-  | "all"
-  | "orchestrators"
-  | "implementers"
-  | "validators"
-  | "critics"
-  | "errors"
-  | "success"
-  | "error"
-  | "tools";
+export type { FilterCategory };
 
 export interface GraphState {
   dataset: GraphDataset | null;

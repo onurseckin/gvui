@@ -1,7 +1,9 @@
 import type { FC } from "react";
 import React, { useMemo } from "react";
 import type { GraphDataset, NodeStatus } from "../../types/graphData";
-import { describeNodeStatus } from "../../primitives/nodes/NodeCard/nodeKinds";
+import { UNKNOWN_LABEL } from "../../state/graphSchema";
+import { describeOpenStatus, NEUTRAL_ACCENT } from "../OpenSchema";
+import { SidebarAccordion } from "./SidebarAccordion";
 
 export interface SidebarNodeStatusProps {
   dataset: GraphDataset | null;
@@ -9,9 +11,12 @@ export interface SidebarNodeStatusProps {
 }
 
 interface StatusItem {
-  status: NodeStatus;
+  status: string;
   label: string;
+  color: string;
   count: number;
+  /** False for a status outside the preset vocabulary, which keeps its own name and accent. */
+  recognized: boolean;
 }
 
 const ORDERED_STATUSES: readonly NodeStatus[] = [
@@ -28,30 +33,52 @@ export const SidebarNodeStatus: FC<SidebarNodeStatusProps> = React.memo(function
   dataset,
   defaultExpanded = true,
 }) {
-  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
-
   const statusItems = useMemo(() => {
     if (!dataset || !dataset.nodes || dataset.nodes.length === 0) {
       return [];
     }
 
-    const countMap = new Map<NodeStatus, number>();
+    // A node whose status the run never recorded is NOT pending. Pending is a claim about where the
+    // node sits in the lifecycle; absence is a claim about our records. They get separate buckets.
+    // A status outside the preset vocabulary gets a bucket of its own rather than being dropped.
+    const countMap = new Map<string, number>();
+    let unknownCount = 0;
     for (const node of dataset.nodes) {
-      const status = node.status ?? "pending";
-      countMap.set(status, (countMap.get(status) ?? 0) + 1);
+      const described = describeOpenStatus(node);
+      if (!described.recorded || described.raw === undefined) {
+        unknownCount += 1;
+        continue;
+      }
+      countMap.set(described.raw, (countMap.get(described.raw) ?? 0) + 1);
     }
 
     const items: StatusItem[] = [];
+    const emit = (status: string, count: number) => {
+      const described = describeOpenStatus({ status });
+      items.push({
+        status,
+        label: described.label,
+        color: described.color,
+        count,
+        recognized: described.recognized,
+      });
+    };
+
     for (const status of ORDERED_STATUSES) {
       const count = countMap.get(status) ?? 0;
-      if (count > 0) {
-        const desc = describeNodeStatus({ id: "mock", name: "mock", status });
-        items.push({
-          status,
-          label: desc.label,
-          count,
-        });
-      }
+      if (count > 0) emit(status, count);
+    }
+    for (const [status, count] of countMap.entries()) {
+      if (!ORDERED_STATUSES.includes(status as NodeStatus)) emit(status, count);
+    }
+    if (unknownCount > 0) {
+      items.push({
+        status: "unknown",
+        label: UNKNOWN_LABEL,
+        color: NEUTRAL_ACCENT,
+        count: unknownCount,
+        recognized: false,
+      });
     }
 
     return items;
@@ -71,59 +98,38 @@ export const SidebarNodeStatus: FC<SidebarNodeStatusProps> = React.memo(function
   const totalNodes = statusItems.reduce((acc, item) => acc + item.count, 0);
 
   return (
-    <div className="sidebar-section" data-testid="sidebar-node-status">
-      <div
-        className="sidebar-section-header sidebar-accordion-header"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        data-testid="sidebar-node-status-header"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setIsExpanded((prev) => !prev);
-          }
-        }}
-      >
-        <div className="sidebar-section-header-left">
-          <svg
-            viewBox="0 0 24 24"
-            width="12"
-            height="12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`sidebar-chevron ${isExpanded ? "open" : ""}`}
-            aria-hidden="true"
+    <SidebarAccordion
+      testId="sidebar-node-status"
+      title="Node Status"
+      badge={`${totalNodes} total`}
+      defaultExpanded={defaultExpanded}
+    >
+      <div className="sidebar-status-list">
+        {statusItems.map((item) => (
+          <div
+            key={item.status}
+            className={`sidebar-status-item status-${item.status} ${
+              item.status === "unknown" ? "is-unknown" : ""
+            }`}
+            data-testid={`status-item-${item.status}`}
+            title={item.recognized || item.status === "unknown" ? undefined : item.status}
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-          <h4 className="sidebar-section-title">Node Status</h4>
-        </div>
-        <span className="sidebar-section-badge">{totalNodes} total</span>
+            <span
+              className={`status-dot dot-${item.status}`}
+              style={
+                item.recognized || item.status === "unknown"
+                  ? undefined
+                  : { background: item.color }
+              }
+            />
+            <span className="status-label">{item.label}</span>
+            <span className="status-count" data-testid={`status-count-${item.status}`}>
+              {item.count}
+            </span>
+          </div>
+        ))}
       </div>
-
-      {isExpanded && (
-        <div className="sidebar-status-list">
-          {statusItems.map((item) => (
-            <div
-              key={item.status}
-              className={`sidebar-status-item status-${item.status}`}
-              data-testid={`status-item-${item.status}`}
-            >
-              <span className={`status-dot dot-${item.status}`} />
-              <span className="status-label">{item.label}</span>
-              <span className="status-count" data-testid={`status-count-${item.status}`}>
-                {item.count}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </SidebarAccordion>
   );
 });
 
