@@ -167,18 +167,21 @@ export interface TokenFootprint {
   evidenceClass?: EvidenceClass;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+/** Exported so sibling schema modules (e.g. per-role report readers) share one notion of a record. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readText(record: Record<string, unknown>, key: string): string | undefined {
+/** Exported so sibling schema modules read a producer-declared string field the same tolerant way. */
+export function readText(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function readNumber(record: Record<string, unknown>, key: string): number | undefined {
+/** Exported so sibling schema modules read a producer-declared numeric field the same tolerant way. */
+export function readNumber(record: Record<string, unknown>, key: string): number | undefined {
   const value = record[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

@@ -7,6 +7,7 @@ import {
   describeNodeArchetype,
   describeNodeKind,
   describeNodeStatus,
+  getTablerIconComponent,
   NODE_KIND_DESCRIPTORS,
   NODE_ROLE_DESCRIPTORS,
   NODE_STATUS_DESCRIPTORS,
@@ -17,6 +18,14 @@ import {
 function agentWithRole(role: NodeRole): GraphNodeData {
   return { id: `n-${role}`, name: role, kind: "agent", telemetry: { role } };
 }
+
+const DOMAIN_VALIDATOR_ROLES: readonly NodeRole[] = [
+  "validator-code-quality",
+  "validator-product",
+  "validator-security",
+  "validator-system-design",
+  "validator-ui-design",
+];
 
 function cardProps(node: GraphNodeData): NodeCardProps {
   return {
@@ -30,8 +39,8 @@ function cardProps(node: GraphNodeData): NodeCardProps {
 }
 
 describe("Node archetypes keyed on kind and role", () => {
-  it("registers a descriptor for every declared role", () => {
-    expect(NODE_ROLES).toHaveLength(10);
+  it("registers a descriptor for every declared role, and none for a role that is not declared", () => {
+    expect(Object.keys(NODE_ROLE_DESCRIPTORS).sort()).toEqual([...NODE_ROLES].sort());
     for (const role of NODE_ROLES) {
       const descriptor = NODE_ROLE_DESCRIPTORS[role];
       expect(descriptor).toBeDefined();
@@ -87,6 +96,56 @@ describe("Node archetypes keyed on kind and role", () => {
       <NodeCard {...cardProps({ id: "plain", name: "Plain", kind: "agent" })} />,
     );
     expect(html).not.toContain("role-");
+  });
+});
+
+describe("The five domain validators are distinct roles, not one validator wearing five hats", () => {
+  it("registers its own descriptor for every domain validator", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      const descriptor = NODE_ROLE_DESCRIPTORS[role];
+      expect(descriptor).toBeDefined();
+      expect(descriptor.role).toBe(role);
+      expect(descriptor.label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("gives every domain validator its own accent, told apart from the generic validator too", () => {
+    const roles = [...DOMAIN_VALIDATOR_ROLES, "validator" as NodeRole];
+    const accents = new Set(roles.map((role) => NODE_ROLE_DESCRIPTORS[role].accent));
+    expect(accents.size).toBe(roles.length);
+  });
+
+  it("gives every domain validator its own icon, told apart from the generic validator too", () => {
+    const roles = [...DOMAIN_VALIDATOR_ROLES, "validator" as NodeRole];
+    const icons = new Set(roles.map((role) => NODE_ROLE_DESCRIPTORS[role].IconComponent));
+    expect(icons.size).toBe(roles.length);
+  });
+
+  it("tells a security validator apart from a UI-design validator at a glance", () => {
+    const security = describeNodeArchetype(agentWithRole("validator-security"));
+    const uiDesign = describeNodeArchetype(agentWithRole("validator-ui-design"));
+
+    expect(security.label).toBe("SECURITY VALIDATOR");
+    expect(uiDesign.label).toBe("UI DESIGN VALIDATOR");
+    expect(security.accent).not.toBe(uiDesign.accent);
+    expect(security.IconComponent).not.toBe(uiDesign.IconComponent);
+  });
+
+  it("puts a domain-specific role class on the card for each domain validator", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      const html = renderToString(<NodeCard {...cardProps(agentWithRole(role))} />);
+      expect(html).toContain(`role-${role}`);
+      expect(html).toContain(`--node-kind-accent:${NODE_ROLE_DESCRIPTORS[role].accent}`);
+    }
+  });
+
+  it("never renders a domain validator under the generic validator's role class", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      const html = renderToString(<NodeCard {...cardProps(agentWithRole(role))} />);
+      const classList = /class="([^"]*)"/.exec(html)?.[1].split(" ") ?? [];
+      expect(classList).not.toContain("role-validator");
+      expect(classList).toContain(`role-${role}`);
+    }
   });
 });
 
@@ -188,5 +247,47 @@ describe("Node status is an open vocabulary too", () => {
       <NodeCard {...cardProps({ id: "q4", name: "Held sample", status: "quarantined" })} />,
     );
     expect(html).toContain("status-quarantined");
+  });
+});
+
+describe("every role in the vocabulary is its own node", () => {
+  it("no two roles share a label, an icon or an accent", () => {
+    const labels = new Map<string, string>();
+    const icons = new Map<unknown, string>();
+    const accents = new Map<string, string>();
+
+    for (const role of NODE_ROLES) {
+      const archetype = describeNodeArchetype(agentWithRole(role));
+
+      expect(labels.get(archetype.label)).toBeUndefined();
+      labels.set(archetype.label, role);
+
+      expect(icons.get(archetype.IconComponent)).toBeUndefined();
+      icons.set(archetype.IconComponent, role);
+
+      expect(accents.get(archetype.accent)).toBeUndefined();
+      accents.set(archetype.accent, role);
+    }
+
+    expect(labels.size).toBe(NODE_ROLES.length);
+    expect(icons.size).toBe(NODE_ROLES.length);
+    expect(accents.size).toBe(NODE_ROLES.length);
+  });
+
+  it("a plan review and a task review are told apart, not just spelled apart", () => {
+    const plan = describeNodeArchetype(agentWithRole("plan-validator"));
+    const task = describeNodeArchetype(agentWithRole("validator"));
+    expect(plan.IconComponent).not.toBe(task.IconComponent);
+    expect(plan.accent).not.toBe(task.accent);
+    expect(plan.label).not.toBe(task.label);
+  });
+
+  it("every role's icon is reachable by the registry name an exported graph would carry", () => {
+    for (const role of NODE_ROLES) {
+      const archetype = describeNodeArchetype(agentWithRole(role));
+      const displayName = (archetype.IconComponent as { displayName?: string }).displayName;
+      expect(displayName).toBeDefined();
+      expect(getTablerIconComponent(`Icon${displayName}`)).toBe(archetype.IconComponent);
+    }
   });
 });

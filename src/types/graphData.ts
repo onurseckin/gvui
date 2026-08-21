@@ -79,12 +79,22 @@ export const TOOL_CATEGORIES: readonly KnownToolCategory[] = [
  */
 export type ToolCategory = KnownToolCategory | (string & {});
 
-/** The roles this renderer ships a preset treatment for. */
+/**
+ * The roles this renderer ships a preset treatment for. The five `validator-*` entries are domain
+ * validators, not flavours of `validator`: a UI-design validator and a security validator check
+ * different things through different evidence, so each keeps its own identity rather than
+ * collapsing into one generic "validator" the way they used to.
+ */
 export type KnownNodeRole =
   | "coordinator"
   | "planner"
   | "implementer"
   | "validator"
+  | "validator-code-quality"
+  | "validator-product"
+  | "validator-security"
+  | "validator-system-design"
+  | "validator-ui-design"
   | "repairer"
   | "completeness-critic"
   | "sub-implementer"
@@ -98,6 +108,11 @@ export const NODE_ROLES: readonly NodeRole[] = [
   "planner",
   "implementer",
   "validator",
+  "validator-code-quality",
+  "validator-product",
+  "validator-security",
+  "validator-system-design",
+  "validator-ui-design",
   "repairer",
   "completeness-critic",
   "sub-implementer",

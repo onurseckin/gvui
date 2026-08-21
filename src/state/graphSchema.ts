@@ -1,3 +1,4 @@
+import { roleIdentities } from "../primitives/vocabulary";
 import {
   EDGE_KINDS,
   EVIDENCE_CLASSES,
@@ -59,6 +60,11 @@ export const ROLE_LABELS: Readonly<Record<NodeRole, string>> = {
   planner: "Planner",
   implementer: "Implementer",
   validator: "Validator",
+  "validator-code-quality": "Code Quality Validator",
+  "validator-product": "Product Validator",
+  "validator-security": "Security Validator",
+  "validator-system-design": "System Design Validator",
+  "validator-ui-design": "UI Design Validator",
   repairer: "Repairer",
   "completeness-critic": "Completeness Critic",
   "sub-implementer": "Sub-implementer",
@@ -94,11 +100,24 @@ export const ROLE_GROUP_LABELS: Readonly<Record<RoleGroup, string>> = {
   "sub-agent": "Sub-agents",
 };
 
+/**
+ * Each domain validator buckets under the same "validator" group as `validator` and
+ * `plan-validator`, matching that existing precedent: the group is a coarse triage bucket, the role
+ * is what carries the node's distinct identity on the canvas (name, label, accent). Splitting the
+ * five domains into their own groups would fragment the sidebar's role breakdown and the
+ * token-footprint-by-role chart into six thin validator slices for a distinction the owner's
+ * complaint was about node identity, not sidebar taxonomy — regroup later if that changes.
+ */
 const ROLE_GROUP_OF: Readonly<Record<NodeRole, RoleGroup>> = {
   coordinator: "coordination",
   planner: "coordination",
   implementer: "implementer",
   validator: "validator",
+  "validator-code-quality": "validator",
+  "validator-product": "validator",
+  "validator-security": "validator",
+  "validator-system-design": "validator",
+  "validator-ui-design": "validator",
   repairer: "repairer",
   "completeness-critic": "critic",
   "sub-implementer": "sub-agent",
@@ -109,6 +128,15 @@ const ROLE_GROUP_OF: Readonly<Record<NodeRole, RoleGroup>> = {
 
 export function roleGroupOf(role: NodeRole): RoleGroup {
   return ROLE_GROUP_OF[role];
+}
+
+/**
+ * The canonical role a spelling names, or undefined when this renderer ships no member for it. It
+ * separates a rename of something known (`worker` is an implementer) from a role the run named that
+ * has no preset here at all (`validator-chaos-engineering`), which must keep its own name.
+ */
+export function canonicalRoleSpelling(member: string): NodeRole | undefined {
+  return ROLE_SPELLINGS[member];
 }
 
 /** Node vocabularies the producer emits, alongside the edge and role ones re-exported above. */
@@ -151,6 +179,11 @@ const ROLE_SPELLINGS: Readonly<Record<string, NodeRole>> = {
   worker: "implementer",
   implementer: "implementer",
   validator: "validator",
+  "validator-code-quality": "validator-code-quality",
+  "validator-product": "validator-product",
+  "validator-security": "validator-security",
+  "validator-system-design": "validator-system-design",
+  "validator-ui-design": "validator-ui-design",
   repairer: "repairer",
   critic: "completeness-critic",
   "completeness-critic": "completeness-critic",
@@ -374,13 +407,20 @@ export interface ResolvedRole {
 export function resolveNodeRole(node: unknown): ResolvedRole | undefined {
   const record = asRecord(node);
   if (!record) return undefined;
+  const metadata = asRecord(record.metadata);
 
-  const telemetryRole = asRecord(record.telemetry)?.role;
-  if (isNodeRole(telemetryRole)) return { role: telemetryRole, declared: true };
+  // Most specific first: a role fused with the domain it was recorded against wins over the bare
+  // role, so a domain validator lands on its own vocabulary member instead of the generic one. A
+  // domain this renderer knows no member for falls through to the bare role rather than costing the
+  // node the role it did declare.
+  for (const identity of roleIdentities(asRecord(record.telemetry)?.role, metadata)) {
+    if (isNodeRole(identity)) return { role: identity, declared: true };
+  }
 
-  const metadataRole = readText(asRecord(record.metadata)?.role);
-  const alias = metadataRole === undefined ? undefined : ROLE_SPELLINGS[metadataRole];
-  if (alias !== undefined) return { role: alias, declared: true };
+  for (const identity of roleIdentities(metadata?.role, metadata)) {
+    const alias = ROLE_SPELLINGS[identity];
+    if (alias !== undefined) return { role: alias, declared: true };
+  }
 
   const kind = readText(record.kind) ?? readText(record.type);
   const implied = kind === undefined ? undefined : KIND_IMPLIED_ROLE[kind];

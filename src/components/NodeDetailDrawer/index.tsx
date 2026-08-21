@@ -28,6 +28,7 @@ import {
   readTokenFootprint,
   readTools,
 } from "./nodeSchema";
+import { readPlanValidatorReview, readValidatorDomain } from "./roleReportSchema";
 import { edgeToPort } from "./streamUtils";
 import { AssetsTab } from "./tabs/AssetsTab";
 import { CostTab } from "./tabs/CostTab";
@@ -124,10 +125,15 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
 
   const filesCount =
     (node.files?.length ?? 0) + ((node.metadata?.writeScope as string[])?.length ?? 0);
-  const findingsCount = (node.metadata?.findings as unknown[])?.length ?? 0;
+  const planReview = readPlanValidatorReview(node);
+  const findingsCount = (node.metadata?.findings?.length ?? 0) + (planReview?.findings.length ?? 0);
   const dependenciesCount = inputs.length + outputs.length;
   const hasRepairOrCritic =
     ((node.metadata?.repairRounds as number | undefined) ?? 0) > 0 || node.kind === "critic";
+  // A role report earns the Feedback & Reviews tab its place even with zero findings — a plan
+  // validator that answered all four questions and approved has nothing to reject, and a domain
+  // validator's checklist framing is worth seeing whether or not it filed a finding.
+  const hasRoleReport = planReview !== undefined || readValidatorDomain(node) !== undefined;
 
   // A tab earns its place only when this node has something behind it, so a dataset that speaks a
   // different vocabulary is never handed a row of views built for a schema it does not use.
@@ -205,7 +211,7 @@ export const NodeDetailDrawer: FC = memo(function NodeDetailDrawer() {
       label: "Feedback & Reviews",
       icon: IconShieldSearch,
       count: findingsCount,
-      visible: findingsCount > 0 || hasRepairOrCritic,
+      visible: findingsCount > 0 || hasRepairOrCritic || hasRoleReport,
     },
     {
       id: "properties" as TabId,

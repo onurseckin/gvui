@@ -4,12 +4,16 @@ import {
   aggregateTokens,
   EDGE_KINDS,
   NODE_KINDS,
+  NODE_ROLES,
   NODE_STATUSES,
   normalizeGraphDataset,
   readNodeTelemetry,
   readNodeTokenDetail,
   readSections,
   resolveNodeRole,
+  ROLE_GROUPS,
+  ROLE_LABELS,
+  roleGroupOf,
   summarizeReviewActivity,
   validateGraphDataset,
   weakestEvidence,
@@ -786,5 +790,106 @@ describe("readSections", () => {
         status: "collected",
       },
     ]);
+  });
+});
+
+describe("the five domain validators", () => {
+  // The producer's own role-file names (roles/validator-<domain>.md), not gvui's invention: each
+  // domain checks something different, through different evidence, so each keeps its own node
+  // identity instead of collapsing into the one generic "validator" every domain used to share.
+  const DOMAIN_VALIDATOR_ROLES = [
+    "validator-code-quality",
+    "validator-product",
+    "validator-security",
+    "validator-system-design",
+    "validator-ui-design",
+  ] as const;
+
+  test("resolveNodeRole reads a domain validator recorded in metadata.role as declared", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      const node = { id: "n1", kind: "agent", metadata: { role } };
+      expect(resolveNodeRole(node)).toEqual({ role, declared: true });
+    }
+  });
+
+  test("resolveNodeRole reads a domain validator recorded in telemetry.role as declared", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      const node = { id: "n1", kind: "agent", telemetry: { role } };
+      expect(resolveNodeRole(node)).toEqual({ role, declared: true });
+    }
+  });
+
+  test("every domain validator groups under the same coarse Validators bucket as validator and plan-validator", () => {
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      expect(roleGroupOf(role)).toBe("validator");
+    }
+    expect(roleGroupOf("validator")).toBe("validator");
+    expect(roleGroupOf("plan-validator")).toBe("validator");
+  });
+
+  test("each domain validator gets its own human-meaningful label, none of them the bare word Validator", () => {
+    expect(ROLE_LABELS["validator-code-quality"]).toBe("Code Quality Validator");
+    expect(ROLE_LABELS["validator-product"]).toBe("Product Validator");
+    expect(ROLE_LABELS["validator-security"]).toBe("Security Validator");
+    expect(ROLE_LABELS["validator-system-design"]).toBe("System Design Validator");
+    expect(ROLE_LABELS["validator-ui-design"]).toBe("UI Design Validator");
+
+    for (const role of DOMAIN_VALIDATOR_ROLES) {
+      expect(ROLE_LABELS[role]).not.toBe(ROLE_LABELS.validator);
+    }
+  });
+
+  test("declares exactly the producer's 15-member role vocabulary", () => {
+    expect([...NODE_ROLES].sort()).toEqual([
+      "completeness-critic",
+      "coordinator",
+      "implementer",
+      "plan-validator",
+      "planner",
+      "repairer",
+      "sub-implementer",
+      "sub-investigator",
+      "sub-validator",
+      "validator",
+      "validator-code-quality",
+      "validator-product",
+      "validator-security",
+      "validator-system-design",
+      "validator-ui-design",
+    ]);
+  });
+
+  test("every declared role has its own label and belongs to a real role group, and no two roles share a label", () => {
+    const labels = new Set<string>();
+    for (const role of NODE_ROLES) {
+      const label = ROLE_LABELS[role];
+      expect(label.length).toBeGreaterThan(0);
+      expect(labels.has(label)).toBe(false);
+      labels.add(label);
+      expect(ROLE_GROUPS).toContain(roleGroupOf(role));
+    }
+  });
+});
+
+describe("tolerance for a role this renderer has never seen", () => {
+  test("an invented role in metadata.role never throws and never fabricates a role the run did not declare", () => {
+    const node = { id: "n1", kind: "tool", metadata: { role: "validator-chaos-engineering" } };
+    expect(() => resolveNodeRole(node)).not.toThrow();
+    // "tool" implies nothing, and the invented spelling matches no known alias, so the run's own
+    // (unrecognised) role is left for the raw-role UI path rather than guessed at here.
+    expect(resolveNodeRole(node)).toBeUndefined();
+  });
+
+  test("an invented role in telemetry.role falls back to what the node's kind implies, never throws, and is flagged as inferred rather than recorded", () => {
+    const node = { id: "n1", kind: "agent", telemetry: { role: "validator-chaos-engineering" } };
+    expect(() => resolveNodeRole(node)).not.toThrow();
+    expect(resolveNodeRole(node)).toEqual({ role: "implementer", declared: false });
+  });
+
+  test("roleGroupOf and ROLE_LABELS resolve every real NODE_ROLES member without throwing", () => {
+    for (const role of NODE_ROLES) {
+      expect(() => roleGroupOf(role)).not.toThrow();
+      expect(() => ROLE_LABELS[role]).not.toThrow();
+    }
   });
 });

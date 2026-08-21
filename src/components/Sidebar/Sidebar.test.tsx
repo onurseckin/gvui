@@ -456,6 +456,139 @@ describe("Sidebar Component & Subcomponents", () => {
         "1",
       ]);
     });
+
+    /** Each domain validator checks something different through different evidence, so the owner's
+     * requirement is that they never collapse into one "Validator" node or one indistinguishable
+     * chip — this dataset carries all five plus a generic validator to prove none of them alias. */
+    const domainValidatorDataset: GraphDataset = {
+      id: "domain-validators",
+      title: "Domain Validators",
+      nodes: [
+        { id: "vg", name: "Validator", kind: "agent", telemetry: { role: "validator" } },
+        {
+          id: "v-cq",
+          name: "Code Quality Validator",
+          kind: "agent",
+          telemetry: { role: "validator-code-quality" },
+        },
+        {
+          id: "v-prod",
+          name: "Product Validator",
+          kind: "agent",
+          telemetry: { role: "validator-product" },
+        },
+        {
+          id: "v-sec",
+          name: "Security Validator",
+          kind: "agent",
+          telemetry: { role: "validator-security" },
+        },
+        {
+          id: "v-sys",
+          name: "System Design Validator",
+          kind: "agent",
+          telemetry: { role: "validator-system-design" },
+        },
+        {
+          id: "v-ui",
+          name: "UI Design Validator",
+          kind: "agent",
+          telemetry: { role: "validator-ui-design" },
+        },
+      ],
+      edges: [],
+    };
+
+    it("gives each of the five domain validators, and the generic validator, a distinct chip and label", () => {
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarRoleBreakdown dataset={domainValidatorDataset} />);
+      });
+
+      const root = renderer!.root;
+      // All six sit under one coarse Validators bucket...
+      expect(root.findByProps({ "data-testid": "role-group-count-validator" }).children).toEqual([
+        "6",
+      ]);
+      // ...but each keeps a chip and a label of its own, none of them the bare word "Validator".
+      const roles = [
+        "validator",
+        "validator-code-quality",
+        "validator-product",
+        "validator-security",
+        "validator-system-design",
+        "validator-ui-design",
+      ];
+      const labels = roles.map((role) => {
+        const chip = root.findByProps({ "data-testid": `role-chip-${role}` });
+        return (chip.children as unknown[]).find((child) => typeof child === "string");
+      });
+      expect(new Set(labels).size).toBe(roles.length);
+      expect(labels).toContain("Security Validator");
+      expect(labels).toContain("UI Design Validator");
+      expect(labels).not.toContain(undefined);
+    });
+
+    it("filters to a single domain validator role without an onFilterChange handler collapsing into a control", () => {
+      // No activeFilter/onFilterChange wired: chips render inert (a span, not a button), which is
+      // what a breakdown shown outside the live graph view (a report export, a bare test render)
+      // must do rather than offering a control that silently does nothing when clicked.
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(<SidebarRoleBreakdown dataset={domainValidatorDataset} />);
+      });
+      const chip = renderer!.root.findByProps({ "data-testid": "role-chip-validator-security" });
+      expect(chip.type).toBe("span");
+    });
+
+    it("selecting a domain validator's chip filters to that role alone, and selecting it again clears it", () => {
+      let selected: string | undefined;
+      let renderer: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <SidebarRoleBreakdown
+            dataset={domainValidatorDataset}
+            activeFilter="all"
+            onFilterChange={(filter) => {
+              selected = filter;
+            }}
+          />,
+        );
+      });
+
+      const root = renderer!.root;
+      const uiChip = root.findByProps({ "data-testid": "role-chip-validator-ui-design" });
+      expect(uiChip.type).toBe("button");
+      expect(uiChip.props["aria-pressed"]).toBe(false);
+
+      act(() => {
+        uiChip.props.onClick();
+      });
+      expect(selected).toBe("role:validator-ui-design");
+
+      // Re-rendering with the now-active filter marks that chip, and only that chip, as pressed.
+      act(() => {
+        renderer!.update(
+          <SidebarRoleBreakdown
+            dataset={domainValidatorDataset}
+            activeFilter="role:validator-ui-design"
+            onFilterChange={(filter) => {
+              selected = filter;
+            }}
+          />,
+        );
+      });
+      const pressedUiChip = root.findByProps({ "data-testid": "role-chip-validator-ui-design" });
+      expect(pressedUiChip.props["aria-pressed"]).toBe(true);
+      expect(pressedUiChip.props.className).toContain("is-active");
+      const securityChip = root.findByProps({ "data-testid": "role-chip-validator-security" });
+      expect(securityChip.props["aria-pressed"]).toBe(false);
+
+      act(() => {
+        pressedUiChip.props.onClick();
+      });
+      expect(selected).toBe("all");
+    });
   });
 
   describe("SidebarSectionBreakdown", () => {

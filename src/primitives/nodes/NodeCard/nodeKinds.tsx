@@ -2,10 +2,16 @@ import type { ComponentType, ReactNode } from "react";
 import {
   IconAlertCircle,
   IconArrowBackUp,
+  IconBug,
+  IconClipboardCheck,
+  IconEye,
   IconGitBranch,
   IconHammer,
   IconListCheck,
+  IconMapSearch,
   IconMicroscope,
+  IconShieldLock,
+  IconSitemap,
   IconTool,
   IconAlertTriangle,
   IconArrowRight,
@@ -43,7 +49,13 @@ import {
   type NodeStatus,
 } from "../../../types/graphData";
 import { UNKNOWN_LABEL } from "../../../state/graphSchema";
-import { hasPreset, readVocabularyMember, stableAccent, vocabularyLabel } from "../../vocabulary";
+import {
+  hasPreset,
+  readDeclaredRole,
+  readVocabularyMember,
+  stableAccent,
+  vocabularyLabel,
+} from "../../vocabulary";
 
 export interface NodeKindDescriptor {
   label: string;
@@ -130,8 +142,11 @@ export interface NodeArchetypeDescriptor extends NodeKindDescriptor {
 }
 
 /**
- * The preset role treatments — the nine roles the orchestration producer speaks. This is a preset
- * table, not the schema: a foreign dataset may extend it, replace it, or name no roles at all.
+ * The preset role treatments the orchestration producer speaks. This is a preset table, not the
+ * schema: a foreign dataset may extend it, replace it, or name no roles at all. The five
+ * `validator-*` domain roles are deliberately distinct from `validator` and from one another —
+ * a security review and a UI-design review check different things with different evidence, so
+ * they never collapse into a single generic "validator" treatment.
  */
 export const NODE_ROLE_DESCRIPTORS: Readonly<Record<NodeRole, NodeArchetypeDescriptor>> =
   Object.freeze({
@@ -167,8 +182,8 @@ export const NODE_ROLE_DESCRIPTORS: Readonly<Record<NodeRole, NodeArchetypeDescr
       role: "plan-validator",
       label: "PLAN VALIDATOR",
       accent: "#14b8a6",
-      icon: <IconShieldCheck size={14} />,
-      IconComponent: IconShieldCheck,
+      icon: <IconMapSearch size={14} />,
+      IconComponent: IconMapSearch,
     },
     repairer: {
       role: "repairer",
@@ -205,11 +220,46 @@ export const NODE_ROLE_DESCRIPTORS: Readonly<Record<NodeRole, NodeArchetypeDescr
       icon: <IconMicroscope size={14} />,
       IconComponent: IconMicroscope,
     },
+    "validator-code-quality": {
+      role: "validator-code-quality",
+      label: "CODE QUALITY VALIDATOR",
+      accent: "#84cc16",
+      icon: <IconBug size={14} />,
+      IconComponent: IconBug,
+    },
+    "validator-system-design": {
+      role: "validator-system-design",
+      label: "SYSTEM DESIGN VALIDATOR",
+      accent: "#22c55e",
+      icon: <IconSitemap size={14} />,
+      IconComponent: IconSitemap,
+    },
+    "validator-security": {
+      role: "validator-security",
+      label: "SECURITY VALIDATOR",
+      accent: "#e23653",
+      icon: <IconShieldLock size={14} />,
+      IconComponent: IconShieldLock,
+    },
+    "validator-product": {
+      role: "validator-product",
+      label: "PRODUCT VALIDATOR",
+      accent: "#e236a9",
+      icon: <IconClipboardCheck size={14} />,
+      IconComponent: IconClipboardCheck,
+    },
+    "validator-ui-design": {
+      role: "validator-ui-design",
+      label: "UI DESIGN VALIDATOR",
+      accent: "#9011d0",
+      icon: <IconEye size={14} />,
+      IconComponent: IconEye,
+    },
   });
 
 const NODE_ROLE_SET = new Set<string>(NODE_ROLES);
 
-/** True for the nine roles the preset table covers. Every other string is still a valid role. */
+/** True for a role the shipped vocabulary names. Every other string is still a valid role. */
 export function isKnownNodeRole(value: unknown): value is KnownNodeRole {
   return typeof value === "string" && NODE_ROLE_SET.has(value);
 }
@@ -223,13 +273,17 @@ export function resolveNodeKind(node: Pick<GraphNodeData, "kind">): NodeKind {
 }
 
 /**
- * The role the node declared, verbatim, from `telemetry.role` or the producer's metadata. A role
- * outside the preset table is still that node's role and keeps its own name.
+ * The role the node declared, from `telemetry.role` or the producer's metadata, carrying the domain
+ * the run recorded it against so a security review and a UI-design review are two roles here rather
+ * than one. A role outside the preset table is still that node's role and keeps its own name.
  */
 export function resolveNodeRole(
   node: Pick<GraphNodeData, "telemetry" | "metadata">,
 ): NodeRole | undefined {
-  return readVocabularyMember(node.telemetry?.role) ?? readVocabularyMember(node.metadata?.role);
+  const metadata = node.metadata;
+  return (
+    readDeclaredRole(node.telemetry?.role, metadata) ?? readDeclaredRole(metadata?.role, metadata)
+  );
 }
 
 /**
@@ -402,6 +456,12 @@ const TABLER_ICON_REGISTRY: Record<
   IconListCheck,
   IconMicroscope,
   IconTool,
+  IconBug,
+  IconClipboardCheck,
+  IconEye,
+  IconShieldLock,
+  IconSitemap,
+  IconMapSearch,
 };
 
 export function getTablerIconComponent(name?: string) {

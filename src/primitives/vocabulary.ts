@@ -58,3 +58,63 @@ export function readVocabularyMember(value: unknown): string | undefined {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
+
+/**
+ * A member's own spelling of "there was nothing to record", so an absence marker is never fused
+ * into a name and read back as a real member.
+ */
+const ABSENCE_MEMBERS: ReadonlySet<string> = new Set([
+  "unknown",
+  "unrecorded",
+  "unavailable",
+  "none",
+  "n/a",
+]);
+
+/** The keys a node may state a role's domain under, most specific first. */
+const ROLE_DOMAIN_KEYS: readonly string[] = ["validatorDomain", "validator_domain", "domain"];
+
+function isVocabularyRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRoleDomain(role: string, metadata: unknown): string | undefined {
+  if (!isVocabularyRecord(metadata)) return undefined;
+  for (const key of ROLE_DOMAIN_KEYS) {
+    const domain = readVocabularyMember(metadata[key]);
+    if (domain === undefined || ABSENCE_MEMBERS.has(domain.toLowerCase())) continue;
+    // A bare `domain` key belongs to whatever the node is about; only a validator's is a role
+    // qualifier, so an unrelated node never has its own subject fused into its role.
+    if (key === "domain" && role !== "validator") continue;
+    return domain;
+  }
+  return undefined;
+}
+
+/**
+ * The role identities a node declared, most specific first.
+ *
+ * A run may state one role two ways. The orchestration producer writes a domain validator as two
+ * orthogonal keys — `role: "validator"` beside `domain: "security"` — because that is the shape its
+ * role contracts are authored in, while naming the same thing as a single member,
+ * `validator-security`, everywhere a human reads it. Every label, accent, icon and filter here is
+ * keyed on that single member, so without the fused identity five roles that check entirely
+ * different things collapse into one node identity on the canvas.
+ *
+ * The fold invents nothing: it fires only when the node recorded both halves, skips a domain that
+ * declares its own absence, and skips a role that already carries the domain. The bare role always
+ * follows the fused one, so a caller that recognises neither still has the run's own word to fall
+ * back to, and a domain this renderer has never seen costs a node nothing.
+ */
+export function roleIdentities(role: unknown, metadata: unknown): readonly string[] {
+  const member = readVocabularyMember(role);
+  if (member === undefined) return [];
+  const domain = readRoleDomain(member, metadata);
+  if (domain === undefined || member === domain || member.endsWith(`-${domain}`)) return [member];
+  return [`${member}-${domain}`, member];
+}
+
+/** The single most specific role identity a node declared, or undefined when it declared none. */
+export function readDeclaredRole(role: unknown, metadata: unknown): string | undefined {
+  return roleIdentities(role, metadata)[0];
+}

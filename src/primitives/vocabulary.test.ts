@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   NEUTRAL_ACCENT,
   hasPreset,
+  readDeclaredRole,
   readVocabularyMember,
+  roleIdentities,
   stableAccent,
   vocabularyLabel,
 } from "./vocabulary";
@@ -73,5 +75,63 @@ describe("Preset lookup", () => {
     expect(hasPreset(table, "branch")).toBe(true);
     expect(hasPreset(table, "toString")).toBe(false);
     expect(hasPreset(table, "constructor")).toBe(false);
+  });
+});
+
+describe("A role recorded beside the domain it was recorded against", () => {
+  it("fuses the two halves into the single member the vocabulary names", () => {
+    expect(readDeclaredRole("validator", { validatorDomain: "security" })).toBe(
+      "validator-security",
+    );
+    expect(readDeclaredRole("validator", { validator_domain: "ui-design" })).toBe(
+      "validator-ui-design",
+    );
+    expect(readDeclaredRole("validator", { domain: "product" })).toBe("validator-product");
+  });
+
+  it("keeps the bare role reachable behind the fused one", () => {
+    expect(roleIdentities("validator", { validatorDomain: "security" })).toEqual([
+      "validator-security",
+      "validator",
+    ]);
+  });
+
+  it("keeps the bare role when the run recorded no domain to fuse", () => {
+    expect(roleIdentities("validator", { validatorId: "val-1" })).toEqual(["validator"]);
+    expect(roleIdentities("validator", undefined)).toEqual(["validator"]);
+  });
+
+  it("refuses a domain that declares its own absence, rather than naming a role after it", () => {
+    for (const absent of ["unknown", "UNKNOWN", "none", "n/a", "unrecorded", "unavailable", "  "]) {
+      expect(readDeclaredRole("validator", { validatorDomain: absent })).toBe("validator");
+    }
+  });
+
+  it("does not fuse a role that already carries the domain", () => {
+    expect(readDeclaredRole("validator-security", { validatorDomain: "security" })).toBe(
+      "validator-security",
+    );
+  });
+
+  it("leaves a non-validator's own subject out of its role", () => {
+    expect(readDeclaredRole("implementer", { domain: "billing" })).toBe("implementer");
+  });
+
+  it("carries a domain this renderer has never seen under its own name instead of dropping it", () => {
+    expect(readDeclaredRole("validator", { validatorDomain: "chaos-engineering" })).toBe(
+      "validator-chaos-engineering",
+    );
+  });
+
+  it("states nothing when the node declared no role, whatever the metadata holds", () => {
+    expect(readDeclaredRole(undefined, { validatorDomain: "security" })).toBeUndefined();
+    expect(roleIdentities(42, { validatorDomain: "security" })).toEqual([]);
+  });
+
+  it("never throws on metadata that is not a record", () => {
+    for (const metadata of [null, "text", 7, ["security"], undefined]) {
+      expect(() => readDeclaredRole("validator", metadata)).not.toThrow();
+      expect(readDeclaredRole("validator", metadata)).toBe("validator");
+    }
   });
 });

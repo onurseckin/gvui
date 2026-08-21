@@ -41,7 +41,10 @@ describe("Producer contract parity", () => {
     ]);
   });
 
-  it("declares the producer's full role vocabulary", () => {
+  it("declares the producer's full 15-member role vocabulary, one entry per role file", () => {
+    // Five of these are domain validators (roles/validator-<domain>.md in the producer): a
+    // security check and a UI-design check look at different things through different evidence,
+    // so each keeps its own role rather than all five collapsing into "validator".
     expect([...NODE_ROLES].sort()).toEqual([
       "completeness-critic",
       "coordinator",
@@ -53,6 +56,11 @@ describe("Producer contract parity", () => {
       "sub-investigator",
       "sub-validator",
       "validator",
+      "validator-code-quality",
+      "validator-product",
+      "validator-security",
+      "validator-system-design",
+      "validator-ui-design",
     ]);
   });
 

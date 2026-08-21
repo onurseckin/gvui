@@ -102,7 +102,13 @@ export const Sidebar: FC<SidebarProps> = React.memo(function Sidebar({
 
         <SidebarVocabulary dataset={dataset} />
 
-        {facets.hasRoles ? <SidebarRoleBreakdown dataset={dataset} /> : null}
+        {facets.hasRoles ? (
+          <SidebarRoleBreakdown
+            dataset={dataset}
+            activeFilter={activeFilter}
+            onFilterChange={handleFilterChange}
+          />
+        ) : null}
 
         {facets.hasRegions ? <SidebarSectionBreakdown dataset={dataset} /> : null}
 

@@ -1,8 +1,7 @@
 import type { FC } from "react";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import type { GraphDataset, GraphNodeData } from "../../types/graphData";
 import {
-  resolveNodeRole,
   roleGroupOf,
   ROLE_GROUP_LABELS,
   ROLE_GROUPS,
@@ -11,12 +10,30 @@ import {
   type NodeRole,
   type RoleGroup,
 } from "../../state/graphSchema";
-import { humanizeKey, readRawRole, stableAccent } from "../OpenSchema";
+import {
+  resolveFilterableRole,
+  roleFilterId,
+  roleIdFromFilter,
+  type FilterCategory,
+} from "../../state/graphFilters";
+import { humanizeKey, stableAccent } from "../OpenSchema";
 import { SidebarAccordion } from "./SidebarAccordion";
 
 export interface SidebarRoleBreakdownProps {
   dataset: GraphDataset | null;
   defaultExpanded?: boolean;
+  /** The graph's current single-role or role-group filter, if any. Absent chips render inert. */
+  activeFilter?: FilterCategory;
+  /** Called with the clicked role's own filter id when a role chip is selected, and with the same
+   * id again to clear it — the caller owns the toggle-back-to-"all" behaviour, same as the group
+   * quick-filters, so the two controls can never disagree about what "already active" means. */
+  onFilterChange?: (filter: FilterCategory) => void;
+}
+
+/** A label to show in place of a preset chip's role name; falls back to the role's own spelling so
+ * a role this dataset declared is never rendered as the literal word "undefined". */
+function roleLabel(role: NodeRole): string {
+  return ROLE_LABELS[role] ?? humanizeKey(role);
 }
 
 interface RoleGroupSummary {
@@ -52,24 +69,25 @@ function buildRoleBreakdown(nodes: readonly GraphNodeData[]): RoleBreakdown {
   let unroledCount = 0;
 
   for (const node of nodes) {
-    const resolved = resolveNodeRole(node);
-    const raw = readRawRole(node);
+    const identity = resolveFilterableRole(node);
 
-    // A role the run declared but the preset table does not carry is that dataset's own role, not
-    // an absent one. It keeps its own name here instead of collapsing into unknown.
-    if ((resolved === undefined || !resolved.declared) && raw !== undefined) {
-      others.set(raw, (others.get(raw) ?? 0) + 1);
-      continue;
-    }
-    if (resolved === undefined) {
+    if (identity === undefined) {
       unroledCount += 1;
       continue;
     }
-    const group = roleGroupOf(resolved.role);
+
+    // A role the run declared but the preset table does not carry is that dataset's own role, not
+    // an absent one. It keeps its own name here instead of collapsing into unknown.
+    if (!identity.isPreset) {
+      others.set(identity.id, (others.get(identity.id) ?? 0) + 1);
+      continue;
+    }
+
+    const group = roleGroupOf(identity.id);
     const bucket = groups.get(group) ?? { count: 0, declared: 0, roles: new Map() };
     bucket.count += 1;
-    if (resolved.declared) bucket.declared += 1;
-    bucket.roles.set(resolved.role, (bucket.roles.get(resolved.role) ?? 0) + 1);
+    if (identity.declared) bucket.declared += 1;
+    bucket.roles.set(identity.id, (bucket.roles.get(identity.id) ?? 0) + 1);
     groups.set(group, bucket);
   }
 
@@ -100,8 +118,62 @@ function buildRoleBreakdown(nodes: readonly GraphNodeData[]): RoleBreakdown {
  * this deliberately carries counts and no per-node detail.
  */
 export const SidebarRoleBreakdown: FC<SidebarRoleBreakdownProps> = React.memo(
-  function SidebarRoleBreakdown({ dataset, defaultExpanded = true }) {
+  function SidebarRoleBreakdown({ dataset, defaultExpanded = true, activeFilter, onFilterChange }) {
     const breakdown = useMemo(() => buildRoleBreakdown(dataset?.nodes ?? []), [dataset]);
+    const activeRoleId = activeFilter === undefined ? undefined : roleIdFromFilter(activeFilter);
+
+    // Selecting the already-active role clears it, matching the group quick-filters' own toggle so
+    // the two controls never disagree about what "already filtered to this" means.
+    const handleRoleClick = useCallback(
+      (roleId: string) => {
+        if (onFilterChange === undefined) return;
+        onFilterChange(activeRoleId === roleId ? "all" : roleFilterId(roleId));
+      },
+      [onFilterChange, activeRoleId],
+    );
+
+    const renderRoleChip = (
+      roleId: string,
+      label: string,
+      count: number,
+      className: string,
+      style?: React.CSSProperties,
+      title?: string,
+    ) => {
+      const isActive = activeRoleId === roleId;
+      const sharedProps = {
+        className: `${className}${isActive ? " is-active" : ""}`,
+        "data-testid": `role-chip-${roleId}`,
+        style,
+        title,
+      };
+      const content = (
+        <>
+          {label}
+          <span className="sidebar-role-chip-count">{count}</span>
+        </>
+      );
+      // Rendered inert (a span) when the caller wired no filter, so a breakdown shown outside the
+      // graph view — a report export, a test fixture — never offers a control that does nothing.
+      if (onFilterChange === undefined) {
+        return (
+          <span key={roleId} {...sharedProps}>
+            {content}
+          </span>
+        );
+      }
+      return (
+        <button
+          key={roleId}
+          {...sharedProps}
+          type="button"
+          onClick={() => handleRoleClick(roleId)}
+          aria-pressed={isActive}
+        >
+          {content}
+        </button>
+      );
+    };
 
     if (breakdown.totalNodes === 0) {
       return (
@@ -140,16 +212,14 @@ export const SidebarRoleBreakdown: FC<SidebarRoleBreakdownProps> = React.memo(
                 </span>
               </div>
               <div className="sidebar-role-chips">
-                {group.roles.map((entry) => (
-                  <span
-                    key={entry.role}
-                    className="sidebar-role-chip"
-                    data-testid={`role-chip-${entry.role}`}
-                  >
-                    {ROLE_LABELS[entry.role]}
-                    <span className="sidebar-role-chip-count">{entry.count}</span>
-                  </span>
-                ))}
+                {group.roles.map((entry) =>
+                  renderRoleChip(
+                    entry.role,
+                    roleLabel(entry.role),
+                    entry.count,
+                    "sidebar-role-chip",
+                  ),
+                )}
               </div>
               {group.declaredCount < group.count ? (
                 <p
@@ -172,18 +242,16 @@ export const SidebarRoleBreakdown: FC<SidebarRoleBreakdownProps> = React.memo(
               </span>
             </div>
             <div className="sidebar-role-chips">
-              {breakdown.otherRoles.map((entry) => (
-                <span
-                  key={entry.role}
-                  className="sidebar-role-chip is-custom"
-                  data-testid={`role-chip-${entry.role}`}
-                  title={entry.role}
-                  style={{ borderColor: entry.accent }}
-                >
-                  {entry.label}
-                  <span className="sidebar-role-chip-count">{entry.count}</span>
-                </span>
-              ))}
+              {breakdown.otherRoles.map((entry) =>
+                renderRoleChip(
+                  entry.role,
+                  entry.label,
+                  entry.count,
+                  "sidebar-role-chip is-custom",
+                  { borderColor: entry.accent },
+                  entry.role,
+                ),
+              )}
             </div>
           </div>
         ) : null}
