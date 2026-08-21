@@ -64,6 +64,7 @@ export const ROLE_LABELS: Readonly<Record<NodeRole, string>> = {
   "sub-implementer": "Sub-implementer",
   "sub-validator": "Sub-validator",
   "sub-investigator": "Sub-investigator",
+  "plan-validator": "Plan Validator",
 };
 
 /** The coarse buckets the sidebar groups by, per the realigned vocabulary. */
@@ -103,6 +104,7 @@ const ROLE_GROUP_OF: Readonly<Record<NodeRole, RoleGroup>> = {
   "sub-implementer": "sub-agent",
   "sub-validator": "sub-agent",
   "sub-investigator": "sub-agent",
+  "plan-validator": "validator",
 };
 
 export function roleGroupOf(role: NodeRole): RoleGroup {
@@ -155,6 +157,7 @@ const ROLE_SPELLINGS: Readonly<Record<string, NodeRole>> = {
   "sub-implementer": "sub-implementer",
   "sub-validator": "sub-validator",
   "sub-investigator": "sub-investigator",
+  "plan-validator": "plan-validator",
 };
 
 /** What a node's `kind` implies when no role was ever recorded. Always flagged as underived. */

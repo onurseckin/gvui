@@ -46,6 +46,7 @@ describe("Producer contract parity", () => {
       "completeness-critic",
       "coordinator",
       "implementer",
+      "plan-validator",
       "planner",
       "repairer",
       "sub-implementer",

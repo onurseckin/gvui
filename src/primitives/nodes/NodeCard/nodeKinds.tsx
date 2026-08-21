@@ -163,6 +163,13 @@ export const NODE_ROLE_DESCRIPTORS: Readonly<Record<NodeRole, NodeArchetypeDescr
       icon: <IconShieldCheck size={14} />,
       IconComponent: IconShieldCheck,
     },
+    "plan-validator": {
+      role: "plan-validator",
+      label: "PLAN VALIDATOR",
+      accent: "#14b8a6",
+      icon: <IconShieldCheck size={14} />,
+      IconComponent: IconShieldCheck,
+    },
     repairer: {
       role: "repairer",
       label: "REPAIRER",

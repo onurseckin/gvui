@@ -1,29 +1,31 @@
 import { describe, expect, it } from "bun:test";
 import {
+  createBoundingBox,
+  detectContainerOverflow,
+  detectViewportOverflow,
+  toBoundingBox,
+  computeBoundingBoxOverlap,
+  type ViewportBounds,
+} from "./boundingBoxGeometry";
+import { detectTextTruncation, type TextElementMetrics } from "./textClippingDetection";
+import {
   calculateContrastRatio,
   calculateRelativeLuminance,
   compositeColor,
   compositeMultipleLayers,
-  createBoundingBox,
-  createEmptyViewportMetrics,
-  createVisualMetricsReport,
-  detectContainerOverflow,
-  detectStackingCollisions,
-  detectTextTruncation,
-  detectViewportOverflow,
   evaluateContrastCompliance,
   hslToRgb,
   isLargeText,
   parseColor,
   resolveEffectiveBackground,
-  toBoundingBox,
-  computeBoundingBoxOverlap,
-  type ElementWithBounds,
   type RgbColor,
-  type TextElementMetrics,
-  type ViewportBounds,
+} from "./colorContrastAnalysis";
+import { detectStackingCollisions, type ElementWithBounds } from "./stackingCollisionDetection";
+import {
+  createEmptyViewportMetrics,
+  createVisualMetricsReport,
   type ViewportMetrics,
-} from "./visualMetricsCollector";
+} from "./visualMetricsReport";
 
 describe("visualMetricsCollector Module", () => {
   describe("Geometry & Bounding Box Utilities", () => {

@@ -2,11 +2,13 @@ import { describe, expect, it } from "bun:test";
 import type { Page } from "playwright";
 import {
   collectVisualMetricsFromPage,
+  type RawElementMetricsPayload,
+} from "./domMetricsCollection";
+import {
   resetDocumentScrollPosition,
   waitForLayoutStabilization,
-  type RawElementMetricsPayload,
   type ViewportConfig,
-} from "./browserVisualHarness";
+} from "./visualHarnessSession";
 
 // Playwright's real `Page` is a huge interface; every function under test here only ever calls
 // `.evaluate` (and, for waitForLayoutStabilization, `.waitForTimeout`). Bridging that gap with a

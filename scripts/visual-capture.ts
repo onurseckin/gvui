@@ -5,7 +5,7 @@
  * Drives end-to-end user interactions across GVUI components and captures
  * deterministic screenshots with in-place overwrites across every viewport in
  * `STANDARD_VIEWPORTS` (desktop, tablet, mobile, wide-desktop) — see
- * `browserVisualHarness.ts` for the authoritative matrix; this file must not
+ * `visualHarnessSession.ts` for the authoritative matrix; this file must not
  * duplicate that list.
  *
  * Interactions executed:
@@ -18,21 +18,23 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
-  captureVisualScreenshot,
-  collectVisualMetricsFromPage,
   launchVisualHarness,
   setViewport,
   STANDARD_VIEWPORTS,
   waitForLayoutStabilization,
-  type CapturedScreenshotRecord,
   type ViewportConfig,
-} from "../src/testing/visual/browserVisualHarness";
+} from "../src/testing/visual/visualHarnessSession";
+import {
+  captureVisualScreenshot,
+  type CapturedScreenshotRecord,
+} from "../src/testing/visual/visualScreenshotCapture";
+import { collectVisualMetricsFromPage } from "../src/testing/visual/domMetricsCollection";
 import {
   createEmptyViewportMetrics,
   createVisualMetricsReport,
   type ViewportMetrics,
   type VisualMetricsReport,
-} from "../src/testing/visual/visualMetricsCollector";
+} from "../src/testing/visual/visualMetricsReport";
 
 export interface VisualCaptureCliOptions {
   readonly baseUrl: string;
@@ -76,7 +78,7 @@ export function parseCliArgs(argv: readonly string[]): VisualCaptureCliOptions {
   }
 
   // Full matrix, sourced from the harness rather than duplicated here — see
-  // `STANDARD_VIEWPORTS` in `browserVisualHarness.ts` for the definitions and dimensions.
+  // `STANDARD_VIEWPORTS` in `visualHarnessSession.ts` for the definitions and dimensions.
   const viewports = STANDARD_VIEWPORTS;
 
   return {

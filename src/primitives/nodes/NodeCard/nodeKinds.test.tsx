@@ -31,7 +31,7 @@ function cardProps(node: GraphNodeData): NodeCardProps {
 
 describe("Node archetypes keyed on kind and role", () => {
   it("registers a descriptor for every declared role", () => {
-    expect(NODE_ROLES).toHaveLength(9);
+    expect(NODE_ROLES).toHaveLength(10);
     for (const role of NODE_ROLES) {
       const descriptor = NODE_ROLE_DESCRIPTORS[role];
       expect(descriptor).toBeDefined();

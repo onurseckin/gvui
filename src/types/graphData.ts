@@ -89,7 +89,8 @@ export type KnownNodeRole =
   | "completeness-critic"
   | "sub-implementer"
   | "sub-validator"
-  | "sub-investigator";
+  | "sub-investigator"
+  | "plan-validator";
 
 /** The preset role vocabulary. A dataset from somewhere else may extend it or ignore it entirely. */
 export const NODE_ROLES: readonly NodeRole[] = [
@@ -102,6 +103,7 @@ export const NODE_ROLES: readonly NodeRole[] = [
   "sub-implementer",
   "sub-validator",
   "sub-investigator",
+  "plan-validator",
 ];
 
 /**

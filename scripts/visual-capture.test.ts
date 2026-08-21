@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { parseCliArgs } from "./visual-capture";
-import { STANDARD_VIEWPORTS } from "../src/testing/visual/browserVisualHarness";
+import { STANDARD_VIEWPORTS } from "../src/testing/visual/visualHarnessSession";
 
 describe("visual-capture CLI defaults", () => {
   it("defaults baseUrl to this project's Vite dev port, not Vite's stock 5173", () => {

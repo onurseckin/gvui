@@ -1,0 +1,2578 @@
+{
+  "id": "2026-08-17-skills-documentation-elevation",
+  "title": "Execution Trajectory: 2026-08-17-skills-documentation-elevation",
+  "description": "Execution graph dataset and trajectory for run 2026-08-17-skills-documentation-elevation",
+  "directed": true,
+  "entry": "node-input-prompt",
+  "exits": ["node-terminal-complete"],
+  "sections": [],
+  "nodes": [
+    {
+      "id": "node-input-prompt",
+      "name": "User Request Prompt",
+      "kind": "input",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: User Prompt",
+      "badge": {
+        "text": "0.0 KB",
+        "variant": "neutral",
+        "icon": "IconTerminal2"
+      },
+      "description": "Skills Documentation Elevation and Capsule Cleanup",
+      "prompt": "Skills Documentation Elevation and Capsule Cleanup",
+      "io": {
+        "inputs": [],
+        "outputs": [
+          {
+            "kind": "prompt",
+            "label": "User Instruction",
+            "preview": "Skills Documentation Elevation and Capsule Cleanup"
+          }
+        ]
+      },
+      "metadata": {
+        "promptBytes": 50
+      }
+    },
+    {
+      "id": "node-orchestrator-plan",
+      "name": "Execution Plan",
+      "kind": "orchestrator",
+      "status": "success",
+      "step": 1,
+      "stepLabel": "Step 1: Planning",
+      "badge": {
+        "text": "3 Tasks",
+        "variant": "info",
+        "icon": "IconHierarchy2"
+      },
+      "badges": [
+        {
+          "label": "3 derived waves",
+          "variant": "gray"
+        }
+      ],
+      "description": "Execution plan across 3 tasks and 3 waves.",
+      "io": {
+        "inputs": [
+          {
+            "node": "node-input-prompt",
+            "kind": "prompt",
+            "label": "User Prompt",
+            "preview": "Skills Documentation Elevation and Capsule Cleanup"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "DAG Work Decomposition",
+            "preview": "3 discrete work scopes (task-1, task-2, task-3)"
+          }
+        ]
+      },
+      "metadata": {
+        "taskCount": 3,
+        "waveCount": 3,
+        "branchCount": 0,
+        "waveSource": {
+          "value": "derived",
+          "evidence_class": "derived",
+          "is_estimated": true
+        },
+        "topologyRevision": null,
+        "hostIdentity": {
+          "hostTool": "claude-code",
+          "evidenceClass": "harness_observed"
+        }
+      }
+    },
+    {
+      "id": "node-task-task-1",
+      "name": "Cleanup of stale capsules and temp scratch files",
+      "description": "Cleaned up stale planning docs and scratch temp files",
+      "kind": "agent",
+      "status": "success",
+      "step": 2,
+      "stepLabel": "Wave 1",
+      "badge": {
+        "text": "Task Satisfied",
+        "variant": "success",
+        "icon": "IconRobot"
+      },
+      "scripts": [
+        {
+          "commandId": "C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f",
+          "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+          "cwd": "/Users/onurseckinsenoglu/repos/skills",
+          "cwdRelative": ".",
+          "repositoryRoot": "/Users/onurseckinsenoglu/repos/skills",
+          "exitCode": 0,
+          "signalsSent": [],
+          "status": "succeeded",
+          "startedAt": "2026-08-17T17:08:35.009Z",
+          "finishedAt": "2026-08-17T17:08:35.192Z",
+          "durationMs": 183,
+          "taskId": "task-1",
+          "actor": "implementer-1",
+          "logPath": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/record.json",
+          "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+          "attemptCount": 1,
+          "retryExhausted": false,
+          "evidenceIssues": [],
+          "stdoutTail": "bun test v1.3.14 (0d9b296a)",
+          "stderrTail": "tests/unit/cli/git-ignore.test.ts:\n(pass) capsule ignore policy > rejects a Git repository until .capsules is ignored [60.92ms]\n(pass) capsule ignore policy > permits a non-Git directory without claiming ignore assurance [0.60ms]\n\n 2 pass\n 0 fail\n 4 expect() calls\nRan 2 tests across 1 file. [80.00ms]",
+          "stdoutBytes": 28,
+          "stderrBytes": 303,
+          "stdoutSha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6",
+          "stderrSha256": "e1826f4242ebeb82e67277b7cdd0e248bbabab4e474a15aee8cca903b18f2781",
+          "record": {
+            "actor": "implementer-1",
+            "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+            "attempt_signing_public_key": "MCowBQYDK2VwAyEA5iLSWlyksmTNTr1YwmMyKkgGBJ8bSVp/p8Vmr9kAUzI=",
+            "attempts": [
+              {
+                "activity": {
+                  "bytes": 340,
+                  "path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/activity.json",
+                  "sha256": "e87f858887f0df6862046a296c0b1d10b6b364cc2e058bf6c8d8a46028f4b317"
+                },
+                "activity_path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/activity.json",
+                "attempt": 1,
+                "evidence_issues": [],
+                "exit_code": 0,
+                "failure_class": null,
+                "finished_at": "2026-08-17T17:08:35.192Z",
+                "id": "C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f",
+                "logs": {
+                  "stderr": {
+                    "bytes": 303,
+                    "path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/stderr.log",
+                    "sha256": "e1826f4242ebeb82e67277b7cdd0e248bbabab4e474a15aee8cca903b18f2781"
+                  },
+                  "stdout": {
+                    "bytes": 28,
+                    "path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/stdout.log",
+                    "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+                  }
+                },
+                "signal": null,
+                "signals_sent": [],
+                "started_at": "2026-08-17T17:08:35.012Z",
+                "status": "succeeded",
+                "timeout_kind": null
+              }
+            ],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "cwd_relative": ".",
+            "evidence_issues": [],
+            "exit_code": 0,
+            "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+            "finished_at": "2026-08-17T17:08:35.192Z",
+            "gate_id": null,
+            "id": "C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f",
+            "logs": {
+              "stderr": {
+                "bytes": 303,
+                "path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/stderr.log",
+                "sha256": "e1826f4242ebeb82e67277b7cdd0e248bbabab4e474a15aee8cca903b18f2781"
+              },
+              "stdout": {
+                "bytes": 28,
+                "path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/attempt-1/stdout.log",
+                "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+              }
+            },
+            "policy": {
+              "drain_timeout_ms": 5000,
+              "grace_ms": 1000,
+              "heartbeat_interval_ms": 1000,
+              "idempotent": false,
+              "idle_timeout_ms": 120000,
+              "max_output_bytes": 67108864,
+              "max_retries": 0,
+              "wall_timeout_ms": 600000
+            },
+            "record_path": "commands/C-cada6c42-9c48-4fa2-b5d1-dea36f6af02f/record.json",
+            "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+            "retry_exhausted": false,
+            "signal": null,
+            "signals_sent": [],
+            "started_at": "2026-08-17T17:08:35.009Z",
+            "status": "succeeded",
+            "task_id": "task-1",
+            "timeout_kind": null
+          },
+          "evidence_class": "harness_observed"
+        },
+        {
+          "commandId": "C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f",
+          "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+          "cwd": "/Users/onurseckinsenoglu/repos/skills",
+          "cwdRelative": ".",
+          "repositoryRoot": "/Users/onurseckinsenoglu/repos/skills",
+          "exitCode": 0,
+          "signalsSent": [],
+          "status": "succeeded",
+          "startedAt": "2026-08-17T17:08:52.318Z",
+          "finishedAt": "2026-08-17T17:08:52.496Z",
+          "durationMs": 178,
+          "taskId": "task-1",
+          "actor": "validator-1",
+          "logPath": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/record.json",
+          "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+          "attemptCount": 1,
+          "retryExhausted": false,
+          "evidenceIssues": [],
+          "stdoutTail": "bun test v1.3.14 (0d9b296a)",
+          "stderrTail": "tests/unit/cli/git-ignore.test.ts:\n(pass) capsule ignore policy > rejects a Git repository until .capsules is ignored [53.01ms]\n(pass) capsule ignore policy > permits a non-Git directory without claiming ignore assurance [0.45ms]\n\n 2 pass\n 0 fail\n 4 expect() calls\nRan 2 tests across 1 file. [71.00ms]",
+          "stdoutBytes": 28,
+          "stderrBytes": 303,
+          "stdoutSha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6",
+          "stderrSha256": "fe27d904feff539fe98ec21af2690faf251acfdd7b9bd42de7518f4f94f9cc29",
+          "record": {
+            "actor": "validator-1",
+            "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+            "attempt_signing_public_key": "MCowBQYDK2VwAyEAGJp8/p84r0dBdGzXkvjypIb9Skq/RdONYbg/cZqJs+E=",
+            "attempts": [
+              {
+                "activity": {
+                  "bytes": 340,
+                  "path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/activity.json",
+                  "sha256": "826d676862079fd223cc631b28ff3743766d990d61c16ee561151eb171ba51a3"
+                },
+                "activity_path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/activity.json",
+                "attempt": 1,
+                "evidence_issues": [],
+                "exit_code": 0,
+                "failure_class": null,
+                "finished_at": "2026-08-17T17:08:52.496Z",
+                "id": "C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f",
+                "logs": {
+                  "stderr": {
+                    "bytes": 303,
+                    "path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/stderr.log",
+                    "sha256": "fe27d904feff539fe98ec21af2690faf251acfdd7b9bd42de7518f4f94f9cc29"
+                  },
+                  "stdout": {
+                    "bytes": 28,
+                    "path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/stdout.log",
+                    "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+                  }
+                },
+                "signal": null,
+                "signals_sent": [],
+                "started_at": "2026-08-17T17:08:52.322Z",
+                "status": "succeeded",
+                "timeout_kind": null
+              }
+            ],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "cwd_relative": ".",
+            "evidence_issues": [],
+            "exit_code": 0,
+            "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+            "finished_at": "2026-08-17T17:08:52.496Z",
+            "gate_id": null,
+            "id": "C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f",
+            "logs": {
+              "stderr": {
+                "bytes": 303,
+                "path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/stderr.log",
+                "sha256": "fe27d904feff539fe98ec21af2690faf251acfdd7b9bd42de7518f4f94f9cc29"
+              },
+              "stdout": {
+                "bytes": 28,
+                "path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/attempt-1/stdout.log",
+                "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+              }
+            },
+            "policy": {
+              "drain_timeout_ms": 5000,
+              "grace_ms": 1000,
+              "heartbeat_interval_ms": 1000,
+              "idempotent": false,
+              "idle_timeout_ms": 120000,
+              "max_output_bytes": 67108864,
+              "max_retries": 0,
+              "wall_timeout_ms": 600000
+            },
+            "record_path": "commands/C-d0c12082-9a87-46d6-b5b2-8264f1d8d32f/record.json",
+            "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+            "retry_exhausted": false,
+            "signal": null,
+            "signals_sent": [],
+            "started_at": "2026-08-17T17:08:52.318Z",
+            "status": "succeeded",
+            "task_id": "task-1",
+            "timeout_kind": null
+          },
+          "evidence_class": "harness_observed"
+        }
+      ],
+      "stateTransitions": [
+        {
+          "at": "2026-08-17T17:08:20.424Z",
+          "actor": "implementer-1",
+          "from": "ready",
+          "to": "leased",
+          "reason": "implementation claimed",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        },
+        {
+          "at": "2026-08-17T17:08:48.315Z",
+          "actor": "implementer-1",
+          "from": "leased",
+          "to": "submitted",
+          "reason": "evidence submitted",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        },
+        {
+          "at": "2026-08-17T17:08:50.150Z",
+          "actor": "validator-1",
+          "from": "submitted",
+          "to": "validating",
+          "reason": "independent validation started",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        },
+        {
+          "at": "2026-08-17T17:09:36.594Z",
+          "actor": "validator-1",
+          "from": "validating",
+          "to": "validated",
+          "reason": "independent validation passed",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        },
+        {
+          "at": "2026-08-17T17:09:36.891Z",
+          "actor": "validator-1",
+          "from": "validated",
+          "to": "gating",
+          "reason": "mandatory gate attached",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        },
+        {
+          "at": "2026-08-17T17:09:37.020Z",
+          "actor": "validator-1",
+          "from": "gating",
+          "to": "done",
+          "reason": "review and mandatory gates passed",
+          "attempt": 1,
+          "evidence_class": "harness_observed"
+        }
+      ],
+      "files": [
+        {
+          "path": "docs/planning",
+          "mode": "write",
+          "evidence_class": "agent_reported",
+          "rationale": "Cleaned up stale planning docs and scratch temp files",
+          "requirementIds": ["req-1"],
+          "step": 7
+        }
+      ],
+      "metrics": {
+        "tokensIn": 50,
+        "tokensOut": 121,
+        "durationMs": 27889,
+        "commandCount": 2,
+        "retries": 0,
+        "tokens": {
+          "inputTokens": 50,
+          "outputTokens": 121,
+          "totalTokens": 171,
+          "isEstimated": true,
+          "evidenceClass": "derived"
+        },
+        "timingBreakdown": {
+          "wallDurationMs": 27889,
+          "activeCommandMs": 361,
+          "cognitiveLatencyMs": 27528
+        }
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-orchestrator-plan",
+            "kind": "prompt",
+            "label": "Task Goal",
+            "preview": "Cleanup of stale capsules and temp scratch files"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Task Summary",
+            "preview": "Cleaned up stale planning docs and scratch temp files"
+          },
+          {
+            "kind": "file",
+            "label": "Modified Files",
+            "preview": "1 files changed"
+          },
+          {
+            "kind": "artifact",
+            "label": "Task Evidence",
+            "preview": "2 commands recorded"
+          }
+        ]
+      },
+      "metadata": {
+        "role": "implementer",
+        "agentId": "implementer-1",
+        "writeScope": ["docs/planning", ".tmp"],
+        "repairRounds": 0,
+        "probeRounds": 0,
+        "taskStatus": "done",
+        "pushbackFindingIds": []
+      }
+    },
+    {
+      "id": "node-gate-task-1",
+      "name": "Gate: Cleanup of stale capsules and temp scratch files",
+      "description": "Verification gate for Cleanup of stale capsules and temp scratch files: 3 recorded gate result(s).",
+      "kind": "gate",
+      "status": "success",
+      "step": 3,
+      "stepLabel": "Gate 1",
+      "badge": {
+        "text": "Gate Passed",
+        "variant": "success",
+        "icon": "IconShieldCheck"
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-task-task-1",
+            "kind": "decision",
+            "label": "Task Submission",
+            "preview": "1 modified files submitted"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Gate Decision",
+            "preview": "PASSED: recorded gates satisfied"
+          }
+        ]
+      },
+      "metadata": {
+        "writeScope": ["docs/planning", ".tmp"],
+        "repairRounds": 0,
+        "probeRounds": 0,
+        "gateResults": [
+          {
+            "gateId": "gate-1",
+            "commandId": "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+            "status": "passed"
+          },
+          {
+            "gateId": "gate-2",
+            "commandId": "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+            "status": "passed"
+          },
+          {
+            "gateId": "gate-3",
+            "commandId": "C-777cfc27-3b32-47a1-8573-3b088f3f8ac5",
+            "status": "passed"
+          }
+        ],
+        "openFindingIds": [],
+        "findings": []
+      }
+    },
+    {
+      "id": "node-critic-authority",
+      "name": "Completeness Critic Review",
+      "description": "Whole-run completeness inspection and sign-off.",
+      "kind": "critic",
+      "status": "success",
+      "step": 8,
+      "stepLabel": "Step 8: Completeness Critic",
+      "badge": {
+        "text": "Certified Clean",
+        "variant": "success",
+        "icon": "IconScale"
+      },
+      "scripts": [
+        {
+          "commandId": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106",
+          "argv": ["bun", "run", "typecheck"],
+          "cwd": "/Users/onurseckinsenoglu/repos/skills",
+          "cwdRelative": ".",
+          "repositoryRoot": "/Users/onurseckinsenoglu/repos/skills",
+          "exitCode": 0,
+          "signalsSent": [],
+          "status": "succeeded",
+          "startedAt": "2026-08-17T17:15:28.664Z",
+          "finishedAt": "2026-08-17T17:15:29.972Z",
+          "durationMs": 1308,
+          "actor": "critic-1",
+          "logPath": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/record.json",
+          "fingerprint": "8fafd71d2ed7b9e182bedb6bbbb1417aeb6f1c85a829f7e4616e0121c8f7004a",
+          "attemptCount": 1,
+          "retryExhausted": false,
+          "evidenceIssues": [],
+          "stderrTail": "$ tsc -p tsconfig.json --noEmit",
+          "stdoutBytes": 0,
+          "stderrBytes": 32,
+          "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderrSha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630",
+          "record": {
+            "actor": "critic-1",
+            "argv": ["bun", "run", "typecheck"],
+            "attempt_signing_public_key": "MCowBQYDK2VwAyEAym3gdQxYXkrLoMlvvGNGBpem6FAr9MEw375wWjFdNyM=",
+            "attempts": [
+              {
+                "activity": {
+                  "bytes": 338,
+                  "path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/activity.json",
+                  "sha256": "904ad4d7463da18a328e1ab110752712f5549e9b15e216fa9f10fc5e177b49a5"
+                },
+                "activity_path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/activity.json",
+                "attempt": 1,
+                "evidence_issues": [],
+                "exit_code": 0,
+                "failure_class": null,
+                "finished_at": "2026-08-17T17:15:29.972Z",
+                "id": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106",
+                "logs": {
+                  "stderr": {
+                    "bytes": 32,
+                    "path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/stderr.log",
+                    "sha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630"
+                  },
+                  "stdout": {
+                    "bytes": 0,
+                    "path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/stdout.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  }
+                },
+                "signal": null,
+                "signals_sent": [],
+                "started_at": "2026-08-17T17:15:28.668Z",
+                "status": "succeeded",
+                "timeout_kind": null
+              }
+            ],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "cwd_relative": ".",
+            "evidence_issues": [],
+            "exit_code": 0,
+            "fingerprint": "8fafd71d2ed7b9e182bedb6bbbb1417aeb6f1c85a829f7e4616e0121c8f7004a",
+            "finished_at": "2026-08-17T17:15:29.972Z",
+            "gate_id": null,
+            "id": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106",
+            "logs": {
+              "stderr": {
+                "bytes": 32,
+                "path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/stderr.log",
+                "sha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630"
+              },
+              "stdout": {
+                "bytes": 0,
+                "path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/attempt-1/stdout.log",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            },
+            "policy": {
+              "drain_timeout_ms": 5000,
+              "grace_ms": 1000,
+              "heartbeat_interval_ms": 1000,
+              "idempotent": false,
+              "idle_timeout_ms": 120000,
+              "max_output_bytes": 67108864,
+              "max_retries": 0,
+              "wall_timeout_ms": 600000
+            },
+            "record_path": "commands/C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106/record.json",
+            "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+            "retry_exhausted": false,
+            "signal": null,
+            "signals_sent": [],
+            "started_at": "2026-08-17T17:15:28.664Z",
+            "status": "succeeded",
+            "task_id": null,
+            "timeout_kind": null
+          },
+          "evidence_class": "harness_observed"
+        }
+      ],
+      "io": {
+        "inputs": [
+          {
+            "node": "node-gate-task-1",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-1",
+            "preview": "Verification evidence recorded for task task-1"
+          },
+          {
+            "node": "node-gate-task-2",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-2",
+            "preview": "Verification evidence recorded for task task-2"
+          },
+          {
+            "node": "node-gate-task-3",
+            "kind": "artifact",
+            "label": "Gate Verification Report: task-3",
+            "preview": "Verification evidence recorded for task task-3"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "decision",
+            "label": "Completeness Critic Certification",
+            "preview": "Critic recorded clean with 0 findings"
+          }
+        ]
+      },
+      "metadata": {
+        "role": "completeness-critic",
+        "findings": [],
+        "criticId": "critic-1",
+        "agentId": "critic-1",
+        "status": "clean",
+        "unresolvedFindingIds": [],
+        "residualRisks": [],
+        "requirementProofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-1 satisfied.",
+                "reference": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106"
+              }
+            ],
+            "requirement_id": "req-1",
+            "status": "satisfied"
+          }
+        ],
+        "reviewedAt": "2026-08-17T17:15:39.855Z"
+      }
+    },
+    {
+      "id": "node-terminal-complete",
+      "name": "Run Completion",
+      "description": "Sealed capsule run completion.",
+      "kind": "terminal",
+      "status": "success",
+      "step": 9,
+      "stepLabel": "Step 9: Terminal Outcome",
+      "badge": {
+        "text": "Sealed Run",
+        "variant": "success",
+        "icon": "IconFlagCheck"
+      },
+      "io": {
+        "inputs": [
+          {
+            "node": "node-critic-authority",
+            "kind": "decision",
+            "label": "Critic Authority Packet",
+            "preview": "Whole-run certification recorded"
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "summary",
+            "label": "Execution Trajectory Summary",
+            "preview": "Run 2026-08-17-skills-documentation-elevation recorded 3 tasks"
+          }
+        ]
+      },
+      "metadata": {
+        "status": "complete",
+        "completedAt": "2026-08-17T17:15:45.171Z",
+        "unattributedCommandCount": 11
+      },
+      "scripts": [
+        {
+          "commandId": "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+          "argv": ["bun", "run", "typecheck"],
+          "cwd": "/Users/onurseckinsenoglu/repos/skills",
+          "cwdRelative": ".",
+          "repositoryRoot": "/Users/onurseckinsenoglu/repos/skills",
+          "exitCode": 0,
+          "signalsSent": [],
+          "status": "succeeded",
+          "startedAt": "2026-08-17T17:09:19.203Z",
+          "finishedAt": "2026-08-17T17:09:21.221Z",
+          "durationMs": 2018,
+          "gateId": "gate-2",
+          "taskId": "task-1",
+          "actor": "validator-1",
+          "logPath": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/record.json",
+          "fingerprint": "8fafd71d2ed7b9e182bedb6bbbb1417aeb6f1c85a829f7e4616e0121c8f7004a",
+          "assurance": "trusted_host_observed_v1",
+          "attemptCount": 1,
+          "retryExhausted": false,
+          "evidenceIssues": [],
+          "stderrTail": "$ tsc -p tsconfig.json --noEmit",
+          "stdoutBytes": 0,
+          "stderrBytes": 32,
+          "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderrSha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630",
+          "record": {
+            "actor": "validator-1",
+            "argv": ["bun", "run", "typecheck"],
+            "assurance": "trusted_host_observed_v1",
+            "attempt_signing_public_key": "MCowBQYDK2VwAyEAi+tz8KvqSSGmScqn4/ENdk3toQSufgJpSt435uY/bnY=",
+            "attempts": [
+              {
+                "activity": {
+                  "bytes": 338,
+                  "path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/activity.json",
+                  "sha256": "5f357679a69533cd11bb415b6299f25d1cb9e86ea07805e94f6d5e234006eeed"
+                },
+                "activity_path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/activity.json",
+                "attempt": 1,
+                "evidence_issues": [],
+                "exit_code": 0,
+                "failure_class": null,
+                "finished_at": "2026-08-17T17:09:21.221Z",
+                "gate_finalized_at": "2026-08-17T17:09:21.622Z",
+                "id": "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+                "logs": {
+                  "stderr": {
+                    "bytes": 32,
+                    "path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/stderr.log",
+                    "sha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630"
+                  },
+                  "stdout": {
+                    "bytes": 0,
+                    "path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/stdout.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  }
+                },
+                "repository_after": {
+                  "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+                  "file_count": 641,
+                  "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+                  "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+                  "schema": "harness.repository-binding",
+                  "total_bytes": 5016976,
+                  "version": 1
+                },
+                "signal": null,
+                "signals_sent": [],
+                "started_at": "2026-08-17T17:09:19.919Z",
+                "status": "succeeded",
+                "timeout_kind": null
+              }
+            ],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "cwd_relative": ".",
+            "evidence_issues": [],
+            "exit_code": 0,
+            "fingerprint": "8fafd71d2ed7b9e182bedb6bbbb1417aeb6f1c85a829f7e4616e0121c8f7004a",
+            "finished_at": "2026-08-17T17:09:21.221Z",
+            "gate_id": "gate-2",
+            "id": "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+            "logs": {
+              "stderr": {
+                "bytes": 32,
+                "path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/stderr.log",
+                "sha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630"
+              },
+              "stdout": {
+                "bytes": 0,
+                "path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/attempt-1/stdout.log",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            },
+            "path_bindings": [
+              {
+                "argument": "bun",
+                "argv_index": 0,
+                "bytes": 63096576,
+                "canonical_path": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+                "device": "16777233",
+                "executable": true,
+                "inode": "54369539",
+                "kind": "file",
+                "mode": 33133,
+                "operand": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+                "role": "executable",
+                "scope": "system",
+                "sha256": "e0c90ec15d33363e6b70713d56bc3b2c7585c17f40a0fe0f8fd9305901d4e233"
+              }
+            ],
+            "policy": {
+              "drain_timeout_ms": 5000,
+              "grace_ms": 1000,
+              "heartbeat_interval_ms": 1000,
+              "idempotent": false,
+              "idle_timeout_ms": 120000,
+              "max_output_bytes": 67108864,
+              "max_retries": 0,
+              "wall_timeout_ms": 600000
+            },
+            "record_path": "commands/C-047daabe-dca7-4ee9-aa07-1bf1925c70f3/record.json",
+            "repository_after": {
+              "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+              "file_count": 641,
+              "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+              "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+              "schema": "harness.repository-binding",
+              "total_bytes": 5016976,
+              "version": 1
+            },
+            "repository_before": {
+              "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+              "file_count": 641,
+              "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+              "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+              "schema": "harness.repository-binding",
+              "total_bytes": 5016976,
+              "version": 1
+            },
+            "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+            "retry_exhausted": false,
+            "signal": null,
+            "signals_sent": [],
+            "started_at": "2026-08-17T17:09:19.203Z",
+            "status": "succeeded",
+            "task_id": "task-1",
+            "timeout_kind": null
+          },
+          "evidence_class": "harness_observed"
+        },
+        {
+          "commandId": "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+          "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+          "cwd": "/Users/onurseckinsenoglu/repos/skills",
+          "cwdRelative": ".",
+          "repositoryRoot": "/Users/onurseckinsenoglu/repos/skills",
+          "exitCode": 0,
+          "signalsSent": [],
+          "status": "succeeded",
+          "startedAt": "2026-08-17T17:09:09.725Z",
+          "finishedAt": "2026-08-17T17:09:10.671Z",
+          "durationMs": 946,
+          "gateId": "gate-1",
+          "taskId": "task-1",
+          "actor": "validator-1",
+          "logPath": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/record.json",
+          "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+          "assurance": "trusted_host_observed_v1",
+          "attemptCount": 1,
+          "retryExhausted": false,
+          "evidenceIssues": [],
+          "stdoutTail": "bun test v1.3.14 (0d9b296a)",
+          "stderrTail": "tests/unit/cli/git-ignore.test.ts:\n(pass) capsule ignore policy > rejects a Git repository until .capsules is ignored [55.52ms]\n(pass) capsule ignore policy > permits a non-Git directory without claiming ignore assurance [0.46ms]\n\n 2 pass\n 0 fail\n 4 expect() calls\nRan 2 tests across 1 file. [73.00ms]",
+          "stdoutBytes": 28,
+          "stderrBytes": 303,
+          "stdoutSha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6",
+          "stderrSha256": "bfcc633cebf9b679909cf7ccea246d0733dd8ccc217dda07ac129ac0e20bef07",
+          "record": {
+            "actor": "validator-1",
+            "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+            "assurance": "trusted_host_observed_v1",
+            "attempt_signing_public_key": "MCowBQYDK2VwAyEA1DuOjyequWbKkhS2P8l0oh0TpTnM7/zG32EDJQIVPd8=",
+            "attempts": [
+              {
+                "activity": {
+                  "bytes": 340,
+                  "path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/activity.json",
+                  "sha256": "37191f7021972bf8eac72ed51aed967097eff0c38eebadd4aa3658b9ca9c4c7a"
+                },
+                "activity_path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/activity.json",
+                "attempt": 1,
+                "evidence_issues": [],
+                "exit_code": 0,
+                "failure_class": null,
+                "finished_at": "2026-08-17T17:09:10.671Z",
+                "gate_finalized_at": "2026-08-17T17:09:11.096Z",
+                "id": "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+                "logs": {
+                  "stderr": {
+                    "bytes": 303,
+                    "path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/stderr.log",
+                    "sha256": "bfcc633cebf9b679909cf7ccea246d0733dd8ccc217dda07ac129ac0e20bef07"
+                  },
+                  "stdout": {
+                    "bytes": 28,
+                    "path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/stdout.log",
+                    "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+                  }
+                },
+                "repository_after": {
+                  "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+                  "file_count": 641,
+                  "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+                  "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+                  "schema": "harness.repository-binding",
+                  "total_bytes": 5016976,
+                  "version": 1
+                },
+                "signal": null,
+                "signals_sent": [],
+                "started_at": "2026-08-17T17:09:10.492Z",
+                "status": "succeeded",
+                "timeout_kind": null
+              }
+            ],
+            "cwd": "/Users/onurseckinsenoglu/repos/skills",
+            "cwd_relative": ".",
+            "evidence_issues": [],
+            "exit_code": 0,
+            "fingerprint": "195865bf4347ec320f8c52cf30866ca3f03278fd47a4cb77ce4ceaac6a3dc054",
+            "finished_at": "2026-08-17T17:09:10.671Z",
+            "gate_id": "gate-1",
+            "id": "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+            "logs": {
+              "stderr": {
+                "bytes": 303,
+                "path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/stderr.log",
+                "sha256": "bfcc633cebf9b679909cf7ccea246d0733dd8ccc217dda07ac129ac0e20bef07"
+              },
+              "stdout": {
+                "bytes": 28,
+                "path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/attempt-1/stdout.log",
+                "sha256": "d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6"
+              }
+            },
+            "path_bindings": [
+              {
+                "argument": "bun",
+                "argv_index": 0,
+                "bytes": 63096576,
+                "canonical_path": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+                "device": "16777233",
+                "executable": true,
+                "inode": "54369539",
+                "kind": "file",
+                "mode": 33133,
+                "operand": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+                "role": "executable",
+                "scope": "system",
+                "sha256": "e0c90ec15d33363e6b70713d56bc3b2c7585c17f40a0fe0f8fd9305901d4e233"
+              },
+              {
+                "argument": "tests/unit/cli/git-ignore.test.ts",
+                "argv_index": 2,
+                "bytes": 1240,
+                "canonical_path": "/Users/onurseckinsenoglu/repos/skills/tests/unit/cli/git-ignore.test.ts",
+                "device": "16777233",
+                "executable": false,
+                "inode": "94186054",
+                "kind": "file",
+                "mode": 33188,
+                "operand": "tests/unit/cli/git-ignore.test.ts",
+                "relative_path": "tests/unit/cli/git-ignore.test.ts",
+                "role": "target",
+                "scope": "repository",
+                "sha256": "e80418e2d5710f3ecec3f26ed14b675cc43ea60a973bdce998272994ffd1b0f4"
+              }
+            ],
+            "policy": {
+              "drain_timeout_ms": 5000,
+              "grace_ms": 1000,
+              "heartbeat_interval_ms": 1000,
+              "idempotent": false,
+              "idle_timeout_ms": 120000,
+              "max_output_bytes": 67108864,
+              "max_retries": 0,
+              "wall_timeout_ms": 600000
+            },
+            "record_path": "commands/C-584d4bbf-1c05-422a-9210-3a8bbb14cafb/record.json",
+            "repository_after": {
+              "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+              "file_count": 641,
+              "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+              "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+              "schema": "harness.repository-binding",
+              "total_bytes": 5016976,
+              "version": 1
+            },
+            "repository_before": {
+              "content_sha256": "85ca7abcc4fdd84edfd8a57720261818721599c59130183504a0dfffe44ff8f7",
+              "file_count": 641,
+              "git_identity_sha256": "5803696acd2681649bc698905458332fbc3bafd9fc44cccb6cda41260303d0d6",
+              "inspection_sha256": "84378f6331abb0f3530b929f87bc95f86ee5559752fcc2af992c614eb0740ad9",
+              "schema": "harness.repository-binding",
+              "total_bytes": 5016976,
+              "version": 1
+            },
+            "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+            "retry_exhausted": false,
+            "signal": null,
+            "signals_sent": [],
+            "started_at": "2026-08-17T17:09:09.725Z",
+            "status": "succeeded",
+            "task_id": "task-1",
+            "timeout_kind": null
+          },
+          "evidence_class": "harness_observed"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-prompt-plan",
+      "source": "node-input-prompt",
+      "target": "node-orchestrator-plan",
+      "kind": "sequence",
+      "label": "User Prompt Ingested",
+      "directed": true,
+      "stepNumber": 1,
+      "badge": {
+        "text": "User Prompt Ingested",
+        "variant": "info",
+        "icon": "IconTerminal2",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "1",
+        "title": "User Prompt Ingested",
+        "variant": "info",
+        "icon": "IconTerminal2",
+        "detail": "0.0 KB"
+      },
+      "accent": "#64748b",
+      "traffic": {
+        "evidence_class": "harness_observed",
+        "messagesCount": 1,
+        "bytes": 50
+      },
+      "exchanges": [
+        {
+          "id": "exch-prompt-plan",
+          "direction": "forward",
+          "type": "prompt",
+          "kind": "prompt",
+          "summary": "Ingested user prompt",
+          "detail": "Skills Documentation Elevation and Capsule Cleanup",
+          "bytes": 50,
+          "evidence_class": "harness_observed"
+        }
+      ]
+    },
+    {
+      "id": "edge-dispatch-task-1",
+      "source": "node-orchestrator-plan",
+      "target": "node-task-task-1",
+      "kind": "dispatch",
+      "label": "Dispatches Implementer",
+      "directed": true,
+      "stepNumber": 2,
+      "badge": {
+        "text": "Dispatches Implementer",
+        "variant": "info",
+        "icon": "IconRocket",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2",
+        "title": "Dispatches Implementer",
+        "variant": "info",
+        "icon": "IconRocket",
+        "detail": "Lease: implementer-1"
+      },
+      "accent": "#3b82f6",
+      "traffic": {
+        "evidence_class": "harness_observed",
+        "messagesCount": 1
+      },
+      "exchanges": [
+        {
+          "id": "exch-dispatch-task-1",
+          "direction": "forward",
+          "type": "dispatch",
+          "kind": "prompt",
+          "summary": "Dispatched task-1 to implementer-1",
+          "detail": "Goal: Cleanup of stale capsules and temp scratch files",
+          "evidence_class": "derived"
+        }
+      ]
+    },
+    {
+      "id": "edge-gate-task-1",
+      "source": "node-task-task-1",
+      "target": "node-gate-task-1",
+      "kind": "gate",
+      "label": "Submits to Gate",
+      "directed": true,
+      "stepNumber": "2 -> 3",
+      "badge": {
+        "text": "Submits to Gate",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "2 -> 3",
+        "title": "Submits to Gate",
+        "variant": "neutral",
+        "icon": "IconArrowRight",
+        "detail": "1 files changed"
+      },
+      "accent": "#8b5cf6",
+      "traffic": {
+        "evidence_class": "harness_observed",
+        "messagesCount": 1,
+        "bytes": 273
+      },
+      "exchanges": [
+        {
+          "id": "exch-submit-task-1",
+          "direction": "forward",
+          "type": "submission",
+          "kind": "file",
+          "summary": "Submitted task-1 for verification",
+          "detail": "Cleaned up stale planning docs and scratch temp files",
+          "files": [
+            {
+              "path": "docs/planning",
+              "mode": "write"
+            }
+          ],
+          "bytes": 273,
+          "evidence_class": "harness_observed"
+        }
+      ]
+    },
+    {
+      "id": "edge-join-task-1",
+      "source": "node-gate-task-1",
+      "target": "node-critic-authority",
+      "kind": "join",
+      "label": "Evidence Report",
+      "directed": true,
+      "stepNumber": 4,
+      "badge": {
+        "text": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "4",
+        "title": "Evidence Report",
+        "variant": "success",
+        "icon": "IconFileText",
+        "detail": "Gate verified"
+      },
+      "accent": "#10b981",
+      "traffic": {
+        "evidence_class": "harness_observed",
+        "messagesCount": 1
+      },
+      "exchanges": [
+        {
+          "id": "exch-evidence-task-1",
+          "direction": "forward",
+          "type": "signoff",
+          "kind": "artifact",
+          "summary": "Gate evidence for task-1",
+          "verdict": "PASS",
+          "evidence_class": "harness_observed"
+        }
+      ]
+    },
+    {
+      "id": "edge-critic-complete",
+      "source": "node-critic-authority",
+      "target": "node-terminal-complete",
+      "kind": "signoff",
+      "label": "Authority Sign-off",
+      "directed": true,
+      "stepNumber": 9,
+      "badge": {
+        "text": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck",
+        "clickable": false
+      },
+      "container": {
+        "stepBadge": "9",
+        "title": "Authority Sign-off",
+        "variant": "success",
+        "icon": "IconFlagCheck",
+        "detail": "Sealed run"
+      },
+      "accent": "#10b981",
+      "traffic": {
+        "evidence_class": "harness_observed",
+        "messagesCount": 1
+      },
+      "exchanges": [
+        {
+          "id": "exch-critic-complete",
+          "timestamp": "2026-08-17T17:15:39.855Z",
+          "direction": "forward",
+          "type": "signoff",
+          "kind": "decision",
+          "summary": "Critic critic-1 recorded clean",
+          "verdict": "PASS",
+          "evidence_class": "harness_observed"
+        }
+      ]
+    }
+  ],
+  "run": {
+    "runId": "2026-08-17-skills-documentation-elevation",
+    "capsuleId": "1f0b3f7a56ce4d44b30891b6b3077ead",
+    "prompt": {
+      "text": "Skills Documentation Elevation and Capsule Cleanup",
+      "bytes": 50,
+      "sha256": "5c95bd694877482f374dece565345b0597cb66691d2ecc608eebfcabc501c00a",
+      "path": "prompt.md",
+      "evidence_class": "harness_observed"
+    },
+    "requirements": {
+      "schema": "harness.requirements",
+      "version": 1,
+      "promptSha256": "5c95bd694877482f374dece565345b0597cb66691d2ecc608eebfcabc501c00a",
+      "requirements": [
+        {
+          "acceptance": [
+            {
+              "criterion": "Task gate `bun test tests/unit/cli/git-ignore.test.ts` passes with exit code 0",
+              "evidence": ["Gate execution output for `task-1`"],
+              "id": "crit-req-1-1"
+            },
+            {
+              "criterion": "Task gate `bun run typecheck` passes with exit code 0",
+              "evidence": ["Gate execution output for `task-2`"],
+              "id": "crit-req-1-2"
+            },
+            {
+              "criterion": "Task gate `bun run typecheck` passes with exit code 0",
+              "evidence": ["Gate execution output for `task-3`"],
+              "id": "crit-req-1-3"
+            }
+          ],
+          "ambiguity": [],
+          "candidate_gates": [
+            {
+              "argv": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+              "cwd": "."
+            },
+            {
+              "argv": ["bun", "run", "typecheck"],
+              "cwd": "."
+            },
+            {
+              "argv": ["bun", "run", "typecheck"],
+              "cwd": "."
+            }
+          ],
+          "dependencies": [],
+          "disposition": "actionable",
+          "evidence": ["task:task-1", "task:task-2", "task:task-3"],
+          "id": "req-1",
+          "implementation": "Implement requirements for Cleanup of stale capsules and temp scratch files within scope docs/planning, .tmp",
+          "instruction": "Cleanup of stale capsules and temp scratch files",
+          "priority": 50,
+          "risk": "medium",
+          "source_excerpt": "Skills Documentation Elevation and Capsule Cleanup",
+          "source_lines": [1],
+          "status": "satisfied",
+          "subsystem": "runtime/planning"
+        }
+      ],
+      "dispositions": [
+        {
+          "kind": "requirement",
+          "line": 1,
+          "requirement_id": "req-1"
+        }
+      ],
+      "evidence_class": "derived"
+    },
+    "taskOrder": ["task-1", "task-2", "task-3"],
+    "gates": [
+      {
+        "command": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+        "cwd": ".",
+        "id": "gate-1",
+        "mandatory": true,
+        "requirement_ids": ["req-1"],
+        "scope": "task"
+      },
+      {
+        "command": ["bun", "run", "typecheck"],
+        "cwd": ".",
+        "id": "gate-2",
+        "mandatory": true,
+        "requirement_ids": ["req-1"],
+        "scope": "task"
+      },
+      {
+        "command": ["bun", "run", "typecheck"],
+        "cwd": ".",
+        "id": "gate-3",
+        "mandatory": true,
+        "requirement_ids": ["req-1"],
+        "scope": "task"
+      },
+      {
+        "command": ["bun", "test", "tests"],
+        "cwd": ".",
+        "id": "gate-run-completion",
+        "mandatory": true,
+        "requirement_ids": [],
+        "scope": "run"
+      }
+    ],
+    "planGraph": {
+      "edges": [
+        {
+          "source": "task-1",
+          "target": "artifact-1",
+          "type": "produces"
+        },
+        {
+          "source": "task-2",
+          "target": "artifact-2",
+          "type": "produces"
+        },
+        {
+          "source": "task-2",
+          "target": "task-1",
+          "type": "depends_on"
+        },
+        {
+          "source": "task-3",
+          "target": "artifact-3",
+          "type": "produces"
+        },
+        {
+          "source": "task-3",
+          "target": "task-2",
+          "type": "depends_on"
+        }
+      ],
+      "gates": [
+        {
+          "command": ["bun", "test", "tests/unit/cli/git-ignore.test.ts"],
+          "cwd": ".",
+          "id": "gate-1",
+          "mandatory": true,
+          "requirement_ids": ["req-1"],
+          "scope": "task"
+        },
+        {
+          "command": ["bun", "run", "typecheck"],
+          "cwd": ".",
+          "id": "gate-2",
+          "mandatory": true,
+          "requirement_ids": ["req-1"],
+          "scope": "task"
+        },
+        {
+          "command": ["bun", "run", "typecheck"],
+          "cwd": ".",
+          "id": "gate-3",
+          "mandatory": true,
+          "requirement_ids": ["req-1"],
+          "scope": "task"
+        },
+        {
+          "command": ["bun", "test", "tests"],
+          "cwd": ".",
+          "id": "gate-run-completion",
+          "mandatory": true,
+          "requirement_ids": [],
+          "scope": "run"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-req-1",
+          "label": "req-1",
+          "requirement_id": "req-1",
+          "type": "requirement"
+        },
+        {
+          "id": "artifact-1",
+          "label": "Artifact for Cleanup of stale capsules and temp scratch files",
+          "type": "artifact"
+        },
+        {
+          "artifact_ids": ["artifact-1"],
+          "created_order": 1,
+          "effort": 3,
+          "id": "task-1",
+          "label": "Cleanup of stale capsules and temp scratch files",
+          "priority": 50,
+          "requirement_ids": ["req-1"],
+          "resource_scope": [],
+          "status": "ready",
+          "type": "task",
+          "write_scope": ["docs/planning", ".tmp"]
+        },
+        {
+          "id": "artifact-2",
+          "label": "Artifact for Elevating SKILL.md, root README.md, and references",
+          "type": "artifact"
+        },
+        {
+          "artifact_ids": ["artifact-2"],
+          "created_order": 2,
+          "effort": 3,
+          "id": "task-2",
+          "label": "Elevating SKILL.md, root README.md, and references",
+          "priority": 50,
+          "requirement_ids": ["req-1"],
+          "resource_scope": [],
+          "status": "proposed",
+          "type": "task",
+          "write_scope": [
+            "README.md",
+            "orchestrating-long-tasks/SKILL.md",
+            "orchestrating-long-tasks/references"
+          ]
+        },
+        {
+          "id": "artifact-3",
+          "label": "Artifact for Elevating docs 9-part deep-dive documentation and docs README",
+          "type": "artifact"
+        },
+        {
+          "artifact_ids": ["artifact-3"],
+          "created_order": 3,
+          "effort": 3,
+          "id": "task-3",
+          "label": "Elevating docs 9-part deep-dive documentation and docs README",
+          "priority": 50,
+          "requirement_ids": ["req-1"],
+          "resource_scope": [],
+          "status": "proposed",
+          "type": "task",
+          "write_scope": ["orchestrating-long-tasks/docs"]
+        }
+      ],
+      "revision": 1,
+      "schema": "harness.graph",
+      "version": 1
+    },
+    "planningTasks": [
+      {
+        "gate": "bun test tests/unit/cli/git-ignore.test.ts",
+        "id": "task-1",
+        "label": "Cleanup of stale capsules and temp scratch files",
+        "writeScope": ["docs/planning", ".tmp"]
+      },
+      {
+        "deps": ["task-1"],
+        "gate": "bun run typecheck",
+        "id": "task-2",
+        "label": "Elevating SKILL.md, root README.md, and references",
+        "writeScope": [
+          "README.md",
+          "orchestrating-long-tasks/SKILL.md",
+          "orchestrating-long-tasks/references"
+        ]
+      },
+      {
+        "deps": ["task-2"],
+        "gate": "bun run typecheck",
+        "id": "task-3",
+        "label": "Elevating docs 9-part deep-dive documentation and docs README",
+        "writeScope": ["orchestrating-long-tasks/docs"]
+      }
+    ],
+    "planningBuffer": [
+      {
+        "gate": "bun test tests/unit/cli/git-ignore.test.ts",
+        "id": "task-1",
+        "label": "Cleanup of stale capsules and temp scratch files",
+        "writeScope": ["docs/planning", ".tmp"]
+      },
+      {
+        "deps": ["task-1"],
+        "gate": "bun run typecheck",
+        "id": "task-2",
+        "label": "Elevating SKILL.md, root README.md, and references",
+        "writeScope": [
+          "README.md",
+          "orchestrating-long-tasks/SKILL.md",
+          "orchestrating-long-tasks/references"
+        ]
+      },
+      {
+        "deps": ["task-2"],
+        "gate": "bun run typecheck",
+        "id": "task-3",
+        "label": "Elevating docs 9-part deep-dive documentation and docs README",
+        "writeScope": ["orchestrating-long-tasks/docs"]
+      }
+    ],
+    "repository": {
+      "currentBinding": {
+        "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+        "file_count": 643,
+        "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+        "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+        "schema": "harness.repository-binding",
+        "total_bytes": 5034390,
+        "version": 1
+      },
+      "currentInspectionSha256": "6011997a2242e864e95dfc0313d6f9cc6a9c147b0ede28c2ca09bed982e1c3cb",
+      "inspections": [
+        {
+          "captured_at": "2026-08-17T17:15:19.906Z",
+          "convention_files": [
+            {
+              "path": "bun.lock",
+              "sha256": "06679bf79e8611fb4dd3b220cfd42cbd5441cde3b202e644f659a81f750f55f8"
+            },
+            {
+              "path": "orchestrating-long-tasks/scripts/package.json",
+              "sha256": "284537e367883471ed885c36d991f1e4624d7733d076814e0ef6e6ad1ebba01e"
+            },
+            {
+              "path": "orchestrating-long-tasks/scripts/tsconfig.json",
+              "sha256": "a6d3aaab899ff18b82a779df87f4b2dcc0a82cc696407e9374b076585a811841"
+            },
+            {
+              "path": "package.json",
+              "sha256": "028ea6c470c712b1952462644be1cf7ba45b8d8560b78d5c46bb424377522bfc"
+            },
+            {
+              "path": "tsconfig.json",
+              "sha256": "320c6da81d6267d908528d36479b086092e1f0a00b03612143e599bd584417d4"
+            }
+          ],
+          "git": {
+            "available": true,
+            "branch": "main",
+            "head": "74f84c5c64ef3d0e0b72a7fa8daf2ee672873dd3",
+            "recent_commits": [
+              "74f84c5 docs: add gvui execution graph visualization instructions",
+              "6014e72 feat(validation): implement automated playwright visual validation pipeline",
+              "11036c0 feat(summary): export rich validator findings, screenshots, and io streams",
+              "38eed7e feat: implement autonomous loop runner and defect synthesis",
+              "bd11ded chore: reduce min_adversarial_rejections to 1 for faster validation cycles"
+            ],
+            "status_porcelain_v2": [
+              "# branch.oid 74f84c5c64ef3d0e0b72a7fa8daf2ee672873dd3",
+              "# branch.head main",
+              "# branch.upstream origin/main",
+              "# branch.ab +0 -0",
+              "1 .M N... 100644 100644 100644 518552da9216f857794e0d14476fa05f9143e395 518552da9216f857794e0d14476fa05f9143e395 README.md",
+              "1 .D N... 100644 100644 000000 855de9c05d1dab5ba245198576bcf8ecc43fbcfb 855de9c05d1dab5ba245198576bcf8ecc43fbcfb docs/planning/automated_playwright_visual_validation_and_asset_pipeline/PLAN.md",
+              "1 .D N... 100644 100644 000000 5957c8370912dbe5108b0bf60087b57df8a290a0 5957c8370912dbe5108b0bf60087b57df8a290a0 docs/planning/gvui-execution-graph/01-creative-vision-and-user-intent.md",
+              "1 .D N... 100644 100644 000000 2add4a2660494a0b4316598c1c5deb3aeed91996 2add4a2660494a0b4316598c1c5deb3aeed91996 docs/planning/gvui-execution-graph/01-system-architecture-and-icons.md",
+              "1 .D N... 100644 100644 000000 5d9e09c41920b916e50888dfac3477b8a1871bd9 5d9e09c41920b916e50888dfac3477b8a1871bd9 docs/planning/gvui-execution-graph/02-edge-cases-and-hk-scenarios.md",
+              "1 .D N... 100644 100644 000000 fa32b37cfa9acc1904b9805531868d4037d4cdc9 fa32b37cfa9acc1904b9805531868d4037d4cdc9 docs/planning/gvui-execution-graph/02-node-shapes-and-visual-flowchart-taxonomy.md",
+              "1 .D N... 100644 100644 000000 94b69349d14f373212c58e7c51f8779c6aba4506 94b69349d14f373212c58e7c51f8779c6aba4506 docs/planning/gvui-execution-graph/03-edge-containers-and-dynamic-highlighter.md",
+              "1 .D N... 100644 100644 000000 9db2b193e1a25eb446f243bcff4b33fc9144c80c 9db2b193e1a25eb446f243bcff4b33fc9144c80c docs/planning/gvui-execution-graph/03-node-archetypes-and-canvas-system.md",
+              "1 .D N... 100644 100644 000000 dd90699a33da1ba6c6d33c6f644de833c3dfee29 dd90699a33da1ba6c6d33c6f644de833c3dfee29 docs/planning/gvui-execution-graph/04-adaptive-polymorphic-drawer-and-sections.md",
+              "1 .D N... 100644 100644 000000 1657026b88c097ba0049dc1696a5ac859dc2661b 1657026b88c097ba0049dc1696a5ac859dc2661b docs/planning/gvui-execution-graph/04-universal-polymorphic-drawer.md",
+              "1 .D N... 100644 100644 000000 b5148bf1be6af359acf87ad748f196f52c6949d8 b5148bf1be6af359acf87ad748f196f52c6949d8 docs/planning/gvui-execution-graph/05-skills-synthesis-and-implementation-roadmap.md",
+              "1 .D N... 100644 100644 000000 9d97f25654c36af17cc249ad58ead85c23480f48 9d97f25654c36af17cc249ad58ead85c23480f48 docs/planning/gvui-execution-graph/05-skills-synthesis-engine-and-schemas.md",
+              "1 .D N... 100644 100644 000000 a88b3a497aee66c72e7b3543ae2e018d01ad6f5d a88b3a497aee66c72e7b3543ae2e018d01ad6f5d docs/planning/gvui-execution-graph/06-host-telemetry-and-agent-detection-plan.md",
+              "1 .D N... 100644 100644 000000 aa31441718c61291160b08c6d5fff77ad0ec0478 aa31441718c61291160b08c6d5fff77ad0ec0478 docs/planning/gvui-execution-graph/06-observability-findings-and-remediation-plan.md",
+              "1 .D N... 100644 100644 000000 40ac84710730a39291bb600a32861a48ba5839b3 40ac84710730a39291bb600a32861a48ba5839b3 docs/planning/gvui-execution-graph/07-high-performance-wasm-layout-and-pure-projection-plan.md",
+              "1 .D N... 100644 100644 000000 bed7df19d65b625bfcbd2c8c10fc9758a74b06a2 bed7df19d65b625bfcbd2c8c10fc9758a74b06a2 docs/planning/gvui-execution-graph/08-streamlined-edge-system-and-traffic-drawer-plan.md",
+              "1 .D N... 100644 100644 000000 659c93d7e58d6d3b7b4cda6d5519458ef02fc6c8 659c93d7e58d6d3b7b4cda6d5519458ef02fc6c8 docs/planning/gvui-execution-graph/09-sequential-waves-and-multi-round-repair-model.md",
+              "1 .D N... 100644 100644 000000 e8841a4972d628e335fd9b7d58d50fbc90b809ad e8841a4972d628e335fd9b7d58d50fbc90b809ad docs/planning/gvui-execution-graph/10-module-1-gaps.md",
+              "1 .D N... 100644 100644 000000 c766dbdf32bf9464054ed30aca89284dee56ae3f c766dbdf32bf9464054ed30aca89284dee56ae3f docs/planning/gvui-execution-graph/10-module-2-partitioning.md",
+              "1 .D N... 100644 100644 000000 92c9e6bc766953b205112636b748bb99dce4958e 92c9e6bc766953b205112636b748bb99dce4958e docs/planning/gvui-execution-graph/10-module-3-dag.md",
+              "1 .D N... 100644 100644 000000 22d59fb8225d40eba165534c817f9355c683d328 22d59fb8225d40eba165534c817f9355c683d328 docs/planning/gvui-execution-graph/10-module-4-batch.md",
+              "1 .D N... 100644 100644 000000 0807f6d187082dffdf103dca1bcdce9725ca1813 0807f6d187082dffdf103dca1bcdce9725ca1813 docs/planning/gvui-execution-graph/10-module-5-walkthrough.md",
+              "1 .D N... 100644 100644 000000 026e41073c116158fc8ae2c25de5b83b5dd3953c 026e41073c116158fc8ae2c25de5b83b5dd3953c docs/planning/gvui-execution-graph/10-skill-cascading-scope-aware-replanning-protocol.md",
+              "1 .D N... 100644 100644 000000 e024e4da3a8fd3c5f9f6940f10d72e395dcf15d8 e024e4da3a8fd3c5f9f6940f10d72e395dcf15d8 docs/planning/gvui-execution-graph/11-always-plus-one-orchestrator-hierarchy-plan.md",
+              "1 .D N... 100644 100644 000000 51146ba17a5df24727ff473a1fddbd1542ef243b 51146ba17a5df24727ff473a1fddbd1542ef243b docs/planning/gvui-execution-graph/12-deep-audit-hardening-and-radial-optimization-plan.md",
+              "1 .D N... 100644 100644 000000 1d46be93d255e114a624d5f302913a0b63b42707 1d46be93d255e114a624d5f302913a0b63b42707 docs/planning/gvui-execution-graph/13-gvui-edge-styling-rich-telemetry-and-drawer-enhancement-plan.md",
+              "1 .D N... 100644 100644 000000 addd8bc443ef3c474ec20eb751aa7a9bc270d67f addd8bc443ef3c474ec20eb751aa7a9bc270d67f docs/planning/gvui-execution-graph/14-meta-orchestrator-and-rich-drawer-overhaul-plan.md",
+              "1 .M N... 100644 100644 100644 a8ec3c8f4772595c2f7009e27f04720fda8ba8b2 a8ec3c8f4772595c2f7009e27f04720fda8ba8b2 orchestrating-long-tasks/SKILL.md",
+              "1 .M N... 100644 100644 100644 fd9dd55f1b67491242e79b9e9ae5f9bf2ff63769 fd9dd55f1b67491242e79b9e9ae5f9bf2ff63769 orchestrating-long-tasks/docs/09-tutorial-and-cli/02-cli-command-reference.md",
+              "1 .M N... 100644 100644 100644 056f63927be928a9aca3e448242ea8d3074a6998 056f63927be928a9aca3e448242ea8d3074a6998 orchestrating-long-tasks/references/cli.md",
+              "1 .M N... 100644 100644 100644 aa4d88a092a8574fccbd2cc7ebe62a4b54768bbf aa4d88a092a8574fccbd2cc7ebe62a4b54768bbf orchestrating-long-tasks/references/parity-matrix.md",
+              "1 .M N... 100644 100644 100644 808f94806afe0ad25532bad8bee2ba7769ad6430 808f94806afe0ad25532bad8bee2ba7769ad6430 orchestrating-long-tasks/scripts/src/cli/commands/orchestrator-ops.ts",
+              "1 .M N... 100644 100644 100644 380df8953b321be5a9d89f20c195e7c4beaa289f 380df8953b321be5a9d89f20c195e7c4beaa289f orchestrating-long-tasks/scripts/src/cli/commands/run-ops.ts",
+              "1 .M N... 100644 100644 100644 24010a0ea81c266cd849641e9a03cd94f3a2f886 24010a0ea81c266cd849641e9a03cd94f3a2f886 orchestrating-long-tasks/scripts/src/cli/commands/task-review-support.ts",
+              "1 .M N... 100644 100644 100644 dbb9cc8f5464a8a026406446ea89e420268ca64f dbb9cc8f5464a8a026406446ea89e420268ca64f orchestrating-long-tasks/scripts/src/cli/execute.ts",
+              "1 .M N... 100644 100644 100644 a63e0d60b04ec70deed7924788b23670fa989b27 a63e0d60b04ec70deed7924788b23670fa989b27 orchestrating-long-tasks/scripts/src/cli/formatters/index.ts",
+              "1 .M N... 100644 100644 100644 ec576e7b735d53be67f0d19301d287614c6a4bf3 ec576e7b735d53be67f0d19301d287614c6a4bf3 orchestrating-long-tasks/scripts/src/cli/prompt-input.ts",
+              "1 .M N... 100644 100644 100644 90a78908d2d7383af94b46ccda4fef8a2fa7c464 90a78908d2d7383af94b46ccda4fef8a2fa7c464 orchestrating-long-tasks/scripts/src/orchestrator/defect-synthesizer.ts",
+              "1 .M N... 100644 100644 100644 2b6842622c1bb97524d7d22c8e24e7788ead4270 2b6842622c1bb97524d7d22c8e24e7788ead4270 orchestrating-long-tasks/scripts/src/orchestrator/loop-runner.ts",
+              "1 .M N... 100644 100644 100644 1bee8cf2b1edd04d55a5d9e2fc1f495cbfcaf95a 1bee8cf2b1edd04d55a5d9e2fc1f495cbfcaf95a orchestrating-long-tasks/scripts/src/reporting/screenshot-ingestion.ts",
+              "1 .M N... 100644 100644 100644 ce6ff62d43bd9f2fcd253c44ee23a3d4ef185907 ce6ff62d43bd9f2fcd253c44ee23a3d4ef185907 orchestrating-long-tasks/scripts/src/reporting/screenshot-store.ts",
+              "1 .M N... 100644 100644 100644 4b2aa5bb61f708b8a838f3cb412b21be3e49f918 4b2aa5bb61f708b8a838f3cb412b21be3e49f918 orchestrating-long-tasks/scripts/src/summary/asset-mapper-finding-screenshots.ts",
+              "1 .M N... 100644 100644 100644 9154981df5f5632079bc399c3d04c642d2c8dbe3 9154981df5f5632079bc399c3d04c642d2c8dbe3 orchestrating-long-tasks/scripts/src/summary/asset-mapper-findings.ts",
+              "1 .M N... 100644 100644 100644 5f16870cd6f347fde5062a235244cb3cccbdafee 5f16870cd6f347fde5062a235244cb3cccbdafee orchestrating-long-tasks/scripts/src/summary/asset-mapper-props.ts",
+              "1 .M N... 100644 100644 100644 270b938594968e06a664875f6064cedfb8f8584c 270b938594968e06a664875f6064cedfb8f8584c orchestrating-long-tasks/scripts/src/summary/asset-mapper.ts",
+              "1 .M N... 100644 100644 100644 3d666eeb77fda368d87c7dc22fe4e336f079cb90 3d666eeb77fda368d87c7dc22fe4e336f079cb90 orchestrating-long-tasks/scripts/src/summary/edge-builder.ts",
+              "1 .M N... 100644 100644 100644 cd44bf699bc001a2f1b0eeaffac2a7ffd1005783 cd44bf699bc001a2f1b0eeaffac2a7ffd1005783 orchestrating-long-tasks/scripts/src/summary/graph-edge-factory.ts",
+              "1 .M N... 100644 100644 100644 c28dc0060a8656f70312bb7f1324a7a844f912a7 c28dc0060a8656f70312bb7f1324a7a844f912a7 orchestrating-long-tasks/scripts/src/summary/graph-generator-critic-nodes.ts",
+              "1 .M N... 100644 100644 100644 fa89b9c12a36fed81f186de55b4565a03aff7104 fa89b9c12a36fed81f186de55b4565a03aff7104 orchestrating-long-tasks/scripts/src/summary/graph-generator-gate-helpers.ts",
+              "1 .M N... 100644 100644 100644 ad0c7783d5dbb8092b558d3c47225efd23e3a0bf ad0c7783d5dbb8092b558d3c47225efd23e3a0bf orchestrating-long-tasks/scripts/src/summary/graph-generator-helpers.ts",
+              "1 .M N... 100644 100644 100644 585168807a0f5d97ee7817914b3a2c6699426407 585168807a0f5d97ee7817914b3a2c6699426407 orchestrating-long-tasks/scripts/src/summary/graph-generator.ts",
+              "1 .M N... 100644 100644 100644 be4447876917a6d7cc075966424fbab02d6c3c9a be4447876917a6d7cc075966424fbab02d6c3c9a orchestrating-long-tasks/scripts/src/summary/graph-types.ts",
+              "1 .M N... 100644 100644 100644 862689571a6adeab59c73d91d83795884ba0fbc7 862689571a6adeab59c73d91d83795884ba0fbc7 orchestrating-long-tasks/scripts/src/summary/metrics-collector-helpers.ts",
+              "1 .M N... 100644 100644 100644 44ba7fae5cf1aa1d4c8c7ca05750bc8579b8bbcd 44ba7fae5cf1aa1d4c8c7ca05750bc8579b8bbcd orchestrating-long-tasks/scripts/src/summary/metrics-collector.ts",
+              "1 .M N... 100644 100644 100644 2025c8e675164fb59c95371cd277fe25f93ee260 2025c8e675164fb59c95371cd277fe25f93ee260 orchestrating-long-tasks/scripts/src/summary/types.ts",
+              "1 .M N... 100644 100644 100644 997dbe61625893ac6a01e8c659a998a794969c2b 997dbe61625893ac6a01e8c659a998a794969c2b orchestrating-long-tasks/scripts/src/validation/dom-violation-extractor.ts",
+              "1 .M N... 100644 100644 100644 046eeba2972e6c11dadd8186cff92ad3dc7dd1ed 046eeba2972e6c11dadd8186cff92ad3dc7dd1ed tests/unit/cli/visual-validation-boundaries.test.ts",
+              "1 .M N... 100644 100644 100644 31b49126c9c8c51b4436a01ee9a3fc766d74f16b 31b49126c9c8c51b4436a01ee9a3fc766d74f16b tests/unit/cli/visual-validation.test.ts",
+              "1 .M N... 100644 100644 100644 a3ee3330caee93d5cffd88de60b63fbd0167c2be a3ee3330caee93d5cffd88de60b63fbd0167c2be tests/unit/orchestrator/capsule-chainer.test.ts",
+              "1 .M N... 100644 100644 100644 7d86397025bc60cf14923dabee7e509d932af4f6 7d86397025bc60cf14923dabee7e509d932af4f6 tests/unit/orchestrator/cli-commands-stress.test.ts",
+              "1 .M N... 100644 100644 100644 0d3d86b4062d930ebc031d73cb1703f1c95bd550 0d3d86b4062d930ebc031d73cb1703f1c95bd550 tests/unit/orchestrator/cli-commands.test.ts",
+              "1 .M N... 100644 100644 100644 3c428af60fdce06c513b9f29d9de3ee9530b5461 3c428af60fdce06c513b9f29d9de3ee9530b5461 tests/unit/orchestrator/defect-synthesizer.test.ts",
+              "1 .M N... 100644 100644 100644 1eef6e25bd85c91057f23e36faf0df8d0a882b7d 1eef6e25bd85c91057f23e36faf0df8d0a882b7d tests/unit/orchestrator/loop-runner.test.ts",
+              "1 .M N... 100644 100644 100644 9a1024ed01b042013a983b3f7a8b4bec42d8cc55 9a1024ed01b042013a983b3f7a8b4bec42d8cc55 tests/unit/orchestrator/orchestrator-yaml.test.ts",
+              "1 .M N... 100644 100644 100644 b09df1ce3bd6dee78cb30f1517caf72610beb941 b09df1ce3bd6dee78cb30f1517caf72610beb941 tests/unit/summary/graph-generator-gate-nodes.test.ts",
+              "1 .M N... 100644 100644 100644 ffd6080d03620367544fc019bb5527d168a48965 ffd6080d03620367544fc019bb5527d168a48965 tests/unit/summary/metrics-collector.test.ts",
+              "1 .M N... 100644 100644 100644 e7d727b674088c06eae2c9a55ff27d88bb2024f7 e7d727b674088c06eae2c9a55ff27d88bb2024f7 tests/unit/summary/metrics-timing.test.ts",
+              "1 .M N... 100644 100644 100644 a2c178915b480384185c8fec4ce38917ca177deb a2c178915b480384185c8fec4ce38917ca177deb tests/unit/summary/validator-finding-screenshots.test.ts",
+              "1 .M N... 100644 100644 100644 d078c11e8284ef8ec42e8b84e458892e6a22dcf8 d078c11e8284ef8ec42e8b84e458892e6a22dcf8 tests/unit/summary/validator-io-traffic.test.ts",
+              "1 .M N... 100644 100644 100644 b8c315d3a615db345442a228d3bb659b34e05d50 b8c315d3a615db345442a228d3bb659b34e05d50 tests/unit/validation/dual-channel-negative-bounds.test.ts",
+              "? tests/unit/cli/visual-validation-reports.test.ts",
+              "? tests/unit/summary/metrics-timing-multi-round.test.ts"
+            ]
+          },
+          "inspection_sha256": "6011997a2242e864e95dfc0313d6f9cc6a9c147b0ede28c2ca09bed982e1c3cb",
+          "instruction_files": [],
+          "phase": "current",
+          "repository_content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+          "repository_file_count": 643,
+          "repository_git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+          "repository_identity_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+          "repository_root": "/Users/onurseckinsenoglu/repos/skills",
+          "repository_total_bytes": 5034390,
+          "schema": "harness.repository-inspection",
+          "tool_versions": {
+            "bun": "1.3.14",
+            "git": "git version 2.55.0"
+          },
+          "version": 3
+        }
+      ],
+      "evidence_class": "harness_observed"
+    },
+    "integrity": {
+      "schema": "harness.state",
+      "version": 1,
+      "revision": 48,
+      "eventSequence": 48,
+      "eventHead": "d79f7bdac1566b54119eef5cff296a5efd539904bb6c22e7f753777cdc8318e9",
+      "evidence_class": "harness_observed"
+    },
+    "events": [
+      {
+        "actor": "coordinator",
+        "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+        "hash": "b7617f3c6c5b772b8392df4e04954f91f4fa79aecc43316695e75a3f587bc60e",
+        "kind": "plan-task-added",
+        "payload": {
+          "task_id": "task-1"
+        },
+        "previous_hash": null,
+        "revision": 1,
+        "run_id": "2026-08-17-skills-documentation-elevation",
+        "schema": "harness.event",
+        "sequence": 1,
+        "timestamp": "2026-08-17T17:08:03.911Z",
+        "version": 1
+      },
+      {
+        "actor": "coordinator",
+        "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+        "hash": "ec5ff67eeddd5c7efbb5c165999e84170befb80ef82a68ebd988aca3b1f3daf6",
+        "kind": "plan-task-added",
+        "payload": {
+          "task_id": "task-2"
+        },
+        "previous_hash": "b7617f3c6c5b772b8392df4e04954f91f4fa79aecc43316695e75a3f587bc60e",
+        "revision": 2,
+        "run_id": "2026-08-17-skills-documentation-elevation",
+        "schema": "harness.event",
+        "sequence": 2,
+        "timestamp": "2026-08-17T17:08:11.244Z",
+        "version": 1
+      },
+      {
+        "actor": "coordinator",
+        "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+        "hash": "aff370406bded880237b409bff5cac0ba8111f11fde410d07ac3ccf340299104",
+        "kind": "plan-task-added",
+        "payload": {
+          "task_id": "task-3"
+        },
+        "previous_hash": "ec5ff67eeddd5c7efbb5c165999e84170befb80ef82a68ebd988aca3b1f3daf6",
+        "revision": 3,
+        "run_id": "2026-08-17-skills-documentation-elevation",
+        "schema": "harness.event",
+        "sequence": 3,
+        "timestamp": "2026-08-17T17:08:14.052Z",
+        "version": 1
+      },
+      {
+        "actor": "coordinator",
+        "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+        "hash": "87697c1457f135eebf3e2761a33d4bc7445ff6fdec3862c5cb8aa779a3d70662",
+        "kind": "plan-compiled",
+        "payload": {
+          "tasks_count": 3
+        },
+        "previous_hash": "aff370406bded880237b409bff5cac0ba8111f11fde410d07ac3ccf340299104",
+        "revision": 4,
+        "run_id": "2026-08-17-skills-documentation-elevation",
+        "schema": "harness.event",
+        "sequence": 4,
+        "timestamp": "2026-08-17T17:08:15.477Z",
+        "version": 1
+      },
+      {
+        "actor": "implementer-1",
+        "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+        "hash": "a7a96f03d7c062f318f482966b5eb02d60ef615826c652b1743426e9a3698030",
+        "kind": "task-claimed",
+        "payload": {
+          "role": "implementer",
+          "task_id": "task-1"
+        },
+        "previous_hash": "87697c1457f135eebf3e2761a33d4bc7445ff6fdec3862c5cb8aa779a3d70662",
+        "revision": 5,
+        "run_id": "2026-08-17-skills-documentation-elevation",
+        "schema": "harness.event",
+        "sequence": 5,
+        "timestamp": "2026-08-17T17:08:20.430Z",
+        "version": 1
+      }
+    ],
+    "steps": [
+      {
+        "step": 1,
+        "timestamp": "2026-08-17T17:08:03.911Z",
+        "actor": "coordinator",
+        "kind": "plan",
+        "rawKind": "plan-task-added",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-1 added: an unrecorded label"
+      },
+      {
+        "step": 2,
+        "timestamp": "2026-08-17T17:08:11.244Z",
+        "actor": "coordinator",
+        "kind": "plan",
+        "rawKind": "plan-task-added",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-2 added: an unrecorded label"
+      },
+      {
+        "step": 3,
+        "timestamp": "2026-08-17T17:08:14.052Z",
+        "actor": "coordinator",
+        "kind": "plan",
+        "rawKind": "plan-task-added",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-3 added: an unrecorded label"
+      },
+      {
+        "step": 4,
+        "timestamp": "2026-08-17T17:08:15.477Z",
+        "actor": "coordinator",
+        "kind": "plan",
+        "rawKind": "plan-compiled",
+        "target": {},
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Plan compiled with revision 4"
+      },
+      {
+        "step": 5,
+        "timestamp": "2026-08-17T17:08:20.430Z",
+        "actor": "implementer-1",
+        "kind": "lease",
+        "rawKind": "task-claimed",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-1 claimed by implementer-1 (role: implementer)"
+      },
+      {
+        "step": 6,
+        "timestamp": "2026-08-17T17:08:35.228Z",
+        "actor": "implementer-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 7,
+        "timestamp": "2026-08-17T17:08:48.319Z",
+        "actor": "implementer-1",
+        "kind": "task",
+        "rawKind": "task-submitted",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-1 submitted by implementer-1"
+      },
+      {
+        "step": 8,
+        "timestamp": "2026-08-17T17:08:50.157Z",
+        "actor": "validator-1",
+        "kind": "gate",
+        "rawKind": "validation-started",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Validation started for task task-1 by validator-1"
+      },
+      {
+        "step": 9,
+        "timestamp": "2026-08-17T17:08:52.532Z",
+        "actor": "validator-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 10,
+        "timestamp": "2026-08-17T17:09:11.103Z",
+        "actor": "validator-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 11,
+        "timestamp": "2026-08-17T17:09:21.629Z",
+        "actor": "validator-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 12,
+        "timestamp": "2026-08-17T17:09:30.155Z",
+        "actor": "validator-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 13,
+        "timestamp": "2026-08-17T17:09:36.888Z",
+        "actor": "validator-1",
+        "kind": "review",
+        "rawKind": "review-recorded",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-1 review recorded; the event states no verdict"
+      },
+      {
+        "step": 14,
+        "timestamp": "2026-08-17T17:09:36.932Z",
+        "actor": "validator-1",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-1",
+          "gateId": "gate-1",
+          "commandId": "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+          "nodeId": "node-gate-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-1 attached to task task-1 by validator-1"
+      },
+      {
+        "step": 15,
+        "timestamp": "2026-08-17T17:09:36.974Z",
+        "actor": "validator-1",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-1",
+          "gateId": "gate-2",
+          "commandId": "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+          "nodeId": "node-gate-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-2 attached to task task-1 by validator-1"
+      },
+      {
+        "step": 16,
+        "timestamp": "2026-08-17T17:09:37.017Z",
+        "actor": "validator-1",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-1",
+          "gateId": "gate-3",
+          "commandId": "C-777cfc27-3b32-47a1-8573-3b088f3f8ac5",
+          "nodeId": "node-gate-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-3 attached to task task-1 by validator-1"
+      },
+      {
+        "step": 17,
+        "timestamp": "2026-08-17T17:09:37.030Z",
+        "actor": "validator-1",
+        "kind": "task",
+        "rawKind": "task-finished",
+        "target": {
+          "taskId": "task-1",
+          "nodeId": "node-task-task-1"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-1 finished and marked done"
+      },
+      {
+        "step": 18,
+        "timestamp": "2026-08-17T17:09:41.776Z",
+        "actor": "implementer-2",
+        "kind": "lease",
+        "rawKind": "task-claimed",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-2 claimed by implementer-2 (role: implementer)"
+      },
+      {
+        "step": 19,
+        "timestamp": "2026-08-17T17:10:46.234Z",
+        "actor": "implementer-2",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 20,
+        "timestamp": "2026-08-17T17:10:54.758Z",
+        "actor": "implementer-2",
+        "kind": "task",
+        "rawKind": "task-submitted",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-2 submitted by implementer-2"
+      },
+      {
+        "step": 21,
+        "timestamp": "2026-08-17T17:10:59.453Z",
+        "actor": "validator-2",
+        "kind": "gate",
+        "rawKind": "validation-started",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Validation started for task task-2 by validator-2"
+      },
+      {
+        "step": 22,
+        "timestamp": "2026-08-17T17:11:02.829Z",
+        "actor": "validator-2",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 23,
+        "timestamp": "2026-08-17T17:11:12.370Z",
+        "actor": "validator-2",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 24,
+        "timestamp": "2026-08-17T17:11:21.290Z",
+        "actor": "validator-2",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 25,
+        "timestamp": "2026-08-17T17:11:28.830Z",
+        "actor": "validator-2",
+        "kind": "review",
+        "rawKind": "review-recorded",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-2 review recorded; the event states no verdict"
+      },
+      {
+        "step": 26,
+        "timestamp": "2026-08-17T17:11:28.888Z",
+        "actor": "validator-2",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-2",
+          "gateId": "gate-1",
+          "commandId": "C-c4499e34-a4fa-42fc-a2a6-3a60f24537e0",
+          "nodeId": "node-gate-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-1 attached to task task-2 by validator-2"
+      },
+      {
+        "step": 27,
+        "timestamp": "2026-08-17T17:11:28.943Z",
+        "actor": "validator-2",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-2",
+          "gateId": "gate-2",
+          "commandId": "C-b8fbf614-efdb-4f81-ab6d-aa7919c0cb92",
+          "nodeId": "node-gate-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-2 attached to task task-2 by validator-2"
+      },
+      {
+        "step": 28,
+        "timestamp": "2026-08-17T17:11:28.998Z",
+        "actor": "validator-2",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-2",
+          "gateId": "gate-3",
+          "commandId": "C-e6d377aa-9c37-4105-be7b-51ad62332ab5",
+          "nodeId": "node-gate-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-3 attached to task task-2 by validator-2"
+      },
+      {
+        "step": 29,
+        "timestamp": "2026-08-17T17:11:29.023Z",
+        "actor": "validator-2",
+        "kind": "task",
+        "rawKind": "task-finished",
+        "target": {
+          "taskId": "task-2",
+          "nodeId": "node-task-task-2"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-2 finished and marked done"
+      },
+      {
+        "step": 30,
+        "timestamp": "2026-08-17T17:11:32.073Z",
+        "actor": "implementer-3",
+        "kind": "lease",
+        "rawKind": "task-claimed",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-3 claimed by implementer-3 (role: implementer)"
+      },
+      {
+        "step": 31,
+        "timestamp": "2026-08-17T17:11:58.864Z",
+        "actor": "implementer-3",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 32,
+        "timestamp": "2026-08-17T17:12:08.524Z",
+        "actor": "implementer-3",
+        "kind": "task",
+        "rawKind": "task-submitted",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-3 submitted by implementer-3"
+      },
+      {
+        "step": 33,
+        "timestamp": "2026-08-17T17:12:10.447Z",
+        "actor": "validator-3",
+        "kind": "gate",
+        "rawKind": "validation-started",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Validation started for task task-3 by validator-3"
+      },
+      {
+        "step": 34,
+        "timestamp": "2026-08-17T17:12:13.557Z",
+        "actor": "validator-3",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 35,
+        "timestamp": "2026-08-17T17:12:22.471Z",
+        "actor": "validator-3",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 36,
+        "timestamp": "2026-08-17T17:12:31.860Z",
+        "actor": "validator-3",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 37,
+        "timestamp": "2026-08-17T17:12:39.063Z",
+        "actor": "validator-3",
+        "kind": "review",
+        "rawKind": "review-recorded",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-3 review recorded; the event states no verdict"
+      },
+      {
+        "step": 38,
+        "timestamp": "2026-08-17T17:12:39.141Z",
+        "actor": "validator-3",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-3",
+          "gateId": "gate-1",
+          "commandId": "C-a1c322a6-3cc5-4748-b3a4-a4f61af46602",
+          "nodeId": "node-gate-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-1 attached to task task-3 by validator-3"
+      },
+      {
+        "step": 39,
+        "timestamp": "2026-08-17T17:12:39.213Z",
+        "actor": "validator-3",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-3",
+          "gateId": "gate-2",
+          "commandId": "C-b3b35046-4699-4569-9c70-f4dcebc6b4d9",
+          "nodeId": "node-gate-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-2 attached to task task-3 by validator-3"
+      },
+      {
+        "step": 40,
+        "timestamp": "2026-08-17T17:12:39.286Z",
+        "actor": "validator-3",
+        "kind": "gate",
+        "rawKind": "gate-attached",
+        "target": {
+          "taskId": "task-3",
+          "gateId": "gate-3",
+          "commandId": "C-f505fec8-30d6-4158-8235-937aa3bf2d25",
+          "nodeId": "node-gate-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Gate gate-3 attached to task task-3 by validator-3"
+      },
+      {
+        "step": 41,
+        "timestamp": "2026-08-17T17:12:39.329Z",
+        "actor": "validator-3",
+        "kind": "task",
+        "rawKind": "task-finished",
+        "target": {
+          "taskId": "task-3",
+          "nodeId": "node-task-task-3"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Task task-3 finished and marked done"
+      },
+      {
+        "step": 42,
+        "timestamp": "2026-08-17T17:13:42.848Z",
+        "actor": "coordinator",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 43,
+        "timestamp": "2026-08-17T17:15:13.974Z",
+        "actor": "coordinator",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 44,
+        "timestamp": "2026-08-17T17:15:20.435Z",
+        "actor": "critic-1",
+        "kind": "run",
+        "rawKind": "repository-inspected",
+        "target": {},
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Repository inspected (current) by critic-1"
+      },
+      {
+        "step": 45,
+        "timestamp": "2026-08-17T17:15:21.291Z",
+        "actor": "critic-1",
+        "kind": "review",
+        "rawKind": "critic-assigned",
+        "target": {},
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Completeness critic round assigned to critic-1"
+      },
+      {
+        "step": 46,
+        "timestamp": "2026-08-17T17:15:30.057Z",
+        "actor": "critic-1",
+        "kind": "command",
+        "rawKind": "command-recorded",
+        "target": {},
+        "outcome": "unknown",
+        "evidence_class": "harness_observed",
+        "summary": "Command recorded"
+      },
+      {
+        "step": 47,
+        "timestamp": "2026-08-17T17:15:40.413Z",
+        "actor": "critic-1",
+        "kind": "review",
+        "rawKind": "completion-reviewed",
+        "target": {
+          "packetId": "packet-critic-direct"
+        },
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Completion review recorded by critic-1 (packet packet-critic-direct): no summary recorded"
+      },
+      {
+        "step": 48,
+        "timestamp": "2026-08-17T17:15:47.892Z",
+        "actor": "coordinator",
+        "kind": "run",
+        "rawKind": "run-completed",
+        "target": {},
+        "outcome": "success",
+        "evidence_class": "harness_observed",
+        "summary": "Run completed successfully by coordinator"
+      }
+    ],
+    "manifest": {
+      "assurance": "source-verified",
+      "bun_version": "1.3.14",
+      "capsule_id": "1f0b3f7a56ce4d44b30891b6b3077ead",
+      "capture_mode": "stdin",
+      "created_at": "2026-08-17T17:07:47.504Z",
+      "prompt_bytes": 50,
+      "prompt_sha256": "5c95bd694877482f374dece565345b0597cb66691d2ecc608eebfcabc501c00a",
+      "run_id": "2026-08-17-skills-documentation-elevation",
+      "runtime_version": "0.1.0",
+      "schema": "harness.manifest",
+      "source_verified": true,
+      "version": 1
+    },
+    "completion": {
+      "critic": {
+        "attempt": 1,
+        "critic_id": "critic-1",
+        "deadline_at": "2026-08-17T17:35:20.439Z",
+        "readiness_sha256": "d85a4fd0936ed70be54b421c7541106de46c9189e31b5c52d1730d68f84d0b8c",
+        "repository_binding": {
+          "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+          "file_count": 643,
+          "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+          "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+          "schema": "harness.repository-binding",
+          "total_bytes": 5034390,
+          "version": 1
+        },
+        "started_at": "2026-08-17T17:15:20.439Z",
+        "status": "reviewed",
+        "token_digest": "7e44bbdb616773d25a30279cda1f9cd53d4c9ecfd60cdedfabc11343708e9ee3"
+      },
+      "criticHistory": [
+        {
+          "attempt": 1,
+          "critic_id": "critic-1",
+          "deadline_at": "2026-08-17T17:35:20.439Z",
+          "packet_id": "packet-critic-direct",
+          "readiness_sha256": "d85a4fd0936ed70be54b421c7541106de46c9189e31b5c52d1730d68f84d0b8c",
+          "repository_binding": {
+            "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+            "file_count": 643,
+            "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+            "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+            "schema": "harness.repository-binding",
+            "total_bytes": 5034390,
+            "version": 1
+          },
+          "started_at": "2026-08-17T17:15:20.439Z",
+          "status": "reviewed",
+          "token_digest": "7e44bbdb616773d25a30279cda1f9cd53d4c9ecfd60cdedfabc11343708e9ee3"
+        }
+      ],
+      "review": {
+        "checks": [
+          {
+            "command_id": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106"
+          }
+        ],
+        "critic_id": "critic-1",
+        "findings": [],
+        "graph_revision": 1,
+        "integrity_evidence": [
+          {
+            "issues": [],
+            "status": "passed"
+          }
+        ],
+        "packet_id": "packet-critic-direct",
+        "packet_sha256": "",
+        "readiness_sha256": "d85a4fd0936ed70be54b421c7541106de46c9189e31b5c52d1730d68f84d0b8c",
+        "repository_binding": {
+          "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+          "file_count": 643,
+          "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+          "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+          "schema": "harness.repository-binding",
+          "total_bytes": 5034390,
+          "version": 1
+        },
+        "repository_command_ids": ["C-9ec06d72-4061-49d5-bf06-f8130cdf1051"],
+        "requirement_proofs": [
+          {
+            "evidence": [
+              {
+                "kind": "command",
+                "observation": "Requirement req-1 satisfied.",
+                "reference": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106"
+              }
+            ],
+            "requirement_id": "req-1",
+            "status": "satisfied"
+          }
+        ],
+        "residual_risks": [],
+        "review_sha256": "a78fb11ac63d0fdb898d046035657dd290afd43a6cca297e19138c7fbde25df8",
+        "reviewed_at": "2026-08-17T17:15:39.855Z",
+        "status": "clean",
+        "unresolved_finding_ids": []
+      },
+      "reviews": [
+        {
+          "checks": [
+            {
+              "command_id": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106"
+            }
+          ],
+          "critic_id": "critic-1",
+          "findings": [],
+          "graph_revision": 1,
+          "integrity_evidence": [
+            {
+              "issues": [],
+              "status": "passed"
+            }
+          ],
+          "packet_id": "packet-critic-direct",
+          "packet_sha256": "",
+          "readiness_sha256": "d85a4fd0936ed70be54b421c7541106de46c9189e31b5c52d1730d68f84d0b8c",
+          "repository_binding": {
+            "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+            "file_count": 643,
+            "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+            "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+            "schema": "harness.repository-binding",
+            "total_bytes": 5034390,
+            "version": 1
+          },
+          "repository_command_ids": ["C-9ec06d72-4061-49d5-bf06-f8130cdf1051"],
+          "requirement_proofs": [
+            {
+              "evidence": [
+                {
+                  "kind": "command",
+                  "observation": "Requirement req-1 satisfied.",
+                  "reference": "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106"
+                }
+              ],
+              "requirement_id": "req-1",
+              "status": "satisfied"
+            }
+          ],
+          "residual_risks": [],
+          "review_sha256": "a78fb11ac63d0fdb898d046035657dd290afd43a6cca297e19138c7fbde25df8",
+          "reviewed_at": "2026-08-17T17:15:39.855Z",
+          "status": "clean",
+          "unresolved_finding_ids": []
+        }
+      ],
+      "verification": {
+        "command_ids": [
+          "C-047daabe-dca7-4ee9-aa07-1bf1925c70f3",
+          "C-584d4bbf-1c05-422a-9210-3a8bbb14cafb",
+          "C-777cfc27-3b32-47a1-8573-3b088f3f8ac5",
+          "C-9ec06d72-4061-49d5-bf06-f8130cdf1051",
+          "C-a1c322a6-3cc5-4748-b3a4-a4f61af46602",
+          "C-b3b35046-4699-4569-9c70-f4dcebc6b4d9",
+          "C-b8fbf614-efdb-4f81-ab6d-aa7919c0cb92",
+          "C-c028fd4e-a9ca-49b2-a3bc-216aa6e2e106",
+          "C-c4499e34-a4fa-42fc-a2a6-3a60f24537e0",
+          "C-e6d377aa-9c37-4105-be7b-51ad62332ab5",
+          "C-f505fec8-30d6-4158-8235-937aa3bf2d25"
+        ],
+        "packets": [],
+        "repository_binding": {
+          "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+          "file_count": 643,
+          "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+          "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+          "schema": "harness.repository-binding",
+          "total_bytes": 5034390,
+          "version": 1
+        },
+        "verification_sha256": "eda574f6ae552cda285d517764c5beb2a2f4fa118b9f3992966439c813f4ef9b",
+        "verified_at": "2026-08-17T17:15:46.467Z"
+      },
+      "result": {
+        "actor": "coordinator",
+        "artifact_verification_sha256": "eda574f6ae552cda285d517764c5beb2a2f4fa118b9f3992966439c813f4ef9b",
+        "completed_at": "2026-08-17T17:15:45.171Z",
+        "critic_review_sha256": "a78fb11ac63d0fdb898d046035657dd290afd43a6cca297e19138c7fbde25df8",
+        "graph_revision": 1,
+        "mandatory_run_gate_commands": {
+          "gate-run-completion": "C-9ec06d72-4061-49d5-bf06-f8130cdf1051"
+        },
+        "readiness_sha256": "d85a4fd0936ed70be54b421c7541106de46c9189e31b5c52d1730d68f84d0b8c",
+        "repository_binding": {
+          "content_sha256": "bb3f6b1b22d1eb7336f74d6eebc19956f010357070e6ebec73dd91090a408baf",
+          "file_count": 643,
+          "git_identity_sha256": "3e7b2e024168d00065365d7d36fd95cc86692429df9211328f83b0cc937f79fd",
+          "inspection_sha256": "9128bbf094375b87971e89023dbbf918ebe7f4fd9f33d4b17ce55bc67b03783a",
+          "schema": "harness.repository-binding",
+          "total_bytes": 5034390,
+          "version": 1
+        },
+        "status": "complete"
+      }
+    }
+  }
+}
